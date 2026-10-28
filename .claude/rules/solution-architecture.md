@@ -67,7 +67,7 @@ System characteristics?
 |---------|-------------|-------------|
 | **Single Database** | Simple apps, tight consistency | Shared database in microservices |
 | **Database per Service** | Service autonomy, bounded context | Cross-service joins in app layer |
-| **CQRS with Event Sourcing** | Audit trail, temporal queries | Using events as single source of truth for reads |
+| **CQRS with Event Sourcing** | Audit trail, temporal queries | Replaying the raw event stream on every read instead of serving projections |
 | **Saga** | Distributed transactions | Using distributed transactions (2PC) in microservices |
 | **Strangler Fig DB** | Database migration | Big-bang migration |
 | **Polyglot Persistence** | Different storage needs per service | Same data in multiple stores without sync |
@@ -89,7 +89,7 @@ System characteristics?
 
 | Pattern | Problem Solved | Implementation |
 |---------|---------------|----------------|
-| **Circuit Breaker** | Cascading failures, slow dependencies | Resilience4j, Hystrix |
+| **Circuit Breaker** | Cascading failures, slow dependencies | Resilience4j, Polly, gobreaker, Envoy outlier detection (Hystrix is in maintenance mode since 2018) |
 | **Retry with Backoff** | Transient failures | Exponential backoff + jitter |
 | **Bulkhead** | Resource exhaustion from one client | Thread pool isolation, semaphores |
 | **Rate Limiter** | Overload protection | Token bucket, sliding window |

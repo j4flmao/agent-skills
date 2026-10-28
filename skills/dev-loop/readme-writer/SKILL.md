@@ -38,6 +38,18 @@ Exact user phrases: "write README", "create README", "README file", "README.md",
 ### Output Artifact
 README.md file following the project's conventions and audience needs.
 
+### Response Format
+```
+# {Project} — {one-line value statement}
+{badges}
+## Installation
+## Quick Start
+## Usage / Configuration
+## Development
+## Contributing
+## License
+```
+
 ### Completion Criteria
 - [ ] Project name and one-line description at top
 - [ ] Badges (CI status, version, license, coverage)
@@ -382,8 +394,8 @@ MIT
 ## References
   - references/readme-writer-advanced.md — README Writer Advanced Topics
   - references/readme-writer-fundamentals.md — README Writer Fundamentals
-  - references/readme-writer-templates.md — README Templates Reference
-  - references/readme-writer-style-guide.md — README Style Guide Reference
+  - references/readme-template.md — README Template
+  - references/readme-best-practices.md — README Best Practices
 ## Handoff
 Hand off to `dev-loop-changelog-generator` for changelog content. Hand off to `dev-loop-pr-writer` for PR descriptions.
 

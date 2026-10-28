@@ -36,6 +36,15 @@ Content type (static, API, video, dynamic), user geography, CDN provider, origin
 ### Output Artifact
 Terraform HCL for CDN resources, provider config (CloudFront, Fastly VCL, Cloudflare Workers), WAF rules, edge function code.
 
+### Response Format
+```
+Provider: {CloudFront|Cloudflare|Fastly|Akamai|Cloud CDN|Azure Front Door}
+Cache rules: {path pattern -> TTL, cache key}
+Security: {WAF managed rules, rate limits, DDoS tier}
+Edge logic: {none|CloudFront Functions|Lambda@Edge|Workers}
+Config: {Terraform/IaC snippet}
+```
+
 ### Completion Criteria
 - [ ] CDN distribution with proper origins and cache behaviors.
 - [ ] Cache rules per content type.
@@ -530,9 +539,6 @@ Serving uncompressed content increases egress costs and hurts performance. Enabl
   - references/ddos-mitigation.md
   - references/edge-functions.md
   - references/waf-rules.md
-  - references/signed-urls-guide.md
-  - references/multi-cdn-strategy.md
-  - references/cdn-monitoring.md
 
 ## Handoff
 Next: **waf-rules** — deeper WAF configuration. Pass: distribution ID, WAF ACL ARN, edge function names.

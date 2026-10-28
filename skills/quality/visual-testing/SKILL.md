@@ -1,7 +1,7 @@
 ---
 name: quality-visual-testing
 description: >
-  Use this skill when setting up visual testing, visual regression, screenshot diff, Percy, Chromatic, Applitools, or snapshot testing. This skill enforces: tool setup (Percy or Chromatic), baseline management, diff threshold configuration, cross-browser visual testing, and CI integration. Do NOT use for: E2E functional assertions, performance benchmarking, or accessibility audits.
+  Use this skill when setting up visual regression testing: screenshot diffing, baseline management, Percy, Chromatic, Applitools, Playwright toHaveScreenshot, or snapshot-based UI regression. This skill enforces: tool selection (Percy, Chromatic, or Playwright built-in), baseline management, diff threshold configuration, cross-browser visual testing, and CI integration. Do NOT use for: E2E functional assertions, performance benchmarking, or accessibility audits.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -43,10 +43,10 @@ Visual testing setup with tool configuration, baseline management, and CI workfl
 // Baseline management workflow
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output -- why use many token when few do trick.
+No preamble or filler. Lead with tool selection and config. Keep prose tight but include the configuration the user needs.
 
 ### Completion Criteria
-- [ ] Tool selected (Percy or Chromatic) with rationale
+- [ ] Tool selected (Percy, Chromatic, or Playwright built-in) with rationale
 - [ ] Initial baseline snapshots captured for all story/component states
 - [ ] Diff thresholds configured per component type
 - [ ] Cross-browser visual testing configured (Chrome, Firefox, Safari)
@@ -60,13 +60,13 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ## Workflow
 
 ### Step 1: Tool Selection
-Percy: integrates with Playwright, Cypress, Storybook; cross-browser; free tier (5k snapshots/mo). Chromatic: built for Storybook; auto-captures stories; integrates with Git (PR checks); free for public projects. Applitools: AI-powered diffing; ultra-fast grid; advanced layout matching -- best for complex apps but costs more. Recommendation: Percy for E2E visual testing, Chromatic for Storybook-based visual testing.
+Percy: integrates with Playwright, Cypress, Storybook; cross-browser; free tier available. Chromatic: built for Storybook but also supports Playwright and Cypress via `chromatic --playwright`/`--cypress`; auto-captures stories; integrates with Git (PR checks); free for public projects. Applitools: AI-powered diffing; ultra-fast grid; advanced layout matching — best for complex apps but costs more. Recommendation: Percy for E2E visual testing, Chromatic for Storybook-based visual testing, Playwright built-in for zero-budget projects.
 
-For team size guidance: 1-5 devs use free tiers (Percy 5K or Chromatic 5K). 5-20 devs use Percy Team (~$400/mo) for unlimited snapshots and parallel CI. 20+ devs with Storybook-heavy workflow use Chromatic (~$1000/mo). Enterprise with complex apps use Applitools (custom pricing) for AI matching across unlimited resolutions. Open-source or no-budget projects use Playwright built-in screenshot comparison with pixelmatch.
+For team size guidance: small teams start on free tiers (Percy/Chromatic offer monthly snapshot limits). Growing teams move to paid tiers for unlimited snapshots and parallel CI. Check each vendor's current pricing page before committing — tiers change frequently.
 
 Decision tree:
 - Using Storybook extensively? -> Chromatic (auto-discovers stories, native integration)
-- Using Playwright/Cypress for E2E? -> Percy (SDK integration, cross-browser)
+- Using Playwright/Cypress for E2E? -> Percy (SDK integration, cross-browser) or Chromatic (now supports Playwright/Cypress)
 - Need AI-powered layout matching across many browsers? -> Applitools
 - No budget for SaaS? -> Playwright built-in `toHaveScreenshot` with pixelmatch
 - Need animation GIF diffing? -> Happo
@@ -93,7 +93,17 @@ export default defineConfig({
 ```
 
 ### Step 3: Diff Threshold Configuration
-Per component type: icons and illustrations (0% tolerance), buttons and inputs (0.1%), cards and surfaces (0.2%), images and media (0.5%), full pages (0.3%). Threshold = max diff area as fraction of total pixels. Configure per snapshot: override global threshold when component has intentional dynamic content.
+Playwright has **two** distinct settings — do not confuse them:
+
+| Setting | Meaning | Scale |
+|---------|---------|-------|
+| `threshold` | Per-pixel color sensitivity. Lower = stricter about color differences. | `0`–`1` (default `0.2`) |
+| `maxDiffPixelRatio` | Fraction of total pixels allowed to differ before the test fails. | `0`–`1` (e.g. `0.01` = 1%) |
+| `maxDiffPixels` | Absolute pixel count allowed to differ. | integer |
+
+> Example: `maxDiffPixelRatio: 0.01` means up to **1%** of pixels may differ. `threshold: 0.2` means a pixel counts as "different" only if its color distance exceeds 0.2. The two are independent.
+
+Per component type (use `maxDiffPixelRatio`): icons and illustrations (0), buttons and inputs (0.001 = 0.1%), cards and surfaces (0.002 = 0.2%), images and media (0.005 = 0.5%), full pages (0.003 = 0.3%). Configure per snapshot: override global threshold when a component has intentional dynamic content.
 
 Percy diff levels: "strict" (0% diff), "major" (1% diff), "minor" (5% diff). Use strict for icons and critical UI elements, major for components with some variability, minor for full-page screenshots with dynamic regions. Chromatic uses `diffThreshold` from 0-1 where 0 is strictest.
 
@@ -129,7 +139,7 @@ Cross-browser baseline strategy: Chrome as primary baseline. Firefox shares same
 Block PR merge on visual diffs unless reviewed and approved. For parallel builds in Percy, use `--parallel-nonce` and `--parallel-total-to` flags. For Chromatic, set `--only-changed` to skip unchanged stories and `--auto-accept-changes` for main branch auto-approval. For Playwright built-in, upload diff artifacts on failure for inspection.
 
 ## Rules
-- Baseline on main -- never approve diffs on feature branches
+- Baselines live on `main`. Diffs are reviewed and approved on the PR (gating the merge), but the baseline image is only updated by the post-merge `main` build.
 - Threshold per component type, not global
 - Cross-browser diffs are reviewed, not automatically accepted
 - Visual tests run alongside functional tests, not instead of
@@ -156,16 +166,16 @@ Is the project Storybook-based?
            YES -> Chromatic (built-in cross-browser)
            NO -> Chromatic (auto-discovers stories)
   NO -> Is the team using Playwright for E2E?
-          YES -> Percy (native Playwright SDK)
+          YES -> Percy (native Playwright SDK) or Chromatic (supports Playwright)
           NO -> Is the team using Cypress for E2E?
-                  YES -> Percy (native Cypress SDK)
+                  YES -> Percy (native Cypress SDK) or Chromatic (supports Cypress)
                   NO -> Evaluate: BackstopJS (generic), Playwright built-in (free)
 Does the project have budget for paid tools?
-  YES -> Evaluate Applitooks (AI matching, unlimited browsers)
+  YES -> Evaluate Applitools (AI matching, unlimited browsers)
   NO -> Playwright toHaveScreenshot or BackstopJS
-Does the project need animation diffing?
-  YES -> Happo (GIF-based diff)
-  NO -> Standard tools suffice
+Does the UI animate?
+  YES -> Snapshot the settled state: animations: "disabled" (Playwright) or tool-specific pause/freeze options; test motion itself manually or with dedicated checks
+  NO -> Standard settings suffice
 ```
 
 ### Baseline Management Decision Tree
@@ -185,14 +195,14 @@ Is this a main branch build?
 ### Diff Threshold Decision Tree
 
 ```
-What component type is being tested?
-  Icon / Illustration -> threshold: 0 (pixel-perfect required)
-  Button / Input / Form control -> threshold: 0.001 (minor sub-pixel variation)
-  Card / Surface / Container -> threshold: 0.002 (shadow rendering variation)
-  Image / Media / Video player -> threshold: 0.005 (compression artifacts)
-  Chart / Data visualization -> threshold: 0.003 (rendering engine variation)
-  Full page / Layout -> threshold: 0.003 (aggregate of all elements)
-  Third-party embed -> threshold: 0.01 (external content variation) or mask entirely
+What component type is being tested? (values are maxDiffPixelRatio)
+  Icon / Illustration -> 0 (pixel-perfect required)
+  Button / Input / Form control -> 0.001 (minor sub-pixel variation)
+  Card / Surface / Container -> 0.002 (shadow rendering variation)
+  Image / Media / Video player -> 0.005 (compression artifacts)
+  Chart / Data visualization -> 0.003 (rendering engine variation)
+  Full page / Layout -> 0.003 (aggregate of all elements)
+  Third-party embed -> 0.01 (external content variation) or mask entirely
 Does the component contain dynamic content?
   YES -> Use clip region, DOM transform, or mask
   NO -> Use standard threshold
@@ -212,8 +222,8 @@ Treating all browsers equally without a baseline hierarchy leads to unnecessary 
 ### Pitfall 4: No Dynamic Content Handling
 Date stamps, user avatar images, random IDs, and real-time data cause every snapshot to differ. Use clip regions, DOM transformation callbacks, or data attribute toggling to stabilize dynamic regions before capture.
 
-### Pitfall 5: Approving Diffs on Feature Branches
-Approving baseline changes on a feature branch pollutes the baseline with unmerged changes. Always approve diffs post-merge on main to ensure baseline integrity.
+### Pitfall 5: Confusing PR Approval with Baseline Update
+Approving a diff on a PR is correct — it gates the merge. The mistake is letting that approval update the *baseline image* on the feature branch. Baselines must only be refreshed by the post-merge `main` build, so the baseline always reflects what is actually in production.
 
 ### Pitfall 6: Using Visual Tests as the Only Testing Layer
 Visual testing verifies pixel output but does not validate behavior, accessibility, or performance. Run visual tests alongside functional assertions, accessibility audits, and performance budgets.
@@ -252,7 +262,7 @@ When UI changes are intentionally made, developers must update baselines via the
 | Approach | Strengths | Weaknesses | Best For |
 |----------|-----------|------------|----------|
 | Percy (cloud SaaS) | Native Playwright/Cypress SDK, cross-browser, PR integration, parallel CI | Paid beyond free tier, external service dependency | Teams wanting managed review workflow |
-| Chromatic (cloud SaaS) | Storybook-native, auto-discovers stories, Git integration | Storybook-only, no generic E2E visual testing | Storybook-heavy projects |
+| Chromatic (cloud SaaS) | Storybook-native, also supports Playwright/Cypress, auto-discovers stories, Git integration | Requires Storybook for full auto-discovery | Storybook-heavy projects |
 | Applitools (cloud SaaS) | AI-powered matching, Ultrafast Grid, layout matching modes | Expensive, complex setup | Enterprise cross-browser visual testing |
 | Playwright built-in | Free, no external dependency, fast | Manual review, no cloud dashboard, local baseline storage | Teams already using Playwright, no budget |
 | Cypress screenshot diff | Free, Cypress-native | Manual review, no cloud dashboard | Teams already using Cypress exclusively |
@@ -416,7 +426,9 @@ jobs:
         if: failure()
         with:
           name: visual-diffs
-          path: __screenshots__/
+          path: |
+            test-results/
+            playwright-report/
   chromatic:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -426,7 +438,7 @@ jobs:
           fetch-depth: 0
       - run: npm ci
       - name: Chromatic Storybook Visual Tests
-        uses: chromaui/action@v1
+        uses: chromaui/action@latest   # Chromatic's documented tag; pin a version for reproducible builds
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
           onlyChanged: true
@@ -484,134 +496,8 @@ baseline_workflow:
   - references/visual-test-setup.md -- Visual Test Setup
   - references/visual-testing-advanced.md -- Visual Testing Advanced Topics
   - references/visual-testing-fundamentals.md -- Visual Testing Fundamentals
-  - references/visual-testing-tools-comparison.md -- Visual Testing Tools Comparison
-  - references/visual-testing-ci-integration.md -- Visual Testing CI Integration
 
 ## Handoff
 `quality-e2e-testing` for combined E2E + visual test suite.
-`design-design-systems` for component baseline snapshots.
+`frontend-design-system` for component baseline snapshots.
 Carry forward: visual test config, baseline snapshots, review workflow.
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
-## Rules
-- Default-deny security posture — allow only explicitly required access.
-- All inputs validated, all outputs encoded, all errors handled.
-- Defend in depth — multiple layers of security controls.
-- Fail securely — errors default to safe behavior.
-- Log security-relevant events for audit and investigation.
-- Keep dependencies updated — automate vulnerability scanning.
-- Design for observability from day one, not as an afterthought.
-- Document all architectural decisions with rationale.
-- Review code for security, performance, and correctness before merging.

@@ -549,7 +549,7 @@ Compliance requirement?
 - Monitor and alert on storage cost anomalies by team/project
 - Test disaster recovery procedures annually
 - Allocate storage costs to teams for cost accountability
-- Run MinIO with at least 4 nodes and N/2 erasure coding parity for production
+- Run MinIO in distributed mode (at least 4 drives across nodes) and size erasure-code parity (at most N/2) for the drive/node failures you must tolerate
 - Benchmark storage performance before committing to architecture
 - Use Object Lock (WORM) for compliance-bound data
 - Plan data migration with pilot phase before bulk transfer
@@ -557,6 +557,8 @@ Compliance requirement?
 - Alert on storage growth anomalies and budget thresholds
 
 ## References
-  - references/distributed-storage-patterns.md — Distributed Storage Patterns
-  - references/storage-cost-optimization.md — Storage Cost Optimization
-  - references/storage-tiering.md — Storage Tiering Reference
+  - references/distributed-storage-fundamentals.md — Distributed Storage Fundamentals
+  - references/distributed-storage-advanced.md — Advanced Patterns (tiering, cost)
+  - references/s3-compatible.md — S3-Compatible Storage
+  - references/s3-compatible-configs.md — S3-Compatible Configuration Examples
+  - references/storage-deployment-guide.md — Storage Deployment Guide

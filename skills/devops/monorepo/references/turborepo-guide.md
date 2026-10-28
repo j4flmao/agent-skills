@@ -105,7 +105,6 @@ turbo run build --remote-cache-url=https://cache.example.com \
   --remote-cache-token=token
 
 # Self-hosted remote cache (docker-compose.yml)
-version: "3"
 services:
   turbo-cache:
     image: ghcr.io/ducktors/turborepo-remote-cache:latest

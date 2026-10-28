@@ -340,9 +340,9 @@ Graph vs document (MongoDB): document stores embed related data, limiting traver
 - LOAD CSV import: 50K-100K nodes/second on single instance.
 - Index lookup: < 1ms per lookup (BTREE).
 - Full-text search: 10-50ms across 1M indexed entities.
-- Neo4j heap: allocate 50% of RAM to heap, 50% to OS page cache.
-- Write throughput: Neo4j 5K-20K writes/sec per core server (SSD-dependent).
-- Query cache: Neo4j caches query plans; reuse parameterized queries for 10-100x plan cache hits.
+- Neo4j memory: size page cache to hold the store (or hot working set) and heap for query state; start from `neo4j-admin server memory-recommendation` and leave RAM for the OS.
+- Write throughput: single writer (cluster leader) per database; batch writes (`UNWIND` + `CALL { ... } IN TRANSACTIONS`) and benchmark on your hardware.
+- Query cache: Neo4j caches query plans; use parameterized queries so plans are reused instead of recompiled.
 - Page cache sizing: allocate enough page cache to hold the hot working set. For 100GB graph with 20GB working set, allocate 24GB page cache.
 - Neptune storage auto-scales but write I/O is limited by instance class. Use larger instances for write-heavy workloads.
 - JanusGraph: each query may hit both storage backend and index backend. Elasticsearch latency dominates query time for indexed lookups. Target <10ms ES response.

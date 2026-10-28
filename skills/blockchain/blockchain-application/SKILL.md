@@ -371,8 +371,6 @@ pub struct User {
   - references/smart-contract-patterns.md — Smart Contract Design Patterns
   - references/solidity-evm.md — Solidity & EVM Deep Dive
   - references/vyper-language.md — Vyper Language
-  - references/cross-chain-deployment.md — Cross-Chain Deployment Strategy
-  - references/gas-optimization-patterns.md — Gas Optimization Techniques
 
 ## Implementation Examples
 

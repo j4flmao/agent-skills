@@ -645,3 +645,13 @@ describe('Report Generation', () => {
 - `backend/bulk-import` — CSV/Excel parsing and validation patterns
 - `data/analytics` — Report data aggregation and query patterns
 - `management/task-queues` — Queue management and worker scaling
+
+## References
+- [excel csv export](references/excel-csv-export.md)
+- [pdf generation](references/pdf-generation.md)
+- [report distribution](references/report-distribution.md)
+- [report generation advanced](references/report-generation-advanced.md)
+- [report generation fundamentals](references/report-generation-fundamentals.md)
+- [report scheduling](references/report-scheduling.md)
+- [report templates](references/report-templates.md)
+- [report visualization](references/report-visualization.md)

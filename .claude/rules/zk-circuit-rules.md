@@ -5,23 +5,26 @@ glob: "*"
 
 # ZK Circuit Security Standards
 
-Cursor/AI MUST follow these rules when writing Zero-Knowledge circuits (Circom, Halo2, Cairo) or Smart Contracts that verify ZK proofs.
+Cursor/AI MUST follow these rules when writing Zero-Knowledge circuits (Circom, Halo2, Noir, Cairo) or Smart Contracts that verify ZK proofs.
 
 ## 1. Constraint Completeness
-- **Rule**: In ZK circuits, assigning a value to a variable does NOT constrain it. You MUST explicitly write mathematical constraints (`<==` or `===` in Circom) for every logic step.
-- **Danger**: If an AI assigns `out = in1 * in2` without constraining it, a malicious Prover can forge a proof where `out = 999999` regardless of the inputs.
+- **Rule**: Computing a witness value does NOT constrain it. In Circom, `<--` only assigns; `<==` assigns **and** constrains; `===` only constrains. Every `<--` MUST be followed by constraints that fully determine the value.
+- **Danger**: `out <-- in1 * in2;` with no constraint lets a malicious prover submit any `out` (e.g. `999999`) and still produce a valid proof. Write `out <== in1 * in2;`.
+- **Rule**: Constraints must be quadratic. Express non-quadratic logic (division, comparisons, bit decomposition) through audited circomlib templates (`IsZero`, `Num2Bits`, `LessThan`), and constrain their outputs.
 
 ## 2. Private Signal Protection (No Leakage)
-- **Rule**: Never expose private inputs (Witnesses) as public outputs unless mathematically hashed (e.g., Poseidon Hash). 
-- **Action**: Always double-check that the `main` component explicitly marks private variables (e.g., `component main {public [pub_key]} = MyCircuit();`).
+- **Rule**: In Circom 2, inputs are private unless listed in `component main {public [...]} = ...;`, and **all outputs are public**. Review the public list and every output for leaks.
+- **Rule**: Hashing a low-entropy private value (age, balance, vote) does not hide it, because it can be brute-forced. Publish commitments that include a random salt/blinding factor (e.g. `Poseidon(value, salt)`).
 
 ## 3. Prevent Under-Constrained Signals
-- **Rule**: When dealing with boolean checks, you MUST constrain the signal to be strictly 0 or 1.
+- **Rule**: Constrain booleans to {0, 1}:
   ```circom
-  // BAD: Signal can be anything
-  signal input b;
-  
-  // GOOD: Force boolean
   signal input b;
   b * (b - 1) === 0;
   ```
+- **Rule**: Arithmetic is modulo the field prime. Range-check values that represent integers (`Num2Bits(n)`) before comparing them or summing balances, otherwise overflow wraps around.
+- **Tooling**: Run static analyzers for under-constrained signals (e.g. `circomspect`) and test with adversarial witnesses, not only honest ones.
+
+## 4. On-Chain Verification
+- **Rule**: Bind every public input the contract relies on, check public inputs are below the scalar field modulus, and prevent replay with nullifiers.
+- **Rule**: Groth16 needs a per-circuit trusted setup. Use a multi-party ceremony with a public transcript, and never ship a single-party `zkey` to production.

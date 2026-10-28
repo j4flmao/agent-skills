@@ -1,7 +1,7 @@
 ---
 name: dotnet-patterns
 description: >
-  Use this skill when implementing .NET patterns — MediatR pipelines, CQRS, Result pattern, EF Core patterns, pipeline behaviors, and event sourcing. This skill enforces: MediatR for CQRS, FluentValidation for validation, Result type for error handling, EF Core conventions. Requires .NET SDK (dotnet new). Do NOT use for: Java, Node.js, Go, or non-.NET stacks.
+  Use this skill when the user says 'dotnet MediatR pattern', 'dotnet pipeline behavior', 'dotnet Result pattern', 'EF Core performance', 'EF Core outbox', 'dotnet FluentValidation', 'dotnet event sourcing'. Implements .NET application patterns: mediator pipeline behaviors, Result types, EF Core query optimization, outbox, simple event store and caching decorators. Do NOT use for: solution/project structure (dotnet-architecture), non-.NET stacks.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -180,7 +180,7 @@ public async Task<Result<OrderDto>> Handle(CreateOrderCommand request, Cancellat
 
 // Controller consumes result
 [HttpPost]
-public IActionResult CreateOrder(CreateOrderCommand command)
+public async Task<IActionResult> CreateOrder(CreateOrderCommand command)
 {
     var result = await _mediator.Send(command);
     return result.Match<IActionResult>(
@@ -216,6 +216,7 @@ public class OrderRepository : IOrderRepository
     {
         var query = _context.Orders
             .AsNoTracking()
+            .OrderByDescending(o => o.CreatedAt).ThenBy(o => o.Id) // stable order required for paging
             .Select(o => new OrderSummary
             {
                 Id = o.Id,
@@ -256,6 +257,12 @@ public interface IDomainEvent
 {
     Guid EventId { get; }
     DateTime OccurredOn { get; }
+}
+
+public abstract record DomainEvent : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
 }
 
 // Infrastructure/Persistence/OutboxMessage.cs
@@ -300,27 +307,30 @@ public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
 
 ```csharp
 // Domain/Events/OrderEvents.cs
-public record OrderCreatedEvent(Guid OrderId, string OrderNumber, DateTime OccurredOn) : IDomainEvent;
-public record OrderItemAddedEvent(Guid OrderId, string Product, decimal Price, int Quantity) : IDomainEvent;
-public record OrderConfirmedEvent(Guid OrderId, DateTime OccurredOn) : IDomainEvent;
+public record OrderCreatedEvent(Guid OrderId, string OrderNumber) : DomainEvent;
+public record OrderItemAddedEvent(Guid OrderId, string Product, decimal Price, int Quantity) : DomainEvent;
+public record OrderConfirmedEvent(Guid OrderId) : DomainEvent;
 
 // Infrastructure/Persistence/EventStore.cs
 public class EventStore : IEventStore
 {
     private readonly AppDbContext _context;
 
+    // Requires a UNIQUE index on (AggregateId, Version): a concurrent writer that read the
+    // same expectedVersion fails with DbUpdateException instead of silently interleaving.
     public async Task AppendEventsAsync(Guid aggregateId, IEnumerable<IDomainEvent> events, int expectedVersion)
     {
+        var version = expectedVersion;
         var eventData = events.Select(e => new EventDescriptor
         {
             AggregateId = aggregateId,
             EventType = e.GetType().Name,
-            EventData = JsonSerializer.Serialize(e),
-            Version = expectedVersion++,
-            Timestamp = DateTime.UtcNow,
-        });
+            EventData = JsonSerializer.Serialize(e, e.GetType()),
+            Version = ++version,
+            Timestamp = e.OccurredOn,
+        }).ToList();
 
-        await _context.EventDescriptors.AddRangeAsync(eventData);
+        _context.EventDescriptors.AddRange(eventData);
         await _context.SaveChangesAsync();
     }
 
@@ -387,6 +397,8 @@ public class CachedOrderRepository : IOrderRepository
 }
 ```
 
+Cache read models/DTOs rather than EF entities in practice: entities with private setters and constructors do not round-trip through `System.Text.Json` without extra configuration, and a deserialized entity is detached from the `DbContext`. On .NET 9+, `HybridCache` adds stampede protection over `IDistributedCache`.
+
 ## Anti-Patterns
 
 | Anti-Pattern | Why | Fix |
@@ -400,9 +412,8 @@ public class CachedOrderRepository : IOrderRepository
 
 ## Security Considerations
 - EF Core raw SQL: always use parameterization, never string interpolation
-- SQL injection via `FromSqlRaw`: validate all inputs, use `FromSqlInterpolated`
-- Encrypt sensitive columns with EF Core value converters
-- Use `[EncryptColumn]` attribute or custom `ValueConverter` for PII
+- SQL injection: use `FromSql($"... {param}")` (EF Core 7+, parameterizes interpolations) or `FromSqlRaw` with explicit `DbParameter`s; never concatenate input into `FromSqlRaw`
+- Encrypt sensitive columns with a custom `ValueConverter` backed by the Data Protection API or KMS keys, or use database-level encryption (SQL Server Always Encrypted)
 - Audit logging via EF Core `SaveChangesInterceptor` or outbox events
 
 ## Testing Strategies
@@ -430,7 +441,7 @@ Use `WebApplicationFactory<T>` with in-memory or TestContainers SQL Server. Seed
 - MediatR pipeline order: Logging → Validation → Performance → Exception → Transaction.
 - Result pattern at Application boundary — never throw for expected failure paths.
 - Domain events dispatched via MediatR `INotification`, never directly.
-- Outbox pattern for reliable messaging — never publish events within same transaction.
+- Outbox pattern for reliable messaging — write outbox rows in the same transaction as the state change; publish to the broker only after commit (background dispatcher).
 - EF Core: `AsNoTracking` for reads, `AsSplitQuery` for multiple includes, `ExecuteUpdate` for bulk.
 - Caching layer wraps repository — decorated with `IDistributedCache`.
 - All DB access goes through repository interface — no `DbContext` in handlers.
@@ -444,65 +455,3 @@ Use `WebApplicationFactory<T>` with in-memory or TestContainers SQL Server. Seed
   - references/ef-core-patterns.md — EF Core Patterns
 ## Handoff
 Hand off to `backend/dotnet/architecture/SKILL.md` for architecture structure or `backend/universal/api-response/SKILL.md` for API response formatting.
-## Implementation Patterns
-
-### Factory Pattern for Module Creation
-`
-function createModule<T>(config: ModuleConfig): T {
-  const dependencies = initializeDependencies(config);
-  const module = new Module(dependencies);
-  module.hooks.onInit();
-  return module as T;
-}
-`
-
-### Builder Pattern for Complex Configuration
-`
-class ConfigBuilder {
-  private config: AppConfig = new AppConfig();
-  withDatabase(url: string): ConfigBuilder { ... }
-  withCache(ttl: number): ConfigBuilder { ... }
-  withLogging(level: string): ConfigBuilder { ... }
-  build(): AppConfig { return this.config; }
-}
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Production build with optimizations enabled
-- [ ] Environment variables configured per environment
-- [ ] Health check endpoint responds correctly
-- [ ] Error tracking and monitoring integrated
-- [ ] Logging level configured (not debug in production)
-- [ ] Resource limits configured
-- [ ] Database migrations applied
-- [ ] Static assets built and served from CDN or cache
-- [ ] Feature flags toggled appropriately
-- [ ] Rollback plan documented and tested
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% | Critical | Rollback or fix |
-| p95 latency | > 500ms | Warning | Profile and optimize |
-| Uptime | < 99.9% | Critical | Investigate infrastructure |
-| Memory usage | > 80% | Warning | Check for leaks |
-| CPU usage | > 80% | Warning | Scale up or optimize |
-
-## Rules
-- Prefer composition over inheritance
-- Favor immutable data structures
-- Use dependency injection for testability
-- Keep functions pure when possible — no side effects
-- Fail fast with clear error messages
-- Don't repeat yourself (DRY) — extract shared logic
-- Keep it simple (KISS) — avoid unnecessary complexity
-- You aren't gonna need it (YAGNI) — build what's required
-- Separate concerns — single responsibility per module
-- Code to interfaces, not implementations
-- Write self-documenting code — clear names over comments
-- Prefer standard library over third-party dependencies
-- Handle errors explicitly — no silent failures
-- Validate inputs at boundaries
-- Log at appropriate levels (debug, info, warn, error)

@@ -1,4 +1,4 @@
-# Routing — 542 skills
+# Routing — 641 skills
 
 No match -> skills/core/master-orchestrator/SKILL.md. Detect stack then route.
 

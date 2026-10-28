@@ -223,11 +223,10 @@ spark.speculation: true
 spark.speculation.interval: 100ms     # Check frequency
 spark.speculation.multiplier: 2       # Slow task threshold relative to median
 spark.speculation.quantile: 0.9       # Speculate when 90% of tasks complete
-spark.speculation.enabled: true       # Spark 3.4+ unified control
 
-# Task blacklisting
-spark.blacklist.enabled: true
-spark.blacklist.timeout: 1h
+# Exclude failing executors/nodes (renamed from spark.blacklist.* in Spark 3.1)
+spark.excludeOnFailure.enabled: true
+spark.excludeOnFailure.timeout: 1h
 spark.task.maxFailures: 8
 ```
 
@@ -264,8 +263,9 @@ spark.memory.offHeap.size: 0
 # For write-heavy workloads (shuffle, sort)
 # spark.memory.storageFraction: 0.3
 
-# Tungsten off-heap
-spark.sql.tungsten.enabled: true  # Spark 2+, enabled by default
+# Off-heap memory for Tungsten (Tungsten itself is always on; there is no flag to toggle it)
+spark.memory.offHeap.enabled: true
+spark.memory.offHeap.size: 4g
 spark.unsafe.sorter.spill.buffer.size: 1MB
 ```
 
@@ -539,7 +539,7 @@ t_env.execute_sql("""
 
 - **AQE (Adaptive Query Execution)**: Enable Spark AQE for automatic partition coalescing, skew join, and join reordering.
 - **Data locality**: Read from local SSDs when possible; minimize S3 get request overhead via file coalescing.
-- **Serialization**: Use Kryo serializer for Spark (2-4x faster than Java); register classes for best performance.
+- **Serialization**: Use the Kryo serializer for RDD/shuffle-heavy Spark jobs (faster and more compact than Java serialization); register classes. DataFrame/Dataset jobs already use Tungsten binary encoding.
 - **Off-heap memory**: Allocate 15% of executor memory as off-heap for Spark Tungsten optimization.
 - **Broadcast join**: Explicitly broadcast dimension tables < 100 MB to avoid shuffle.
 

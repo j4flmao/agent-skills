@@ -176,8 +176,9 @@ Tumbling windows: fixed-size, non-overlapping — `window(TumblingProcessingTime
 Flink checkpoints save the job state for failure recovery. Checkpoints are triggered periodically (every 60s recommended). State is stored in a durable backend (RocksDB for large state, Heap for low-latency). Checkpoints enable exactly-once semantics by restoring to the last successful checkpoint on failure. Savepoints are manually triggered checkpoints used for job upgrades, scaling, and maintenance.
 
 ```yaml
-# Flink config for exactly-once with checkpointing
-state.backend: rocksdb
+# Flink config for exactly-once with checkpointing (Flink 1.17+ key names;
+# Flink 2.x also accepts execution.checkpointing.dir / execution.checkpointing.num-retained)
+state.backend.type: rocksdb
 state.checkpoints.dir: s3://flink-checkpoints/job-name
 state.checkpoints.num-retained: 5
 execution.checkpointing.interval: 60s
@@ -187,8 +188,8 @@ execution.checkpointing.timeout: 10min
 execution.checkpointing.mode: EXACTLY_ONCE
 
 # Unaligned checkpoints for high-throughput jobs
-execution.checkpointing.unaligned: true
-execution.checkpointing.unaligned.max-buffers: 100
+execution.checkpointing.unaligned.enabled: true
+execution.checkpointing.aligned-checkpoint-timeout: 30s   # start aligned, switch to unaligned under backpressure
 ```
 
 ### Partitioning Strategy
@@ -285,7 +286,7 @@ Debezium connects to database transaction logs (WAL for PostgreSQL, binlog for M
     "database.user": "debezium",
     "database.password": "${POSTGRES_PASSWORD}",
     "database.dbname": "orders_db",
-    "database.server.name": "postgres",
+    "topic.prefix": "postgres",
     "table.include.list": "public.orders,public.customers",
     "plugin.name": "pgoutput",
     "publication.name": "debezium_pub",
@@ -294,7 +295,8 @@ Debezium connects to database transaction logs (WAL for PostgreSQL, binlog for M
     "tombstones.on.delete": "false",
     "key.converter": "io.confluent.connect.avro.AvroConverter",
     "value.converter": "io.confluent.connect.avro.AvroConverter",
-    "schema.registry.url": "http://schema-registry:8081",
+    "key.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
     "transforms": "unwrap",
     "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState"
   }
@@ -349,8 +351,10 @@ Buffer events in state store with configured grace period. Use event time proces
 | Store | Description | Best For |
 |---|---|---|
 | HashMapStateBackend | In-memory, fast, limited heap | Small state (< 1 GB), low-latency |
-| RocksDBStateBackend | Disk-backed, large state | Large state (> 1 GB), moderate latency |
-| FileSystemStateBackend | Checkpoints to FS | Development, testing |
+| EmbeddedRocksDBStateBackend | Disk-backed (local SSD), incremental checkpoints | Large state (> heap), moderate latency |
+| ForSt (Flink 2.x) | Disaggregated state on remote storage | Very large state, fast rescaling (check maturity) |
+
+Checkpoint storage is configured separately (`state.checkpoints.dir` on S3/HDFS); the old `FsStateBackend`/`RocksDBStateBackend` classes are deprecated.
 
 ### State TTL Configuration
 ```yaml
@@ -381,7 +385,7 @@ Define throughput targets (msg/s, MB/s), latency SLAs (p50, p95, p99), and data 
 ## Security
 
 ### Encryption
-In-transit: TLS between all components (brokers, clients, ZooKeeper, Schema Registry). In-rest: disk encryption on broker storage. End-to-end: application-level encryption for sensitive fields using envelope encryption.
+In-transit: TLS between all components (brokers, KRaft controllers, clients, Schema Registry; ZooKeeper only on pre-4.0 clusters). In-rest: disk encryption on broker storage. End-to-end: application-level encryption for sensitive fields using envelope encryption.
 
 ### Authentication
 SSL client authentication: mutual TLS between clients and brokers. SASL/PLAIN: username/password (simple, needs TLS). SASL/SCRAM: salt-challenge authentication (recommended). SASL/GSSAPI (Kerberos): enterprise integration. SASL/OAUTHBEARER: OAuth2 token-based.
@@ -528,7 +532,7 @@ Setting partition count once and never reviewing it. As throughput grows, partit
 Pulsar is a multi-tenant, high-throughput messaging platform with native geo-replication. Unlike Kafka, Pulsar separates serving (Brokers) from storage (Bookies via Apache BookKeeper), enabling elastic scaling without data rebalancing. Key features: segment-centric storage for unlimited log retention, tiered storage (offload to S3/GCS), built-in Pulsar Functions for lightweight processing, and native multi-tenancy. Topics are virtual and scale transparently. Use Pulsar for geo-distributed deployments, unlimited retention, or multi-tenant streaming.
 
 ### Redpanda
-Redpanda is a Kafka-compatible streaming platform in C++ with a single binary (no ZooKeeper, no JVM). Achieves 10x lower latency and 6x higher throughput per node. Uses Raft-based consensus for HA, full Kafka API compatibility, and includes built-in Schema Registry, REST Proxy, and Connectors. Best for teams wanting Kafka compatibility with reduced ops overhead and lower TCO.
+Redpanda is a Kafka-compatible streaming platform in C++ with a single binary (no ZooKeeper, no JVM). Vendor benchmarks claim lower tail latency and higher per-node throughput than Kafka; verify with your own workload. Uses Raft-based consensus for HA, full Kafka API compatibility, and includes built-in Schema Registry, REST Proxy, and Connectors. Best for teams wanting Kafka compatibility with reduced ops overhead and lower TCO.
 
 ### Streaming Databases (Materialize, RisingWave)
 Both provide incremental materialized views on streaming data using PostgreSQL-compatible SQL. Materialize updates results incrementally as new data arrives without re-running queries, with persistent storage and exactly-once semantics. RisingWave is cloud-native with decoupled compute-storage and object store persistence. Both support `CREATE MATERIALIZED VIEW` on streams, window functions, stream-table joins, and JDBC/PostgreSQL wire protocol. Choose Materialize for Kafka-native SQL with strong consistency; RisingWave for large-scale persistence with PG compatibility.

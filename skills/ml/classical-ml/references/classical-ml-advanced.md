@@ -1,214 +1,199 @@
-# Classical Ml Advanced Topics
+# Classical ML Advanced: Gradient Boosting in Depth, Calibration, Thresholds, Uncertainty, Constraints and Scale
+
+Advanced techniques for production-quality tabular models: tuning and early stopping for gradient boosting libraries, native categorical handling, probability calibration, decision threshold optimization, prediction intervals and conformal prediction, monotonic constraints, stacking, large-data training, and safe persistence. Fundamentals, feature engineering, model selection and interpretability are in sibling references.
 
-## Introduction
-Advanced Classical Ml topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+## Gradient Boosting Libraries
+
+| Library | Distinctive features |
+|---------|----------------------|
+| scikit-learn `HistGradientBoosting*` | Histogram-based, native missing values and categorical features, monotonic and interaction constraints, no extra dependency |
+| XGBoost | Mature, GPU training (`device="cuda"`), native categorical support (`enable_categorical=True`), many objectives |
+| LightGBM | Fast on large data, leaf-wise growth, native categorical, GPU options |
+| CatBoost | Ordered target statistics for categorical features, strong defaults, robust to overfitting on small data |
+
+### Key hyperparameters (concepts are shared)
+
+| Parameter (generic) | Effect | Typical search range |
+|---------------------|--------|----------------------|
+| Learning rate | Lower = more trees, often better generalization | 0.01 to 0.2 |
+| Number of trees | With early stopping, set high and let validation decide | Up to thousands |
+| Tree size (max depth / max leaves) | Model capacity, interaction order | Depth 3 to 10; leaves 15 to 255 |
+| Min samples/weight per leaf | Regularizes small leaves | Data-size dependent |
+| Row / column subsampling | Variance reduction, speed | 0.5 to 1.0 |
+| L1/L2 regularization on leaf weights | Shrinks extreme leaves | Log-uniform search |
 
-## Advanced Architecture Patterns
+### Early stopping
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+```python
+import lightgbm as lgb
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+model = lgb.LGBMClassifier(
+    n_estimators=5000, learning_rate=0.03, num_leaves=63,
+    subsample=0.8, subsample_freq=1, colsample_bytree=0.8,
+    reg_lambda=1.0, random_state=42,
+)
+model.fit(
+    X_tr, y_tr,
+    eval_set=[(X_val, y_val)],
+    eval_metric="auc",
+    callbacks=[lgb.early_stopping(stopping_rounds=100), lgb.log_evaluation(200)],
+)
+print(model.best_iteration_)
+```
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+```python
+from xgboost import XGBClassifier
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+model = XGBClassifier(
+    n_estimators=5000, learning_rate=0.03, max_depth=6,
+    subsample=0.8, colsample_bytree=0.8, tree_method="hist",
+    early_stopping_rounds=100, eval_metric="aucpr", enable_categorical=True,
+)
+model.fit(X_tr, y_tr, eval_set=[(X_val, y_val)], verbose=False)
+```
 
-## Performance Optimization
+```python
+from sklearn.ensemble import HistGradientBoostingClassifier
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+model = HistGradientBoostingClassifier(
+    learning_rate=0.05, max_iter=2000, max_leaf_nodes=31,
+    early_stopping=True, validation_fraction=0.1, n_iter_no_change=50,
+    categorical_features="from_dtype",       # pandas 'category' columns treated natively
+    random_state=42,
+)
+```
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+The early-stopping validation set must not be the final test set. Inside cross-validation, carve the early-stopping split from each training fold.
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+## Categorical Features at Scale
 
-## Security Hardening
+| Approach | When |
+|----------|------|
+| One-hot | Low cardinality, linear models |
+| Native categorical (HistGB, LightGBM, XGBoost, CatBoost) | Tree models, moderate to high cardinality |
+| Target encoding with cross-fitting (`sklearn.preprocessing.TargetEncoder`) | High cardinality with linear or other models |
+| Hashing | Very high or unbounded cardinality |
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+`TargetEncoder.fit_transform` uses internal cross-fitting to prevent target leakage on training data; calling `fit` then `transform` on the same data does not, so use `fit_transform` for training.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+## Probability Calibration
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+Many models (boosting with heavy regularization, SVMs, naive Bayes, models trained with class weights or resampling) produce scores that are not calibrated probabilities.
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+```python
+from sklearn.calibration import CalibratedClassifierCV, CalibrationDisplay
 
-## Monitoring and Observability
+calibrated = CalibratedClassifierCV(estimator=pipeline, method="isotonic", cv=5)
+calibrated.fit(X_train, y_train)
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+CalibrationDisplay.from_estimator(calibrated, X_test, y_test, n_bins=10)
+```
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+- `method="sigmoid"` (Platt scaling) for small calibration sets; `isotonic` needs more data (roughly a thousand or more samples) but is more flexible.
+- Measure with Brier score and reliability diagrams; log loss also rewards calibration.
+- Resampling (SMOTE, undersampling) and `class_weight` distort probabilities; calibrate afterwards on data with the true class distribution.
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+## Decision Thresholds
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+The default 0.5 threshold is rarely optimal for the business decision.
 
-## Scalability and Reliability
+```python
+from sklearn.model_selection import TunedThresholdClassifierCV
+from sklearn.metrics import make_scorer, fbeta_score
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+tuned = TunedThresholdClassifierCV(
+    estimator=pipeline,
+    scoring=make_scorer(fbeta_score, beta=2),   # recall weighted higher than precision
+    cv=5,
+)
+tuned.fit(X_train, y_train)
+print(tuned.best_threshold_)
+```
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+For explicit costs, maximize expected value: `value = TP*benefit - FP*cost_fp - FN*cost_fn` over thresholds on validation predictions (scikit-learn 1.5+ supports custom scorers for this; `FixedThresholdClassifier` applies a chosen threshold). Revisit thresholds when base rates change.
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+## Uncertainty: Quantiles and Conformal Prediction
 
-## Integration and Interoperability
+Prediction intervals for regression:
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+```python
+from sklearn.ensemble import HistGradientBoostingRegressor
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+lower = HistGradientBoostingRegressor(loss="quantile", quantile=0.05).fit(X_tr, y_tr)
+upper = HistGradientBoostingRegressor(loss="quantile", quantile=0.95).fit(X_tr, y_tr)
+```
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+Quantile models are not guaranteed to achieve nominal coverage. **Conformal prediction** wraps any model to provide intervals or prediction sets with finite-sample coverage guarantees under exchangeability (split conformal, conformalized quantile regression). Libraries: MAPIE, crepes. Verify coverage on held-out data, and note that guarantees weaken under distribution shift (time series need adapted methods).
 
-## DevOps and Automation
+## Monotonic and Interaction Constraints
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+Domain knowledge often requires monotonic relationships (risk increases with debt ratio). Constraints improve trust, regulatory acceptability and robustness to extrapolation.
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+```python
+model = HistGradientBoostingClassifier(
+    monotonic_cst={"debt_ratio": 1, "income": -1},     # dict by feature name (pandas input)
+    interaction_cst=[["age", "tenure_months"], ["debt_ratio", "income"]],
+)
+```
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+XGBoost (`monotone_constraints`), LightGBM (`monotone_constraints`) and CatBoost support the same idea.
 
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
+## Stacking and Blending
 
-## Data Management
+```python
+from sklearn.ensemble import StackingClassifier
+from sklearn.linear_model import LogisticRegression
 
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
+stack = StackingClassifier(
+    estimators=[("hgb", hgb_pipeline), ("lr", linear_pipeline)],
+    final_estimator=LogisticRegression(),
+    cv=5,
+    stack_method="predict_proba",
+)
+```
 
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
+- Out-of-fold predictions feed the meta-model, preventing leakage.
+- Gains are usually small on well-tuned boosting models; weigh against complexity and latency.
+- Diversity between base models (linear + trees + kNN) matters more than count.
 
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
+## Large Data
 
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
+| Constraint | Technique |
+|------------|-----------|
+| Data larger than memory | Train on a representative sample; out-of-core learners with `partial_fit` (`SGDClassifier`, `MiniBatchKMeans`, `IncrementalPCA`); LightGBM/XGBoost external memory or distributed (Dask, Spark, Ray) |
+| Many rows | Histogram-based boosting; subsampling for tuning, full data for final fit |
+| Slow hyperparameter search | Successive halving (`HalvingRandomSearchCV`), Optuna with pruning |
+| Wide sparse data | Linear models with sparse matrices, hashing |
 
-## API Design and Management
+Use `n_jobs` for parallelism and keep data as float32 where precision permits to halve memory.
 
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
+## Metadata Routing
 
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
+scikit-learn's metadata routing passes sample weights, groups or other metadata through pipelines and CV correctly:
 
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
+```python
+import sklearn
+sklearn.set_config(enable_metadata_routing=True)
 
-## Quality Assurance
+clf = LogisticRegression().set_fit_request(sample_weight=True)
+pipe = Pipeline([("prep", preprocess), ("clf", clf)])
+cross_val_score(pipe, X, y, params={"sample_weight": w}, cv=5)
+```
 
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
+## Safe Persistence and Reproducibility
 
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
+- Pickle/joblib files execute code on load; load only trusted artifacts. `skops.io` restricts loadable types and supports inspection (`get_untrusted_types`) before loading.
+- Pin library versions (scikit-learn, LightGBM, XGBoost) between training and serving; minor version changes can alter predictions.
+- Store the pipeline with its training data version, hyperparameters, metrics and feature list.
+- For cross-language serving, export to ONNX (`skl2onnx`, `onnxmltools`) and validate prediction parity.
 
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
+## Checklist
 
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Gradient boosting tuned with early stopping on a validation split separate from test
+- [ ] Categorical handling chosen per model; target encoding cross-fitted
+- [ ] Probabilities calibrated when used as probabilities; Brier score reported
+- [ ] Decision threshold optimized for business cost
+- [ ] Prediction intervals with verified coverage where uncertainty matters
+- [ ] Monotonic constraints applied where domain requires
+- [ ] Scale strategy chosen deliberately for large data
+- [ ] Safe persistence format and pinned versions

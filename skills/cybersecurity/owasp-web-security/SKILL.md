@@ -7,6 +7,28 @@ description: Theoretical mechanics of critical web vulnerabilities, static analy
 
 As an application security analyst, you must understand the theoretical underpinnings of web vulnerabilities to accurately identify them through static code analysis (SAST) and remediate them architecturally.
 
+## Purpose
+Explain the root-cause mechanics of common OWASP web vulnerability classes (injection, SSRF, XSS) and the secure-coding controls that eliminate them. Defensive and educational — focused on identification and remediation, not on producing working exploits.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "OWASP Top 10", "SQL injection mechanics", "XSS types", "SSRF defense", "secure coding for web".
+
+### Input Context
+- Stack/framework and where untrusted input enters.
+- The vulnerability class under review.
+
+### Output Artifact
+Root-cause explanation plus the concrete framework-level mitigation.
+
+### Response Format
+```
+Class: {vuln}
+Root cause: {mechanism}
+Fix: {parameterization / encoding / allowlist / header}
+```
+
 ## 1. Theoretical Mechanics of Injection Flaws
 
 Injection vulnerabilities (SQLi, NoSQLi, OS Command Injection) occur when untrusted data is sent to an interpreter as part of a command or query. The core theoretical failure is the **lack of separation between control plane (syntax) and data plane**.

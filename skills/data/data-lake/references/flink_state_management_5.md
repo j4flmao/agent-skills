@@ -1,44 +1,126 @@
-# Flink State Management 5 Internal Wiki
+# Flink State Primitives: Keyed, Operator and Broadcast State Patterns
 
-### Architectural Deep Dive: Flink State Management 5
-In modern distributed systems, Flink State Management 5 represents a critical bottleneck and opportunity for optimization. State management relies on asynchronous RocksDB snapshots, reducing checkpoint blocking time. Memory is bounded by strict heap limits. By isolating the compute layer from the storage plane, we achieve elastic scalability.
+The state types Flink offers, when to use each, and patterns commonly needed before writing to a lake table: dedup, latest-value per key, enrichment with broadcast rules, and buffering. Part 5 of the Flink series (index in `flink_state_management_1.md`).
 
-To further guarantee ACID compliance and low-latency reads, the system implements multi-version concurrency control (MVCC). For Flink State Management 5, this means readers are never blocked by writers. The compaction daemon runs asynchronously to merge small files and reclaim space.
+## State Types
 
-### System Architecture
-```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
-graph TD
-    FlinkStateManagement5_B["FlinkStateManagement5_B Layer"] -->|Stream| FlinkStateManagement5_A["FlinkStateManagement5_A Processor"]
-    FlinkStateManagement5_A -->|Checkpoint| S3_Bucket
-    FlinkStateManagement5_A -->|Optimize| FlinkStateManagement5_C["FlinkStateManagement5_C Engine"]
-    FlinkStateManagement5_C -->|Write| KMS_Auth
-    KMS_Auth -->|Persist| ORC_Writer
-    RocksDB_State -.->|Authenticate| FlinkStateManagement5_C
+| Type | Scope | Primitives | Typical use |
+|---|---|---|---|
+| Keyed state | Per key, after `keyBy` | `ValueState`, `ListState`, `MapState`, `ReducingState`, `AggregatingState` | Dedup, per-entity latest value, session tracking |
+| Operator (non-keyed) state | Per parallel operator instance | `ListState` (even-split or union redistribution) | Source offsets, sink buffers |
+| Broadcast state | Same copy on every instance | `MapState` via `BroadcastProcessFunction` | Rules, config, small dimension tables |
+
+## Choosing Keyed Primitives
+
+| Need | Primitive | Note |
+|---|---|---|
+| One value per key | `ValueState<T>` | Cheapest |
+| Many sub-keys per key | `MapState<K,V>` | RocksDB reads single entries; `ValueState<Map>` deserializes the whole map |
+| Append items | `ListState<T>` | RocksDB `add` is a merge (cheap); `get` reads all |
+| Running aggregate | `AggregatingState` | Avoids storing raw events |
+
+## Latest Value per Key (CDC Compaction Before the Lake)
+
+Emit only when the incoming record is newer, so out-of-order updates are dropped:
+
+```java
+public class LatestByVersion extends KeyedProcessFunction<Long, Account, Account> {
+    private transient ValueState<Long> lastVersion;
+
+    @Override
+    public void open(OpenContext ctx) {
+        lastVersion = getRuntimeContext().getState(
+            new ValueStateDescriptor<>("last-version", Long.class));
+    }
+
+    @Override
+    public void processElement(Account a, Context ctx, Collector<Account> out) throws Exception {
+        Long prev = lastVersion.value();
+        if (prev == null || a.sourceLsn() > prev) {
+            lastVersion.update(a.sourceLsn());
+            out.collect(a);
+        }
+    }
+}
 ```
 
-### Mathematical Thresholds
-To determine the optimal configuration for Flink State Management 5, we apply the following mathematical formula to calculate the system threshold:
+## Buffer and Flush with Timers
 
-$$ Mem_{JVM} = \max\left( \frac{\text{Heap}_{max} \times 0.75}{1 + \alpha}, \sum ( \mu_{state} \times P_{degree} ) \right) $$
+Collect events per key and emit one combined record after inactivity (sessionization before writing a sessions table):
 
-### Code Implementation
-Below is a highly optimized production-grade implementation addressing Flink State Management 5:
+```java
+public class SessionBuffer extends KeyedProcessFunction<String, Event, Session> {
+    private static final long GAP_MS = 30 * 60 * 1000L;
+    private transient ListState<Event> events;
+    private transient ValueState<Long> timer;
 
-```scala
-// Spark Scala implementation for RocksDB state backend
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.streaming.OutputMode
+    @Override
+    public void open(OpenContext ctx) {
+        events = getRuntimeContext().getListState(new ListStateDescriptor<>("events", Event.class));
+        timer = getRuntimeContext().getState(new ValueStateDescriptor<>("timer", Long.class));
+    }
 
-val spark = SparkSession.builder()
-  .appName("StatefulApp")
-  .config("spark.sql.streaming.stateStore.providerClass", "org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider")
-  .getOrCreate()
+    @Override
+    public void processElement(Event e, Context ctx, Collector<Session> out) throws Exception {
+        events.add(e);
+        Long current = timer.value();
+        if (current != null) ctx.timerService().deleteEventTimeTimer(current);
+        long next = e.timestamp() + GAP_MS;
+        ctx.timerService().registerEventTimeTimer(next);
+        timer.update(next);
+    }
 
-val stream = spark.readStream.format("kafka").load()
-stream.writeStream
-  .format("console")
-  .outputMode(OutputMode.Update())
-  .start()
-  .awaitTermination()
+    @Override
+    public void onTimer(long ts, OnTimerContext ctx, Collector<Session> out) throws Exception {
+        out.collect(Session.from(ctx.getCurrentKey(), events.get()));
+        events.clear();
+        timer.clear();
+    }
+}
 ```
+
+For standard sessions, the built-in `EventTimeSessionWindows.withGap(...)` is simpler; custom functions are for logic windows cannot express.
+
+## Broadcast State for Rules or Small Dimensions
+
+```java
+MapStateDescriptor<String, Rule> rulesDesc =
+    new MapStateDescriptor<>("rules", String.class, Rule.class);
+BroadcastStream<Rule> rules = ruleStream.broadcast(rulesDesc);
+
+events.connect(rules).process(new BroadcastProcessFunction<Event, Rule, Tagged>() {
+    @Override
+    public void processElement(Event e, ReadOnlyContext ctx, Collector<Tagged> out) throws Exception {
+        Rule r = ctx.getBroadcastState(rulesDesc).get(e.type());
+        out.collect(Tagged.of(e, r));
+    }
+    @Override
+    public void processBroadcastElement(Rule r, Context ctx, Collector<Tagged> out) throws Exception {
+        ctx.getBroadcastState(rulesDesc).put(r.type(), r);
+    }
+});
+```
+
+Broadcast state is replicated in every task and checkpointed by each; keep it small (MBs, not GBs). Large dimensions belong in keyed state (keyed co-process join) or a lookup join.
+
+## Operator State
+
+Used mainly by connectors. Custom sinks that buffer must implement `CheckpointedFunction` (legacy) or the Sink V2 writer state; prefer existing lake connectors over custom sinks, since exactly-once commit logic is subtle.
+
+## Serialization
+
+- Use POJOs or Avro types for state; enable `pipeline.generic-types: false` to forbid Kryo fallback.
+- Keep state values compact: store IDs and versions, not whole payloads, when only dedup is needed.
+
+## Pitfalls
+- `ValueState<List<...>>` or `ValueState<Map<...>>` on RocksDB: full (de)serialization on every access.
+- Forgetting to clear timers and state in `onTimer`: unbounded growth.
+- Broadcast state used for large reference tables: memory blow-up on every task.
+- Non-deterministic keys (e.g. random or time-based) defeating key-group redistribution.
+
+## Checklist
+- [ ] Each stateful function uses the narrowest primitive (`MapState` over map-in-value)
+- [ ] Timers and state cleared after emit
+- [ ] Broadcast state bounded in size
+- [ ] State types serializable without Kryo
+- [ ] Out-of-order protection uses a monotonic source version

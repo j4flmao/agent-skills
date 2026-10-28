@@ -1,5 +1,5 @@
 ---
-name: serverless
+name: devops-serverless
 description: >
   Use this skill when the user says 'serverless', 'lambda', 'aws
   lambda', 'functions', 'function as a service', 'faas', 'azure
@@ -437,13 +437,7 @@ Lambda response streaming:
 ## References
   - references/serverless-advanced.md — Serverless Advanced Topics
   - references/serverless-fundamentals.md — Serverless Fundamentals
-  - references/aws-lambda.md — AWS Lambda Deep Dive
-  - references/azure-functions.md — Azure Functions Configuration
-  - references/gcp-cloud-functions.md — GCP Cloud Functions
   - references/serverless-framework.md — Serverless Framework Deployment
-  - references/step-functions.md — AWS Step Functions Workflows
-  - references/lambda-monitoring.md — Lambda Monitoring and Observability
-  - references/lambda-security.md — Lambda Security Best Practices
 ## Handoff
 - `devops-aws` for API Gateway, DynamoDB, SQS, EventBridge integration.
 - `devops-observability` for AWS X-Ray and CloudWatch configuration.

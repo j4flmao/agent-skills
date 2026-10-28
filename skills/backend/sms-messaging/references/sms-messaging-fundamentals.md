@@ -1,213 +1,111 @@
-# Sms Messaging Fundamentals
-
-## Overview
-Sms Messaging is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
-
-## Core Concepts
-
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Sms Messaging helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
-
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Sms Messaging solutions. These principles help maintain code quality and reduce technical debt.
-
-### Concept 3: Data Management
-Proper data management is essential for Sms Messaging. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
-
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Sms Messaging follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
-
-## Implementation Guide
-
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
-
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Sms Messaging concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+# SMS Messaging Fundamentals: Encoding, Segments, Numbers, Sender Types and Delivery
+
+The essential mechanics behind application-to-person (A2P) SMS: how messages are encoded and split into billable segments, phone number formatting, sender types and registration requirements, message lifecycle and delivery receipts, and consent rules. Provider-specific integration is in `sms-providers.md`; OTP flows in `2fa-sms.md`; regulation details in `compliance-analytics.md`.
+
+## Encoding and Segments
+
+SMS payloads are 140 bytes. The characters that fit depend on the encoding:
+
+| Encoding | Used when | Single message | Per segment when concatenated |
+|----------|-----------|----------------|-------------------------------|
+| GSM-7 (GSM 03.38) | All characters in the GSM basic set (plus extension table) | 160 characters | 153 characters |
+| UCS-2 (UTF-16 subset) | Any character outside GSM-7 (emoji, most non-Latin scripts, many accented letters) | 70 characters | 67 characters |
+
+- Concatenated messages carry a User Data Header (UDH) in each segment, which is why per-segment capacity drops.
+- GSM-7 extension characters (`^ { } [ ] ~ \ | €` and form feed) take two septets each.
+- **One non-GSM character switches the whole message to UCS-2.** Curly quotes (`'` `"`), an en dash, or an emoji in a template can more than double segment count and cost.
+- Emoji outside the Basic Multilingual Plane use two UTF-16 code units, counting as two characters in UCS-2.
+- Providers bill per segment; carriers may also cap segments (often around 10) per message.
+
+```ts
+const GSM7_BASIC = new Set(
+  "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ ÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"
+);
+const GSM7_EXT = new Set("^{}\\[~]|€\f");
+
+export function segmentInfo(text: string): { encoding: "GSM-7" | "UCS-2"; units: number; segments: number } {
+  let units = 0;
+  let gsm = true;
+  for (const ch of text) {
+    if (GSM7_BASIC.has(ch)) units += 1;
+    else if (GSM7_EXT.has(ch)) units += 2;
+    else { gsm = false; break; }
+  }
+  if (gsm) return { encoding: "GSM-7", units, segments: units <= 160 ? 1 : Math.ceil(units / 153) };
+  const ucs2Units = text.length;                     // UTF-16 code units
+  return { encoding: "UCS-2", units: ucs2Units, segments: ucs2Units <= 70 ? 1 : Math.ceil(ucs2Units / 67) };
+}
+```
+
+Run templates through a check like this in CI or in the template editor, and normalize smart punctuation to ASCII where the language allows. (Segment boundaries in practice also avoid splitting a two-septet character or a surrogate pair, so real counts can be marginally higher.)
+
+## Phone Numbers
+
+- Store and send numbers in **E.164**: `+` then country code and subscriber number, up to 15 digits, no spaces (`+14155550123`, `+447700900123`).
+- Parse and validate input with libphonenumber (`libphonenumber-js`, `phonenumbers` for Python, `libphonenumber` for Java/Go ports) using the user's region as default.
+- Number type matters: many providers can look up line type (mobile, landline, VoIP) and carrier; landlines cannot receive SMS, and some VoIP numbers are associated with higher fraud risk.
+- Numbers get reassigned: a number verified years ago may now belong to someone else. Re-verify periodically for sensitive messages; in the US, the FCC Reassigned Numbers Database can be checked before calling or texting.
+
+## Sender Types
+
+| Sender | Format | Throughput | Two-way | Notes |
+|--------|--------|------------|---------|-------|
+| Long code (10DLC in US) | Local phone number | Moderate; set by registration tier and carrier | Yes | US requires brand and campaign registration with The Campaign Registry |
+| Toll-free number | `+1 8XX` (US/Canada) | Moderate to high after verification | Yes | Toll-free verification required before sending A2P traffic in the US/Canada |
+| Short code | 5 to 6 digits | Highest | Yes | Leased per country; application and carrier approval take weeks |
+| Alphanumeric sender ID | Up to 11 characters (`ACME`) | Varies | No (one-way) | Not supported in the US and Canada; many countries require pre-registration (for example India's DLT system) |
+
+Unregistered A2P traffic in the US is filtered or blocked by carriers. Registration requirements differ per country; check your provider's country guidelines before launching.
+
+## Message Lifecycle and Delivery Receipts
+
+```text
+API accepted -> queued (provider) -> sent to carrier/aggregator -> delivered to handset
+                                  \-> undelivered / failed (with error code)
+```
+
+| Status (typical) | Meaning |
+|------------------|---------|
+| `queued` / `accepted` | Provider accepted the request |
+| `sending` / `sent` | Handed to the downstream carrier |
+| `delivered` | Carrier reported delivery to the handset (DLR) |
+| `undelivered` | Carrier could not deliver (unreachable, blocked, filtered) |
+| `failed` | Provider could not send (invalid number, account issue) |
+
+- Delivery receipts come asynchronously via webhook (status callback) and are carrier-dependent: some networks do not return final receipts, so `sent` may be the last status you see.
+- Store the provider message ID with your own message record, and update status from callbacks idempotently (callbacks can arrive more than once or out of order).
+- Error codes distinguish permanent failures (invalid or landline number, opted out) from transient ones; do not resend on permanent errors.
+
+## Inbound Messages and Keywords
+
+- Two-way numbers deliver replies to an inbound webhook (sender, recipient number, body).
+- Standard opt-out keywords in the US (CTIA guidance) include STOP, STOPALL, UNSUBSCRIBE, CANCEL, END, QUIT; HELP must return program information. Some providers handle these automatically at the number level, but your system must also record the opt-out and stop sending.
+- Opt-back-in keywords (START, UNSTOP) re-enable messaging.
+
+## Consent and Content Basics
+
+| Requirement | Practice |
+|-------------|----------|
+| Consent | Collect explicit opt-in for marketing (and keep records: timestamp, source, wording shown); transactional messages still require a relationship and number ownership |
+| Identification | Include the brand name in messages |
+| Opt-out | Honor immediately; include opt-out instructions in marketing messages |
+| Quiet hours | Avoid marketing at night in the recipient's time zone; some jurisdictions set legal limits |
+| Content | No prohibited content (carrier rules restrict categories such as cannabis, certain financial offers); avoid public URL shorteners, which carriers often filter; use branded domains |
+
+US marketing texts fall under the TCPA; other regions apply GDPR/ePrivacy, CASL (Canada) and local telecom rules. Consult legal counsel for your programs.
+
+## Message Design
+
+- Keep within one GSM-7 segment where possible (160 characters).
+- Put the essential information first; previews truncate.
+- Use a consistent sender per conversation; changing numbers confuses users and looks like spam.
+- Links: branded domain, HTTPS, short paths. Never include secrets or full personal data in SMS; messages are not end-to-end encrypted and appear on lock screens.
+
+## Checklist
+
+- [ ] Numbers stored and validated in E.164 with libphonenumber
+- [ ] Templates checked for encoding and segment count
+- [ ] Sender type chosen per country and registered (10DLC, toll-free verification, short code, sender ID)
+- [ ] Provider message IDs stored; status callbacks processed idempotently
+- [ ] Opt-in records kept; STOP/HELP handled and enforced in your own data
+- [ ] No sensitive data in message bodies

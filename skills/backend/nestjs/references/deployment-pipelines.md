@@ -1,298 +1,184 @@
-# Advanced deployment-pipelines for nestjs
+# NestJS Deployment Pipelines: Build, Container, CI/CD, Runtime
 
-## 1. Executive Summary
-This document provides an exhaustive, production-grade reference for implementing deployment-pipelines in the context of nestjs. It covers architectural decisions, common pitfalls, performance tuning, and security considerations.
+Shipping a NestJS service: production build, a small non-root container image, a CI pipeline, and runtime concerns (health checks, graceful shutdown, migrations).
 
-## 2. Deep Dive Principle 2
-When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. 
+## Production Build
 
-### 2.1 Architectural Considerations
-The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+```bash
+npm ci
+npm run build          # nest build -> dist/
+npm prune --omit=dev   # drop devDependencies before packaging
+node dist/main.js
+```
+
+`nest build` uses `tsc` by default; `"builder": "swc"` in `nest-cli.json` speeds builds. Webpack bundling (`--webpack`) is optional and mainly useful for monorepo apps.
+
+## Dockerfile (multi-stage)
+
+```dockerfile
+# syntax=docker/dockerfile:1
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+FROM deps AS build
+COPY . .
+RUN npm run build && npm prune --omit=dev
+
+FROM node:22-alpine AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/package.json ./
+USER node
+EXPOSE 3000
+CMD ["node", "dist/main.js"]
+```
+
+Notes:
+- Run `node` directly, not `npm start`, so SIGTERM reaches the process.
+- Use an LTS Node version (even-numbered); pin the minor/digest in production.
+- Add a `.dockerignore` with `node_modules`, `dist`, `.git`, `.env*`.
+- Distroless (`gcr.io/distroless/nodejs22-debian12`) is an option for a smaller attack surface.
+
+## Health Checks with Terminus
 
 ```typescript
-// Advanced Implementation Example 2
-export class deployment_pipelinesManager_2 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+// health/health.controller.ts
+import { Controller, Get } from '@nestjs/common';
+import { HealthCheck, HealthCheckService, TypeOrmHealthIndicator, MemoryHealthIndicator } from '@nestjs/terminus';
 
-  private initialize(): void {
-    console.log('Initializing nestjs deployment-pipelines subsystem...');
-    // Complex setup logic here
-  }
+@Controller('health')
+export class HealthController {
+  constructor(private health: HealthCheckService, private db: TypeOrmHealthIndicator, private mem: MemoryHealthIndicator) {}
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for deployment-pipelines
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
+  @Get('live')
+  @HealthCheck()
+  live() { return this.health.check([]); }
+
+  @Get('ready')
+  @HealthCheck()
+  ready() {
+    return this.health.check([
+      () => this.db.pingCheck('database', { timeout: 1500 }),
+      () => this.mem.checkHeap('heap', 512 * 1024 * 1024),
+    ]);
   }
 }
 ```
 
-### 2.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. 
+Liveness must not check dependencies (a DB outage would restart every pod); readiness should.
 
-## 3. Deep Dive Principle 3
-When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. 
-
-### 3.1 Architectural Considerations
-The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 3
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class deployment_pipelines_Processor_3:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 3.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. 
-
-## 4. Deep Dive Principle 4
-When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. 
-
-### 4.1 Architectural Considerations
-The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## Graceful Shutdown
 
 ```typescript
-// Advanced Implementation Example 4
-export class deployment_pipelinesManager_4 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs deployment-pipelines subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for deployment-pipelines
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
+// main.ts
+const app = await NestFactory.create(AppModule, { bufferLogs: true });
+app.enableShutdownHooks();  // enables OnModuleDestroy / OnApplicationShutdown on SIGTERM
+await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 ```
 
-### 4.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. 
+Implement `onApplicationShutdown()` to close queues and consumers. In Kubernetes, set `terminationGracePeriodSeconds` longer than the longest in-flight request, and optionally a short `preStop` sleep so the endpoint is removed from load balancers before the process stops.
 
-## 5. Deep Dive Principle 5
-When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. 
+## GitHub Actions Pipeline
 
-### 5.1 Architectural Considerations
-The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+```yaml
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
 
-```python
-# Advanced Python Implementation 5
-import asyncio
-import logging
+permissions:
+  contents: read
+  packages: write
 
-logger = logging.getLogger(__name__)
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_PASSWORD: test, POSTGRES_DB: app_test }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test -- --ci
+      - run: npm run test:e2e
+        env: { DATABASE_URL: postgres://postgres:test@localhost:5432/app_test }
 
-class deployment_pipelines_Processor_5:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
+  image:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
+      - uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 ```
 
-### 5.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. 
+Tag images with the commit SHA (immutable); promote the same image across environments instead of rebuilding.
 
-## 6. Deep Dive Principle 6
-When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. 
+## Database Migrations
 
-### 6.1 Architectural Considerations
-The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+Run migrations as a separate step, not on app boot with multiple replicas racing:
+- Kubernetes `Job` or Helm pre-upgrade hook running `npx typeorm migration:run -d dist/data-source.js` or `npx prisma migrate deploy`.
+- Keep migrations backward compatible (expand -> deploy -> contract) so old and new pods can coexist during a rolling update.
+- Never use `synchronize: true` outside local development.
 
-```typescript
-// Advanced Implementation Example 6
-export class deployment_pipelinesManager_6 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+## Kubernetes Deployment Essentials
 
-  private initialize(): void {
-    console.log('Initializing nestjs deployment-pipelines subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for deployment-pipelines
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
+```yaml
+containers:
+  - name: api
+    image: ghcr.io/acme/api:3f2c1ab
+    ports: [{ containerPort: 3000 }]
+    envFrom: [{ secretRef: { name: api-secrets } }]
+    resources:
+      requests: { cpu: 250m, memory: 256Mi }
+      limits: { memory: 512Mi }
+    readinessProbe: { httpGet: { path: /health/ready, port: 3000 }, periodSeconds: 5 }
+    livenessProbe: { httpGet: { path: /health/live, port: 3000 }, periodSeconds: 10, failureThreshold: 3 }
+    securityContext: { runAsNonRoot: true, readOnlyRootFilesystem: true, allowPrivilegeEscalation: false }
 ```
 
-### 6.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. 
+Set `NODE_OPTIONS=--max-old-space-size` to roughly 75% of the memory limit so V8 collects before the container is OOM-killed.
 
-## 7. Deep Dive Principle 7
-When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. 
+## Deployment Strategy Options
 
-### 7.1 Architectural Considerations
-The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+| Strategy | When |
+|----------|------|
+| Rolling update | Default; requires backward-compatible schema and API |
+| Blue/green | Instant rollback needed; double capacity briefly |
+| Canary (Argo Rollouts, Flagger) | Risky changes; metric-gated promotion |
 
-```python
-# Advanced Python Implementation 7
-import asyncio
-import logging
+## Pitfalls
 
-logger = logging.getLogger(__name__)
+- `npm start` as PID 1: signals not forwarded, abrupt kills.
+- Migrations in `main.ts` with several replicas.
+- `.env` baked into the image.
+- Liveness probe hitting the database.
+- Rebuilding per environment so prod runs an untested artifact.
 
-class deployment_pipelines_Processor_7:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
+## Checklist
 
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 7.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. 
-
-## 8. Deep Dive Principle 8
-When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. 
-
-### 8.1 Architectural Considerations
-The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 8
-export class deployment_pipelinesManager_8 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs deployment-pipelines subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for deployment-pipelines
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 8.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. 
-
-## 9. Deep Dive Principle 9
-When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. 
-
-### 9.1 Architectural Considerations
-The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 9
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class deployment_pipelines_Processor_9:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 9.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. 
-
-## 10. Deep Dive Principle 10
-When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. When dealing with nestjs, addressing deployment-pipelines requires a multi-layered approach. 
-
-### 10.1 Architectural Considerations
-The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that deployment-pipelines must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 10
-export class deployment_pipelinesManager_10 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs deployment-pipelines subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for deployment-pipelines
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 10.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. A frequent mistake when implementing deployment-pipelines in nestjs is ignoring edge cases. 
-
-## 11. Conclusion
-This concludes the deep dive into deployment-pipelines for nestjs. Ensure you review the other 7 references in this category for a holistic understanding.
-
+- [ ] Multi-stage image, non-root, no dev dependencies
+- [ ] `enableShutdownHooks()` and tuned grace period
+- [ ] Separate liveness/readiness endpoints
+- [ ] Migrations run as a job, backward compatible
+- [ ] Image tagged by SHA and promoted unchanged
+- [ ] Secrets injected at runtime from a secret store

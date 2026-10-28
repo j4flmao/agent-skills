@@ -1,214 +1,177 @@
 # Progressive Delivery Advanced Topics
 
-## Introduction
-Advanced Progressive Delivery topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Techniques for progressive delivery in demanding environments: statistically sound automated analysis, header/cohort-based routing, Gateway API traffic splitting, schema and data changes during rollouts, non-HTTP workloads, coupling with feature flags (OpenFeature), and organizational guardrails.
+
+## Comparative Analysis
+
+Absolute thresholds ("error rate < 1%") fail when baseline behaviour varies with time of day. Compare canary to a baseline that receives equivalent traffic.
+
+| Approach | How | Notes |
+|----------|-----|-------|
+| Canary vs stable | Compare metrics of new pods to existing pods | Stable pods have warm caches and longer uptime: bias |
+| Canary vs baseline | Deploy a fresh copy of the *old* version alongside the canary with equal traffic | Removes warm-up bias; used by Kayenta-style analysis |
+| Ratio query | `canary_error_rate / stable_error_rate <= 1.2` | Simple, robust when traffic is sufficient |
+| Statistical tests | Mann-Whitney U per metric with significance scores (Kayenta) | Needs enough samples per interval |
+
+```yaml
+# Argo Rollouts: ratio-based analysis with the canary/stable pod hash
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: error-ratio-vs-stable
+spec:
+  args:
+    - name: canary-hash
+    - name: stable-hash
+  metrics:
+    - name: error-ratio
+      interval: 2m
+      count: 5
+      failureLimit: 1
+      successCondition: result[0] <= 1.2
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring:9090
+          query: |
+            (
+              sum(rate(http_requests_total{rollouts_pod_template_hash="{{args.canary-hash}}",code=~"5.."}[4m]))
+              / sum(rate(http_requests_total{rollouts_pod_template_hash="{{args.canary-hash}}"}[4m]))
+            )
+            /
+            clamp_min(
+              sum(rate(http_requests_total{rollouts_pod_template_hash="{{args.stable-hash}}",code=~"5.."}[4m]))
+              / sum(rate(http_requests_total{rollouts_pod_template_hash="{{args.stable-hash}}"}[4m])),
+              0.001
+            )
+```
+
+Pass hashes from the Rollout step:
+
+```yaml
+- analysis:
+    templates: [{ templateName: error-ratio-vs-stable }]
+    args:
+      - name: canary-hash
+        valueFrom: { podTemplateHashValue: Latest }
+      - name: stable-hash
+        valueFrom: { podTemplateHashValue: Stable }
+```
+
+Requires the pod-template-hash label to reach your metrics (relabel in Prometheus scrape config). `clamp_min` avoids division by zero when stable has no errors.
+
+### Sample size
+At 1% canary weight and 100 requests/s, the canary sees about 1 request/s: one error swings the rate wildly. Rules of thumb: hold each step long enough to collect hundreds of requests to the canary, or start at a higher weight for low-traffic services, or use synthetic traffic.
+
+## Cohort and Header Routing
+
+Route specific users first (employees, beta testers, one region) before percentage traffic:
+
+```yaml
+strategy:
+  canary:
+    trafficRouting:
+      managedRoutes:
+        - name: internal-users
+      istio:
+        virtualService: { name: checkout-vs, routes: [primary] }
+    steps:
+      - setHeaderRoute:
+          name: internal-users
+          match:
+            - headerName: x-user-cohort
+              headerValue: { exact: internal }
+      - pause: { duration: 30m }
+      - setWeight: 5
+      - pause: { duration: 15m }
+```
+
+The header must be set by a trusted edge component (gateway after authentication), never accepted from clients directly.
+
+## Gateway API Traffic Splitting
+
+Kubernetes Gateway API expresses weights portably:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: checkout
+spec:
+  parentRefs: [{ name: public-gateway }]
+  rules:
+    - backendRefs:
+        - { name: checkout-stable, port: 80, weight: 90 }
+        - { name: checkout-canary, port: 80, weight: 10 }
+```
 
-## Advanced Architecture Patterns
+Argo Rollouts (Gateway API plugin) and Flagger can manage these weights. Confirm your Gateway implementation supports weighted backends and the matches you need.
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+## Data and Schema Changes
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+Old and new versions run concurrently during a rollout, so data changes use expand/contract:
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+| Phase | Change | Safe with |
+|-------|--------|-----------|
+| Expand | Add new column/table (nullable or defaulted), new topic/event version | Old and new code |
+| Migrate | New code writes both, backfill old rows | Old and new code |
+| Switch | New code reads new structure | New code (old still tolerated) |
+| Contract | Remove old column/field after all old versions are gone and rollback window passed | New code only |
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+Never pair a destructive migration with the canary that depends on it; ship it in a later release. Message consumers must accept both old and new event versions during the rollout.
 
-## Performance Optimization
+## Non-HTTP Workloads
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+| Workload | Approach |
+|----------|----------|
+| Queue consumers | Run a small number of new-version consumers (partition/consumer-group share); compare processing errors, DLQ rate, lag |
+| Batch jobs | Run new version on a subset of tenants/partitions; diff outputs against old version |
+| gRPC | Mesh-level weighted routing works per request; watch for long-lived streams pinning clients to one version |
+| Stateful services | Canary one replica/shard; verify replication compatibility both ways |
+| Mobile/desktop clients | Store staged rollouts + server-side feature flags + remote kill switches |
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+## Feature Flags at Scale (OpenFeature)
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+Use a vendor-neutral API so flag providers can change without code changes:
 
-## Security Hardening
+```ts
+import { OpenFeature } from '@openfeature/server-sdk'
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+await OpenFeature.setProviderAndWait(new MyProvider())   // e.g. flagd, LaunchDarkly, Unleash, Flipt provider
+const client = OpenFeature.getClient('checkout')
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+const useNewPricing = await client.getBooleanValue('new-pricing-engine', false, {
+  targetingKey: user.id,
+  country: user.country,
+  plan: user.plan,
+})
+```
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+Practices:
+- Default values must be the safe/old behaviour (used when the provider is unavailable).
+- Flags have owners and expiry; remove release flags after full rollout to avoid combinatorial debt.
+- Emit flag evaluation as telemetry (OpenTelemetry semantic conventions for feature flags) so metrics can be sliced by variant.
+- Kill switches for risky dependencies are permanent operational flags, documented as such.
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+## Rollback Engineering
 
-## Monitoring and Observability
+- Abort must be faster than detection: shift traffic first, investigate later.
+- Keep the previous ReplicaSet scaled (Argo Rollouts `scaleDownDelaySeconds`) for instant rollback after promotion.
+- Rollbacks of config and flags are tracked like deploys (GitOps history).
+- Practice: run game days where a deliberately bad canary must be auto-aborted.
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+## Organizational Guardrails
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+- Change policy by risk tier: low-risk services may use shorter steps; payment/identity services require longer analysis and business metrics.
+- Freeze windows enforced by tooling (admission policy or pipeline gate), with an emergency override that is logged.
+- Rollout ownership: the deployer watches until full promotion or hands off explicitly.
+- Post-rollout review for every automated abort to tune metrics and thresholds.
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+## Checklist
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Analysis compares canary against stable/baseline with enough samples
+- [ ] Pod hash or version labels flow into metrics
+- [ ] Cohort routing based on trusted headers only
+- [ ] Expand/contract for every data change shipped with a canary
+- [ ] Non-HTTP workloads have a defined canary mechanism
+- [ ] Feature flags via OpenFeature with safe defaults, owners and expiry
+- [ ] Rollback paths exercised; aborts reviewed

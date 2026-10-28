@@ -19,6 +19,28 @@ tags: [api, product-management, phase-3]
 ## Purpose
 Manage APIs as products: define API product strategy, design developer experience, manage API lifecycle, implement API monetization, build developer portals that drive adoption, and use API analytics to inform product decisions.
 
+## Agent Protocol
+
+### Trigger
+Exact user phrases: "API as a product", "API product management", "API strategy", "API monetization", "developer portal", "API deprecation policy", "API lifecycle", "API adoption metrics", "API pricing tiers".
+
+### Input Context
+- API audience (internal, partner, public) and business goal (adoption, revenue, ecosystem).
+- Current API inventory, versions in use and consumer counts.
+- Existing portal/gateway tooling and analytics available.
+
+### Output Artifact
+Strategy, lifecycle or deprecation plan, pricing model, or metrics framework as structured text. No files unless requested.
+
+### Response Format
+```
+API product: {name}  Audience: {internal|partner|public}
+Goal: {adoption|revenue|ecosystem}   North-star metric: {metric}
+Lifecycle stage: {design|beta|GA|deprecated|retired}
+Plan: {numbered actions with owners and dates}
+Risks: {consumer impact, mitigation}
+```
+
 ## Workflow
 
 ### API Product Lifecycle
@@ -55,10 +77,10 @@ API Product Mission:
 | Model | Description | Example | Best For |
 |-------|-------------|---------|----------|
 | Free | No charge, drive ecosystem adoption | GitHub API | Platform lock-in, ecosystem growth |
-| Usage-based | Pay per request/unit | Stripe ($0.025/call) | Variable usage patterns |
-| Tiered | Different plans with limits | Google Maps API | Predictable consumption segments |
-| Freemium | Free tier + paid premium | Slack API | Bottom-up adoption |
-| Revenue share | % of transaction value | Stripe Connect (2.9% + $0.30) | Platform businesses |
+| Usage-based | Pay per request/unit | Twilio (per message), LLM APIs (per token) | Variable usage patterns |
+| Tiered | Different plans with limits | Most SaaS APIs (Starter/Pro/Enterprise quotas) | Predictable consumption segments |
+| Freemium | Free tier + paid premium | Free monthly quota, paid overage | Bottom-up adoption |
+| Revenue share | % of transaction value | Payment and marketplace platforms (percentage + fixed fee per transaction) | Platform businesses |
 | Internal value | Cost savings, not direct revenue | Platform APIs | Internal developer platforms |
 
 #### Selecting the Right Model
@@ -156,10 +178,12 @@ Month 8: Infrastructure decommissioned
 #### Deprecation Headers
 ```http
 HTTP/1.1 200 OK
-Deprecation: true
-Sunset: Sat, 31 Dec 2025 23:59:59 GMT
-Link: </docs/migrate-v2-to-v3>; rel="deprecation"
+Deprecation: @1767225599
+Sunset: Wed, 31 Dec 2026 23:59:59 GMT
+Link: </docs/migrate-v2-to-v3>; rel="deprecation"; type="text/html"
 ```
+
+`Deprecation` (RFC 9745) carries the deprecation date as a Unix-timestamp structured field (`@<seconds>`); the old draft form `Deprecation: true` is obsolete. `Sunset` (RFC 8594) is an HTTP-date after which the resource may stop responding.
 
 #### Breaking Change Classification
 
@@ -386,7 +410,7 @@ api_design_review:
   checklist:
     - [ ] Naming follows API style guide (snake_case, plural resources)
     - [ ] Pagination implemented for list endpoints
-    - [ ] Error responses follow RFC 7807 format
+    - [ ] Error responses follow RFC 9457 Problem Details (obsoletes RFC 7807)
     - [ ] Rate limiting documented
     - [ ] Authentication method specified
     - [ ] OpenAPI spec updated

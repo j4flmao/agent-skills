@@ -1,213 +1,194 @@
-# Vault Fundamentals
+# HashiCorp Vault Fundamentals: Mental Model, Auth Methods, Tokens, Leases and KV Workflows
 
-## Overview
-Vault is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Vault centralizes secrets, issues short-lived dynamic credentials, and provides encryption as a service, with every request authenticated, authorized by policy and audited. This reference builds the core mental model: paths and mounts, authentication and identity, tokens and leases, and day-to-day KV usage. Server architecture and unsealing are in `vault-basics.md`; policies, engines, clustering and integrations have their own references.
 
-## Core Concepts
+## Licensing and Distributions
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Vault helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+- Vault Community Edition is source-available under the Business Source License (BSL 1.1) since version 1.14 (2023). Enterprise adds namespaces, performance/DR replication, HSM support, Sentinel and more.
+- HCP Vault Dedicated is the managed service.
+- OpenBao is a Linux Foundation fork of the last MPL-licensed Vault, API-compatible for most features. Choose deliberately and check feature parity for your needs.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Vault solutions. These principles help maintain code quality and reduce technical debt.
+## Mental Model: Everything Is a Path
 
-### Concept 3: Data Management
-Proper data management is essential for Vault. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+```text
+client --(auth method)--> token --(policy check on path + capability)--> mount (engine) --> response (+ lease)
+                                                                    \--> audit device logs request and response
+```
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+| Concept | Meaning |
+|---------|---------|
+| Mount | An engine instance at a path: `secret/` (KV v2), `database/`, `pki/`, `transit/`, `auth/kubernetes/` |
+| Path | Operation target under a mount, for example `secret/data/orders/db` |
+| Capability | `create`, `read`, `update`, `patch`, `delete`, `list`, `sudo`, `deny` |
+| Policy | HCL rules mapping paths to capabilities; default deny |
+| Token | Credential carrying policies, TTL and metadata |
+| Lease | TTL attached to dynamic secrets and tokens; renewable up to a max TTL; revocable |
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+```bash
+vault secrets list -detailed
+vault auth list
+vault path-help secret/            # discover paths of a mount
+vault read sys/mounts/secret/tune
+```
 
-## Architecture Patterns
+## Development Server (Local Only)
 
-### Pattern 1: Standard Architecture
-The standard architecture for Vault follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+```bash
+vault server -dev -dev-root-token-id=dev-only-token
+export VAULT_ADDR=http://127.0.0.1:8200
+export VAULT_TOKEN=dev-only-token
+```
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+Dev mode runs in memory, unsealed, with HTTP and a root token: never use it beyond local experiments.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+## Authentication Methods
 
-## Implementation Guide
+Pick auth methods that use an identity the client already has, so no secret must be distributed to obtain a Vault token ("secret zero").
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+| Client | Auth method | Identity proof |
+|--------|-------------|----------------|
+| Humans | OIDC (Entra ID, Okta, Google), LDAP | SSO login with MFA |
+| Kubernetes pods | `kubernetes` (or JWT with the cluster's OIDC issuer) | Service account token |
+| Cloud workloads | `aws` (IAM), `azure` (managed identity), `gcp` (service account) | Cloud-signed identity |
+| CI/CD | `jwt` with the CI provider's OIDC tokens (GitHub Actions, GitLab) | Workflow-scoped JWT |
+| Legacy apps / machines | `approle` | Role ID + Secret ID (deliver Secret ID via trusted orchestrator, short TTL, CIDR bound) |
+| Mutual TLS clients | `cert` | Client certificate |
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### Kubernetes auth
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+```bash
+vault auth enable kubernetes
+vault write auth/kubernetes/config kubernetes_host="https://kubernetes.default.svc:443"
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+vault write auth/kubernetes/role/orders \
+  bound_service_account_names=orders \
+  bound_service_account_namespaces=orders \
+  token_policies=orders-read \
+  token_ttl=1h token_max_ttl=4h
+```
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+When Vault runs outside the cluster, also configure the CA certificate and a reviewer JWT (or use the JWT auth method with the cluster's OIDC discovery).
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### GitHub Actions via JWT
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+```bash
+vault auth enable jwt
+vault write auth/jwt/config \
+  oidc_discovery_url="https://token.actions.githubusercontent.com" \
+  bound_issuer="https://token.actions.githubusercontent.com"
 
-## Best Practices
+vault write auth/jwt/role/deploy-orders - <<'EOF'
+{
+  "role_type": "jwt",
+  "user_claim": "repository",
+  "bound_audiences": ["https://github.com/example-org"],
+  "bound_claims": {"repository": "example-org/orders", "ref": "refs/heads/main"},
+  "token_policies": ["orders-deploy"],
+  "token_ttl": "15m"
+}
+EOF
+```
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+Bind to repository and branch (or environment) claims so other repositories cannot use the role.
+
+## Identity: Entities and Groups
+
+Vault maps each authenticated login to an **entity** (with **aliases** per auth method). Groups attach policies to many entities; external groups mirror identity provider groups (OIDC/LDAP). Assign policies to groups rather than to individual tokens or roles where possible, and use entity metadata in templated policies (for example per-user KV paths).
+
+## Tokens
+
+| Property | Notes |
+|----------|-------|
+| TTL / max TTL | Token expires at TTL unless renewed; cannot exceed max TTL |
+| Service tokens | Persisted, renewable, can create children; default type |
+| Batch tokens | Not persisted, lightweight, not renewable; good for high-volume short-lived workloads |
+| Periodic tokens | Renewable indefinitely within the period (for long-running services that renew) |
+| Orphan tokens | No parent; not revoked when the creator is revoked |
+| Root tokens | Unlimited; generate only for emergencies (`vault operator generate-root`) and revoke after use |
+
+```bash
+vault token lookup                     # current token details
+vault token renew                      # extend TTL (within max TTL)
+vault token revoke -self
+vault token capabilities secret/data/orders/db
+```
+
+Revoking a token revokes its child tokens and the leases it created.
+
+## Leases
+
+Dynamic secrets (database credentials, cloud credentials) come with leases:
+
+```bash
+vault read database/creds/orders-readonly
+# lease_id: database/creds/orders-readonly/abc123  lease_duration: 1h  renewable: true
+
+vault lease renew database/creds/orders-readonly/abc123
+vault lease revoke database/creds/orders-readonly/abc123
+vault lease revoke -prefix database/creds/orders-readonly      # incident response: revoke all
+```
+
+Applications (or Vault Agent / Vault Secrets Operator) must renew leases before expiry and re-fetch credentials when the max TTL is reached. Keep TTLs short enough that leaked credentials expire quickly, long enough to avoid excessive churn.
+
+## KV Version 2 Workflows
+
+```bash
+vault secrets enable -path=secret kv-v2
+
+vault kv put -mount=secret orders/db username=orders password="$(openssl rand -base64 24)"
+vault kv get -mount=secret orders/db
+vault kv get -mount=secret -field=password orders/db
+vault kv patch -mount=secret orders/db password="$(openssl rand -base64 24)"
+
+vault kv metadata get -mount=secret orders/db             # versions, timestamps
+vault kv rollback -mount=secret -version=2 orders/db
+vault kv delete -mount=secret orders/db                   # soft delete latest version (undelete possible)
+vault kv destroy -mount=secret -versions=1 orders/db      # permanently remove a version
+vault kv metadata put -mount=secret -max-versions=10 orders/db
+```
+
+KV v2 API paths include `data/` and `metadata/`: policies must reference `secret/data/orders/*` for reading values and `secret/metadata/orders/*` for listing. The CLI hides this, which is a frequent source of "permission denied".
+
+```hcl
+path "secret/data/orders/*" {
+  capabilities = ["read"]
+}
+path "secret/metadata/orders/*" {
+  capabilities = ["list"]
+}
+```
+
+Prefer dynamic secrets over static KV entries where an engine exists (databases, cloud IAM, PKI).
+
+## Response Wrapping (Overview)
+
+`-wrap-ttl=5m` returns a single-use wrapping token instead of the secret; the recipient unwraps it once. It protects secrets in transit through intermediaries (CI systems, orchestrators) and detects interception (unwrap fails if someone else used it). See `vault-basics.md` for details.
+
+## HTTP API
+
+```bash
+curl -s --header "X-Vault-Token: $VAULT_TOKEN" \
+  "$VAULT_ADDR/v1/secret/data/orders/db" | jq '.data.data'
+```
+
+All CLI operations map to `/v1/<path>`; use `vault <command> -output-curl-string` to see the equivalent API call.
 
 ## Common Pitfalls
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+| Pitfall | Fix |
+|---------|-----|
+| Using root token for applications | Auth methods with scoped policies |
+| Long-lived static secrets everywhere | Dynamic secrets, short TTLs, rotation |
+| Secret zero problem (AppRole Secret ID baked into images) | Platform identity auth (Kubernetes, cloud, OIDC) |
+| Policies written for CLI paths on KV v2 | Include `data/` and `metadata/` |
+| Leases never renewed | Vault Agent / VSO / SDK lease management |
+| Dev server or HTTP in production | TLS, proper storage, unseal setup |
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+## Checklist
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Vault concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- [ ] Distribution and license chosen consciously (Community, Enterprise, HCP, OpenBao)
+- [ ] Humans via OIDC/LDAP with MFA; workloads via platform identity
+- [ ] Policies attached through groups/roles, least privilege, default deny
+- [ ] Short TTLs; leases renewed and revocable by prefix
+- [ ] KV v2 with version limits; dynamic secrets where possible
+- [ ] Root token revoked after initial setup

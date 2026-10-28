@@ -5,6 +5,28 @@ description: Master methodologies for SIEM architecture, incident response, and 
 
 # Blue Team & SOC Operations Methodology
 
+## Purpose
+Provide SOC and blue-team methodology: SIEM architecture and log ontology, the NIST SP 800-61 / SANS incident response lifecycle, and intelligence-driven threat hunting mapped to MITRE ATT&CK. Guides defenders in building high-fidelity detection and structured response.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "SOC architecture", "SIEM design", "incident response lifecycle", "threat hunting hypothesis", "log correlation".
+
+### Input Context
+- Telemetry sources (EDR, NDR, IAM, cloud) and SIEM platform.
+- Incident type or hunt objective.
+
+### Output Artifact
+IR runbook or hunt plan with correlation logic and ATT&CK mapping.
+
+### Response Format
+```
+Phase: {Prep|Identify|Contain|Eradicate|Recover|Lessons}
+Signal: {telemetry / correlation}
+Action: {step}
+```
+
 ## Core Architecture & SIEM Paradigm
 A resilient Security Operations Center (SOC) relies on a robust Security Information and Event Management (SIEM) architecture. The objective is holistic visibility across the enterprise telemetry plane, orchestrating log ingestion, normalization, correlation, and alerting. Data ontology must prioritize high-fidelity indicators over raw volume, enabling real-time detection engineering and proactive defense mechanisms.
 

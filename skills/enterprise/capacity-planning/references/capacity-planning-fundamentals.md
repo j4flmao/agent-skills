@@ -1,213 +1,131 @@
 # Capacity Planning Fundamentals
 
-## Overview
-Capacity Planning is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Core concepts and the basic process for ensuring systems have enough capacity to meet demand at acceptable cost: demand and supply units, utilization vs saturation, Little's Law, the planning cycle, and the data required. Forecasting methods are in `forecasting.md`; headroom calculations in `headroom-math.md`; business-driver modeling in `growth-modeling.md`.
 
-## Core Concepts
+## Vocabulary
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Capacity Planning helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Term | Meaning |
+|------|---------|
+| Demand | Workload placed on a system (requests/s, jobs/hour, GB stored, concurrent users) |
+| Supply / capacity | Maximum workload the system can serve while meeting its SLOs |
+| Utilization | Fraction of time or quantity a resource is busy (CPU %, disk used %) |
+| Saturation | Work queued because the resource is fully busy (run queue, connection wait, I/O queue) |
+| Headroom | Capacity minus expected peak demand |
+| Capacity unit | Smallest scalable block (a pod, a VM type, a DB shard, a rack) with a measured throughput |
+| Lead time | Time to add a capacity unit (seconds for autoscaling, weeks for hardware, months for data centers) |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Capacity Planning solutions. These principles help maintain code quality and reduce technical debt.
+Capacity is defined relative to an SLO: "this cluster serves 12,000 req/s at p99 < 300 ms" — not "the CPU is at 100%".
 
-### Concept 3: Data Management
-Proper data management is essential for Capacity Planning. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Utilization Is Not Linear
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+Latency rises sharply as utilization approaches 100% because queues build. For a simple single-server queue (M/M/1), mean response time is `service_time / (1 - utilization)`: at 50% utilization it is 2x service time, at 90% it is 10x. Real systems differ, but the shape holds: plan to operate well below saturation and find each system's knee with load tests.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+## Little's Law
 
-## Architecture Patterns
+`L = λ × W` — average items in the system equals arrival rate times average time in the system.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Capacity Planning follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+| Use | Example |
+|-----|---------|
+| Size concurrency | 2,000 req/s × 0.15 s = 300 requests in flight → threads/connections needed |
+| Size connection pools | 500 queries/s × 0.02 s = 10 busy connections on average; add headroom for bursts |
+| Queue drain time | Backlog 1,000,000 messages / 5,000 msg/s net drain = 200 s |
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+It holds for any stable system regardless of distribution, which makes it the most useful capacity sanity check.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+## USE Method for Resource Inventory
 
-## Implementation Guide
+For each resource (CPU, memory, disk, network, connection pools, locks, quotas), track:
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+- **U**tilization
+- **S**aturation
+- **E**rrors
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+Bottlenecks often appear first in non-hardware resources: database connections, thread pools, API rate limits, cloud service quotas, file descriptors, or IP addresses in a subnet.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+## The Planning Cycle
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+```
+1. Inventory      → services, resources, capacity units, owners, lead times
+2. Measure        → current demand, utilization, saturation, peak patterns
+3. Model          → capacity per unit (load tests), demand drivers
+4. Forecast       → expected demand for the planning horizon (+ scenarios)
+5. Plan           → required units with headroom, N+1, failure domains
+6. Act            → autoscaling limits, reservations, procurement, optimization
+7. Review         → forecast vs actual, adjust models (monthly/quarterly)
+```
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+Planning horizon should exceed the longest lead time of the resources involved.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+## Measuring Demand Correctly
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+- Use peak, not average: plan from p95–p99 of per-minute (or finer) demand over the peak period, plus known events (launches, seasonal peaks, batch windows).
+- Separate organic growth from step changes (new customers, features, migrations).
+- Capture demand at the entry point (requests, jobs) and per-resource consumption, so you can relate business drivers to infrastructure.
 
-## Best Practices
+```promql
+# Peak request rate per service over the last 30 days (5m resolution)
+max_over_time(sum by (service) (rate(http_requests_total[5m]))[30d:5m])
+```
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+## Determining Capacity per Unit
 
-## Common Pitfalls
+- Load test a single capacity unit with production-like traffic until the SLO breaks; capacity is the highest throughput that still meets the SLO (not the throughput at failure).
+- Repeat after significant code or infrastructure changes; capacity per unit drifts.
+- For shared resources (databases), measure the system-level limit, not just per-pod limits.
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+## Planning Formula (Simplified)
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+```
+required_units = ceil( forecast_peak_demand × (1 + safety_margin) / capacity_per_unit ) + redundancy_units
+```
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+- `safety_margin` covers forecast error and burstiness (derive from forecast intervals, not habit).
+- `redundancy_units` cover failure of the largest failure domain (N+1 node, zone, or region), detailed in `headroom-math.md`.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## Elastic vs Fixed Capacity
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+| Resource | Planning focus |
+|----------|----------------|
+| Autoscaled stateless compute | Max limits, scale-up speed, quotas, cost ceilings, warm-up time |
+| Databases and stateful stores | Vertical limits, sharding plan, replica lag, storage growth |
+| Reserved/committed cloud spend | Commit levels matched to steady baseline |
+| Hardware / colo | Lead time, power and space, procurement cycles |
+| Third-party APIs and SaaS limits | Contracted quotas and rate limits |
 
-## Tooling Ecosystem
+Autoscaling does not remove capacity planning: it moves it to limits, quotas, and dependent systems that do not scale automatically.
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+## Data Required
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Capacity Planning concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+| Data | Source |
+|------|--------|
+| Demand time series | Metrics (Prometheus, Datadog, CloudWatch) with long retention or downsampled history |
+| Resource utilization and saturation | Node/container/DB metrics |
+| Business drivers | Product analytics, sales pipeline, marketing calendar |
+| Cost | Cloud billing exports |
+| Inventory and lead times | CMDB, IaC, vendor contracts |
+
+Keep at least 13 months of downsampled history to see annual seasonality.
+
+## Roles
+
+- Service owners: capacity models and SLOs for their services.
+- Platform/SRE: shared infrastructure, tooling, quotas, review process.
+- Finance/FinOps: commitments and budgets.
+- Product/business: demand drivers and event calendar.
+
+## Pitfalls
+
+- Planning from averages; peaks break systems.
+- Treating 100% utilization as capacity.
+- Ignoring hidden limits (quotas, connection pools, licenses).
+- Forecasting only infrastructure trends without business inputs.
+- No feedback loop comparing forecasts with actuals.
+
+## Checklist
+
+- [ ] Capacity defined against SLOs, per capacity unit
+- [ ] Inventory includes non-hardware limits and lead times
+- [ ] Peak demand measured and annotated with events
+- [ ] Load tests establish per-unit capacity and knee
+- [ ] Plan covers forecast + margin + failure-domain redundancy
+- [ ] Regular forecast-vs-actual review

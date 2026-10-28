@@ -1,214 +1,159 @@
-# Longhorn Advanced Topics
-
-## Introduction
-Advanced Longhorn topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# Longhorn Advanced Operations
+
+Operating Longhorn in production: replica scheduling and anti-affinity, node maintenance and drains, disk management, capacity controls, RWX volumes, encryption, upgrades, and monitoring. Backup/DR and performance tuning are covered in sibling references.
+
+## 1. Replica Scheduling
+
+| Setting | Default | Effect |
+|---|---|---|
+| `replica-soft-anti-affinity` | false | If false, replicas of a volume must be on different nodes; scheduling fails rather than co-locating |
+| `replica-zone-soft-anti-affinity` | true | Prefer different zones (`topology.kubernetes.io/zone`), allow same zone if needed |
+| `replica-disk-soft-anti-affinity` | true | Prefer different disks on the same node when co-location is allowed |
+| `replica-auto-balance` | disabled | `least-effort` / `best-effort` redistribute replicas when nodes are added or freed |
+| `storage-minimal-available-percentage` | 25 | Disk is unschedulable below this free percentage |
+| `storage-over-provisioning-percentage` | 100 | Scheduled (provisioned) size may reach this percentage of usable capacity |
+
+For zone resilience, label nodes with zones and use three replicas across three zones. Set `replica-zone-soft-anti-affinity=false` only if every volume can always find nodes in distinct zones.
+
+## 2. Node and Disk Management
+
+```yaml
+# Node CR excerpt (kubectl -n longhorn-system edit nodes.longhorn.io <node>)
+spec:
+  allowScheduling: true
+  tags: ["storage"]
+  disks:
+    nvme-0:
+      path: /mnt/nvme0/longhorn
+      allowScheduling: true
+      storageReserved: 21474836480      # bytes kept free for the OS/other uses
+      tags: ["ssd"]
+```
+
+- Use dedicated disks or partitions for Longhorn data, not the root filesystem.
+- To retire a disk: set `allowScheduling: false`, then `evictionRequested: true`; wait until its replicas rebuild elsewhere; then remove it.
+- Node labels can create default disks automatically (`create-default-disk-labeled-nodes` setting with the `node.longhorn.io/default-disks-config` annotation).
+
+## 3. Node Maintenance and Drains
+
+`node-drain-policy` controls whether `kubectl drain` may evict instance-manager pods:
+
+| Policy | Behaviour |
+|---|---|
+| `block-if-contains-last-replica` (default) | Block drain if the node holds the last healthy replica of any volume |
+| `allow-if-replica-is-stopped` | Allow if the last replica is stopped (volume detached) |
+| `always-allow` | Never block; risk of data unavailability |
+| `block-for-eviction` | Evict all replicas off the node before allowing drain |
+| `block-for-eviction-if-contains-last-replica` | Evict only last replicas before allowing drain |
+
+Procedure for planned maintenance:
+
+```bash
+kubectl cordon node-3
+kubectl drain node-3 --ignore-daemonsets --delete-emptydir-data --timeout=30m
+# Longhorn volumes re-attach on other nodes when their pods reschedule;
+# replicas on node-3 become failed and are rebuilt per staleReplicaTimeout
+kubectl uncordon node-3
+```
+
+For long maintenance, request eviction of replicas from the node first so volumes stay at full redundancy.
+
+## 4. RWX Volumes
+
+- Each RWX volume runs a share-manager pod exporting NFSv4; clients mount it over the cluster network.
+- The share-manager is a single point for that volume; Longhorn recreates it on failure, with brief I/O interruption. Recent versions add faster failover options; check your version's settings.
+- Not suited to heavy database workloads; use RWO block volumes for databases.
+- Nodes need an NFS client; network policies must allow traffic to share-manager services.
+
+## 5. Volume Encryption
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: longhorn-crypto
+  namespace: longhorn-system
+stringData:
+  CRYPTO_KEY_VALUE: "<from secret manager>"
+  CRYPTO_KEY_PROVIDER: "secret"
+  CRYPTO_KEY_CIPHER: "aes-xts-plain64"
+  CRYPTO_KEY_HASH: "sha256"
+  CRYPTO_KEY_SIZE: "256"
+  CRYPTO_PBKDF: "argon2i"
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-encrypted
+provisioner: driver.longhorn.io
+parameters:
+  numberOfReplicas: "3"
+  encrypted: "true"
+  csi.storage.k8s.io/provisioner-secret-name: longhorn-crypto
+  csi.storage.k8s.io/provisioner-secret-namespace: longhorn-system
+  csi.storage.k8s.io/node-publish-secret-name: longhorn-crypto
+  csi.storage.k8s.io/node-publish-secret-namespace: longhorn-system
+  csi.storage.k8s.io/node-stage-secret-name: longhorn-crypto
+  csi.storage.k8s.io/node-stage-secret-namespace: longhorn-system
+```
+
+Encryption uses LUKS (dm-crypt) on the node; backups of encrypted volumes stay encrypted. Store the key in a secret manager and sync it (e.g. External Secrets); losing the key loses the data.
+
+## 6. Upgrades
+
+1. Read release notes; upgrade one minor version at a time.
+2. Verify all volumes are `healthy`; take backups of critical volumes and a Longhorn system backup.
+3. Upgrade the Helm release (manager, CSI, UI).
+4. Engine upgrade: automatic per `concurrent-automatic-engine-upgrade-per-node-limit` (0 disables automatic upgrade) or manual per volume; attached volumes upgrade live.
+5. Confirm no volumes remain on old engine images; old images are cleaned up afterwards.
+
+Kubernetes version compatibility is listed per Longhorn release; upgrade Longhorn before moving Kubernetes beyond its supported range.
+
+## 7. Monitoring
+
+Longhorn exposes Prometheus metrics from longhorn-manager (`longhorn-backend` service, port 9500, `/metrics`).
+
+| Metric | Use |
+|---|---|
+| `longhorn_volume_robustness` | 1 healthy, 2 degraded, 3 faulted (0 unknown) |
+| `longhorn_volume_actual_size_bytes` / `longhorn_volume_capacity_bytes` | Snapshot growth vs provisioned |
+| `longhorn_node_storage_usage_bytes` / `longhorn_node_storage_capacity_bytes` | Node capacity |
+| `longhorn_disk_usage_bytes` / `longhorn_disk_capacity_bytes` | Disk capacity |
+| `longhorn_volume_read_latency` / `longhorn_volume_write_latency` | Performance |
+| `longhorn_backup_state` | Backup success/failure |
+
+```yaml
+- alert: LonghornVolumeDegraded
+  expr: longhorn_volume_robustness == 2
+  for: 15m
+- alert: LonghornVolumeFaulted
+  expr: longhorn_volume_robustness == 3
+  for: 1m
+- alert: LonghornDiskAlmostFull
+  expr: longhorn_disk_usage_bytes / longhorn_disk_capacity_bytes > 0.8
+  for: 30m
+```
+
+## 8. Snapshot Space Management
+
+- Snapshots keep overwritten blocks; actual size can exceed volume capacity.
+- Use recurring `snapshot-cleanup` / `snapshot-delete` jobs and set retain counts on recurring snapshot jobs.
+- `snapshot-max-count` and `snapshot-max-size` limits (per volume, in recent versions) prevent runaway growth.
+- Trim (`fstrim`) inside the filesystem lets Longhorn reclaim space from deleted files where supported (`unmapMarkSnapChainRemoved`).
+
+## Pitfalls
+
+- `always-allow` drain policy with routine node rotation: volumes lose their last replica.
+- Soft anti-affinity enabled on small clusters: replicas co-located on one node defeat replication.
+- RWX for write-heavy databases.
+- Upgrading Longhorn several minor versions at once.
+- No alert on degraded volumes; a second failure becomes data loss.
+
+## Checklist
+
+- [ ] Hard node anti-affinity; zone spreading where zones exist.
+- [ ] Drain policy chosen and maintenance procedure documented.
+- [ ] Dedicated data disks with reserved space and tags.
+- [ ] Encryption keys in a secret manager for encrypted classes.
+- [ ] Upgrade runbook: one minor at a time, backups first.
+- [ ] Alerts on robustness, capacity, backup failures, snapshot growth.

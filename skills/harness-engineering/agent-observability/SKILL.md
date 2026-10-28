@@ -1,12 +1,15 @@
 ---
 name: agent-observability
 description: >
-  Comprehensive skill for tracing reasoning paths, debugging non-deterministic
-  agent loops, and monitoring agent behavior in production systems. Covers
+  Use this skill when the user says 'agent observability', 'trace agent reasoning',
+  'debug agent loop', 'LLM cost tracking', 'agent audit log', 'OpenTelemetry for agents'.
+  Covers
   reasoning trace visualization, OpenTelemetry integration for agent systems,
   distributed tracing across multi-agent chains, decision audit logging,
   performance profiling, anomaly detection, cost tracking and optimization,
-  and latency analysis for AI agent deployments.
+  and latency analysis for AI agent deployments. Do NOT use for: generic service
+  observability without LLM/agent components (devops/opentelemetry), or offline
+  model evaluation (ai evals skills).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -394,100 +397,107 @@ User Request: "Summarize the Q3 financial report and compare to Q2"
 ### Agent Trace Collector
 
 ```python
-from typing import Dict, List, Optional, Any
-from datetime import datetime
-import json
-import uuid
+from __future__ import annotations
+
+import secrets
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
 
 class AgentTrace:
-    def __init__(self, agent_id: str, session_id: str):
-        self.trace_id = str(uuid.uuid4())
+    """Minimal in-process span recorder. In production prefer the OpenTelemetry SDK;
+    IDs here follow the W3C Trace Context sizes (16-byte trace id, 8-byte span id)."""
+
+    def __init__(self, agent_id: str, session_id: str) -> None:
+        self.trace_id = secrets.token_hex(16)  # 32 hex chars
         self.agent_id = agent_id
         self.session_id = session_id
-        self.spans: List[Dict] = []
-        self.start_time = datetime.utcnow()
+        self.spans: dict[str, dict[str, Any]] = {}
+        self.start_time = datetime.now(timezone.utc)
 
-    def start_span(self, name: str, parent_span_id: Optional[str] = None) -> str:
-        span_id = str(uuid.uuid4())[:16]
-        span = {
+    def start_span(self, name: str, parent_span_id: str | None = None) -> str:
+        span_id = secrets.token_hex(8)  # 16 hex chars
+        self.spans[span_id] = {
             "span_id": span_id,
             "trace_id": self.trace_id,
             "parent_span_id": parent_span_id,
             "name": name,
-            "start_time": datetime.utcnow().isoformat() + "Z",
+            "start_time": _now(),
             "attributes": {},
             "events": [],
-            "status": "ok",
+            "status": "unset",
         }
-        self.spans.append(span)
         return span_id
 
-    def end_span(self, span_id: str, status: str = "ok", attributes: Optional[Dict] = None):
-        for span in self.spans:
-            if span["span_id"] == span_id:
-                span["end_time"] = datetime.utcnow().isoformat() + "Z"
-                span["status"] = status
-                if attributes:
-                    span["attributes"].update(attributes)
+    def end_span(self, span_id: str, status: str = "ok", attributes: dict[str, Any] | None = None) -> None:
+        span = self.spans.get(span_id)
+        if span is None:
+            raise KeyError(f"end_span: unknown span_id={span_id} in trace={self.trace_id}")
+        span["end_time"] = _now()
+        span["status"] = status
+        span["attributes"].update(attributes or {})
 
-    def add_event(self, span_id: str, name: str, attributes: Optional[Dict] = None):
-        for span in self.spans:
-            if span["span_id"] == span_id:
-                span["events"].append({
-                    "name": name,
-                    "timestamp": datetime.utcnow().isoformat() + "Z",
-                    "attributes": attributes or {},
-                })
+    def add_event(self, span_id: str, name: str, attributes: dict[str, Any] | None = None) -> None:
+        span = self.spans.get(span_id)
+        if span is None:
+            raise KeyError(f"add_event: unknown span_id={span_id} in trace={self.trace_id}")
+        span["events"].append({"name": name, "timestamp": _now(), "attributes": attributes or {}})
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict[str, Any]:
+        elapsed = datetime.now(timezone.utc) - self.start_time
         return {
             "trace_id": self.trace_id,
             "agent_id": self.agent_id,
             "session_id": self.session_id,
-            "duration_ms": (datetime.utcnow() - self.start_time).total_seconds() * 1000,
-            "spans": self.spans,
+            "duration_ms": elapsed.total_seconds() * 1000,
+            "spans": list(self.spans.values()),
         }
+
+
+@dataclass(frozen=True, slots=True)
+class ModelPrice:
+    input_per_mtok: float   # USD per 1M input tokens
+    output_per_mtok: float  # USD per 1M output tokens
 
 
 class CostTracker:
-    def __init__(self):
-        self.entries: List[Dict] = []
-        self.pricing = {
-            "gpt-4": {"input": 0.03, "output": 0.06},
-            "gpt-3.5-turbo": {"input": 0.0015, "output": 0.002},
-            "claude-3": {"input": 0.015, "output": 0.075},
-        }
+    """Prices change often: load them from config (env/JSON) that is versioned and
+    reviewed, never hardcode them. Unknown models fail loudly instead of guessing."""
 
-    def track_call(self, model: str, input_tokens: int, output_tokens: int, agent_id: str):
-        pricing = self.pricing.get(model, {"input": 0.01, "output": 0.03})
-        cost = (input_tokens / 1000 * pricing["input"]) + (output_tokens / 1000 * pricing["output"])
+    def __init__(self, pricing: dict[str, ModelPrice]) -> None:
+        self.pricing = pricing
+        self.entries: list[dict[str, Any]] = []
+
+    def track_call(self, model: str, input_tokens: int, output_tokens: int, agent_id: str) -> float:
+        price = self.pricing.get(model)
+        if price is None:
+            raise KeyError(f"No price configured for model={model} (agent={agent_id}); update pricing config")
+        cost = (input_tokens * price.input_per_mtok + output_tokens * price.output_per_mtok) / 1_000_000
         self.entries.append({
-            "timestamp": datetime.utcnow().isoformat() + "Z",
-            "agent_id": agent_id,
-            "model": model,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "cost": round(cost, 6),
+            "timestamp": _now(), "agent_id": agent_id, "model": model,
+            "input_tokens": input_tokens, "output_tokens": output_tokens, "cost_usd": cost,
         })
+        return cost
 
-    def get_total_cost(self, agent_id: Optional[str] = None) -> float:
-        entries = self.entries
-        if agent_id:
-            entries = [e for e in entries if e["agent_id"] == agent_id]
-        return round(sum(e["cost"] for e in entries), 4)
+    def total(self, agent_id: str | None = None) -> float:
+        return sum(e["cost_usd"] for e in self.entries if agent_id in (None, e["agent_id"]))
 
-    def get_report(self) -> str:
-        total = sum(e["cost"] for e in self.entries)
-        by_model = {}
+    def by_model(self) -> dict[str, float]:
+        out: dict[str, float] = {}
         for e in self.entries:
-            by_model[e["model"]] = by_model.get(e["model"], 0) + e["cost"]
-        lines = ["## Cost Report"]
-        lines.append(f"Total Cost: ${total:.4f}")
-        for model, cost in sorted(by_model.items(), key=lambda x: -x[1]):
-            lines.append(f"  {model}: ${cost:.4f}")
-        lines.append(f"Total Calls: {len(self.entries)}")
-        return "\n".join(lines)
+            out[e["model"]] = out.get(e["model"], 0.0) + e["cost_usd"]
+        return dict(sorted(out.items(), key=lambda kv: -kv[1]))
 ```
+
+When exporting through OpenTelemetry, use the GenAI semantic conventions for span attributes
+(`gen_ai.operation.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`,
+`gen_ai.usage.output_tokens`). They are still marked experimental, so pin the semconv
+version you emit and check the spec before upgrading.
 
 ## Architecture Decision Trees
 

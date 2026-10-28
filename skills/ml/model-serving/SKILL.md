@@ -140,7 +140,6 @@ No preamble. No postamble. No explanations. No filler. Compress output.
 # BentoML service definition
 import bentoml
 import numpy as np
-from bentoml.io import JSON, NumpyNdarray
 
 @bentoml.service(
     resources={"cpu": "2", "memory": "4Gi"},
@@ -165,9 +164,9 @@ model = xgb.XGBClassifier()
 model.fit(X_train, y_train)
 bentoml.xgboost.save_model("churn_model", model)
 
-# Verify
-svc = bentoml.Server("prediction_service:latest")
-svc.start()
+# Serve locally, then build and containerize (CLI):
+#   bentoml serve service:PredictionService
+#   bentoml build && bentoml containerize prediction_service:latest
 ```
 
 ### Step 3: Configure Autoscaling
@@ -370,21 +369,14 @@ Goal: Serve multiple models on shared infrastructure.
 Strategies:
 1. Sidecar per model: each model in its own container, shared sidecar
 2. Model multiplexing: single server loads multiple models, routes by header
-3. Model mesh: dedicated infrastructure for model routing (e.g., Seldon Core)
+3. Multi-model serving platform: KServe ModelMesh, Triton Inference Server (model repository with many models), Seldon Core 2 (check its license terms)
 
-Config (Seldon Core):
-apiVersion: machinelearning.seldon.io/v1
-kind: SeldonDeployment
-metadata:
-  name: model-mesh
-spec:
-  predictors:
-    - componentSpecs:
-        - spec:
-            containers:
-              - image: model-a-server
-              - image: model-b-server
-              - image: model-c-server
+Config (Triton model repository, one server, many models):
+model_repository/
+  model_a/config.pbtxt  model_a/1/model.onnx
+  model_b/config.pbtxt  model_b/1/model.plan
+  model_c/config.pbtxt  model_c/1/model.pt
+tritonserver --model-repository=/models --model-control-mode=explicit --load-model=model_a
 ```
 
 ## Autoscaling Configuration — Production Ready

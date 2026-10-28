@@ -206,7 +206,7 @@ training_args = TrainingArguments(
     weight_decay=0.01,
     warmup_ratio=0.1,
     logging_steps=100,
-    evaluation_strategy="epoch",
+    eval_strategy="epoch",
     save_strategy="epoch",
     fp16=True,
     gradient_accumulation_steps=2,
@@ -280,7 +280,7 @@ with torch.no_grad():
 Classification: F1 (macro/weighted), ROC AUC. NER: exact match F1, span F1. Summarization: ROUGE-1/2/L, BERTScore. Translation: BLEU, chrF, COMET. Generation: perplexity. QA: exact match, F1.
 
 ```python
-from datasets import load_metric
+import evaluate  # `datasets.load_metric` was removed in datasets 3.0
 
 def compute_metrics(eval_pred, task="classification"):
     predictions, labels = eval_pred
@@ -291,7 +291,8 @@ def compute_metrics(eval_pred, task="classification"):
             "f1": f1_score(labels, predictions, average="weighted"),
         }
     elif task == "summarization":
-        rouge = load_metric("rouge")
+        # predictions/labels must be decoded strings (tokenizer.batch_decode) before scoring
+        rouge = evaluate.load("rouge")
         return rouge.compute(predictions=predictions, references=labels)
 ```
 
@@ -346,12 +347,12 @@ training_args = TrainingArguments(
     warmup_ratio=0.1,             # linear warmup
     lr_scheduler_type="cosine",
     logging_steps=100,
-    evaluation_strategy="steps",
+    eval_strategy="steps",
     eval_steps=500,
     save_strategy="steps",
     save_steps=500,
     load_best_model_at_end=True,
-    fp16=True,                     # 2x speed on modern GPUs
+    bf16=True,                     # mixed precision (use fp16=True on pre-Ampere GPUs)
     gradient_checkpointing=True,   # save memory, slower
     gradient_accumulation_steps=2, # effective batch size = 64
 )
@@ -504,7 +505,7 @@ tokenizer.save("domain_tokenizer.json")
 - LR: 2e-5 to 5e-5 (AdamW), 1e-4 to 1e-3 (LoRA).
 - Use cosine schedule with linear warmup (10%).
 - Never use test data for validation decisions.
-- Mixed precision (fp16/bf16) for 2x speedup.
+- Mixed precision (bf16 on Ampere+, fp16 otherwise) for faster training and lower memory.
 - Evaluate on multiple seeds (3-5) for small datasets.
 - Save best checkpoint by validation metric.
 

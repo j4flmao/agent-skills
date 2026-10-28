@@ -1,4 +1,37 @@
+---
+name: kernel-bypass-dpdk
+description: >
+  Use this skill when the user says 'kernel bypass', 'DPDK', 'poll mode driver', 'ultra-low latency networking', 'userspace networking', 'HFT networking'. Explains kernel-bypass packet processing (DPDK, poll-mode drivers, hugepages). Do NOT use for: in-kernel packet filtering (use niche/low-level/ebpf-xdp-networking) or lock-free data structures (use niche/hft/lock-free-ring-buffers).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [niche, hft, dpdk, networking, low-latency]
+---
+
 # Kernel Bypass & Ultra-Low Latency (DPDK)
+
+## Purpose
+Explain how DPDK achieves microsecond-scale networking by bypassing the kernel: poll-mode drivers instead of interrupts, userspace NIC access, hugepages, and CPU core isolation/pinning.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "kernel bypass", "DPDK poll mode driver", "userspace networking", "hugepages", "core pinning for HFT".
+
+### Input Context
+- NIC/driver and core topology.
+- Latency vs throughput targets.
+
+### Output Artifact
+Dataplane design with polling, memory, and core-affinity guidance.
+
+### Response Format
+```
+Technique: {PMD / hugepages / isolcpus}
+Why: {avoids interrupt+context switch}
+Tradeoff: {CPU spin cost}
+```
+
 
 ## Core Mechanics
 

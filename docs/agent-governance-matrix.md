@@ -21,7 +21,7 @@ The agent follows the normative specification and its platform profile for autho
 
 ### Level 2: Repository validation
 
-Run npm run validate:governance before declaring governance changes complete. It validates profile presence, normative links, required policy sections, bundle JSON shape, and duplicate skill IDs.
+Run npm run validate:governance before declaring governance changes complete. It validates profile presence, normative links, required policy sections, bundle JSON shape, kebab-case and unique skill names, and that every bundle entry resolves to an existing skill.
 
 ### Level 3: Tool enforcement
 

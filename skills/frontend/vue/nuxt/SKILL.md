@@ -16,7 +16,7 @@ tags: [frontend, vue, nuxt, phase-3]
 # Nuxt
 
 ## Purpose
-Build Nuxt 3 applications with directory-based routing, server-side data fetching, and auto-imported components and composables. UseFetch for data, server/api/ for backend endpoints.
+Build Nuxt 3/4 applications with directory-based routing, server-side data fetching, and auto-imported components and composables. useFetch for data, server/api/ for backend endpoints. Nuxt 4 (2025) moves app code into `app/` by default, makes `data` a `shallowRef`, defaults it to `undefined` instead of `null`, and changes `pending` semantics, so check `status` instead.
 
 ## Agent Protocol
 
@@ -25,7 +25,7 @@ Exact user phrases: "Nuxt", "Nuxt 3", "Nuxt structure", "Nuxt composables", "Nux
 
 ### Input Context
 Before activating, verify:
-- nuxt.config.ts exists (Nuxt 3).
+- nuxt.config.ts exists; check the `nuxt` major version in package.json (3 or 4) and whether source lives in `app/`.
 - The feature or page being created is known.
 
 ### Output Artifact
@@ -108,7 +108,7 @@ Where is this state needed?
 <script setup lang="ts">
 definePageMeta({ layout: 'default', title: 'Products' })
 const page = ref(1)
-const { data, pending, error } = await useFetch('/api/products', {
+const { data, status, error } = await useFetch('/api/products', {
   query: { page, limit: 20 },
   watch: [page],
   default: () => ({ products: [], total: 0 }),
@@ -116,7 +116,7 @@ const { data, pending, error } = await useFetch('/api/products', {
 </script>
 
 <template>
-  <div v-if="pending">Loading...</div>
+  <div v-if="status === 'pending'">Loading...</div>
   <div v-else-if="error">Error: {{ error.message }}</div>
   <div v-else>
     <ProductCard v-for="p in data.products" :key="p.id" :product="p" />
@@ -420,7 +420,7 @@ async function logout() { await $fetch('/api/logout') }
 
 ## Common Pitfalls
 
-1. **useFetch outside async setup**: useFetch requires `await` in `<script setup>`.
+1. **useFetch outside setup context**: call useFetch/useAsyncData at the top level of `<script setup>`, a plugin or route middleware — not inside event handlers (use `$fetch` there). `await` blocks navigation until data loads; omit it (or use `lazy: true`) for non-blocking loads.
 2. **Missing error handling**: Always handle `error` from useFetch/useAsyncData.
 3. **Overusing ssr:false**: Only disable SSR for truly client-only routes.
 4. **Direct DOM access in SSR**: Use `onMounted` for browser-only code (ref access).

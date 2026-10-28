@@ -1,214 +1,120 @@
-# Nlp Advanced Topics
+# Advanced NLP: Efficient Adaptation, Long Context, Retrieval, Distillation, Evaluation
 
-## Introduction
-Advanced Nlp topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Techniques beyond basic fine-tuning: parameter-efficient adaptation, long documents, retrieval and reranking, constrained/structured generation, distillation into small models, multilingual systems, and rigorous evaluation of generative systems.
 
-## Advanced Architecture Patterns
+## Parameter-Efficient Fine-Tuning (PEFT)
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+| Method | What trains | Notes |
+|--------|-------------|-------|
+| LoRA | Low-rank matrices added to attention/MLP weights | Small adapters (MBs), mergeable into base weights |
+| QLoRA | LoRA on a 4-bit quantized frozen base | Fits larger models on a single GPU |
+| DoRA | Weight-decomposed LoRA variant | Sometimes better quality at same rank |
+| Prefix/prompt tuning | Virtual tokens | Fewer params; usually weaker than LoRA for large shifts |
+| Full fine-tuning | All weights | Highest capacity, highest cost, risk of forgetting |
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+```python
+from peft import LoraConfig, get_peft_model
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+lora = LoraConfig(
+    r=16, lora_alpha=32, lora_dropout=0.05,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    task_type="CAUSAL_LM",
+)
+model = get_peft_model(model, lora)
+model.print_trainable_parameters()
+```
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+Target module names depend on the architecture; inspect `model.named_modules()`. Use TRL `SFTTrainer` for instruction data and `DPOTrainer` (or similar preference methods) for preference alignment.
 
-## Performance Optimization
+## Long Documents
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+| Strategy | When |
+|----------|------|
+| Chunk + aggregate (classification: max/mean of chunk scores) | Classification of long texts |
+| Map-reduce summarization | Very long inputs beyond context |
+| Long-context models | Need cross-document reasoning; verify quality at long lengths ("lost in the middle" effects) |
+| Retrieval over chunks | QA over large corpora |
+| Hierarchical models | Encoders over sections, then over section embeddings |
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+Chunk on structure (headings, paragraphs) with overlap rather than fixed character counts.
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+## Retrieval and Reranking
 
-## Security Hardening
+Two-stage retrieval is standard:
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+1. Candidate generation: hybrid search (BM25 + dense embeddings) fused with Reciprocal Rank Fusion; apply metadata filters in the query.
+2. Reranking: cross-encoder scores (query, passage) pairs; keep top few for the generator.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+```python
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+bi = SentenceTransformer("BAAI/bge-small-en-v1.5")
+ce = CrossEncoder("BAAI/bge-reranker-base")
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+doc_emb = bi.encode(docs, normalize_embeddings=True)
+q_emb = bi.encode([query], normalize_embeddings=True)
+cand = (doc_emb @ q_emb.T).ravel().argsort()[::-1][:50]
+scores = ce.predict([(query, docs[i]) for i in cand])
+top = [docs[cand[i]] for i in scores.argsort()[::-1][:5]]
+```
 
-## Monitoring and Observability
+Fine-tune embeddings on in-domain pairs (with hard negatives) when off-the-shelf recall is insufficient. Re-embed the full corpus whenever the embedding model changes.
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+## Structured and Constrained Generation
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+- JSON schema/grammar-constrained decoding guarantees parseable output: provider structured-output modes, or open-source tools such as Outlines, XGrammar, or vLLM guided decoding.
+- Validate outputs with Pydantic even when constrained; schemas constrain shape, not truth.
+- For extraction, include evidence spans in the schema so outputs can be verified against the source.
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+## Distillation and Small Models
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+Use a large model to label data, then train a small model for production:
 
-## Scalability and Reliability
+1. Prompt a strong LLM to label a sample of unlabeled production data.
+2. Human-review a subset to estimate label quality.
+3. Fine-tune a compact encoder (e.g. DeBERTa-v3-small, ModernBERT) or small LLM on the labels.
+4. Compare against the teacher on a human-labeled test set; route low-confidence cases to the teacher or humans.
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+Benefits: lower latency and cost, deterministic behavior, on-prem deployment. SetFit (contrastive fine-tuning of sentence transformers) works well with few labels.
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+## Multilingual NLP
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+- Multilingual encoders (XLM-RoBERTa, mDeBERTa) and multilingual embedding models enable cross-lingual transfer: train on one language, apply to others, with some quality loss.
+- Evaluate per language; tokenization efficiency and quality vary by script.
+- Language identification (fastText `lid.176`, CLD3) before routing.
+- Machine translation pipelines (NLLB, MarianMT, LLMs) as an alternative to native multilingual models.
 
-## Integration and Interoperability
+## Inference Optimization
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+| Technique | Effect |
+|-----------|--------|
+| Dynamic batching / continuous batching | Throughput (vLLM, TGI, Triton) |
+| Quantization (INT8, 4-bit AWQ/GPTQ, FP8 on supported GPUs) | Memory and speed; validate accuracy |
+| ONNX Runtime / TensorRT export for encoders | Lower latency for classification/embedding |
+| KV cache reuse / prefix caching | Faster repeated prompts |
+| Speculative decoding | Faster generation with a draft model |
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+## Evaluating Generative Systems
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Build a versioned evaluation set of real queries with references or rubrics.
+- Separate metrics: retrieval quality (recall@k), faithfulness to sources, answer relevance, format validity, refusal correctness, latency, cost.
+- LLM-as-judge: use pairwise or rubric scoring, randomize answer order, calibrate against human labels, and avoid judging with the same model family when possible.
+- Track regressions on every prompt, model or retrieval change in CI.
+- Slice by user segment, language and query type.
+
+## Safety and Robustness
+
+- Prompt injection via retrieved content: treat documents as data; never let retrieved text trigger tool actions without checks.
+- PII detection and redaction (token classification models or Microsoft Presidio) on inputs and logs.
+- Toxicity and policy classifiers on outputs where needed.
+- Adversarial and perturbation tests (typos, paraphrases, negation).
+
+## Checklist
+
+- [ ] PEFT considered before full fine-tuning
+- [ ] Long inputs handled by structured chunking or validated long-context models
+- [ ] Hybrid retrieval + cross-encoder reranking with measured recall
+- [ ] Structured output constrained and validated
+- [ ] Distillation path to small models for high-volume tasks
+- [ ] Per-language evaluation for multilingual use
+- [ ] Generative eval set with faithfulness and judge calibration

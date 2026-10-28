@@ -1,213 +1,114 @@
 # Onboarding Flow Fundamentals
 
-## Overview
-Onboarding Flow is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
-
-## Core Concepts
-
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Onboarding Flow helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
-
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Onboarding Flow solutions. These principles help maintain code quality and reduce technical debt.
-
-### Concept 3: Data Management
-Proper data management is essential for Onboarding Flow. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
-
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Onboarding Flow follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
-
-## Implementation Guide
-
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
-
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Onboarding Flow concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+Onboarding is the path from sign-up to the first experience of real value (activation). This reference defines the core concepts, how to map an onboarding flow, which metrics to track, and how to instrument it. Patterns, activation design, funnels, and experiments are covered in sibling references.
+
+## 1. Core Concepts
+
+| Concept | Definition |
+|---|---|
+| Activation | The user reaches an outcome that predicts retention (e.g. "created a project and invited a teammate") |
+| Aha moment | The point where the user perceives the product's value; activation is its measurable proxy |
+| Time to value (TTV) | Elapsed time from sign-up to activation |
+| Setup moment | Prerequisites completed (account, data connected, integration installed) |
+| Habit moment | Repeated use that indicates retention (e.g. used on 3 separate days in week 1) |
+| Onboarding flow | Screens, prompts, emails, and help that move users from sign-up to activation |
+
+Define activation from data: find early behaviours that distinguish retained from churned users, then validate the definition with experiments (correlation alone does not prove the behaviour causes retention).
+
+## 2. Mapping the Flow
+
+```
+Acquisition source → Sign-up → Welcome / intent question → Setup steps
+→ First key action → Aha moment (activation) → Habit loop → Expansion (invite, upgrade)
+```
+
+For each step document: goal, required user effort, data collected, drop-off rate, and whether the step is necessary now or can be deferred.
+
+| Step type | Examples | Guideline |
+|---|---|---|
+| Account creation | Email/password, SSO, magic link | Offer SSO; ask only what is needed |
+| Intent capture | "What do you want to do first?" | One or two questions that change the experience; skip anything not used |
+| Setup | Connect data, install SDK, import contacts | Provide sample data/templates so users can reach value before setup is complete |
+| First key action | Create first document, send first campaign | Guide with a checklist or empty-state call to action |
+| Social / team | Invite teammates | Prompt after the user has seen value |
+
+## 3. Reducing Friction
+
+- Remove or defer fields; use progressive profiling (ask later, when the answer is needed).
+- Default sensible settings; let users change them later.
+- Use empty states that explain the next action instead of blank screens.
+- Provide templates, sample projects, or demo data.
+- Make onboarding skippable and resumable; do not block experienced users.
+- Keep the product usable on small screens and accessible (keyboard navigation, screen readers, contrast) during onboarding.
+
+## 4. Metrics
+
+| Metric | Definition | Use |
+|---|---|---|
+| Sign-up completion rate | Completed sign-ups / started | Form friction |
+| Step conversion | Users completing step N+1 / completing step N | Find biggest drop-offs |
+| Activation rate | Activated users within X days / new sign-ups in cohort | Primary onboarding outcome |
+| Time to value | Median time from sign-up to activation | Speed of value delivery |
+| Early retention | Users active in week 2–4 / cohort | Validates activation definition |
+| Onboarding checklist completion | Completed items / total | Engagement with guidance |
+
+Report by cohort (sign-up week) and segment (acquisition channel, plan, persona, platform); blended averages hide problems.
+
+## 5. Instrumentation
+
+Track a small, consistent event set with properties:
+
+```json
+{"event": "onboarding_step_completed",
+ "user_id": "u_123", "account_id": "a_456",
+ "properties": {"step": "connect_data_source", "step_index": 3, "flow_version": "2026-10-a",
+                "source": "google_ads", "platform": "web"},
+ "timestamp": "2026-10-28T09:12:44Z"}
+```
+
+| Event | When |
+|---|---|
+| `signup_started`, `signup_completed` | Account creation |
+| `onboarding_step_viewed`, `onboarding_step_completed`, `onboarding_skipped` | Each step |
+| `activation_achieved` | Computed server-side when the activation definition is met |
+| `invite_sent`, `invite_accepted` | Team expansion |
+
+- Name events in a tracking plan with owners; enforce with schema validation in the analytics pipeline (Segment Protocols, RudderStack tracking plans, Amplitude/Mixpanel data governance, or custom).
+- Compute activation server-side from trusted events; client events can be blocked or duplicated.
+- Include `flow_version` to compare onboarding variants over time.
+- Respect consent requirements for analytics (GDPR/ePrivacy) and avoid sending personal data in event properties.
+
+## 6. Channels Beyond the Product
+
+| Channel | Use |
+|---|---|
+| In-app guidance (checklists, tooltips, empty states) | Primary path to activation |
+| Lifecycle email | Bring users back to unfinished steps; triggered by behaviour, not fixed schedules alone |
+| Human touch (sales assist, customer success) | High-value accounts or complex setup |
+| Help center and contextual docs | Self-serve problem solving |
+
+## 7. Working Process
+
+1. Define activation and TTV targets from data.
+2. Map the current flow with drop-off rates.
+3. Interview or watch users who dropped off (qualitative why).
+4. Prioritize fixes by drop-off size × ease.
+5. Ship changes as experiments where traffic allows (`onboarding-experiments.md`).
+6. Review metrics by cohort monthly.
+
+## Pitfalls
+
+- Activation defined as a vanity action (logged in, viewed dashboard).
+- Long product tours that users skip and forget.
+- Asking for data you never use in sign-up forms.
+- Measuring only overall conversion, missing segment-specific problems.
+- Client-only tracking that undercounts due to blockers.
+
+## Checklist
+
+- [ ] Activation event defined from retention data and validated.
+- [ ] Flow mapped with per-step drop-off and necessity reviewed.
+- [ ] Tracking plan with server-side activation computation.
+- [ ] Metrics reported by cohort and segment.
+- [ ] Qualitative research on drop-off points.
+- [ ] Onboarding skippable, resumable, accessible.

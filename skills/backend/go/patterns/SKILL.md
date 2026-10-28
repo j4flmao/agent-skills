@@ -413,15 +413,14 @@ Always run with `-race` flag: `go test -race ./...`. Use `sync.WaitGroup` or `er
 ## Rules
 - Never start a goroutine without knowing how it will stop. context cancellation is the standard mechanism.
 - Use sync.WaitGroup or errgroup for synchronization. Never time.Sleep to wait for goroutines.
-- The creator of a channel is responsible for closing it. Not the consumer.
+- Only the sending side closes a channel (the owner that writes to it), never the receiver; closing twice or sending on a closed channel panics.
 - Always wrap errors with context: fmt.Errorf("load config: %w", err). "file not found" is useless without context.
-- context.Background() is used only at the entry point (main, request handler). Use context.TODO() during migration.
+- context.Background() is created only at program entry points (main, tests, background workers). HTTP handlers use r.Context(); everything below receives ctx as the first parameter.
 - Never copy a sync.Mutex. Always pass as pointer.
-- Run `go vet` and `-race` in CI — catch deadlocks and data races before they reach production.
+- Run `go vet` and `go test -race` in CI — vet catches misuse such as copied locks; the race detector finds data races on exercised code paths (it does not detect deadlocks).
 
 ## References
   - references/concurrency-patterns.md — Go Concurrency Patterns
-  - references/error-handling.md — Go Error Handling
   - references/go-cli-patterns.md — Go CLI Application Patterns
   - references/go-microservices.md — Go Microservices Patterns
   - references/go-middleware.md — Go HTTP Middleware Patterns
@@ -430,68 +429,6 @@ Always run with `-race` flag: `go test -race ./...`. Use `sync.WaitGroup` or `er
 No artifact produced.
 Next skill: backend-testing — test Go patterns.
 Carry forward: concurrency model, HTTP handler DI pattern, graceful shutdown.
-## Implementation Patterns
-
-### Factory Pattern for Module Creation
-`
-function createModule<T>(config: ModuleConfig): T {
-  const dependencies = initializeDependencies(config);
-  const module = new Module(dependencies);
-  module.hooks.onInit();
-  return module as T;
-}
-`
-
-### Builder Pattern for Complex Configuration
-`
-class ConfigBuilder {
-  private config: AppConfig = new AppConfig();
-  withDatabase(url: string): ConfigBuilder { ... }
-  withCache(ttl: number): ConfigBuilder { ... }
-  withLogging(level: string): ConfigBuilder { ... }
-  build(): AppConfig { return this.config; }
-}
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Production build with optimizations enabled
-- [ ] Environment variables configured per environment
-- [ ] Health check endpoint responds correctly
-- [ ] Error tracking and monitoring integrated
-- [ ] Logging level configured (not debug in production)
-- [ ] Resource limits configured
-- [ ] Database migrations applied
-- [ ] Static assets built and served from CDN or cache
-- [ ] Feature flags toggled appropriately
-- [ ] Rollback plan documented and tested
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% | Critical | Rollback or fix |
-| p95 latency | > 500ms | Warning | Profile and optimize |
-| Uptime | < 99.9% | Critical | Investigate infrastructure |
-| Memory usage | > 80% | Warning | Check for leaks |
-| CPU usage | > 80% | Warning | Scale up or optimize |
-
-## Rules
-- Prefer composition over inheritance
-- Favor immutable data structures
-- Use dependency injection for testability
-- Keep functions pure when possible — no side effects
-- Fail fast with clear error messages
-- Don't repeat yourself (DRY) — extract shared logic
-- Keep it simple (KISS) — avoid unnecessary complexity
-- You aren't gonna need it (YAGNI) — build what's required
-- Separate concerns — single responsibility per module
-- Code to interfaces, not implementations
-- Write self-documenting code — clear names over comments
-- Prefer standard library over third-party dependencies
-- Handle errors explicitly — no silent failures
-- Validate inputs at boundaries
-- Log at appropriate levels (debug, info, warn, error)
 
 ## Implementation Patterns
 
@@ -580,8 +517,8 @@ func (p *Pool) worker() {
 - Use `map` with struct keys over string keys for structured lookups.
 - `io.Copy` with `io.Pipe` for streaming transformations.
 - Escape analysis: prefer value receivers. Check with `-gcflags="-m"`.
-- `runtime.GOMAXPROCS(0)` matches CPU quota. No oversubscription.
-- Profile-guided optimization with `-PGO` flag in Go 1.21+.
+- Since Go 1.25, GOMAXPROCS defaults to the container CPU limit on Linux; on older versions use `go.uber.org/automaxprocs`. `runtime.GOMAXPROCS(0)` only reads the current value.
+- Profile-guided optimization (Go 1.21+): place a CPU profile as `default.pgo` in the main package (picked up by the default `-pgo=auto`) or pass `-pgo=path`.
 
 ## Security Considerations
 
@@ -594,45 +531,3 @@ func (p *Pool) worker() {
 - Rate limiting: token bucket per client IP. Sliding window for authenticated users.
 - CORS: `rs/cors` middleware. Allow specific origins only.
 - Authentication: JWT with `golang-jwt/jwt`. Short expiry. Refresh token rotation.
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets

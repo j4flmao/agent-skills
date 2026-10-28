@@ -1,4 +1,37 @@
+---
+name: double-entry-ledger
+description: >
+  Use this skill when the user says 'double-entry ledger', 'debit credit', 'accounting equation', 'core banking ledger', 'immutable ledger', 'event-sourced ledger'. Explains balanced double-entry accounting and immutable/event-sourced ledger design for FinTech systems. Do NOT use for: generic event sourcing (use backend/universal/event-sourcing) or payment gateway integration (use ecommerce/payment-processing).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [niche, fintech, ledger, accounting, event-sourcing]
+---
+
 # Double-Entry Ledger Architecture
+
+## Purpose
+Explain double-entry ledger design where every transaction posts balanced debits and credits (Assets = Liabilities + Equity), and why FinTech ledgers are append-only/event-sourced for auditability and reconstructable balances.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "double-entry ledger", "debit/credit balancing", "accounting equation", "immutable ledger", "event-sourced balances".
+
+### Input Context
+- Account types and currencies.
+- Consistency/audit requirements.
+
+### Output Artifact
+Ledger schema and posting rules with invariants.
+
+### Response Format
+```
+Entry: {debit acct / credit acct}
+Invariant: {sum(debits)=sum(credits)}
+Storage: {append-only / event-sourced}
+```
+
 
 ## Core Mechanics
 

@@ -1,51 +1,108 @@
-# Error Handling Internal Wiki
+# Error Handling for Lake Writes: Conflicts, Retries and Idempotency
 
-### Architectural Deep Dive: Error Handling
-In modern distributed systems, Error Handling represents a critical bottleneck and opportunity for optimization. This deep dive into Error Handling reveals a sophisticated event-driven model using Kafka for WAL and Parquet for columnar persistence. By isolating the compute layer from the storage plane, we achieve elastic scalability.
+How lake writes fail, which failures are safe to retry, and how to make batch and streaming writes idempotent so retries never duplicate data.
 
-To further guarantee ACID compliance and low-latency reads, the system implements multi-version concurrency control (MVCC). For Error Handling, this means readers are never blocked by writers. The compaction daemon runs asynchronously to merge small files and reclaim space.
+## Failure Classes
 
-### System Architecture
-```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
-graph TD
-    S3_Bucket["S3_Bucket Layer"] -->|Stream| ErrorHandling_B["ErrorHandling_B Processor"]
-    ErrorHandling_B -->|Checkpoint| ErrorHandling_C
-    ErrorHandling_B -->|Optimize| RocksDB_State["RocksDB_State Engine"]
-    RocksDB_State -->|Write| ErrorHandling_A
-    ErrorHandling_A -->|Persist| KMS_Auth
-    ORC_Writer -.->|Authenticate| RocksDB_State
+| Failure | Example | Retry? |
+|---|---|---|
+| Commit conflict (retryable) | Delta `ConcurrentAppendException`, Iceberg `CommitFailedException` | Yes, bounded, with backoff |
+| Logical conflict | Delta `ConcurrentDeleteDeleteException`, Iceberg validation failure under serializable isolation | Re-run whole operation on fresh state, or fix scheduling |
+| Commit state unknown | Iceberg `CommitStateUnknownException` (timeout during commit) | Do not blindly retry; check table history first |
+| Schema mismatch | `AnalysisException` / schema validation errors | No; fix data or migrate schema |
+| Protocol/feature unsupported | Delta `DeltaUnsupportedTableFeatureException` / reader version errors | No; upgrade engine |
+| Storage throttling | S3 `503 SlowDown` | SDK retries; reduce request rate (fewer, larger files) |
+| Bad records | parse failures, constraint violations | Quarantine, not retry |
+
+## Bounded Retry for Conflicts
+
+```python
+from __future__ import annotations
+
+import logging
+import random
+import time
+
+from delta.exceptions import ConcurrentAppendException, ConcurrentDeleteReadException
+
+log = logging.getLogger(__name__)
+RETRYABLE = (ConcurrentAppendException, ConcurrentDeleteReadException)
+
+
+def run_with_retry(op, *, table: str, attempts: int = 4, base: float = 2.0, cap: float = 60.0) -> None:
+    for attempt in range(1, attempts + 1):
+        try:
+            op()
+            return
+        except RETRYABLE as exc:
+            if attempt == attempts:
+                log.error("commit failed after %d attempts table=%s error=%s", attempt, table, exc)
+                raise
+            sleep = random.uniform(0, min(cap, base * 2 ** attempt))   # full jitter
+            log.warning("commit conflict table=%s attempt=%d sleep=%.1fs", table, attempt, sleep)
+            time.sleep(sleep)
 ```
 
-### Mathematical Thresholds
-To determine the optimal configuration for Error Handling, we apply the following mathematical formula to calculate the system threshold:
+Iceberg already retries `CommitFailedException` internally (`commit.retry.num-retries`, `commit.retry.min-wait-ms`, `commit.retry.max-wait-ms`); add an outer retry only for whole-operation validation failures.
 
-$$ C_{opt} = \argmin_{C} \left( \alpha \cdot T_{CPU}(C) + \beta \cdot S_{Network}(C) \right) $$
+## Idempotent Batch Writes
 
-### Code Implementation
-Below is a highly optimized production-grade implementation addressing Error Handling:
+Pick one per table:
 
-```java
-// Flink Java Implementation
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+| Technique | How |
+|---|---|
+| Deterministic overwrite | Job for date D always replaces partition D (`INSERT OVERWRITE` dynamic mode) |
+| Keyed MERGE with version guard | `WHEN MATCHED AND s.version > t.version THEN UPDATE` |
+| Delta idempotent writes | `txnAppId` + `txnVersion` options; Delta skips a write whose version was already committed for that app ID |
+| Batch ID recorded in commit | Store batch ID in commit metadata / control table; skip if present |
 
-public class StreamingJob {
-    public static void main(String[] args) throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.enableCheckpointing(60000); // 1 min RocksDB checkpoints
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env);
-        
-        tableEnv.executeSql(
-            "CREATE TABLE sink_table (" +
-            "  id BIGINT, " +
-            "  data STRING" +
-            ") WITH (" +
-            "  'connector' = 'hudi', " +
-            "  'path' = 's3a://lakehouse/hudi/', " +
-            "  'table.type' = 'MERGE_ON_READ'" +
-            ")"
-        );
-    }
-}
+```python
+(df.write.format("delta")
+   .option("txnAppId", "orders_loader")
+   .option("txnVersion", batch_number)        # monotonically increasing per app
+   .mode("append")
+   .saveAsTable("lake.bronze.orders"))
 ```
+
+Iceberg: record `snapshot-property.<key>` on commit (e.g. `.option("snapshot-property.batch-id", batch_id)`) and check `SELECT summary['batch-id'] FROM lake.db.t.snapshots` before writing.
+
+## Idempotent Streaming Writes
+
+- Structured Streaming with a checkpoint gives exactly-once into Delta/Iceberg sinks; `foreachBatch` does not by itself, because the function may run again for the same `batch_id`.
+- In `foreachBatch`, use `txnAppId=<query id>`/`txnVersion=batch_id` (Delta) or a MERGE that is naturally idempotent.
+- Flink sinks commit on checkpoint completion (two-phase); restart from the last checkpoint does not duplicate.
+
+## Handling Commit State Unknown (Iceberg)
+
+1. Do not delete the written data files.
+2. Reload the table and look for a snapshot with your batch ID in its summary.
+3. If present: success. If absent: retry the commit; orphaned files are cleaned later by `remove_orphan_files`.
+
+## Bad Record Quarantine
+
+```python
+parsed = raw.withColumn("rec", F.from_json("json", schema, {"mode": "PERMISSIVE",
+                                                             "columnNameOfCorruptRecord": "_corrupt"}))
+good = parsed.filter("rec._corrupt IS NULL").select("rec.*")
+bad = parsed.filter("rec._corrupt IS NOT NULL") \
+            .withColumn("_error", F.lit("json_parse")) \
+            .withColumn("_quarantined_at", F.current_timestamp())
+bad.writeTo("lake.ops.quarantine_orders").append()
+```
+
+The corrupt-record column must be part of the supplied schema for `from_json` to populate it. Alert when the quarantine rate exceeds a threshold, and keep quarantine tables queryable for reprocessing.
+
+## Constraint Violations
+
+Delta `CHECK` constraints and `NOT NULL` fail the whole commit (`DeltaInvariantViolationException`). Validate before writing so one bad row does not fail the batch silently in a retry loop; send violators to quarantine.
+
+## Logging
+
+Log table, operation, batch/snapshot ID, attempt, rows written and exception class on every failure. Emit metrics: commit conflicts, retries, quarantine rows, commit latency.
+
+## Checklist
+- [ ] Retryable vs non-retryable exceptions classified per format
+- [ ] Retries bounded with jittered backoff
+- [ ] Every write idempotent (overwrite, guarded MERGE, txnAppId, or batch ID check)
+- [ ] Commit-state-unknown handled by checking history
+- [ ] Bad records quarantined with reason and alerting

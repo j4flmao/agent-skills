@@ -105,7 +105,7 @@ For continuous metrics: n = 2 × (Z_(α/2) + Z_β)² × σ² / δ²
 Simple: each unit assigned independently. Stratified: block by important covariates (country, platform, segment) to reduce variance. Cluster: group-level randomization when network effects exist (markets, regions). Re-randomization: reject unbalanced allocations (if used, must adjust inference).
 
 #### Sample Ratio Mismatch (SRM)
-Monitor daily: chi-square test on observed vs expected allocation ratio. p < 0.05 indicates SRM. Common causes: assignment code bug, caching layers, bot filtering, ad blockers. SRM found → experiment is invalid. Do not analyze primary metric. Fix root cause, re-launch.
+Monitor daily: chi-square goodness-of-fit test on observed vs expected allocation. Use a strict threshold (commonly p < 0.001) because the check is repeated and false alarms are costly. Common causes: assignment code bug, caching layers, bot filtering, ad blockers. SRM found → experiment is invalid. Do not analyze primary metric. Fix root cause, re-launch.
 
 ### Step 5: Statistical Analysis
 
@@ -180,7 +180,7 @@ def cuped_adjust(treatment_metric, control_metric, pre_treatment, pre_control):
     post_pooled = np.concatenate([treatment_metric, control_metric])
     
     # Calculate theta
-    theta = np.cov(pre_pooled, post_pooled)[0, 1] / np.var(pre_pooled)
+    theta = np.cov(pre_pooled, post_pooled)[0, 1] / np.var(pre_pooled, ddof=1)
     
     # Adjust metrics, variance_reduction = corr(pre, post)^2
     mu_x = np.mean(pre_pooled)
@@ -203,26 +203,22 @@ High correlation between pre/post metric (r > 0.5). Stable user behavior (don't 
 Allows continuous monitoring without inflating false positive rate. Uses a mixing distribution over effect sizes. Decision boundary widens over time, maintaining valid type I error at any stopping time.
 
 ```python
-# mSPRT for normal data (continuous metrics)
-def msprt_normal(treatment_data, control_data, variance=None):
-    n = len(treatment_data)
-    m = len(control_data)
+# mSPRT for a difference in means (normal approximation, Johari et al. 2017)
+def msprt_normal(treatment_data, control_data, tau: float, alpha: float = 0.05) -> bool:
+    """tau: std dev of the normal mixing prior on the effect (set near the expected/MDE effect)."""
+    n, m = len(treatment_data), len(control_data)
     theta_hat = np.mean(treatment_data) - np.mean(control_data)
-    se = np.sqrt(np.var(treatment_data)/n + np.var(control_data)/m) if variance is None else variance
-    
-    # Log-likelihood ratio integrated over normal prior N(0, tau²)
-    tau = 0.2 * se  # Mixing variance (tune based on MDE)
-    z = theta_hat / se
-    lrt = (tau**2 / (se**2 + tau**2)) * np.exp(
-        (z**2 * tau**2) / (2 * (se**2 + tau**2))
-    )
-    
-    # Reject H0 when LRT crosses threshold (typically 1/e ≈ 0.368)
-    return lrt > np.exp(-1)
+    v = np.var(treatment_data, ddof=1) / n + np.var(control_data, ddof=1) / m  # Var(theta_hat)
+
+    # Mixture likelihood ratio for H0: theta = 0 with prior theta ~ N(0, tau^2)
+    lr = np.sqrt(v / (v + tau**2)) * np.exp(tau**2 * theta_hat**2 / (2 * v * (v + tau**2)))
+
+    # Always-valid test: reject H0 the first time LR >= 1/alpha
+    return lr >= 1.0 / alpha
 ```
 
 #### Implementation in Practice
-Use sequential testing for: long-running experiments, high-traffic products, safety-critical changes. Configure: expected effect size, alpha spending function, maximum sample size. Tools: Google's CORE, Optimizely Sequential, custom mSPRT implementation.
+Use sequential testing for: long-running experiments, high-traffic products, safety-critical changes. Configure: expected effect size, alpha spending function, maximum sample size. Tools: Optimizely Stats Engine (mSPRT-based), sequential testing in experimentation platforms (e.g. Eppo, Statsig), group-sequential designs with alpha spending, or a custom mSPRT.
 
 ### Python Power Calculation
 

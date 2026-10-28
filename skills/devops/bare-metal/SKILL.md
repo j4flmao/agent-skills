@@ -928,7 +928,6 @@ PXE/iPXE configuration, BMC automation scripts (Python/Bash), Ansible burn-in pl
   - references/firmware-lifecycle.md
   - references/ipmi-bmc.md
   - references/provisioning-pxe-maas.md
-  - references/redfish-automation-guide.md
 
 ## Handoff
 After completing this skill:

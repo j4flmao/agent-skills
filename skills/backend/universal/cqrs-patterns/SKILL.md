@@ -504,16 +504,8 @@ describe('GetOrderQueryHandler', () => {
 - Mediator pipeline behaviors are for cross-cutting concerns (logging, validation, tx), not business logic.
 
 ## References
-  - references/command-query-separation.md — Command-Query Separation
-  - references/command-validation.md — Command Validation
-  - references/cqrs-fundamentals.md — CQRS Fundamentals
-  - references/cqrs-advanced.md — CQRS Advanced Patterns
-  - references/cqrs-monitoring.md — CQRS Monitoring
-  - references/cqrs-sync-strategies.md — CQRS Synchronization Strategies
-  - references/cqrs-testing.md — CQRS Testing
-  - references/event-sourcing.md — Event Sourcing
-  - references/mediator-patterns.md — Mediator Patterns for CQRS
-  - references/read-model-strategies.md — Read Model Strategies
+- Related skills: `skills/backend/universal/event-sourcing/SKILL.md`, `skills/backend/universal/transactional-outbox/SKILL.md`, `skills/backend/universal/design-patterns/microservices/SKILL.md`.
+
 ## Handoff
 No artifact produced.
 Next skill: event-sourcing — if events are the source of truth for the write model.

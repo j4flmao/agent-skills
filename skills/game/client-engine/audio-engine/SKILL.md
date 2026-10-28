@@ -1,11 +1,39 @@
 ---
 name: audio-engine
-description: Expert game audio engine — DSP graph, buses and mixing, spatialization/HRTF, streaming decode, ducking, effects (reverb/delay) and voice/performance budgets.
+description: >
+  Use this skill when the user says 'audio engine', 'game audio', 'DSP graph', 'audio mixing', 'ducking', 'spatial audio', 'HRTF', 'reverb', 'voice limiting', 'audio streaming'. Designs the runtime audio engine: DSP graph and buses, spatialization, streaming decode, ducking/mixing, effects and voice/CPU budgets. Do NOT use for: music composition or sound design, middleware authoring workflows in FMOD/Wwise UIs, VoIP chat backends.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, audio, dsp, spatial-audio, client-engine]
 ---
 
 # Audio Engine — Deep Engineering Guide
 
+## Purpose
 Audio is half the game feel and a third the frame budget people forget. This skill covers the audio graph (DSP, buses, mixing), 3D spatialization, streaming decode, ducking/mixing-control, effects and the performance/voice budgets that keep audio crisp under load.
+
+## Agent Protocol
+
+### Trigger
+"audio engine", "game audio", "DSP graph", "audio mixing", "ducking", "spatial audio", "HRTF", "reverb", "voice limiting", "audio streaming".
+
+### Input Context
+- Engine or middleware (custom, FMOD, Wwise, Unity, Unreal)
+- Platforms and voice/CPU budget
+- Content type (dialogue-heavy, music-driven, competitive shooter)
+
+### Output Artifact
+Audio graph design, mixer/bus layout, and code for the audio thread. No file unless requested.
+
+### Response Format
+```
+Graph: {sources -> buses -> master}
+Voices: {max real / virtual}
+Budget: {audio thread ms, memory}
+Code: {snippet}
+Risks: {underruns, clipping, latency}
+```
 
 ## 1. The Audio Pipeline
 
@@ -50,9 +78,9 @@ Spatialize per-voice: azimuth→pan/HRTF, distance→attenuation (per-source fal
 | One-shots (footstep) | decompressed to RAM once |
 | Dialogue | streamed + memory pool |
 
-- Decompress in **worker threads** (see job-system): `Vorbis/Opus`/platform-native at ~1–2 ms/2 k samples.
-- Chunk size: 10–80 ms ms read-ahead (latency vs memory); a long stream = a ring buffer double-buffered.
-- **Latency budget** per voice: < 30 ms added (read-ahead), so sound stays synced.
+- Decode on worker threads (see job-system): Vorbis/Opus or platform hardware codecs; measure decode cost per voice on target hardware.
+- Streams keep a ring buffer with read-ahead sized to worst-case disk latency (often a few hundred ms); prime the head of streamed clips in RAM so playback starts instantly.
+- Output latency is set by the mixer buffer (typically ~5–20 ms per block); streaming read-ahead adds memory, not latency, as long as it is primed.
 
 ## 5. Mixing Control & Ducking
 
@@ -61,7 +89,7 @@ Spatialize per-voice: azimuth→pan/HRTF, distance→attenuation (per-source fal
 | Mixing levels | per-bus volume, per-bus priorities |
 | **Ducking** | lower a sidechain bus (music→sfx) on event |
 | Voice limiting | cap max polyphony (drop/steal voices) |
-| Loudness targets | per-bus RMS targets (streaming combat music to 60% when sfx burst) |
+| Loudness targets | integrated loudness (LUFS) target for the final mix per platform guidance; meter it in QA |
 
 A classic duck: dialogue events duck music −12 dB (attack 50 ms, release 400 ms). Voice-stealing: a new urgent sound steals the oldest lowest-priority voice (never the player's own voice).
 
@@ -75,7 +103,7 @@ A classic duck: dialogue events duck music −12 dB (attack 50 ms, release 400 m
 | Compressor/limiter | master (anti-clip) |
 | Chorus/flanger | incidental |
 
-Reverb = **send** (one FDN per room, many voices route in) — never one reverb per voice per frame. Convolution reverb = author-time bake (impulse responses) not run-time.
+Reverb = **send** (one reverb per room/zone bus, many voices route in) — never one reverb per voice. Convolution reverb runs at runtime with recorded or baked impulse responses (partitioned FFT convolution) and costs far more than an algorithmic FDN — reserve it for a few buses.
 
 ## 7. Performance & Voice Budgets
 
@@ -85,14 +113,14 @@ Reverb = **send** (one FDN per room, many voices route in) — never one reverb 
 | DSP CPU | ~2–6% total (often 5%) |
 | decode threads | 1–2 |
 | latency (start→sound) | < 30–50 ms |
-| streaming bytes/s | 10–20 kB/s per stream |
+| streaming bytes/s | ~16–40 kB/s per compressed stereo stream (128–320 kbps) |
 
 For a crowd (hundreds of NPCs): voice-allocate by proximity/prioritization — the "best 24 voices" trick (spatialize the near, composite the far with a single room ambience).
 
 ## 8. Determinism (Replay & QA)
 
 - The DSP must be **deterministic**: same input → same output (fixed sample rates, fixed filter constants, no nondeterministic effects (random=seeded)).
-- QA wants byte-identical audio in replay runs to confirm "the gun sound is in" — this keeps sound *testable*.
+- With fixed seeds, replays can be rendered offline and compared, which makes audio regressions testable.
 
 ## 9. The Event→DSP Boundary (API Design)
 

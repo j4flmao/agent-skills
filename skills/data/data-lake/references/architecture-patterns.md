@@ -1,51 +1,99 @@
-# Architecture Patterns Internal Wiki
+# Lake Zone Architecture: Medallion Layers on Open Table Formats
 
-### Architectural Deep Dive: Architecture Patterns
-In modern distributed systems, Architecture Patterns represents a critical bottleneck and opportunity for optimization. The Medallion architecture (Bronze, Silver, Gold) separates raw ingestion from refined aggregations, utilizing distributed engines like Trino and Spark. By isolating the compute layer from the storage plane, we achieve elastic scalability.
+How to structure a data lake into zones (bronze/silver/gold, or raw/curated/consumption) with ACID table formats, what each zone guarantees, and how data moves between them. Ingestion mechanics are in `architecture_patterns.md`.
 
-To further guarantee ACID compliance and low-latency reads, the system implements multi-version concurrency control (MVCC). For Architecture Patterns, this means readers are never blocked by writers. The compaction daemon runs asynchronously to merge small files and reclaim space.
+## Zones
 
-### System Architecture
-```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
-graph TD
-    ArchitecturePatterns_C["ArchitecturePatterns_C Layer"] -->|Stream| KMS_Auth["KMS_Auth Processor"]
-    KMS_Auth -->|Checkpoint| ArchitecturePatterns_A
-    KMS_Auth -->|Optimize| ORC_Writer["ORC_Writer Engine"]
-    ORC_Writer -->|Write| S3_Bucket
-    S3_Bucket -->|Persist| ArchitecturePatterns_B
-    RocksDB_State -.->|Authenticate| ORC_Writer
+| Zone | Contents | Write pattern | Schema | Retention |
+|---|---|---|---|---|
+| Landing (optional) | Files exactly as delivered (JSON, CSV, Avro) | Object PUT | none | short (days), lifecycle rule |
+| Bronze / raw | Source records as table, plus ingestion metadata | Append only | source schema, permissive | long; replay source of truth |
+| Silver / curated | Cleaned, typed, deduplicated, conformed entities | MERGE / upsert, SCD | enforced, evolving under review | per domain policy |
+| Gold / consumption | Aggregates, marts, features, wide tables | Overwrite partition or MERGE | contract with consumers | as consumers need |
+
+Rules:
+- Bronze is append-only and replayable: never update it; add `_ingested_at`, `_source_file`, `_batch_id`.
+- Silver owns data quality: types, dedupe, key constraints, PII handling.
+- Gold is consumer-shaped; one gold table has one owner and a published contract.
+- Every layer is a table in a catalog, not loose files.
+
+## Reference Layout
+
+```
+s3://acme-lake-prod/
+  landing/<source>/<yyyy>/<mm>/<dd>/...
+  warehouse/
+    bronze.db/<source>_<entity>/      # Iceberg/Delta tables
+    silver.db/<domain>_<entity>/
+    gold.db/<mart>/
 ```
 
-### Mathematical Thresholds
-To determine the optimal configuration for Architecture Patterns, we apply the following mathematical formula to calculate the system threshold:
+Separate buckets (or prefixes with separate IAM) per zone make it easy to give consumers read access to gold only.
 
-$$ \text{Threshold}_{compaction} = \sum_{i=1}^{N} \frac{S_i}{T_{merge}} \times e^{-\lambda t} $$
+## Data Flow
 
-### Code Implementation
-Below is a highly optimized production-grade implementation addressing Architecture Patterns:
-
-```java
-// Flink Java Implementation
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-
-public class StreamingJob {
-    public static void main(String[] args) throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.enableCheckpointing(60000); // 1 min RocksDB checkpoints
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env);
-        
-        tableEnv.executeSql(
-            "CREATE TABLE sink_table (" +
-            "  id BIGINT, " +
-            "  data STRING" +
-            ") WITH (" +
-            "  'connector' = 'hudi', " +
-            "  'path' = 's3a://lakehouse/hudi/', " +
-            "  'table.type' = 'MERGE_ON_READ'" +
-            ")"
-        );
-    }
-}
 ```
+source DB --CDC--> Kafka --stream--> bronze (append)
+SaaS API  --batch-> landing --load--> bronze (append)
+bronze --dedupe/type/MERGE--> silver --aggregate/join--> gold --> BI / ML / reverse ETL
+```
+
+Incremental processing between layers:
+- Delta: Change Data Feed (`delta.enableChangeDataFeed=true`) or streaming source on the table.
+- Iceberg: incremental read by snapshot range (`start-snapshot-id`, `end-snapshot-id`) or `create_changelog_view`.
+- Hudi: incremental query from a commit instant.
+
+## Bronze to Silver Example (Spark SQL, Iceberg)
+
+```sql
+MERGE INTO lake.silver.customers t
+USING (
+  SELECT * FROM (
+    SELECT *, row_number() OVER (PARTITION BY customer_id ORDER BY _source_ts DESC) AS rn
+    FROM lake.bronze.crm_customers
+    WHERE _ingested_at > :last_watermark
+  ) WHERE rn = 1
+) s
+ON t.customer_id = s.customer_id
+WHEN MATCHED AND s.op = 'D' THEN DELETE
+WHEN MATCHED THEN UPDATE SET *
+WHEN NOT MATCHED AND s.op <> 'D' THEN INSERT *;
+```
+
+Store the watermark (last processed snapshot ID or ingestion timestamp) in a control table, updated in the same job after the commit succeeds.
+
+## Silver to Gold
+
+```sql
+INSERT OVERWRITE lake.gold.daily_revenue
+SELECT order_date, region, sum(amount) AS revenue, count(*) AS orders
+FROM lake.silver.orders
+WHERE order_date >= date_sub(current_date(), 3)
+GROUP BY order_date, region;
+```
+
+With Iceberg and `spark.sql.sources.partitionOverwriteMode=dynamic`, only the partitions produced are replaced; recomputing a short trailing window absorbs late data.
+
+## Variants
+
+| Variant | When |
+|---|---|
+| Two layers (raw + curated) | Small teams, few sources |
+| Medallion per domain (data mesh) | Domain teams own silver/gold, platform owns bronze ingestion |
+| Lakehouse with warehouse-serving gold | Gold also exposed through Snowflake/BigQuery/Databricks SQL reading Iceberg/Delta |
+| Kappa (streaming end to end) | Low latency needs; Flink/Spark streaming between layers |
+
+## Pitfalls
+- Business logic in bronze (filters, joins) makes replay impossible.
+- Gold tables built directly from bronze duplicate cleansing logic per mart.
+- No ownership per table: nobody fixes broken silver tables.
+- Copying data into many gold tables instead of views for simple projections.
+- Treating "landing" files as the source of truth after loading; keep bronze as the replay point.
+
+## Checklist
+- [ ] Each table assigned to a zone, owner and SLA
+- [ ] Bronze append-only with ingestion metadata
+- [ ] Silver enforces keys, types, dedupe and PII rules
+- [ ] Gold contracts documented and versioned
+- [ ] Incremental processing uses snapshot/CDF watermarks stored in a control table
+- [ ] Zone-level access control (consumers read gold only)

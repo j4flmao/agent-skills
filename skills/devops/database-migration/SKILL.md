@@ -26,6 +26,26 @@ tags: [devops, database-migration, schema, phase-5]
 ## Purpose
 Plan and execute database migrations including schema changes, cross-engine migration, zero-downtime deployments, and rollback strategies.
 
+## Agent Protocol
+
+### Trigger
+"database migration", "schema migration", "Flyway", "Liquibase", "Alembic", "AWS DMS", "gh-ost", "zero-downtime migration".
+
+### Input Context
+Source/target engines and versions, data size, write rate, downtime tolerance, migration tool already in use.
+
+### Output Artifact
+Migration scripts and step-by-step plan with rollback. No file unless requested.
+
+### Response Format
+```
+Type: {schema change|engine migration} {online|offline}
+Tool: {Flyway|Liquibase|Alembic|gh-ost|pt-osc|DMS|...}
+Steps: {expand -> migrate -> contract}
+Rollback: {plan}
+Script: {SQL/config}
+```
+
 ## Architecture Decision Trees
 
 ### Online vs Offline Migration
@@ -591,7 +611,6 @@ Applying migrations without watching database locks, replication lag, or error r
   - references/schema-migration-tools.md
   - references/schema-migration.md
   - references/zero-downtime.md
-  - references/expand-contract-guide.md
 
 ## Handoff
 Next: **cloud-migration** — full workload migration including databases.

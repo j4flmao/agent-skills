@@ -1,213 +1,92 @@
-# Kubernetes Autoscaling Fundamentals
+# Kubernetes Autoscaling Fundamentals: Layers, Metrics Pipeline and the HPA Algorithm
 
-## Overview
-Kubernetes Autoscaling is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+The autoscaling layers in Kubernetes, how metrics reach them, and the exact rules HPA uses to compute replicas. Configuration catalogs for each autoscaler live in the sibling files (`hpa-patterns.md`, `vpa-config.md`, `keda-scalers.md`, `cluster-autoscaler.md`).
 
-## Core Concepts
+## Layers
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Kubernetes Autoscaling helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Layer | Component | Adjusts | Trigger |
+|---|---|---|---|
+| Pod count | HorizontalPodAutoscaler (built in) | replicas | resource/custom/external metrics |
+| Pod count, event-driven | KEDA | replicas, including 0 | event sources (queues, streams, cron, Prometheus) |
+| Pod size | VerticalPodAutoscaler (add-on) | CPU/memory requests (and limits proportionally) | historical usage |
+| Node count | Cluster Autoscaler or Karpenter | nodes | Pending (unschedulable) pods; underutilized nodes |
+| Control-plane add-ons | cluster-proportional-autoscaler | replicas of DNS etc. | cluster size |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Kubernetes Autoscaling solutions. These principles help maintain code quality and reduce technical debt.
+Typical stack: HPA or KEDA for workloads, VPA in recommendation mode to right-size requests, Karpenter or Cluster Autoscaler for nodes.
 
-### Concept 3: Data Management
-Proper data management is essential for Kubernetes Autoscaling. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Metrics Pipeline
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+```
+kubelet (cAdvisor) --> metrics-server --> metrics.k8s.io           (CPU/memory; for HPA, VPA, kubectl top)
+Prometheus --> prometheus-adapter --> custom.metrics.k8s.io / external.metrics.k8s.io
+KEDA operator --> external.metrics.k8s.io (KEDA metrics server)
+```
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+- Only one service can back each aggregated API (`custom.metrics.k8s.io`, `external.metrics.k8s.io`) at a time; KEDA and prometheus-adapter conflict on `external.metrics.k8s.io`.
+- metrics-server keeps only recent samples (no history); VPA's recommender keeps its own histograms.
 
-## Architecture Patterns
+## HPA Algorithm
 
-### Pattern 1: Standard Architecture
-The standard architecture for Kubernetes Autoscaling follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+Every sync period (default 15 s, `--horizontal-pod-autoscaler-sync-period` on kube-controller-manager):
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+```
+desiredReplicas = ceil( currentReplicas × currentMetricValue / desiredMetricValue )
+```
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+Example: 4 replicas at 90 % average CPU with target 60 % → ceil(4 × 90 / 60) = 6.
 
-## Implementation Guide
+Rules applied around the formula:
+- Tolerance: no change if the ratio is within ±10 % of 1.0 (`--horizontal-pod-autoscaler-tolerance`, default 0.1). Kubernetes 1.33 added per-HPA tolerance in `spec.behavior.scaleUp/scaleDown.tolerance` as an alpha feature (`HPAConfigurableTolerance` gate); check its status for your version.
+- Multiple metrics: compute desired replicas for each, take the maximum.
+- Missing metrics: pods without metrics are assumed to use 100 % of target when scaling down and 0 % when scaling up (conservative in both directions).
+- Not-ready / starting pods: for CPU, pods that are not yet ready or within the initial readiness window are ignored or treated conservatively (`--horizontal-pod-autoscaler-cpu-initialization-period` default 5 min, `--horizontal-pod-autoscaler-initial-readiness-delay` default 30 s).
+- Clamp to `[minReplicas, maxReplicas]`, then apply `behavior` policies.
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+## Default Behavior
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+If `spec.behavior` is omitted:
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+| Direction | Stabilization window | Policies |
+|---|---|---|
+| Scale up | 0 s | max of 100 % or 4 pods per 15 s |
+| Scale down | 300 s | 100 % per 15 s (bounded by stabilization) |
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+Stabilization: for scale-down, HPA uses the highest desired-replica recommendation seen during the window, preventing flapping.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+## Requests Are the Foundation
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+- HPA utilization = usage / requests. Too-low requests make HPA scale out early; too-high make it react late and waste nodes.
+- Cluster Autoscaler/Karpenter schedule by requests, not usage.
+- VPA recommendations (or observed p90–p95 usage) are the input for setting requests.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## Node Autoscaling Basics
 
-## Best Practices
+- Cluster Autoscaler: scales node groups (ASGs, MIGs, VMSS) when pods are Pending due to insufficient resources; scales down nodes whose pods fit elsewhere after a delay (`--scale-down-unneeded-time`, default 10 min).
+- Karpenter: provisions right-sized nodes directly from pending pod requirements and consolidates underutilized nodes (`karpenter.sh/v1` NodePool API).
+- Both respect PodDisruptionBudgets during scale-down/consolidation; pods with restrictive PDBs or `safe-to-evict: "false"` annotations block node removal.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+## Reaction Time
 
-## Common Pitfalls
+```
+load rises → metrics scraped (≈15–60 s) → HPA sync (≤15 s) → pod scheduled
+  → if no capacity: node provisioned (~1–3 min typical in cloud) → image pull → app startup → readiness
+```
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+Startup time of the app and image size often dominate. Mitigations: smaller images, image pre-pulling/caching, startup probes tuned, headroom via `minReplicas` or low-priority "pause" pods (overprovisioning) that get preempted.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+## Choosing Signals
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+| Workload | Good signal |
+|---|---|
+| CPU-bound stateless API | CPU utilization or RPS per pod |
+| I/O-bound API | RPS or in-flight requests per pod, latency SLO-based custom metric |
+| Queue workers | Backlog per worker (KEDA) |
+| Batch | Jobs per queue; scale to zero between runs |
+| Memory-bound caches | Usually scale manually or vertically; memory rarely drops on scale-out |
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Kubernetes Autoscaling concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+## Checklist
+- [ ] metrics-server installed and healthy; adapters do not conflict on aggregated APIs
+- [ ] Requests set from observed usage
+- [ ] Signal chosen per workload type
+- [ ] Node autoscaler configured with PDB-aware scale-down
+- [ ] End-to-end reaction time measured under a load test

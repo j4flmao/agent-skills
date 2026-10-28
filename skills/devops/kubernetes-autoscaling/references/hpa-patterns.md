@@ -1,22 +1,19 @@
-# Horizontal Pod Autoscaler (HPA)
+# Horizontal Pod Autoscaler (HPA) Patterns
 
-## Overview
+HPA (`autoscaling/v2`) scales the replica count of a Deployment, StatefulSet or any resource with a `scale` subresource, from resource, per-pod, object or external metrics. This file is a pattern catalog; the scaling algorithm is explained in `kubernetes-autoscaling-fundamentals.md`, event-driven scaling in `keda-scalers.md`.
 
-HPA automatically scales the number of pods based on observed metrics. Kubernetes autoscaling/v2 API supports resource metrics, custom metrics, and external metrics with advanced behavior configuration.
+## Base Manifest
 
-## Basic HPA
-
-### CPU-Based Autoscaling
 ```yaml
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: web-app
+  name: web
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: web-app
+    name: web
   minReplicas: 2
   maxReplicas: 20
   metrics:
@@ -25,334 +22,152 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 70
+        averageUtilization: 70      # percent of the pods' CPU *requests*
 ```
 
-### Memory-Based Autoscaling
+Utilization targets are relative to container `requests`; pods without requests for that resource make the metric unavailable. Requests must reflect real usage, which is what VPA recommendations help with. Setting requests equal to limits is a QoS decision (Guaranteed class), not an HPA requirement.
+
+The remaining patterns show only the `spec` fields that change.
+
+## Metric Patterns
+
+Memory (only for workloads whose memory tracks load; many runtimes never release memory, so the HPA cannot scale down):
+
 ```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: cache-service
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: cache-service
-  minReplicas: 3
-  maxReplicas: 15
   metrics:
   - type: Resource
     resource:
       name: memory
-      target:
-        type: Utilization
-        averageUtilization: 75
+      target: {type: Utilization, averageUtilization: 75}
 ```
 
-### Multiple Metrics
+Per-container resource (ignores sidecars such as service-mesh proxies; GA since Kubernetes 1.30):
+
 ```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: api-gateway
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: api-gateway
-  minReplicas: 2
-  maxReplicas: 20
   metrics:
-  - type: Resource
-    resource:
+  - type: ContainerResource
+    containerResource:
       name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
-  - type: Pods
-    pods:
-      metric:
-        name: requests_per_second
-      target:
-        type: AverageValue
-        averageValue: 1000
+      container: app
+      target: {type: Utilization, averageUtilization: 70}
 ```
 
-## Custom Metrics
+Per-pod custom metric (served by an adapter at `custom.metrics.k8s.io`):
 
-### Prometheus Custom Metrics
 ```yaml
-# Requires prometheus-adapter or custom-metrics-apiserver
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: worker-hpa
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: worker
-  minReplicas: 1
-  maxReplicas: 50
   metrics:
   - type: Pods
     pods:
-      metric:
-        name: queue_messages_processing
-      target:
-        type: AverageValue
-        averageValue: 5
+      metric: {name: http_requests_per_second}
+      target: {type: AverageValue, averageValue: "100"}
 ```
 
-### Prometheus Adapter Config
+Object metric (one value describing another object, e.g. an Ingress or Service):
+
 ```yaml
-# prometheus-adapter config
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: adapter-config
-  namespace: monitoring
-data:
-  config.yaml: |
-    rules:
-    - seriesQuery: 'rate(http_requests_total{job="my-app"}[5m])'
-      resources:
-        overrides:
-          namespace: {resource: "namespace"}
-          pod: {resource: "pod"}
-      name:
-        matches: "^(.*)_total"
-        as: "requests_per_second"
-      metricsQuery: 'rate(<<.Series>>{<<.LabelMatchers>>}[2m])'
-```
-
-## External Metrics
-
-### Kafka Lag-Based Scaling
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: kafka-consumer
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: kafka-consumer
-  minReplicas: 1
-  maxReplicas: 30
-  metrics:
-  - type: External
-    external:
-      metric:
-        name: kafka_consumer_lag
-        selector:
-          matchLabels:
-            topic: orders
-            consumer-group: order-processor
-      target:
-        type: AverageValue
-        averageValue: 100
-```
-
-### SQS Queue Depth
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: sqs-worker
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: sqs-worker
-  minReplicas: 1
-  maxReplicas: 20
-  metrics:
-  - type: External
-    external:
-      metric:
-        name: aws_sqs_approximate_number_of_messages_visible
-        selector:
-          matchLabels:
-            queue_name: my-queue
-      target:
-        type: AverageValue
-        averageValue: 10
-```
-
-## Behavior Configuration
-
-### Stabilization and Scaling Policies
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: web-app-behavior
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: web-app
-  minReplicas: 2
-  maxReplicas: 20
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 300  # 5 min before scaling down
-      policies:
-      - type: Percent
-        value: 10      # Max 10% pods can scale down per period
-        periodSeconds: 60
-      - type: Pods
-        value: 5       # Or max 5 pods per period (whichever is less restrictive)
-        periodSeconds: 60
-      selectPolicy: Min  # Use the policy that results in fewer changes
-    scaleUp:
-      stabilizationWindowSeconds: 0  # Scale up immediately
-      policies:
-      - type: Percent
-        value: 100     # Can double pods per period
-        periodSeconds: 15
-      - type: Pods
-        value: 4       # Or add 4 pods (whichever is more)
-        periodSeconds: 15
-      selectPolicy: Max
-```
-
-### Aggressive Scale-Up, Conservative Scale-Down
-```yaml
-behavior:
-  scaleUp:
-    policies:
-    - type: Pods
-      value: 10
-      periodSeconds: 15
-    - type: Percent
-      value: 200
-      periodSeconds: 15
-    selectPolicy: Max
-    stabilizationWindowSeconds: 0
-  scaleDown:
-    stabilizationWindowSeconds: 600  # 10 min window
-    policies:
-    - type: Percent
-      value: 5
-      periodSeconds: 60
-    selectPolicy: Min
-```
-
-## Advanced Patterns
-
-### HPA with Custom Resource Metrics
-```yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: ml-inference
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: ml-inference
-  minReplicas: 1
-  maxReplicas: 100
   metrics:
   - type: Object
     object:
-      describedObject:
-        apiVersion: v1
-        kind: Service
-        name: inference-ingress
-      metric:
-        name: inference_requests_inflight
-      target:
-        type: AverageValue
-        averageValue: 50
+      describedObject: {apiVersion: networking.k8s.io/v1, kind: Ingress, name: main}
+      metric: {name: requests_per_second}
+      target: {type: Value, value: "2k"}
 ```
 
-### HPA with Multiple Scaling Triggers
+External metric (queue depth from outside the cluster, via `external.metrics.k8s.io`):
+
 ```yaml
-metrics:
-- type: Resource
-  resource:
-    name: cpu
-    target:
-      type: Utilization
-      averageUtilization: 70
-- type: Pods
-  pods:
-    metric:
-      name: grpc_requests_in_flight
-    target:
-      type: AverageValue
-      averageValue: 100
-- type: External
-  external:
-    metric:
-      name: pubsub_subscription_undelivered_messages
-      selector:
-        matchLabels:
-          subscription_id: my-sub
-    target:
-      type: Value
-      value: 500
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: sqs_messages_visible
+        selector: {matchLabels: {queue: orders}}
+      target: {type: AverageValue, averageValue: "30"}   # per replica
 ```
+
+`AverageValue` divides the metric by current replicas; `Value` compares the raw value. For queues, `AverageValue` (backlog per worker) is the usual choice. For queue-driven workloads, KEDA is often simpler than running a metrics adapter yourself.
+
+With multiple metrics, HPA computes a desired count for each and uses the highest.
+
+## Prometheus Adapter Rule
+
+```yaml
+rules:
+- seriesQuery: 'http_requests_total{namespace!="",pod!=""}'
+  resources:
+    overrides:
+      namespace: {resource: "namespace"}
+      pod: {resource: "pod"}
+  name:
+    matches: "^(.*)_total$"
+    as: "${1}_per_second"
+  metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'
+```
+
+`seriesQuery` selects raw series (not a `rate()` expression); the rate belongs in `metricsQuery`.
+
+## Behavior Patterns
+
+Fast up, slow down (web services):
+
+```yaml
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      selectPolicy: Max                 # pick the policy allowing the largest change
+      policies:
+      - {type: Percent, value: 100, periodSeconds: 15}
+      - {type: Pods, value: 4, periodSeconds: 15}
+    scaleDown:
+      stabilizationWindowSeconds: 300   # use the highest recommendation of the last 5 min
+      selectPolicy: Min                 # pick the policy allowing the smallest change
+      policies:
+      - {type: Percent, value: 10, periodSeconds: 60}
+      - {type: Pods, value: 5, periodSeconds: 60}
+```
+
+Never scale down (manual or batch-controlled shrink):
+
+```yaml
+  behavior:
+    scaleDown:
+      selectPolicy: Disabled
+```
+
+Burst workloads with long startup (JVM, model loading): raise `scaleUp` limits and pre-scale with `minReplicas` via a scheduled change (or KEDA cron scaler) before known peaks, because HPA reacts only after load arrives.
+
+## Interplay With Other Autoscalers
+
+| Combination | Guidance |
+|---|---|
+| HPA + VPA on the same resource metric | Avoid; VPA changing requests shifts HPA's utilization baseline. Use VPA in `Off` (recommend-only) mode or scale HPA on custom metrics |
+| HPA + Cluster Autoscaler/Karpenter | Expected pairing: HPA adds pods, node autoscaler adds nodes for Pending pods |
+| HPA + KEDA | KEDA creates and manages its own HPA; do not also define an HPA for the same target |
+| HPA + PodDisruptionBudget | PDB limits voluntary disruption, not HPA scale-down; keep `minReplicas` ≥ PDB `minAvailable` |
 
 ## Troubleshooting
 
-### Common Issues
 ```bash
-# Check HPA status
-kubectl describe hpa web-app
-
-# View HPA events
-kubectl get events --field-selector involvedObject.name=web-app
-
-# Check metric server
-kubectl get --raw /apis/metrics.k8s.io/v1beta1
-
-# Verify custom metrics
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1
-
-# Check external metrics
-kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
+kubectl describe hpa web                      # conditions, events, current vs target
+kubectl get hpa web -o yaml                   # status.currentMetrics, conditions
+kubectl top pods -l app=web                   # metrics-server data
+kubectl get --raw /apis/metrics.k8s.io/v1beta1 | head
+kubectl get --raw "/apis/custom.metrics.k8s.io/v1beta1" | head
+kubectl get --raw "/apis/external.metrics.k8s.io/v1beta1" | head
 ```
 
-### HPA Status Fields
-```
-Targets:          <current>/<target> (e.g., 35%/70%)
-MinPods:          2
-MaxPods:          10
-Deployment pods:  3 current / 3 desired
-Conditions:
-  AbleToScale     True
-  ScalingActive   True
-  ScalingLimited  False
-```
+| Condition / message | Meaning |
+|---|---|
+| `ScalingActive=False`, `FailedGetResourceMetric` | Metrics unavailable: metrics-server down, missing requests, pods not ready |
+| `AbleToScale=False` | Cannot read/update the scale subresource |
+| `ScalingLimited=True` | Desired count clamped by min/max or behavior policies |
+| Targets show `<unknown>` | No metric data yet or adapter misconfigured |
 
-## Best Practices
-
-1. **Set `requests` equal to `limits`** for predictable scaling behavior.
-2. **Use `averageUtilization`** for CPU/memory — not `averageValue`.
-3. **Configure `stabilizationWindowSeconds`** to prevent thrashing.
-4. **Use `scaleDown` policies** to prevent rapid scale-down during traffic dips.
-5. **Set appropriate `minReplicas`** for HA (2+ for production).
-6. **Set `maxReplicas`** high enough to handle peak load, but within cluster capacity.
-7. **Combine multiple metrics** for more responsive scaling.
-8. **Monitor scaling events** with Prometheus and alert on scaling failures.
-9. **Use `selectPolicy: Max`** for scale-up (fast), `selectPolicy: Min` for scale-down (slow).
-10. **Test HPA behavior** with load testing tools before production.
+## Checklist
+- [ ] Requests set realistically on all containers involved in utilization metrics
+- [ ] Metric reflects load (CPU, RPS, backlog), not a lagging signal
+- [ ] `minReplicas` ≥ 2 for HA services and ≥ PDB requirements
+- [ ] `maxReplicas` within cluster and quota capacity
+- [ ] Behavior policies tuned: fast up, stabilized down
+- [ ] No overlapping HPA/KEDA/VPA control of the same signal
+- [ ] Load-tested scaling response before production

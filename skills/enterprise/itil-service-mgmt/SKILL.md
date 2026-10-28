@@ -264,7 +264,7 @@ Practice 6: Train and certify teams. ITIL 4 Foundation certification for all ser
 - Lucidchart for process documentation
 - Grafana / Splunk for monitoring and event management
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: Incident-to-Problem Transformation
 A SaaS company was firefighting 200+ incidents per month with recurring issues accounting for 60% of volume. Implementing ITIL problem management with known error database reduced recurring incidents by 70% over 6 months. Root cause analysis on the top-10 recurring incidents identified 3 systemic issues. Fixing those eliminated 40% of total incident volume. Operational costs reduced by 25%.
@@ -397,7 +397,7 @@ class ProblemManager:
                 root_cause="Under investigation",
                 workaround="",
                 linked_incidents=[i.title for i in incidents],
-                fix_version="TBD",
+                fix_version=None,  # assigned when a fix is scheduled
                 created_at=datetime.now()
             )
             self.known_errors[problem.id] = problem
@@ -537,10 +537,7 @@ problem_management:
   - references/incident-problem-mgmt.md -- Incident and Problem Management
   - references/itil-service-mgmt-advanced.md -- ITIL Service Management Advanced Topics
   - references/itil-service-mgmt-fundamentals.md -- ITIL Service Management Fundamentals
-  - references/itil-service-transition.md -- ITIL Service Transition Reference
-  - references/itil-service-operation.md -- ITIL Service Operation Reference
   - references/service-level-mgmt.md -- Service Level Management
-  - references/service-lifecycle.md -- ITIL Service Lifecycle
   - references/capacity-availability-management.md -- Capacity and Availability Management
 ## Handoff
 For compliance alignment, hand off to `enterprise-compliance-audit` for regulatory control mapping. For architecture decisions, hand off to `enterprise-architecture-governance` for review board approvals.

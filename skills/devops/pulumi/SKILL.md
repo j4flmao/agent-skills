@@ -211,7 +211,8 @@ const k8sProvider = new k8s.Provider("k8s", {
 
 const namespace = new k8s.core.v1.Namespace("app", {}, { provider: k8sProvider });
 
-// Helm chart
+// Helm chart (example only: ingress-nginx was retired in March 2026 — prefer a Gateway API
+// implementation such as Envoy Gateway for new clusters)
 const nginx = new helm.v3.Chart("nginx-ingress", {
   chart: "ingress-nginx",
   version: "4.10.0",
@@ -249,8 +250,8 @@ const certManager = new k8s.apiextensions.CustomResource("cluster-issuer", {
 | Backend | Pros | Cons | Best For |
 |---------|------|------|----------|
 | Pulumi Cloud | Managed, web UI, RBAC, audit, deployments | Vendor lock-in, cost | Teams, enterprise |
-| AWS S3 | Cheap, well-known | No state locking by default (DynamoDB needed) | AWS-native teams |
-| Azure Blob | Cheap, Azure-native | No state locking (Lease Blob needed) | Azure-native teams |
+| AWS S3 | Cheap, well-known | No UI/audit/RBAC; locking via lock files in the bucket | AWS-native teams |
+| Azure Blob | Cheap, Azure-native | No UI/audit/RBAC; locking via lock files in the container | Azure-native teams |
 | GCS | Cheap, GCP-native | Object versioning for safety | GCP-native teams |
 | Local | No infra needed | No sharing, no locking | Personal projects only |
 

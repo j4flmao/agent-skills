@@ -31,6 +31,22 @@ for (const [file, name] of profiles) {
 }
 if (spec && !spec.includes("Truthfulness contract")) failures.push("spec: missing truthfulness contract");
 if (spec && !spec.includes("Cost and loop control")) failures.push("spec: missing loop control");
+const skillNames = new Map();
+function collectSkills(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) { collectSkills(full); continue; }
+    if (entry.name !== "SKILL.md") continue;
+    const relative = path.relative(root, full).split(path.sep).join("/");
+    const match = /^---\r?\n[\s\S]*?^name:\s*"?([^"\r\n]+)"?/m.exec(fs.readFileSync(full, "utf8"));
+    if (!match) { failures.push(relative + ": missing frontmatter name"); continue; }
+    const name = match[1].trim();
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name)) failures.push(relative + ": name '" + name + "' is not kebab-case");
+    if (skillNames.has(name)) failures.push(relative + ": duplicate skill name '" + name + "' (also " + skillNames.get(name) + ")");
+    else skillNames.set(name, relative);
+  }
+}
+collectSkills(path.join(root, "skills"));
 for (const file of fs.readdirSync(path.join(root, "bundles")).filter((name) => name.endsWith(".json"))) {
   try {
     const value = JSON.parse(fs.readFileSync(path.join(root, "bundles", file), "utf8"));
@@ -38,8 +54,11 @@ for (const file of fs.readdirSync(path.join(root, "bundles")).filter((name) => n
     for (const definition of definitions) {
       if (!definition.name || !Array.isArray(definition.skills)) failures.push("bundles/" + file + ": invalid shape");
       if (Array.isArray(definition.skills) && new Set(definition.skills).size !== definition.skills.length) failures.push("bundles/" + file + ": duplicate skill");
+      for (const skill of definition.skills || []) {
+        if (!skillNames.has(skill)) failures.push("bundles/" + file + ": " + definition.name + " references unknown skill '" + skill + "'");
+      }
     }
   } catch (error) { failures.push("bundles/" + file + ": invalid JSON (" + error.message + ")"); }
 }
 if (failures.length) { console.error(failures.map((x) => "FAIL: " + x).join("\n")); process.exit(1); }
-console.log("Agent governance validation passed (" + profiles.length + " profiles, bundle JSON validated).");
+console.log("Agent governance validation passed (" + profiles.length + " profiles, " + skillNames.size + " skills, bundle JSON and skill names validated).");

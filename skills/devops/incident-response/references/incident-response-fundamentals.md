@@ -1,213 +1,113 @@
 # Incident Response Fundamentals
 
-## Overview
-Incident Response is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+The minimum working model of incident response for software services: what counts as an incident, the roles, the first-hour flow, communication, and the handoff into a post-incident review. Severity details, runbooks, war-room protocol and postmortem templates live in sibling references.
+
+## Definitions
 
-## Core Concepts
-
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Incident Response helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
-
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Incident Response solutions. These principles help maintain code quality and reduce technical debt.
-
-### Concept 3: Data Management
-Proper data management is essential for Incident Response. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
-
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Incident Response follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
-
-## Implementation Guide
-
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
-
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Incident Response concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+| Term | Meaning |
+|------|---------|
+| Incident | Unplanned degradation or interruption of a service, or an event that threatens one (including security events), requiring coordinated response |
+| Severity | Impact-based classification that sets urgency and who gets involved |
+| Mitigation | Action that stops or reduces customer impact (rollback, failover, feature flag off) |
+| Resolution | Underlying cause fixed and the system back to normal operation |
+| Postmortem / post-incident review | Blameless analysis producing learning and follow-up actions |
+
+Mitigate first, investigate later. The fastest path to reduced impact (rollback, disable a feature, shed load) beats finding the root cause during the incident.
+
+## Roles
+
+| Role | Responsibility | Not responsible for |
+|------|----------------|---------------------|
+| Incident Commander (IC) | Owns the incident: coordinates, decides, delegates, tracks state | Debugging hands-on (in larger incidents) |
+| Operations / technical lead | Leads investigation and mitigation work | External communication |
+| Communications lead | Status page, stakeholder and customer updates on a schedule | Technical decisions |
+| Scribe | Timeline of observations, decisions and actions with timestamps | — |
+| Subject-matter experts | Specific systems, pulled in by the IC | Running the incident |
+
+In small incidents one person may hold several roles; the IC role is always explicitly assigned ("I am IC").
+
+## Severity at a Glance
+
+| Level | Typical criteria | Response |
+|-------|------------------|----------|
+| SEV1 | Major customer-facing outage, data loss/exposure, security breach in progress | Page immediately, all hands, exec notification, public status updates |
+| SEV2 | Significant degradation or a key feature down for many users | Page on-call, dedicated IC, status page as appropriate |
+| SEV3 | Minor or partial impact, workaround exists | Business-hours handling, ticket |
+| SEV4 | No user impact, potential risk | Backlog |
+
+Declare high and downgrade later; under-declaring delays help. Exact criteria belong in `severity-classification.md`.
+
+## First-Hour Flow
+
+```text
+detect ─► acknowledge ─► declare & assign IC ─► assess impact ─► mitigate ─► communicate ─► monitor
+   ▲                                                    │                          │
+   └──────────────── re-evaluate every 15–30 min ◄──────┴──────────────────────────┘
+```
+
+1. **Detect**: alert, customer report, or engineer observation. Alerts should page on symptoms (error rate, latency, saturation of user-facing SLOs), not only causes.
+2. **Acknowledge** the page within the on-call target.
+3. **Declare**: open the incident channel/ticket, set severity, name the IC.
+4. **Assess**: who is affected, since when, how badly, is it getting worse? Check recent changes (deploys, config, feature flags, infra events).
+5. **Mitigate**: prefer reversible, fast actions: roll back the last deploy, turn off a flag, fail over, scale out, rate-limit abusive traffic.
+6. **Communicate**: internal update immediately; external status update for customer-visible SEV1/SEV2.
+7. **Monitor** until metrics are stable for an agreed period, then mark mitigated/resolved.
+
+## Recent-Change Checklist
+
+| Source | Question |
+|--------|----------|
+| Deploy history | Did anything ship in the last hours? Can we roll it back? |
+| Feature flags | Was a flag flipped or a rollout percentage increased? |
+| Config/infra | Terraform applies, Kubernetes changes, certificate or DNS changes, quota changes |
+| Dependencies | Status pages of cloud providers and third-party APIs |
+| Traffic | Unusual volume, new client version, bot traffic |
+
+Most incidents correlate with a change; rolling back is often the fastest mitigation even before proof.
+
+## Communication
+
+Internal update template (every 30 minutes for SEV1, 60 for SEV2, or on state change):
+
+```text
+[SEV2] Checkout errors — update 14:30 UTC
+Status: Mitigating
+Impact: ~8% of checkout attempts failing (EU region) since 13:52
+Actions: Rolled back payments-service v2.41 at 14:20; error rate dropping
+Next: Confirm recovery, update by 15:00
+IC: @dana  Comms: @lee
+```
+
+External status page update:
+- Plain language, customer impact, workaround if any, next update time.
+- No speculation about cause, no internal names, no blame of vendors in the first updates.
+
+## Working Agreements
+
+- One channel per incident; decisions recorded there.
+- The IC asks for explicit acknowledgements: "Sam, roll back payments-service; report back in 10 minutes."
+- Changes during the incident are announced before execution.
+- Hand over the IC role explicitly when shifts change, with a summary.
+- Bring in help early; escalation is normal, not a failure.
+
+## After the Incident
+
+1. Mark resolved with timestamps (start, detection, mitigation, resolution).
+2. Schedule a blameless review within a few business days for SEV1/SEV2.
+3. Produce a timeline, contributing factors, what went well, what was hard, and tracked action items with owners.
+4. Feed learnings into alerts, runbooks, tests and architecture.
+
+## On-Call Basics
+
+- Rotations with primary and secondary; reasonable shift lengths; handoff notes.
+- Every paging alert has a runbook link and is actionable; remove or downgrade noisy alerts.
+- Compensate and protect on-call time; track pages per shift as a health metric.
+
+## Checklist
+
+- [ ] Severity levels and paging policy documented
+- [ ] IC assigned explicitly for every incident
+- [ ] Mitigation-first mindset; rollback paths tested
+- [ ] Status update cadence and templates ready
+- [ ] Timeline captured during the incident
+- [ ] Blameless review with owned action items

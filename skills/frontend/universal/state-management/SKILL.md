@@ -439,7 +439,7 @@ const useUIStore = createStore<UIState>(
 // createSelector with memoization
 import { createSelector } from 'reselect';
 
-interface Todo {
+interface Task {
   id: string;
   text: string;
   completed: boolean;
@@ -447,42 +447,42 @@ interface Todo {
 }
 
 interface RootState {
-  todos: Todo[];
+  tasks: Task[];
   filter: 'all' | 'active' | 'completed';
 }
 
-const selectTodos = (state: RootState) => state.todos;
+const selectTasks = (state: RootState) => state.tasks;
 const selectFilter = (state: RootState) => state.filter;
 
-export const selectFilteredTodos = createSelector(
-  [selectTodos, selectFilter],
-  (todos, filter) => {
+export const selectFilteredTasks = createSelector(
+  [selectTasks, selectFilter],
+  (tasks, filter) => {
     switch (filter) {
       case 'active':
-        return todos.filter(t => !t.completed);
+        return tasks.filter(t => !t.completed);
       case 'completed':
-        return todos.filter(t => t.completed);
+        return tasks.filter(t => t.completed);
       default:
-        return todos;
+        return tasks;
     }
   }
 );
 
-export const selectTodoStats = createSelector(
-  [selectTodos],
-  (todos) => ({
-    total: todos.length,
-    completed: todos.filter(t => t.completed).length,
-    active: todos.filter(t => !t.completed).length,
-    completionRate: todos.length > 0
-      ? Math.round((todos.filter(t => t.completed).length / todos.length) * 100)
+export const selectTaskStats = createSelector(
+  [selectTasks],
+  (tasks) => ({
+    total: tasks.length,
+    completed: tasks.filter(t => t.completed).length,
+    active: tasks.filter(t => !t.completed).length,
+    completionRate: tasks.length > 0
+      ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100)
       : 0,
   })
 );
 
 // Partial state subscription — only re-render on relevant changes
-export const useTodoById = (id: string) => {
-  return useTodoStore((state) => state.todos.find(t => t.id === id));
+export const useTaskById = (id: string) => {
+  return useTaskStore((state) => state.tasks.find(t => t.id === id));
 };
 ```
 

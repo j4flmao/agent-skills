@@ -1,214 +1,205 @@
 # Elixir Advanced Topics
 
-## Introduction
-Advanced Elixir topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+Advanced Elixir for production backends: metaprogramming with macros, protocols and behaviours, releases and runtime configuration, clustering and distribution, native code (NIFs and ports), observability with `:telemetry`, and performance analysis on the BEAM. OTP supervision, Ecto and testing are covered in sibling references.
+
+## Macros and Metaprogramming
+
+Macros receive and return quoted code (AST) at compile time.
+
+```elixir
+quote do: 1 + 2
+# {:+, [context: Elixir, imports: [{1, Kernel}, {2, Kernel}]], [1, 2]}
+
+defmodule MyApp.Guards do
+  defmacro is_positive_integer(value) do
+    quote do
+      is_integer(unquote(value)) and unquote(value) > 0
+    end
+  end
+end
+```
+
+`defguard` is the preferred way to define guard-safe macros:
+
+```elixir
+defmodule MyApp.Guards do
+  defguard is_positive_integer(value) when is_integer(value) and value > 0
+end
+```
+
+### `__using__` for shared setup
+
+```elixir
+defmodule MyApp.Schema do
+  defmacro __using__(_opts) do
+    quote do
+      use Ecto.Schema
+      @primary_key {:id, :binary_id, autogenerate: true}
+      @foreign_key_type :binary_id
+      @timestamps_opts [type: :utc_datetime_usec]
+    end
+  end
+end
+
+defmodule MyApp.Accounts.User do
+  use MyApp.Schema
+  schema "users" do
+    field :email, :string
+    timestamps()
+  end
+end
+```
+
+Rules:
+- Use a function when a function works; macros are harder to read and debug.
+- Keep `quote` blocks small; delegate logic to regular functions called from the generated code.
+- Macros are hygienic: variables defined inside `quote` do not leak unless `var!/1` is used deliberately.
+- Inspect expansion with `Macro.expand/2` and `Macro.to_string/1` while developing.
+
+## Protocols vs Behaviours
+
+| | Protocol | Behaviour |
+|---|----------|-----------|
+| Dispatch on | Data type of the first argument | Module chosen by the caller/config |
+| Example | `Jason.Encoder`, `Enumerable`, `String.Chars` | `GenServer`, `Plug`, custom adapters |
+| Extension | Implement for your struct anywhere | Module declares `@behaviour` and implements callbacks |
+
+```elixir
+defprotocol MyApp.Redactable do
+  @spec redact(t) :: t
+  def redact(data)
+end
+
+defimpl MyApp.Redactable, for: MyApp.Accounts.User do
+  def redact(user), do: %{user | email: "[redacted]", password_hash: nil}
+end
+```
+
+```elixir
+defmodule MyApp.Payments.Gateway do
+  @callback charge(amount :: Decimal.t(), token :: String.t()) :: {:ok, String.t()} | {:error, term()}
+end
+
+defmodule MyApp.Payments.Stripe do
+  @behaviour MyApp.Payments.Gateway
+  @impl true
+  def charge(amount, token), do: MyApp.Payments.StripeClient.create_charge(amount, token)
+end
+
+# selected by configuration, swapped for a mock (Mox) in tests
+def gateway, do: Application.fetch_env!(:my_app, :payment_gateway)
+```
+
+Enable protocol consolidation (default in releases) for fast dispatch.
+
+## Releases and Configuration
+
+```bash
+MIX_ENV=prod mix release
+_build/prod/rel/my_app/bin/my_app start        # foreground: start; daemon: daemon
+_build/prod/rel/my_app/bin/my_app remote       # attach a remote IEx shell
+_build/prod/rel/my_app/bin/my_app eval "MyApp.Release.migrate()"
+```
+
+```elixir
+# config/runtime.exs: evaluated at boot in the release
+import Config
+
+if config_env() == :prod do
+  database_url = System.fetch_env!("DATABASE_URL")
+  config :my_app, MyApp.Repo,
+    url: database_url,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE", "10")),
+    ssl: true
+
+  config :my_app, MyAppWeb.Endpoint,
+    secret_key_base: System.fetch_env!("SECRET_KEY_BASE"),
+    server: true
+end
+```
+
+- `config/config.exs` and env-specific files are compiled in; anything from environment variables belongs in `runtime.exs`.
+- `System.fetch_env!/1` fails fast at boot if a variable is missing.
+- Run migrations from a release module (`MyApp.Release.migrate/0` using `Ecto.Migrator`), not with `mix` (Mix is not available in releases).
+- Container images: multi-stage build (`hexpm/elixir` builder, slim Debian runtime with matching OpenSSL and libc).
+
+## Distribution and Clustering
+
+```elixir
+# libcluster topology for Kubernetes (headless service DNS)
+config :libcluster,
+  topologies: [
+    k8s: [
+      strategy: Cluster.Strategy.Kubernetes.DNS,
+      config: [service: "my-app-headless", application_name: "my_app"]
+    ]
+  ]
+```
+
+- Nodes need the same Erlang cookie and reachable EPMD/distribution ports (or `-erl_epmd_port`-style fixed ports).
+- Distribution is not encrypted by default; enable TLS distribution (`-proto_dist inet_tls`) or keep it on a private network.
+- Cluster-wide registries: `:pg` process groups (built into OTP), Horde for distributed supervisors/registries, Phoenix.PubSub for messaging.
+- Design for netsplits: global singletons (`:global`) can run twice during partitions; prefer idempotent work and database-backed locks/queues (e.g. Oban) for exactly-once business effects.
+
+## Native Code
+
+| Option | Isolation | Use |
+|--------|-----------|-----|
+| Port (external OS process) | Full; crash cannot take down the VM | Wrapping CLIs, long-running external tools |
+| NIF | None; a crash or long call can kill/stall the VM | Small, fast functions |
+| Dirty NIF | Runs on dirty schedulers | CPU- or IO-bound native work > 1 ms |
+| Rustler (Rust NIFs) | Memory-safe Rust, still in-VM | Preferred way to write NIFs |
+
+A regular NIF must return quickly (guidance: about 1 ms) or it blocks a scheduler; mark heavier work as dirty.
+
+```elixir
+defmodule MyApp.Hashing do
+  use Rustler, otp_app: :my_app, crate: "hashing"
+  def blake3(_data), do: :erlang.nif_error(:nif_not_loaded)
+end
+```
+
+## Observability with Telemetry
+
+```elixir
+:telemetry.attach_many(
+  "my-app-logger",
+  [[:my_app, :repo, :query], [:phoenix, :endpoint, :stop]],
+  &MyApp.TelemetryHandler.handle_event/4,
+  nil
+)
+
+# emitting your own span
+:telemetry.span([:my_app, :payments, :charge], %{order_id: id}, fn ->
+  result = gateway().charge(amount, token)
+  {result, %{order_id: id}}
+end)
+```
+
+- `Telemetry.Metrics` + a reporter (Prometheus via PromEx/peep, StatsD) for metrics; OpenTelemetry Erlang/Elixir SDK for traces.
+- Handlers run in the caller's process: keep them fast and never raise (a raising handler is detached).
+- Use `Logger` with metadata (`Logger.metadata(request_id: id)`) and a JSON formatter in production.
+
+## Performance on the BEAM
+
+| Tool | Use |
+|------|-----|
+| `:observer` / `observer_cli` | Live view of processes, memory, schedulers |
+| `recon` | Production-safe diagnostics (top processes by memory/reductions) |
+| `:eprof`, `:fprof`, `:tprof` (OTP 27+) | Profiling (`mix profile.eprof`, `mix profile.tprof`) |
+| Benchee | Micro-benchmarks |
+
+Common issues:
+- Large mailboxes: a slow consumer process receiving more messages than it handles. Apply back-pressure (GenStage/Broadway, bounded queues).
+- Large binaries kept alive by small sub-binaries (`binary:copy/1` when storing slices long-term).
+- Single GenServer bottleneck serializing all requests: partition by key, use ETS for reads.
+- ETS: `read_concurrency: true` for read-heavy tables; `:persistent_term` for rarely changing global config.
+
+## Checklist
+
+- [ ] Macros only where functions cannot express the abstraction
+- [ ] Behaviours for swappable adapters, protocols for type-based dispatch
+- [ ] Releases with `runtime.exs`, fail-fast env vars, release-based migrations
+- [ ] Cluster distribution secured; partition-tolerant designs
+- [ ] NIFs via Rustler, dirty for long work; ports for untrusted/external tools
+- [ ] Telemetry metrics/traces and JSON logs; mailbox and memory monitoring

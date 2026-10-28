@@ -1,214 +1,195 @@
-# Vault Advanced Topics
-
-## Introduction
-Advanced Vault topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# HashiCorp Vault Advanced: Production Operations, Auto-Unseal, Raft, Namespaces, PKI, Audit and Scaling
+
+Advanced operation of Vault in production: auto-unseal, Integrated Storage (Raft) operations, Enterprise replication and namespaces, PKI hierarchies, transit key lifecycle, audit devices, performance and lease management, Kubernetes secret delivery, hardening and monitoring. Fundamentals and per-engine details are in sibling references (`vault-fundamentals.md`, `vault-clustering.md`, `secrets-engines.md`, `vault-policies.md`, `vault-integration.md`).
+
+## Auto-Unseal
+
+Shamir unsealing requires operators to enter key shares after every restart. Auto-unseal delegates protection of the root key to a KMS or HSM:
+
+```hcl
+# vault.hcl
+seal "awskms" {
+  region     = "eu-central-1"
+  kms_key_id = "alias/vault-unseal"
+}
+# Alternatives: seal "azurekeyvault", seal "gcpckms", seal "transit" (another Vault), seal "pkcs11" (HSM, Enterprise)
+```
+
+- With auto-unseal, initialization produces **recovery keys** (for operations like generating a root token), not unseal keys.
+- The KMS key becomes critical: restrict its IAM policy to the Vault servers' identity, enable deletion protection and key rotation, and monitor its use.
+- Migration between seals uses `vault operator unseal -migrate` with both stanzas configured (old marked `disabled = "true"`); follow the documented procedure and back up first.
+- Seal High Availability (Enterprise) supports multiple seals so one KMS outage does not prevent unsealing.
+
+## Integrated Storage (Raft) Operations
+
+```hcl
+storage "raft" {
+  path    = "/opt/vault/data"
+  node_id = "vault-1"
+  retry_join {
+    leader_api_addr         = "https://vault-0.vault-internal:8200"
+    leader_ca_cert_file     = "/etc/vault/tls/ca.pem"
+  }
+}
+cluster_addr = "https://vault-1.vault-internal:8201"
+api_addr     = "https://vault-1.example.com:8200"
+```
+
+```bash
+vault operator raft list-peers
+vault operator raft autopilot state             # health, failure tolerance, voter status
+vault operator raft snapshot save /backup/vault-$(date +%F).snap
+vault operator raft snapshot restore /backup/vault-2026-10-27.snap
+vault operator raft remove-peer vault-3          # after a node is permanently lost
+```
+
+- Run 3 or 5 voters across availability zones; 5 tolerates two failures.
+- Autopilot handles dead server cleanup and stabilization; configure `cleanup_dead_servers` and `min_quorum` deliberately.
+- Automate snapshots (Enterprise has automated snapshots; Community needs a scheduled job with a token limited to `sys/storage/raft/snapshot`) and store them encrypted off-cluster. Snapshots are encrypted with the seal, so restoring requires the same seal (KMS key or Shamir keys).
+- Use fast, dedicated disks; Raft performance depends on fsync latency.
+
+## Enterprise Replication and Namespaces
+
+| Feature | Purpose | Notes |
+|---------|---------|-------|
+| Performance replication | Secondary clusters serve reads and local operations near clients | Tokens and leases are local to each cluster; secrets data replicates |
+| DR replication | Warm standby, not serving clients until promoted | Replicates tokens and leases too; promote during disaster |
+| Performance standby nodes | Standby nodes in one cluster serve read requests | Scales reads within a cluster |
+| Namespaces | Isolated "Vaults within Vault" with own mounts, policies, identity | Delegate administration to tenants (`vault namespace create team-a`; `VAULT_NAMESPACE=team-a`) |
+
+Run regular DR promotion drills: generate a DR operation token, promote the secondary, repoint clients (DNS), and demote/re-establish the old primary.
+
+## PKI Hierarchy
+
+Keep the root CA offline or in a separate, rarely used mount; issue from an intermediate:
+
+```bash
+# Intermediate CA in Vault (root signed externally or by a separate root mount)
+vault secrets enable -path=pki_int pki
+vault secrets tune -max-lease-ttl=43800h pki_int
+vault write -field=csr pki_int/intermediate/generate/internal \
+  common_name="Example Intermediate CA" key_type=ec key_bits=384 > int.csr
+# sign int.csr with the root CA, then:
+vault write pki_int/intermediate/set-signed certificate=@int.pem
+
+vault write pki_int/config/urls \
+  issuing_certificates="https://vault.example.com/v1/pki_int/ca" \
+  crl_distribution_points="https://vault.example.com/v1/pki_int/crl"
+
+vault write pki_int/roles/internal-web \
+  allowed_domains="svc.example.internal" allow_subdomains=true \
+  key_type=ec key_bits=256 max_ttl=72h no_store=true
+
+vault write pki_int/issue/internal-web common_name="orders.svc.example.internal" ttl=24h
+```
+
+- Short-lived certificates (hours to days) with automated renewal reduce the need for revocation; `no_store=true` avoids storing every leaf certificate (it then cannot be revoked by serial through Vault).
+- Vault PKI supports multiple issuers per mount for CA rotation, and ACME for clients like cert-manager or Caddy (enable ACME on the mount and configure cluster paths).
+- Enable automatic tidy (`pki_int/config/auto-tidy`) to purge expired certificates and revocation entries.
+
+## Transit Key Lifecycle
+
+```bash
+vault write -f transit/keys/orders type=aes256-gcm96
+vault write -f transit/keys/orders/rotate                     # new key version for encryption
+vault write transit/keys/orders/config min_decryption_version=3 auto_rotate_period=720h
+vault write transit/rewrap/orders ciphertext="$OLD_CIPHERTEXT"   # re-encrypt with latest version without exposing plaintext
+```
+
+- Ciphertexts carry the key version prefix (`vault:vN:`); rewrap stored data after rotation, then raise `min_decryption_version`.
+- Use convergent encryption only when deterministic ciphertext is required (it reveals equality).
+- Keys are non-exportable by default; keep it that way unless a documented need exists.
+
+## Audit Devices
+
+```bash
+vault audit enable file file_path=/var/log/vault/audit.log
+vault audit enable -path=socket socket address=logcollector:9090 socket_type=tcp
+```
+
+- Vault refuses to service requests if it cannot write to **any** enabled audit device; enable at least two devices to avoid an outage from one failing sink.
+- Sensitive values are HMAC'ed in audit logs; correlate with `vault write sys/audit-hash/<path> input=<value>`.
+- Ship audit logs to a SIEM with retention matching compliance needs; alert on root token use, policy changes, auth method changes, and denied requests spikes.
+
+## Performance and Lease Management
+
+| Problem | Symptom | Fix |
+|---------|---------|-----|
+| Lease explosion | `vault.expire.num_leases` grows into millions; slow restarts | Shorter TTLs, reuse credentials (Agent caching), batch tokens, revoke unused leases |
+| Token churn from many short jobs | High storage writes | Batch tokens for short-lived workloads |
+| Hot paths on a single cluster | Latency increases | Performance standbys / replicas (Enterprise), Vault Agent caching, client-side caching of static secrets |
+| Slow storage | High `vault.raft.commitTime` / fsync latency | Faster disks, dedicated volumes |
+
+Rate limit quotas (`vault write sys/quotas/rate-limit/global rate=500`) and lease count quotas protect the cluster from runaway clients.
+
+## Delivering Secrets to Kubernetes
+
+| Method | How | Notes |
+|--------|-----|-------|
+| Vault Secrets Operator (VSO) | CRDs (`VaultAuth`, `VaultStaticSecret`, `VaultDynamicSecret`, `VaultPKISecret`) sync into Kubernetes Secrets | Native Secret consumption; supports rollout restarts on change |
+| Vault Agent Injector | Sidecar renders secrets into files | No Kubernetes Secret objects created |
+| CSI provider | Secrets mounted as volumes via Secrets Store CSI Driver | Mount-time delivery |
+| External Secrets Operator | `external-secrets.io/v1` `ExternalSecret` with a Vault `SecretStore` | Multi-backend operator |
+
+```yaml
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: orders-db
+  namespace: orders
+spec:
+  vaultAuthRef: orders-auth
+  mount: secret
+  type: kv-v2
+  path: orders/db
+  refreshAfter: 60s
+  destination:
+    name: orders-db
+    create: true
+  rolloutRestartTargets:
+    - kind: Deployment
+      name: orders-api
+```
+
+Syncing into Kubernetes Secrets means etcd encryption at rest and RBAC on Secrets matter.
+
+## Hardening
+
+- TLS everywhere (API and cluster ports), modern ciphers; no `tls_disable` outside dev.
+- Run as an unprivileged user, `disable_mlock` only where the platform requires it (Integrated Storage docs recommend keeping mlock unless swap is disabled), no core dumps.
+- Restrict network access to 8200 (clients) and 8201 (cluster) only.
+- Revoke root tokens; generate on demand with quorum of recovery/unseal key holders.
+- Manage Vault configuration (mounts, auth methods, policies) as code with the Terraform Vault provider and review changes.
+- Separate administration duties: policy authors, auth method admins, operators.
+- Upgrade regularly; follow security advisories.
+
+## Monitoring
+
+```hcl
+telemetry {
+  prometheus_retention_time = "30s"
+  disable_hostname          = true
+}
+```
+
+Scrape `/v1/sys/metrics?format=prometheus` (requires a token with read on `sys/metrics`, or `unauthenticated_metrics_access` on the listener). Key signals:
+
+| Metric | Watch for |
+|--------|-----------|
+| `vault.core.unsealed` | 0 on any node |
+| `vault.core.active` / leadership changes | Frequent leader elections |
+| `vault.expire.num_leases` | Steady growth |
+| `vault.raft.commitTime`, `vault.raft.leader.lastContact` | Storage or network latency |
+| `vault.audit.log_request_failure` | Any failures |
+| `vault.core.handle_request` latency | Rising p99 |
+
+## Checklist
+
+- [ ] Auto-unseal with a tightly controlled KMS/HSM key; recovery keys held by separate people
+- [ ] 3 or 5 Raft voters across zones; automated, tested snapshots
+- [ ] DR strategy (Enterprise DR replication or snapshot restore) drilled
+- [ ] PKI with offline root, short-lived leaf certificates, auto-tidy
+- [ ] Transit keys rotated with rewrap and minimum decryption version
+- [ ] At least two audit devices shipped to a SIEM with alerts
+- [ ] Lease and rate quotas; lease counts monitored
+- [ ] Configuration as code; TLS, least privilege and regular upgrades

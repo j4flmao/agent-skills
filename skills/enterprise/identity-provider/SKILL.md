@@ -317,8 +317,8 @@ SCIM: automated, standardized, real-time, reduces errors. Manual provisioning: e
 | SOC2 CC6.3 | Role-based access | RBAC, directory groups |
 | HIPAA 164.312 | Unique user identification | IdP as identity source |
 | GDPR Art. 32 | Security of processing | MFA, session management |
-| FedRAMP | Identity and access management | FIPS 140-2, PIV/CAC support |
-| NIST 800-63 | Digital identity guidelines | IAL/AAL levels mapping |
+| FedRAMP | Identity and access management | FIPS 140-3 validated crypto modules (140-2 certificates are being retired), PIV/CAC support |
+| NIST SP 800-63-4 | Digital identity guidelines | IAL/AAL/FAL levels mapping |
 
 ## Code Examples
 
@@ -500,8 +500,6 @@ SCIM sync configured for user creation but not deactivation. When an employee le
 - references/saml-oidc.md -- SAML vs OIDC
 - references/idp-setup.md -- Identity Provider Setup
 - references/idp-migration.md -- Identity Provider Migration
-- references/idp-federation-scenarios.md -- Federation Scenarios
-  - references/idp-security-best-practices.md -- IdP Security Best Practices
   - references/conditional-access-zero-trust.md -- Conditional Access and Zero-Trust Identity
 
 ## Handoff

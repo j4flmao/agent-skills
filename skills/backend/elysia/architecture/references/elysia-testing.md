@@ -1,275 +1,327 @@
 # Elysia Testing
 
-## Test Setup with Bun
+Testing Elysia apps with Bun's built-in runner: in-process tests via `app.handle()`, type-safe tests via Eden Treaty, plugin/guard tests, error-handler tests, and real-server integration tests. Examples target Elysia 1.x on Bun.
 
-```typescript
-// test/utils.ts
-import { Elysia } from 'elysia'
-import { afterAll, beforeAll } from 'bun:test'
+## Choosing a Level
 
-let app: Elysia
-let baseUrl: string
+| Level | Tool | Network | Use for |
+|-------|------|---------|---------|
+| Route unit | `app.handle(new Request(...))` | none | status codes, validation, handlers |
+| Typed route | Eden Treaty `treaty(app)` | none (calls `handle`) | contract-level checks with inferred types |
+| Plugin | mount plugin on a throwaway `new Elysia()` | none | derive/resolve/guards/hooks |
+| Integration | `app.listen(0)` + `fetch` | loopback | CORS, streaming, WebSocket, real DB |
 
-export async function setupTestApp(router: Elysia) {
-  app = router
-  const listener = app.listen(0)
-  const { port } = listener
-  baseUrl = `http://localhost:${port}`
-  return { app, baseUrl }
+`app.handle` requires a fully qualified URL: `new Request('http://localhost/orders')`, not `'/orders'`.
+
+## App Factory (dependency injection for tests)
+
+Build the app in a function so tests can inject fakes instead of module-level singletons.
+
+```ts
+// src/app.ts
+import { Elysia, t } from 'elysia'
+
+export interface OrderRepo {
+  list(): Promise<Array<{ id: string; customerId: string; total: number }>>
+  get(id: string): Promise<{ id: string; customerId: string; total: number } | null>
+  create(input: { customerId: string; items: { sku: string; quantity: number }[] }): Promise<{ id: string; customerId: string }>
 }
 
-export async function teardownTestApp() {
-  app?.stop()
-}
+export const createApp = (repo: OrderRepo) =>
+  new Elysia({ prefix: '/api' })
+    .get('/orders', () => repo.list())
+    .get('/orders/:id', async ({ params: { id }, status }) => {
+      const order = await repo.get(id)
+      if (!order) return status(404, { error: 'Order not found' })
+      return order
+    })
+    .post(
+      '/orders',
+      async ({ body, set }) => {
+        set.status = 201
+        return repo.create(body)
+      },
+      {
+        body: t.Object({
+          customerId: t.String({ minLength: 1 }),
+          items: t.Array(t.Object({ sku: t.String(), quantity: t.Integer({ minimum: 1 }) }), { minItems: 1 }),
+        }),
+      },
+    )
 
-export { baseUrl }
+export type App = ReturnType<typeof createApp>
 ```
 
-## Unit Testing Routes
+`status(code, body)` is the context helper for typed non-2xx responses in current Elysia; older 1.x releases exposed the same thing as `error(code, body)`.
 
-```typescript
+## Route Tests with `app.handle`
+
+```ts
 // test/orders.test.ts
-import { describe, expect, it, beforeAll, afterAll } from 'bun:test'
-import { Elysia } from 'elysia'
-import { setupTestApp, teardownTestApp, baseUrl } from './utils'
+import { describe, expect, it, mock } from 'bun:test'
+import { createApp, type OrderRepo } from '../src/app'
 
-const mockApp = new Elysia()
-  .get('/api/orders', () => [
-    { id: '1', customerId: 'cust-1', total: 99.99 },
-  ])
-  .post('/api/orders', ({ body }) => body, {
-    body: t.Object({
-      customerId: t.String(),
-      items: t.Array(t.Object({
-        sku: t.String(),
-        quantity: t.Number(),
-      })),
-    }),
+const fakeRepo = (): OrderRepo => ({
+  list: mock(async () => [{ id: '1', customerId: 'cust-1', total: 99.99 }]),
+  get: mock(async (id: string) => (id === '1' ? { id: '1', customerId: 'cust-1', total: 99.99 } : null)),
+  create: mock(async (input) => ({ id: 'new-1', customerId: input.customerId })),
+})
+
+const json = (path: string, body: unknown) =>
+  new Request(`http://localhost${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
   })
 
-describe('Orders API', () => {
-  beforeAll(async () => {
-    await setupTestApp(mockApp)
-  })
-
-  afterAll(async () => {
-    await teardownTestApp()
-  })
-
-  it('GET /api/orders returns order list', async () => {
-    const res = await fetch(`${baseUrl}/api/orders`)
+describe('orders routes', () => {
+  it('lists orders', async () => {
+    // Arrange
+    const app = createApp(fakeRepo())
+    // Act
+    const res = await app.handle(new Request('http://localhost/api/orders'))
+    // Assert
     expect(res.status).toBe(200)
-    const data = await res.json()
-    expect(Array.isArray(data)).toBe(true)
-    expect(data[0]).toHaveProperty('customerId')
+    expect(await res.json()).toEqual([{ id: '1', customerId: 'cust-1', total: 99.99 }])
   })
 
-  it('POST /api/orders creates order', async () => {
-    const payload = {
-      customerId: 'cust-1',
-      items: [{ sku: 'SKU-001', quantity: 2 }],
+  it('returns 404 for a missing order', async () => {
+    const app = createApp(fakeRepo())
+    const res = await app.handle(new Request('http://localhost/api/orders/missing'))
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'Order not found' })
+  })
+
+  it('creates an order with 201', async () => {
+    const repo = fakeRepo()
+    const app = createApp(repo)
+    const res = await app.handle(json('/api/orders', { customerId: 'cust-1', items: [{ sku: 'A', quantity: 2 }] }))
+    expect(res.status).toBe(201)
+    expect(repo.create).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['empty body', {}],
+    ['zero quantity', { customerId: 'c', items: [{ sku: 'A', quantity: 0 }] }],
+    ['no items', { customerId: 'c', items: [] }],
+  ])('rejects %s with 422', async (_name, payload) => {
+    const repo = fakeRepo()
+    const app = createApp(repo)
+    const res = await app.handle(json('/api/orders', payload))
+    expect(res.status).toBe(422)
+    expect(repo.create).not.toHaveBeenCalled()
+  })
+})
+```
+
+Elysia answers schema validation failures with 422 and unknown routes with 404 without any custom handler.
+
+## Typed Tests with Eden Treaty
+
+```ts
+// test/orders.eden.test.ts
+import { describe, expect, it } from 'bun:test'
+import { treaty } from '@elysiajs/eden'
+import { createApp } from '../src/app'
+
+const api = treaty(createApp({
+  list: async () => [],
+  get: async () => null,
+  create: async (i) => ({ id: 'x', customerId: i.customerId }),
+}))
+
+describe('orders via eden', () => {
+  it('creates', async () => {
+    const { data, error, status } = await api.api.orders.post({
+      customerId: 'c1',
+      items: [{ sku: 'A', quantity: 1 }],
+    })
+    expect(error).toBeNull()
+    expect(status).toBe(201)
+    expect(data?.id).toBe('x')
+  })
+
+  it('surfaces 404 as error', async () => {
+    const { error } = await api.api.orders({ id: 'nope' }).get()
+    expect(error?.status).toBe(404)
+  })
+})
+```
+
+Passing the app instance (not a URL) makes Eden call `app.handle` directly, so no port is opened. A renamed route or changed body schema becomes a type error in the test file.
+
+## Testing Error Handlers
+
+Custom errors need a registered code so `onError` can match them.
+
+```ts
+import { describe, expect, it } from 'bun:test'
+import { Elysia } from 'elysia'
+
+class PaymentDeclined extends Error {
+  constructor(public reason: string) { super('Payment declined') }
+}
+
+const app = new Elysia()
+  .error({ PaymentDeclined })
+  .onError(({ code, error, set }) => {
+    if (code === 'PaymentDeclined') {
+      set.status = 402
+      return { error: error.message, reason: error.reason }
     }
-    const res = await fetch(`${baseUrl}/api/orders`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    expect(res.status).toBe(200)
-    const data = await res.json()
-    expect(data.customerId).toBe('cust-1')
-  })
-
-  it('POST /api/orders validates body', async () => {
-    const res = await fetch(`${baseUrl}/api/orders`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    })
-    expect(res.status).toBe(422)
-  })
-})
-```
-
-## Testing with Elysia handle()
-
-```typescript
-// Test without server — use handle() directly
-import { describe, expect, it } from 'bun:test'
-import { Elysia } from 'elysia'
-
-const app = new Elysia()
-  .get('/api/orders', () => [{ id: '1', status: 'pending' }])
-  .post('/api/orders', ({ body }) => body, {
-    body: t.Object({
-      customerId: t.String(),
-    }),
-  })
-
-describe('Order Routes (direct handle)', () => {
-  it('GET returns orders', async () => {
-    const req = new Request('http://localhost/api/orders')
-    const res = await app.handle(req)
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body).toHaveLength(1)
-  })
-
-  it('POST validates input', async () => {
-    const req = new Request('http://localhost/api/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invalid: true }),
-    })
-    const res = await app.handle(req)
-    expect(res.status).toBe(422)
-  })
-
-  it('POST accepts valid input', async () => {
-    const req = new Request('http://localhost/api/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customerId: 'cust-1' }),
-    })
-    const res = await app.handle(req)
-    expect(res.status).toBe(200)
-  })
-})
-```
-
-## Testing Error Handling
-
-```typescript
-import { describe, expect, it } from 'bun:test'
-import { Elysia } from 'elysia'
-
-const app = new Elysia()
-  .onError(({ code, set }) => {
     if (code === 'NOT_FOUND') {
       set.status = 404
-      return { error: 'Resource not found' }
+      return { error: 'Route not found' }
     }
-    set.status = 500
-    return { error: 'Internal error' }
   })
-  .get('/api/orders/:id', ({ params: { id } }) => {
-    if (id === 'not-found') {
-      throw new Error('NOT_FOUND')
-    }
-    return { id, status: 'ok' }
+  .post('/pay', () => { throw new PaymentDeclined('insufficient_funds') })
+  .get('/boom', () => { throw new Error('unexpected') })
+
+describe('error handling', () => {
+  it('maps a domain error to 402', async () => {
+    const res = await app.handle(new Request('http://localhost/pay', { method: 'POST' }))
+    expect(res.status).toBe(402)
+    expect(await res.json()).toEqual({ error: 'Payment declined', reason: 'insufficient_funds' })
   })
 
-describe('Error handling', () => {
-  it('returns 404 for not found', async () => {
-    const req = new Request('http://localhost/api/orders/not-found')
-    const res = await app.handle(req)
+  it('maps unknown routes to 404', async () => {
+    const res = await app.handle(new Request('http://localhost/nope'))
     expect(res.status).toBe(404)
   })
 
-  it('returns 404 for unknown routes', async () => {
-    const req = new Request('http://localhost/unknown')
-    const res = await app.handle(req)
-    expect(res.status).toBe(404)
+  it('returns 500 for unhandled errors', async () => {
+    const res = await app.handle(new Request('http://localhost/boom'))
+    expect(res.status).toBe(500)
   })
 })
 ```
 
-## Testing Middleware
+Throwing a plain `new Error('NOT_FOUND')` does not set `code` to `NOT_FOUND`; use `NotFoundError` from `elysia`, `status(404)`, or a registered custom error.
 
-```typescript
+## Testing Auth Plugins
+
+A `derive` that only sets `set.status = 401` does not stop the handler. Short-circuit in `beforeHandle` (or a `resolve` that returns `status(...)`), and export the plugin with a scope so it applies to the parent.
+
+```ts
+// src/auth.ts
+import { Elysia } from 'elysia'
+
+export const auth = (verify: (token: string) => Promise<{ id: string; role: string } | null>) =>
+  new Elysia({ name: 'auth' })
+    .resolve({ as: 'scoped' }, async ({ headers }) => {
+      const header = headers.authorization
+      const token = header?.startsWith('Bearer ') ? header.slice(7) : undefined
+      return { user: token ? await verify(token) : null }
+    })
+    .onBeforeHandle({ as: 'scoped' }, ({ user, status }) => {
+      if (!user) return status(401, { error: 'Unauthorized' })
+    })
+```
+
+```ts
+// test/auth.test.ts
 import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
-
-const authMiddleware = (app: Elysia) =>
-  app.derive(({ headers, set }) => {
-    const token = headers.authorization?.slice(7)
-    if (!token) {
-      set.status = 401
-      return { error: 'Unauthorized' }
-    }
-    return { user: { id: 'user-1', role: 'admin' } }
-  })
+import { auth } from '../src/auth'
 
 const app = new Elysia()
-  .use(authMiddleware)
-  .get('/api/protected', ({ user }) => ({ user }))
+  .use(auth(async (t) => (t === 'good' ? { id: 'u1', role: 'admin' } : null)))
+  .get('/me', ({ user }) => user)
 
-describe('Auth Middleware', () => {
-  it('allows authenticated requests', async () => {
-    const req = new Request('http://localhost/api/protected', {
-      headers: { Authorization: 'Bearer valid-token' },
-    })
-    const res = await app.handle(req)
+const get = (headers: Record<string, string> = {}) =>
+  app.handle(new Request('http://localhost/me', { headers }))
+
+describe('auth plugin', () => {
+  it('passes a valid token', async () => {
+    const res = await get({ authorization: 'Bearer good' })
     expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ id: 'u1', role: 'admin' })
   })
 
-  it('rejects unauthenticated requests', async () => {
-    const req = new Request('http://localhost/api/protected')
-    const res = await app.handle(req)
-    expect(res.status).toBe(401)
-  })
+  it.each([[{}], [{ authorization: 'Bearer bad' }], [{ authorization: 'Basic abc' }]])(
+    'rejects %o with 401',
+    async (headers) => {
+      expect((await get(headers)).status).toBe(401)
+    },
+  )
 })
 ```
 
-## Integration Tests
+Without `{ as: 'scoped' }` (or `'global'`), lifecycle hooks registered inside a named plugin stay local to that plugin instance and never run for the parent's routes.
 
-```typescript
-import { describe, expect, it, beforeAll, afterAll } from 'bun:test'
-import { Elysia } from 'elysia'
+## Integration Tests with a Real Server
 
-let app: Elysia
+```ts
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
+import { cors } from '@elysiajs/cors'
+import { createApp } from '../src/app'
+import { createPgRepo } from '../src/pg-repo'
+
+let app: ReturnType<typeof createApp>
 let baseUrl: string
 
-beforeAll(async () => {
-  app = new Elysia()
-    .use(cors())
-    .use(orderRoutes)
-    .listen(0)
+beforeAll(() => {
+  const dbUrl = process.env.TEST_DATABASE_URL
+  if (!dbUrl) throw new Error('TEST_DATABASE_URL is required for integration tests')
+  app = createApp(createPgRepo(dbUrl)).use(cors({ origin: 'https://app.example.com' }))
+  app.listen(0) // random free port
   baseUrl = `http://localhost:${app.server!.port}`
 })
 
-afterAll(() => {
-  app.stop()
+afterAll(async () => {
+  await app.stop()
 })
 
-describe('Integration: Full Order Flow', () => {
-  it('completes full order lifecycle', async () => {
-    // Create order
-    const createRes = await fetch(`${baseUrl}/api/orders`, {
+describe('order lifecycle', () => {
+  it('creates then reads an order', async () => {
+    const created = await fetch(`${baseUrl}/api/orders`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(validOrderPayload),
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ customerId: 'c1', items: [{ sku: 'A', quantity: 1 }] }),
     })
-    expect(createRes.status).toBe(201)
-    const order = await createRes.json()
+    expect(created.status).toBe(201)
+    const { id } = await created.json()
 
-    // Get order
-    const getRes = await fetch(`${baseUrl}/api/orders/${order.id}`)
-    expect(getRes.status).toBe(200)
+    const read = await fetch(`${baseUrl}/api/orders/${id}`)
+    expect(read.status).toBe(200)
+  })
 
-    // Update order status
-    const updateRes = await fetch(`${baseUrl}/api/orders/${order.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'shipped' }),
+  it('answers CORS preflight', async () => {
+    const res = await fetch(`${baseUrl}/api/orders`, {
+      method: 'OPTIONS',
+      headers: { origin: 'https://app.example.com', 'access-control-request-method': 'POST' },
     })
-    expect(updateRes.status).toBe(200)
-
-    // List orders
-    const listRes = await fetch(`${baseUrl}/api/orders?page=1&limit=10`)
-    expect(listRes.status).toBe(200)
+    expect(res.headers.get('access-control-allow-origin')).toBe('https://app.example.com')
   })
 })
 ```
 
-## Key Points
+Run each integration file against an isolated schema or a disposable container (Testcontainers, a per-run database) and truncate between tests.
 
-- Test routes directly with app.handle() for fast tests
-- Use dynamic port (0) for parallel test execution
-- Test validation, auth, and error handling separately
-- Use Bun's built-in test runner with describe/it
-- Mock external services with mock functions
-- Test both success and error paths for every route
-- Use integration tests for full request lifecycle
-- Clean up server after each test suite
-- Keep test asserts focused on status and response shape
-- Test schema validation with invalid inputs
+## Bun Test Runner Notes
+
+| Need | Bun feature |
+|------|-------------|
+| Mocks/spies | `mock()`, `spyOn()` from `bun:test` |
+| Module mocking | `mock.module('./path', () => ({ ... }))` |
+| Table tests | `it.each([...])` |
+| Coverage | `bun test --coverage` |
+| Watch | `bun test --watch` |
+| Filter | `bun test -t "orders"` |
+| Global setup | `preload` in `bunfig.toml` `[test]` section |
+
+## Pitfalls
+
+- Missing `import { t } from 'elysia'` in schema examples.
+- Sharing one app instance with mutable fakes across tests; build a fresh app per test or reset mocks.
+- Asserting only status codes; also assert body shape and that side effects did (or did not) happen.
+- Leaving servers open: always `await app.stop()` in `afterAll`.
+- Testing a plugin without the scope it ships with; tests then pass while production routes are unprotected.
+
+## Checklist
+
+- [ ] App built by a factory with injected dependencies
+- [ ] Validation, 404, 401/403 and 5xx paths covered
+- [ ] Eden Treaty tests for public contracts
+- [ ] Plugin hooks tested through a parent app
+- [ ] Integration tests use port 0, isolated data and `stop()`

@@ -1,11 +1,38 @@
 ---
 name: unity
-description: Expert game development with Unity - engine architecture, C# scripting, DOTS ECS, rendering (URP/HDRP), physics, animation, UI, asset pipeline, multiplayer, and performance.
+description: >
+  Use this skill when the user says 'unity', 'unity 6', 'monobehaviour', 'URP', 'HDRP', 'addressables', 'unity performance', 'netcode for gameobjects'. Guides Unity projects: player loop, GameObject/component architecture, URP/HDRP, physics, animation, UI, Addressables, multiplayer and profiling. Do NOT use for: DOTS/Entities/Burst code in depth (use unity-csharp), Unreal or Godot.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, unity, csharp, engine]
 ---
 
 # Unity Deep Engineering Guide
 
+## Purpose
 Unity is a component-based game engine built around GameObjects, MonoBehaviours, and a C# scripting layer. Modern Unity adds Data-Oriented Technology Stack (DOTS/E.C.S.) and two Scriptable Render Pipelines (URP/HDRP). This guide covers how a lead engineer thinks about Unity: architecture, C# performance, data-oriented design, rendering, physics, multiplayer, and profiling.
+
+## Agent Protocol
+
+### Trigger
+"unity", "unity 6", "monobehaviour", "URP", "HDRP", "addressables", "unity performance", "netcode for gameobjects".
+
+### Input Context
+- Unity version (Unity 6.x)
+- Render pipeline and target platforms
+- Profiler capture if performance-related
+
+### Output Artifact
+C# code, project/pipeline settings or a performance plan. No file unless requested.
+
+### Response Format
+```
+Unity: {6.x}  Pipeline: {URP | HDRP}
+Change: {what and why}
+Code: {snippet}
+Verify: {Profiler / Frame Debugger result}
+```
 
 ## 1. Engine Architecture
 
@@ -16,7 +43,7 @@ Unity Player/Editor
       GameObject   (identity + transform)
         Component  (MonoBehaviour, Renderer, Collider, Animator...)
     PlayerLoop:    (fixed update order, engine-driven)
-      ScriptableRunLoops -> custom systems injected
+      PlayerLoop.SetPlayerLoop -> custom systems injected
     Module systems: Physics (PhysX/Box2D), Audio (FMOD), UI (UGUI/UI Toolkit),
                     Rendering (URP/HDRP/Built-in), Input (new Input System)
 ```
@@ -32,13 +59,13 @@ void LateUpdate()  // camera follow, post-movement
 ```
 
 Rules:
-- **Never move Rigidbody in Update()**; move via `FixedUpdate` or use `rb.velocity` only in FixedUpdate. Changing `transform` in Update fights the physics solver.
+- **Never move Rigidbody in Update()**; move via `FixedUpdate` or use `rb.linearVelocity` (named `velocity` before Unity 6) / `rb.MovePosition` only in FixedUpdate. Changing `transform` in Update fights the physics solver.
 - Camera interpolation in LateUpdate.
 - Scene load is synchronous unless using `Addressables`/`SceneManager.LoadSceneAsync`.
 
 ### 1.2 Multiple Scenes (Additive Loading)
 
-- Split levels into persistent + gameplay scenes; stream with `LoadSceneAsync` + `AllowSceneActivation = false` to keep the load from blocking.
+- Split levels into persistent + gameplay scenes; stream with `SceneManager.LoadSceneAsync(name, LoadSceneMode.Additive)`; set `allowSceneActivation = false` to hold activation until you are ready.
 - Use `SceneManager.MergeScenes` or DontDestroyOnLoad root object.
 
 ## 2. GameObject & Component Model
@@ -62,9 +89,9 @@ public class Health : MonoBehaviour {
 - `GetComponentsInChildren` only at load or on structural change.
 - Hot update loops use **managers** (single static list of registered components), not per-object `Find`.
 
-### 2.2 FindObjectOfType / GameObject.Find
+### 2.2 FindFirstObjectByType / GameObject.Find
 
-These are O(n) with allocations. They MUST not run on the per-frame path. For singletons, register in `Awake`, destroy in `OnDestroy`:
+`FindObjectOfType` is deprecated (2023.1+) in favour of `FindFirstObjectByType` / `FindAnyObjectByType`. All of these scan the scene. They MUST not run on the per-frame path. For singletons, register in `Awake`, destroy in `OnDestroy`:
 
 ```csharp
 public static GameManager I;  // global accessor
@@ -114,22 +141,20 @@ partial struct MoveSystem : ISystem {
 | Pipeline | Use |
 |----------|-----|
 | Built-in | Legacy, quick prototypes, simple mobile games |
-| **URP** | Default for most new projects (PC+mobile), SRP Batcher optimal |
+| **URP** | Default for most new projects (mobile to PC/console); Forward, Forward+ or Deferred paths |
 | **HDRP** | Film-grade lighting: deferred, ray tracing, volumetrics, high-end PC/console |
-| `ScriptableRenderer` (custom) | You own pass ordering; use with `RenderGraph` |
+| Custom SRP | Only with a dedicated rendering team; URP/HDRP passes are extended via Render Graph (`ScriptableRenderPass.RecordRenderGraph`, Unity 6) |
 
 ### 4.2 URP vs HDRP in practice
 
-- URP: forward rendering, 2D lights, SRP batcher, simplified.
-- HDRP: deferred, clustered lighting, volumetric fog, SSR, RT reflections (DXR).
-- Both are `ScriptableRenderPipeline`; they run in the `Rendering.Update` player-loop phase.
+- URP: scalable, 2D renderer with 2D lights, Forward+/Deferred for many lights.
+- HDRP: physically based lighting, volumetric fog, SSR, ray-traced effects (DXR) on high-end PC/console.
 
 ### 4.3 Draw Call Reduction
 
-1. **Enable SRP Batcher** (URP/HDRP property `UseSRPBatcher`) — batches dynamic shadows+lit objects with compatible materials.
-2. **GPU instancing**: `Graphics.DrawMeshInstanced` for repeated meshes (grass, crowds, particles).
+1. **SRP Batcher** (on by default in URP/HDRP) — cuts CPU cost per draw for materials using the same shader variant; keep shaders SRP-Batcher compatible (per-material CBUFFER).
+2. **GPU Resident Drawer** (Unity 6, BatchRendererGroup-based) or GPU instancing via `Graphics.RenderMeshInstanced` for many repeated meshes (vegetation, crowds).
 3. **Static batching**: mark static → combined at build.
-4. **Addressables + SDF 2D**: not draw-call related, but stream textures to control bandwidth.
 5. Minimize material variants (`KeywordEnum`, `MaterialPropertyBlock` for per-object color).
 6. Bake lighting (Lightmapping) instead of dynamic.
 
@@ -137,13 +162,13 @@ partial struct MoveSystem : ISystem {
 
 - Shader Graph (node-based) is preferred for artists; expose exposed properties only.
 - Hand-written shaders: write in HLSL; SRP uses `HLSLPROGRAM` blocks and `#pragma target` 3.0+.
-- Watch out: Unity editor implicit `#pragma multi_compile _ _ALPHATEST_ON`; use `#pragma shader_feature_local` to avoid variants.
+- Variant explosion: `multi_compile` always builds every combination; prefer `shader_feature_local` (unused keywords are stripped at build) and add `IPreprocessShaders` stripping for the rest.
 
 ## 5. Physics
 
 - Unity uses **PhysX** (3D) and **Box2D** (2D).
-- Fixed timestep at 0.02s (50Hz); fast small objects tunnel → use `Physics.Burst`/`Physics.Solver` or a dedicated CCD sensor.
-- Sleeping: overlapping static triggers should disable colliders (`isTrigger = true`) to avoid touches every frame.
+- Fixed timestep defaults to 0.02 s (50 Hz). Fast small objects tunnel → set `Rigidbody.collisionDetectionMode` to `ContinuousDynamic` (vs static and dynamic) or `ContinuousSpeculative` (cheaper, can produce ghost contacts).
+- Triggers (`isTrigger = true`) report overlaps without collision response; keep trigger volumes on layers that only test against what they need.
 - Layers & matrix matter: `Physics.IgnoreLayerCollision(playerLayer, enemyLayer, true)` reduces contact generation.
 - `Physics.SyncTransforms()` forces syncing; avoid calling per-frame.
 
@@ -151,13 +176,13 @@ partial struct MoveSystem : ISystem {
 
 - **Animator** state machine with transitions; avoid heavy tree layers per object.
 - `Time.deltaTime` may be 0 on pause; use `Time.unscaledDeltaTime` for UI.
-- Animation events are editor-time; use `OnAnimationEvent` or `AnimationEvent` binding.
-- For 100s of animating characters prefer playables or `AnimationUpdateMode` fixed with simple lerps.
+- Animation Events invoke a method by name on the GameObject; keep handlers cheap and allocation-free.
+- For 100s of characters: set `Animator.cullingMode` to `CullUpdateTransforms`/`CullCompletely`, reduce layers, and consider vertex-animation textures for distant crowds.
 
 ## 7. UI (UGUI / UI Toolkit / IMGUI)
 
-- **UGUI** (Canvas): fine for HUD; keep panels/Canvas to 1-2, enable `Vertex Buffer` reuse, disable raycast on static.
-- **UI Toolkit** (new): UXML/USS, better for menus and editor tooling; runtime since 2023.
+- **UGUI** (Canvas): any change rebuilds the whole Canvas mesh — split static and frequently changing elements into separate Canvases; untick Raycast Target on non-interactive graphics.
+- **UI Toolkit**: UXML/USS, retained-mode; runtime support since 2021.2, the recommended system for new editor tooling and menus.
 - **IMGUI**: editor windows and debugging only, not runtime UI.
 - Rule: no layout rebuild per frame; cache `RectTransform`s, minify `GraphicRaycaster` blockers.
 
@@ -168,30 +193,36 @@ partial struct MoveSystem : ISystem {
 Addressables = load by key, async, memory-managed:
 
 ```csharp
-Addressables.LoadAssetAsync<GameObject>("enemies/wolf").Completed += h => {
-    var go = Instantiate(h.Result);
-    go.AddComponent<DeferredUnload>();
-};
-Addressables.Release(handle);
+// Instantiate + track in one call; release the instance, not the prefab
+var handle = Addressables.InstantiateAsync("enemies/wolf", spawnPoint.position, Quaternion.identity);
+GameObject wolf = await handle.Task;
+// ... later
+Addressables.ReleaseInstance(wolf);
+
+// Or load once, instantiate many, release the load handle when done
+var prefabHandle = Addressables.LoadAssetAsync<GameObject>("enemies/wolf");
+GameObject prefab = await prefabHandle.Task;
+// Instantiate(prefab) ... destroy instances normally ...
+Addressables.Release(prefabHandle);
 ```
 
 - Use `AssetReference` fields instead of hardcoded strings.
 - Set `addressables` remote catalog for updates.
-- Remember: `Instantiate(referencedObject)` body must be released too.
+- Every `LoadAssetAsync` needs a matching `Release`; every `InstantiateAsync` a matching `ReleaseInstance` — otherwise bundles stay in memory.
 
 ### 8.2 Streaming & Background Loading
 
-- Texture streaming (`Texture2D.streamingEnabled`) or Addressables load in `OnTriggerEnter`.
-- Audio: `AudioClip.Create` streaming for ambience.
-- Never `Resources.Load` in Update; use `Resources.LoadAll` once.
+- Mipmap streaming: enable "Stream Mipmaps" on texture import and `QualitySettings.streamingMipmapsActive` with a memory budget.
+- Audio: long music/ambience clips use Load Type = Streaming; short SFX Decompress On Load or Compressed In Memory.
+- Avoid the `Resources` folder for content (everything in it ships and is indexed at startup); use Addressables.
 
 ## 9. Multiplayer (Netcode for GameObjects / Netcode Transport / UnityTransport)
 
 - Authoritative: server owns state; clients send inputs; interpolate snapshot positions.
-- `[ServerRpc]` from client to server; `[ClientRpc]` from server to clients.
+- RPCs: `[Rpc(SendTo.Server)]` / `[Rpc(SendTo.ClientsAndHost)]` (NGO 1.8+ universal RPCs; older code uses `[ServerRpc]`/`[ClientRpc]`).
 - Sim tick = fixed timestep; physics simulation server-side only; clients render interpolated states.
 - Use `NetworkVariable<T>` — beware of per-frame `NetworkVariable` writes (delta encode, avoid 60/s floats).
-- Prediction: `PredictedPlayer` pattern with client-side `NetworkTransform` interpolation.
+- Netcode for GameObjects has no built-in client prediction; owner-authoritative `NetworkTransform` or hand-written prediction are the options. Netcode for Entities provides built-in prediction and lag compensation for competitive games.
 
 ## 10. Performance Rules (Lead Level)
 
@@ -201,7 +232,7 @@ Addressables.Release(handle);
 4. Garbage: minimize per-frame allocations; cache arrays; use `NativeArray`/`NativeList` in jobs.
 5. Broke update: use `FixedUpdate` only for physics; game logic in `Update`.
 6. Root motion vs scripted movement: profile `Animator` cost.
-7. Hidden cost: `Camera.main` cached; avoid in Update.
+7. `Camera.main` is cached internally since 2020.2, but still store camera references in fields rather than looking them up everywhere.
 
 ### 10.1 Frame Budget Table Template
 
@@ -240,12 +271,12 @@ Use `.asmdef` (assembly definition) per folder to speed up compile times and con
 
 | Anti-pattern | Consequence | Fix |
 |--------------|-------------|-----|
-| `FindObjectOfType` in Update | GC spikes, slow | cache in Awake |
-| Rigidbody move in Update | physics jitter | FixedUpdate + rb.Move |
+| `FindFirstObjectByType`/`GameObject.Find` in Update | full scene scan | cache in Awake or register with a manager |
+| Rigidbody move in Update | physics jitter | `MovePosition`/forces in FixedUpdate + Rigidbody interpolation |
 | Per-frame allocations (strings) | GC pauses | string builders, pooling |
 | Resources.Load in loop | load spikes | Addressables + cache |
 | One Canvas for everything | layout rebuild | split by update frequency |
-| Scripts in Editor without serialization | lost state | `[SerializedField]` |
+| Private state not serialized | inspector values lost | `[SerializeField] private` fields |
 | Not using .asmdef | long compile | per-system asmdefs |
 | Physics without layer matrix | wasted contacts | `IgnoreLayerCollision` |
 

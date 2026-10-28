@@ -1,298 +1,143 @@
-# Advanced performance-optimization for nestjs
+# NestJS Performance Optimization
 
-## 1. Executive Summary
-This document provides an exhaustive, production-grade reference for implementing performance-optimization in the context of nestjs. It covers architectural decisions, common pitfalls, performance tuning, and security considerations.
+Practical levers for throughput and latency in NestJS services: HTTP adapter choice, avoiding request-scoped providers, caching, database access, compression offload and profiling. Measure before and after each change.
 
-## 2. Deep Dive Principle 2
-When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. 
+## Measure First
 
-### 2.1 Architectural Considerations
-The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+```bash
+# Load test a single endpoint
+npx autocannon -c 100 -d 30 http://localhost:3000/orders
+
+# CPU profile
+node --cpu-prof dist/main.js        # writes .cpuprofile, open in Chrome DevTools
+# Flame graph
+npx clinic flame -- node dist/main.js
+# Event loop delay inside the app
+```
 
 ```typescript
-// Advanced Implementation Example 2
-export class performance_optimizationManager_2 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+import { monitorEventLoopDelay } from 'node:perf_hooks';
+const h = monitorEventLoopDelay({ resolution: 20 });
+h.enable();
+setInterval(() => logger.log(`eventLoop p99=${(h.percentile(99) / 1e6).toFixed(1)}ms`), 10_000).unref();
+```
 
-  private initialize(): void {
-    console.log('Initializing nestjs performance-optimization subsystem...');
-    // Complex setup logic here
-  }
+Track p50/p95/p99 latency, RPS and event-loop delay under realistic payloads.
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for performance-optimization
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
+## HTTP Adapter
+
+```typescript
+import { NestFactory } from '@nestjs/core';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+
+const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ logger: false }));
+await app.listen(3000, '0.0.0.0');
+```
+
+Fastify generally has lower per-request overhead than Express. Switching requires Fastify-compatible middleware/plugins (`@fastify/helmet`, `@fastify/compress`) and replacing direct `express` request/response usage.
+
+## Avoid Request-Scoped Providers on Hot Paths
+
+A `Scope.REQUEST` provider forces Nest to build a new instance of it and of every dependent per request. Use singletons and propagate context with `AsyncLocalStorage`:
+
+```typescript
+// nestjs-cls
+ClsModule.forRoot({ global: true, middleware: { mount: true, generateId: true } });
+
+@Injectable()
+export class AuditService {
+  constructor(private readonly cls: ClsService) {}
+  record(action: string) { const reqId = this.cls.getId(); /* use reqId */ }
+}
+```
+
+## Caching
+
+```typescript
+// app.module.ts (cache-manager v6 uses Keyv stores)
+import { CacheModule } from '@nestjs/cache-manager';
+import KeyvRedis from '@keyv/redis';
+
+CacheModule.registerAsync({
+  isGlobal: true,
+  useFactory: () => ({ stores: [new KeyvRedis(process.env.REDIS_URL)], ttl: 60_000 }), // ms
+});
+```
+
+```typescript
+@Injectable()
+export class ProductService {
+  constructor(@Inject(CACHE_MANAGER) private cache: Cache, private repo: ProductRepository) {}
+
+  async get(id: string) {
+    const key = `product:${id}`;
+    const hit = await this.cache.get<ProductDto>(key);
+    if (hit) return hit;
+    const fresh = await this.repo.findDto(id);
+    await this.cache.set(key, fresh, 300_000);
+    return fresh;
   }
 }
 ```
 
-### 2.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. 
+`CacheInterceptor` auto-caches GET responses keyed by URL; do not use it for user-specific responses unless you override `trackBy()`. Check the cache-manager major version: TTL units and store APIs changed between v4, v5 and v6.
 
-## 3. Deep Dive Principle 3
-When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. 
+Also set HTTP caching headers (`Cache-Control`, `ETag`) so CDNs and clients cache public responses.
 
-### 3.1 Architectural Considerations
-The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## Database Access
 
-```python
-# Advanced Python Implementation 3
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class performance_optimization_Processor_3:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 3.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. 
-
-## 4. Deep Dive Principle 4
-When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. 
-
-### 4.1 Architectural Considerations
-The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+- Select only needed columns; map to DTOs rather than hydrating full entity graphs.
+- Avoid N+1: TypeORM `relations`/`leftJoinAndSelect`, Prisma `include`/`select`, or DataLoader in GraphQL.
+- Size the pool to DB capacity: total connections = pods x pool size. Put PgBouncer in front for many replicas.
+- Use keyset (cursor) pagination for large tables instead of `OFFSET`.
+- Index foreign keys and filter columns; check plans with `EXPLAIN (ANALYZE, BUFFERS)`.
 
 ```typescript
-// Advanced Implementation Example 4
-export class performance_optimizationManager_4 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs performance-optimization subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for performance-optimization
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
+// keyset pagination
+const rows = await this.repo.createQueryBuilder('o')
+  .where('(o.createdAt, o.id) < (:ts, :id)', { ts: cursor.ts, id: cursor.id })
+  .orderBy('o.createdAt', 'DESC').addOrderBy('o.id', 'DESC')
+  .limit(50).getMany();
 ```
 
-### 4.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. 
+## Serialization Cost
 
-## 5. Deep Dive Principle 5
-When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. 
+`ClassSerializerInterceptor` + `class-transformer` reflection is relatively expensive for large arrays. For hot list endpoints, map to plain objects manually. Fastify can serialize faster when given a response JSON schema.
 
-### 5.1 Architectural Considerations
-The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## CPU-Bound Work
 
-```python
-# Advanced Python Implementation 5
-import asyncio
-import logging
+The event loop is single-threaded. Move heavy work out of request handlers:
+- Queue it (`@nestjs/bullmq` with BullMQ workers) and return `202 Accepted`.
+- Use `worker_threads` (e.g. Piscina) for synchronous CPU work such as image processing or large JSON transforms.
+- Use async crypto APIs (`crypto.scrypt` callback/promise form, not `scryptSync`).
 
-logger = logging.getLogger(__name__)
+## Compression and TLS
 
-class performance_optimization_Processor_5:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
+Terminate TLS and compress at the reverse proxy/ingress/CDN rather than in Node. If compressing in-app, use `@fastify/compress` or `compression` with a size threshold.
 
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
+## Startup Time
 
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
+- `nest build` with SWC builder for faster builds.
+- Lazy-load rarely used modules with `LazyModuleLoader` (useful for serverless cold starts).
+- Avoid heavy synchronous work in `onModuleInit`.
 
-### 5.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. 
+## Horizontal Scaling
 
-## 6. Deep Dive Principle 6
-When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. 
+Run one Node process per container and scale replicas; avoid the `cluster` module inside containers managed by Kubernetes. Keep instances stateless (sessions, rate limits and WebSocket adapters backed by Redis).
 
-### 6.1 Architectural Considerations
-The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## Pitfalls
 
-```typescript
-// Advanced Implementation Example 6
-export class performance_optimizationManager_6 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+- Benchmarking with logging at debug level.
+- `await` inside loops for independent I/O; use `Promise.all` with a concurrency limit.
+- Unbounded in-memory caches causing GC pauses and OOM.
+- Interceptors doing synchronous work on every request.
+- Pool exhaustion masked as "slow endpoints".
 
-  private initialize(): void {
-    console.log('Initializing nestjs performance-optimization subsystem...');
-    // Complex setup logic here
-  }
+## Checklist
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for performance-optimization
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 6.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. 
-
-## 7. Deep Dive Principle 7
-When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. 
-
-### 7.1 Architectural Considerations
-The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 7
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class performance_optimization_Processor_7:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 7.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. 
-
-## 8. Deep Dive Principle 8
-When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. 
-
-### 8.1 Architectural Considerations
-The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 8
-export class performance_optimizationManager_8 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs performance-optimization subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for performance-optimization
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 8.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. 
-
-## 9. Deep Dive Principle 9
-When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. 
-
-### 9.1 Architectural Considerations
-The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 9
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class performance_optimization_Processor_9:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 9.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. 
-
-## 10. Deep Dive Principle 10
-When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. When dealing with nestjs, addressing performance-optimization requires a multi-layered approach. 
-
-### 10.1 Architectural Considerations
-The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that performance-optimization must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 10
-export class performance_optimizationManager_10 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs performance-optimization subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for performance-optimization
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 10.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. A frequent mistake when implementing performance-optimization in nestjs is ignoring edge cases. 
-
-## 11. Conclusion
-This concludes the deep dive into performance-optimization for nestjs. Ensure you review the other 7 references in this category for a holistic understanding.
-
+- [ ] Baseline p99 and RPS recorded with autocannon/k6
+- [ ] No request-scoped providers on hot paths
+- [ ] Cache with explicit TTLs and invalidation plan
+- [ ] Queries reviewed for N+1, indexes, column selection
+- [ ] CPU-heavy work offloaded to queue or worker threads
+- [ ] Event-loop delay monitored in production

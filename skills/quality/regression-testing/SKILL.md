@@ -209,12 +209,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npx playwright test --grep @smoke --timeout 30000
+      - uses: actions/setup-node@v4
+      - run: npm ci && npx playwright install --with-deps chromium
+      - run: npx playwright test --grep @smoke --timeout 30000   # a failing step fails the job; `needs:` stops later tiers
         env:
           CI: true
-      - if: failure()
-        run: echo "Smoke tests failed - blocking merge"
-        # Pipeline stops here on failure
 
   core-tier:
     needs: smoke-tier
@@ -224,6 +223,10 @@ jobs:
         shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # needed for git diff against origin/main
+      - uses: actions/setup-node@v4
+      - run: npm ci
       - name: Compute affected tests
         run: |
           CHANGED=$(git diff --name-only origin/main...HEAD)
@@ -240,6 +243,8 @@ jobs:
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: npm ci
       - run: npx vitest run --shard=${{ matrix.shard }}/8
 ```
 

@@ -1,41 +1,105 @@
-# Lakehouse Query Engines Internal Wiki
+# Lakehouse Query Engines
 
-### Architectural Deep Dive: Lakehouse Query Engines
-In modern distributed systems, Lakehouse Query Engines represents a critical bottleneck and opportunity for optimization. This deep dive into Lakehouse Query Engines reveals a sophisticated event-driven model using Kafka for WAL and Parquet for columnar persistence. By isolating the compute layer from the storage plane, we achieve elastic scalability.
+Capabilities and configuration of engines that read and write lakehouse tables, and how to pick one per workload. Catalog wiring is in `lakehouse-catalog-integration.md`.
 
-To further guarantee ACID compliance and low-latency reads, the system implements multi-version concurrency control (MVCC). For Lakehouse Query Engines, this means readers are never blocked by writers. The compaction daemon runs asynchronously to merge small files and reclaim space.
+## 1. Engine Comparison
 
-### System Architecture
-```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
-graph TD
-    LakehouseQueryEngines_C["LakehouseQueryEngines_C Layer"] -->|Stream| RocksDB_State["RocksDB_State Processor"]
-    RocksDB_State -->|Checkpoint| LakehouseQueryEngines_A
-    RocksDB_State -->|Optimize| KMS_Auth["KMS_Auth Engine"]
-    KMS_Auth -->|Write| LakehouseQueryEngines_B
-    LakehouseQueryEngines_B -->|Persist| ORC_Writer
-    S3_Bucket -.->|Authenticate| KMS_Auth
+| Engine | Workload | Iceberg | Delta | Writes | Notes |
+|---|---|---|---|---|---|
+| Apache Spark | Batch ETL, MERGE, ML prep, streaming | Full | Full | Yes | Reference implementation for most features |
+| Apache Flink | Streaming, CDC, Paimon | Full streaming read/write | Connector (limited) | Yes | Commits on checkpoints |
+| Trino / Starburst | Interactive SQL, federation | Strong (MERGE, procedures, time travel) | Read + write via Delta connector | Yes | Coordinator memory and spill tuning matter |
+| Databricks SQL | BI, SQL warehouse | Managed/foreign Iceberg | Native | Yes | Photon engine, serverless |
+| Snowflake | SQL, BI | Iceberg tables (managed or external catalog) | Read via Iceberg metadata (UniForm) | Managed tables | Governance and sharing integrated |
+| Amazon Athena | Serverless SQL on AWS | Read/write, MERGE, OPTIMIZE, VACUUM | Read | Iceberg | Per-TB-scanned pricing |
+| BigQuery | Serverless SQL on GCP | BigLake Iceberg tables | Read (BigLake) | BigQuery-managed Iceberg | Slot-based or on-demand |
+| DuckDB | Local/embedded analytics | Read; REST catalog attach; writes in recent releases | Read (`delta` extension) | Limited | Great for dev, tests, small data |
+| StarRocks / Doris | Low-latency BI | Read, materialized views | Read | Limited | Caching for dashboards |
+| Dremio | BI, semantic layer | Read/write, reflections | Read | Yes | Reflections act as accelerators |
+
+Feature support evolves quickly; verify MERGE, row-level deletes, v3 features, and time travel for the exact engine version.
+
+## 2. Choosing Per Workload
+
+| Workload | First choice | Alternatives |
+|---|---|---|
+| Nightly ETL with large joins/MERGE | Spark | Databricks SQL, Trino (fault-tolerant execution) |
+| Sub-minute streaming ingestion | Flink or Spark Structured Streaming | Kafka Connect sink |
+| Many concurrent BI users | Databricks SQL, Snowflake, Trino with caching, StarRocks | Athena/BigQuery for spiky load |
+| Ad hoc analysis by engineers | Trino, DuckDB | Spark notebooks |
+| CI tests and local dev | DuckDB, local Spark | |
+
+## 3. Trino Iceberg Connector
+
+```properties
+connector.name=iceberg
+iceberg.catalog.type=rest
+iceberg.rest-catalog.uri=https://catalog.example.com/api/catalog
+iceberg.file-format=PARQUET
+iceberg.compression-codec=ZSTD
+iceberg.expire-snapshots.min-retention=7d
+iceberg.remove-orphan-files.min-retention=7d
+fs.native-s3.enabled=true
+s3.region=eu-west-1
 ```
 
-### Mathematical Thresholds
-To determine the optimal configuration for Lakehouse Query Engines, we apply the following mathematical formula to calculate the system threshold:
+```sql
+SELECT * FROM lake.silver.orders FOR VERSION AS OF 5729182;
+SELECT * FROM lake.silver.orders FOR TIMESTAMP AS OF TIMESTAMP '2026-10-01 00:00:00 UTC';
+ALTER TABLE lake.silver.orders EXECUTE optimize(file_size_threshold => '128MB');
+ALTER TABLE lake.silver.orders EXECUTE expire_snapshots(retention_threshold => '7d');
+ALTER TABLE lake.silver.orders EXECUTE remove_orphan_files(retention_threshold => '7d');
+SELECT * FROM lake.silver."orders$snapshots";      -- metadata tables use $ suffix
+```
 
-$$ Mem_{JVM} = \max\left( \frac{\text{Heap}_{max} \times 0.75}{1 + \alpha}, \sum ( \mu_{state} \times P_{degree} ) \right) $$
+Trino time-travel syntax (`FOR VERSION AS OF`) differs from Spark (`VERSION AS OF`).
 
-### Code Implementation
-Below is a highly optimized production-grade implementation addressing Lakehouse Query Engines:
+## 4. Spark Settings Relevant to Lakehouse Reads
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `spark.sql.adaptive.enabled` | true (3.2+) | AQE: coalesce partitions, handle skew, switch join strategy |
+| `spark.sql.autoBroadcastJoinThreshold` | 10 MB | Broadcast small dimension tables |
+| `spark.sql.files.maxPartitionBytes` | 128 MB | Input split size for file sources |
+| `read.split.target-size` (Iceberg table/read option) | 128 MB | Iceberg split planning |
+| `spark.sql.iceberg.vectorization.enabled` / `read.parquet.vectorization.enabled` | true | Vectorized Parquet reads |
+
+## 5. DuckDB for Local and CI
 
 ```python
-# PySpark Implementation
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, expr
-
-spark = SparkSession.builder \
-    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-    .getOrCreate()
-
-df = spark.read.format("parquet").load("s3a://data-lake/raw/")
-optimized_df = df.repartition(200, "partition_key").sortWithinPartitions("event_time")
-optimized_df.write.format("delta").mode("overwrite").save("s3a://data-lake/optimized/")
+import duckdb
+con = duckdb.connect()
+con.sql("INSTALL iceberg; LOAD iceberg; INSTALL delta; LOAD delta;")
+con.sql("SELECT count(*) FROM iceberg_scan('s3://lake/warehouse/silver/orders')").show()
+con.sql("SELECT status, sum(amount) FROM delta_scan('s3://lake/gold/daily_revenue') GROUP BY 1").show()
 ```
+
+`iceberg_scan` on a path needs a metadata file or version hint; attaching a REST catalog is more robust.
+
+## 6. Performance Considerations Across Engines
+
+- Planning cost scales with manifests/log size: keep metadata compact (see `lakehouse-performance-optimization.md`).
+- Engines differ in which statistics they use (partition values, file min/max, Parquet page indexes, bloom filters). Check before relying on a feature for skipping.
+- Concurrency: Trino coordinators and Spark drivers are single points of planning; size them for metadata-heavy queries.
+- Caching: Trino/Starburst file system cache, Databricks disk cache, StarRocks data cache reduce object-store reads for hot data.
+
+## 7. Write Ownership
+
+Allow multiple engines to read; restrict writes:
+- Spark (or Flink) owns ingestion and silver/gold tables.
+- Trino/Athena write only to sandbox or specific mart tables if needed.
+- Maintenance runs in one engine per table to avoid conflicting procedures.
+
+## Pitfalls
+
+- Assuming identical SQL semantics across engines (time travel, MERGE behaviour, timestamp types).
+- Running heavy ETL on an interactive cluster sized for BI.
+- Different engines using different catalogs for the same table.
+- Ignoring engine-level minimum retention settings that block maintenance procedures.
+
+## Checklist
+
+- [ ] Engine per workload chosen and documented.
+- [ ] Feature support verified for the engine versions in use.
+- [ ] Write ownership per table defined.
+- [ ] Engine configs version-controlled; credentials from vending or service identities.

@@ -1,298 +1,187 @@
-# Advanced architecture-patterns for nestjs
+# NestJS Architecture Patterns: Modules, DI, and Layering
 
-## 1. Executive Summary
-This document provides an exhaustive, production-grade reference for implementing architecture-patterns in the context of nestjs. It covers architectural decisions, common pitfalls, performance tuning, and security considerations.
+NestJS is an opinionated Node.js framework built on a module system and a constructor-injection IoC container. This reference covers how to structure modules, providers and layers so an application stays testable as it grows.
 
-## 2. Deep Dive Principle 2
-When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. 
+## Building Blocks
 
-### 2.1 Architectural Considerations
-The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+| Element | Decorator | Responsibility |
+|---------|-----------|----------------|
+| Module | `@Module()` | Groups providers/controllers; declares `imports`, `exports` |
+| Controller | `@Controller()` | Maps HTTP/RPC routes to handlers; no business logic |
+| Provider | `@Injectable()` | Services, repositories, factories resolved by the container |
+| Guard | `CanActivate` | Authorization decision before the handler runs |
+| Interceptor | `NestInterceptor` | Wraps handler execution (logging, mapping, caching, timeouts) |
+| Pipe | `PipeTransform` | Validates/transforms input arguments |
+| Exception filter | `@Catch()` | Converts thrown errors into responses |
+
+Request lifecycle order: middleware -> guards -> interceptors (before) -> pipes -> handler -> interceptors (after) -> exception filters (on error).
+
+## Feature Modules
+
+One module per bounded context or feature. Export only what other modules need.
 
 ```typescript
-// Advanced Implementation Example 2
-export class architecture_patternsManager_2 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+// orders/orders.module.ts
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { OrdersController } from './orders.controller';
+import { OrdersService } from './orders.service';
+import { Order } from './order.entity';
+import { PaymentsModule } from '../payments/payments.module';
 
-  private initialize(): void {
-    console.log('Initializing nestjs architecture-patterns subsystem...');
-    // Complex setup logic here
-  }
+@Module({
+  imports: [TypeOrmModule.forFeature([Order]), PaymentsModule],
+  controllers: [OrdersController],
+  providers: [OrdersService],
+  exports: [OrdersService],
+})
+export class OrdersModule {}
+```
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for architecture-patterns
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
+Rules:
+- A provider is visible only inside its module unless exported.
+- `@Global()` modules are for genuinely cross-cutting infrastructure (config, logger). Overusing them hides dependencies.
+- Shared code that has no state belongs in a plain library, not a module.
+
+## Dynamic Modules
+
+Configurable modules expose `forRoot`/`forRootAsync` (app-wide) and `forFeature` (per consumer). Since Nest 9, `ConfigurableModuleBuilder` generates the boilerplate.
+
+```typescript
+// mailer/mailer.module-definition.ts
+import { ConfigurableModuleBuilder } from '@nestjs/common';
+
+export interface MailerOptions { host: string; port: number; from: string; }
+
+export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN } =
+  new ConfigurableModuleBuilder<MailerOptions>().setClassMethodName('forRoot').build();
+
+// mailer/mailer.module.ts
+@Module({ providers: [MailerService], exports: [MailerService] })
+export class MailerModule extends ConfigurableModuleClass {}
+
+// mailer/mailer.service.ts
+@Injectable()
+export class MailerService {
+  constructor(@Inject(MODULE_OPTIONS_TOKEN) private readonly opts: MailerOptions) {}
+}
+
+// app.module.ts
+MailerModule.forRootAsync({
+  imports: [ConfigModule],
+  inject: [ConfigService],
+  useFactory: (cfg: ConfigService) => ({
+    host: cfg.getOrThrow('SMTP_HOST'),
+    port: cfg.getOrThrow<number>('SMTP_PORT'),
+    from: cfg.getOrThrow('MAIL_FROM'),
+  }),
+});
+```
+
+## Provider Types
+
+```typescript
+providers: [
+  OrdersService,                                            // class provider
+  { provide: 'CLOCK', useValue: { now: () => new Date() } }, // value provider
+  { provide: PaymentGateway, useClass: StripeGateway },      // swap implementation
+  {
+    provide: 'REDIS',
+    useFactory: async (cfg: ConfigService) => createClient({ url: cfg.getOrThrow('REDIS_URL') }).connect(),
+    inject: [ConfigService],
+  },
+  { provide: 'LEGACY_SERVICE', useExisting: OrdersService },  // alias
+]
+```
+
+Use an abstract class (not an interface) as the token when you want type-safe injection without string tokens: interfaces are erased at runtime.
+
+## Injection Scopes
+
+| Scope | Lifetime | Cost |
+|-------|----------|------|
+| `DEFAULT` (singleton) | One instance per app | Cheapest; default choice |
+| `REQUEST` | New instance per request | Bubbles up: every dependent becomes request-scoped |
+| `TRANSIENT` | New instance per consumer | Each injecting class gets its own |
+
+Prefer singletons and pass request context explicitly, or use `AsyncLocalStorage` (e.g. `nestjs-cls`) for request-scoped data such as tenant ID or correlation ID.
+
+## Hexagonal / Clean Layering in Nest
+
+```
+src/orders/
+  domain/            # entities, value objects, domain errors (no Nest imports)
+  application/       # use cases, ports (abstract classes)
+  infrastructure/    # TypeORM/Prisma repositories, HTTP clients (adapters)
+  interface/         # controllers, DTOs, message handlers
+  orders.module.ts   # wiring only
+```
+
+```typescript
+// application/order-repository.port.ts
+export abstract class OrderRepository {
+  abstract findById(id: string): Promise<Order | null>;
+  abstract save(order: Order): Promise<void>;
+}
+
+// orders.module.ts
+providers: [PlaceOrderUseCase, { provide: OrderRepository, useClass: TypeOrmOrderRepository }]
+```
+
+The use case depends on the port; tests bind an in-memory implementation.
+
+## CQRS Module
+
+`@nestjs/cqrs` provides `CommandBus`, `QueryBus`, `EventBus` and sagas. Use it when read and write paths diverge; for plain CRUD it adds indirection without benefit.
+
+```typescript
+export class PlaceOrderCommand { constructor(readonly customerId: string, readonly items: LineItem[]) {} }
+
+@CommandHandler(PlaceOrderCommand)
+export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
+  constructor(private readonly repo: OrderRepository, private readonly events: EventBus) {}
+  async execute(cmd: PlaceOrderCommand): Promise<string> {
+    const order = Order.place(cmd.customerId, cmd.items);
+    await this.repo.save(order);
+    this.events.publish(new OrderPlacedEvent(order.id));
+    return order.id;
   }
 }
 ```
 
-### 2.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. 
+The in-process `EventBus` is not durable. For cross-service events use a transactional outbox plus a broker (`@nestjs/microservices` transports, or a Kafka/RabbitMQ client).
 
-## 3. Deep Dive Principle 3
-When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. 
-
-### 3.1 Architectural Considerations
-The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 3
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class architecture_patterns_Processor_3:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 3.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. 
-
-## 4. Deep Dive Principle 4
-When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. 
-
-### 4.1 Architectural Considerations
-The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## Microservices and Hybrid Apps
 
 ```typescript
-// Advanced Implementation Example 4
-export class architecture_patternsManager_4 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs architecture-patterns subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for architecture-patterns
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
+const app = await NestFactory.create(AppModule);
+app.connectMicroservice<MicroserviceOptions>({
+  transport: Transport.KAFKA,
+  options: { client: { brokers: [process.env.KAFKA_BROKER!] }, consumer: { groupId: 'orders' } },
+});
+await app.startAllMicroservices();
+await app.listen(3000);
 ```
 
-### 4.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. 
+Handlers use `@MessagePattern()` (request-response) or `@EventPattern()` (fire-and-forget).
 
-## 5. Deep Dive Principle 5
-When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. 
+## Circular Dependencies
 
-### 5.1 Architectural Considerations
-The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+`forwardRef(() => OtherModule)` resolves cycles but is a design smell. Fix by extracting the shared piece into a third module or by communicating through events.
 
-```python
-# Advanced Python Implementation 5
-import asyncio
-import logging
+## Pitfalls
 
-logger = logging.getLogger(__name__)
+- Business logic in controllers: untestable without HTTP.
+- One giant `SharedModule` exporting everything.
+- Request-scoped providers deep in the graph silently making the whole chain per-request.
+- Importing a module twice with different `forRoot` config: only one wins.
+- Using string tokens without constants; typos fail at runtime.
 
-class architecture_patterns_Processor_5:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
+## Checklist
 
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 5.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. 
-
-## 6. Deep Dive Principle 6
-When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. 
-
-### 6.1 Architectural Considerations
-The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 6
-export class architecture_patternsManager_6 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs architecture-patterns subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for architecture-patterns
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 6.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. 
-
-## 7. Deep Dive Principle 7
-When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. 
-
-### 7.1 Architectural Considerations
-The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 7
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class architecture_patterns_Processor_7:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 7.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. 
-
-## 8. Deep Dive Principle 8
-When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. 
-
-### 8.1 Architectural Considerations
-The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 8
-export class architecture_patternsManager_8 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs architecture-patterns subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for architecture-patterns
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 8.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. 
-
-## 9. Deep Dive Principle 9
-When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. 
-
-### 9.1 Architectural Considerations
-The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 9
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class architecture_patterns_Processor_9:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 9.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. 
-
-## 10. Deep Dive Principle 10
-When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. When dealing with nestjs, addressing architecture-patterns requires a multi-layered approach. 
-
-### 10.1 Architectural Considerations
-The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that architecture-patterns must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 10
-export class architecture_patternsManager_10 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs architecture-patterns subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for architecture-patterns
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 10.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. A frequent mistake when implementing architecture-patterns in nestjs is ignoring edge cases. 
-
-## 11. Conclusion
-This concludes the deep dive into architecture-patterns for nestjs. Ensure you review the other 7 references in this category for a holistic understanding.
-
+- [ ] Each feature module exports a minimal public surface
+- [ ] Ports are abstract classes; adapters bound in the module
+- [ ] No `forwardRef` without a documented reason
+- [ ] Config loaded via `ConfigModule` with validation at startup
+- [ ] Request context via `AsyncLocalStorage`, not request scope, where possible
+- [ ] Cross-service events go through a durable broker/outbox

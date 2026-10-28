@@ -1,213 +1,197 @@
 # Preact Fundamentals
 
-## Overview
-Preact is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Preact is a small (around 4 kB gzipped core) virtual-DOM UI library with a React-compatible API. This reference covers components, JSX, hooks, events, refs, rendering, Signals basics and the differences from React that matter in daily work. Setup is in `preact-setup.md`; architecture choices in `preact-architecture.md`; comparison in `preact-vs-react.md`.
 
-## Core Concepts
+## Rendering an App
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Preact helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+```tsx
+import { render } from 'preact';
+import { App } from './app';
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Preact solutions. These principles help maintain code quality and reduce technical debt.
+render(<App />, document.getElementById('app')!);
+```
 
-### Concept 3: Data Management
-Proper data management is essential for Preact. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+JSX compiles to `h()` / `jsx()` calls. With TypeScript or Vite, configure the automatic runtime:
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  }
+}
+```
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+The `@preact/preset-vite` plugin configures JSX, aliases and Prefresh (hot module replacement).
 
-## Architecture Patterns
+## Components
 
-### Pattern 1: Standard Architecture
-The standard architecture for Preact follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+```tsx
+import type { ComponentChildren } from 'preact';
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+type CardProps = { title: string; children?: ComponentChildren };
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+export function Card({ title, children }: CardProps) {
+  return (
+    <section class="card">
+      <h2>{title}</h2>
+      {children}
+    </section>
+  );
+}
+```
 
-## Implementation Guide
+- Function components are the norm; class components (`Component` from `preact`) remain supported.
+- Both `class` and `className` work; `class` is idiomatic in Preact.
+- `Fragment` (`<>...</>`) groups children without a wrapper element.
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+## Hooks
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+Import from `preact/hooks`:
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+```tsx
+import { useState, useEffect, useMemo, useCallback, useRef, useReducer, useContext } from 'preact/hooks';
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+export function Counter() {
+  const [count, setCount] = useState(0);
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+  useEffect(() => {
+    document.title = `Count: ${count}`;
+  }, [count]);
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+  return <button onClick={() => setCount(c => c + 1)}>Clicked {count}</button>;
+}
+```
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+Hook rules are the same as React: call at the top level, never conditionally; include dependencies in effect arrays.
 
-## Best Practices
+## Events
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- Preact attaches native DOM listeners; there is no synthetic event system. Event objects are native `Event`s.
+- Use `onInput` for text input changes (fires per keystroke). `onChange` follows native semantics: for text inputs it fires on blur/commit. `preact/compat` maps `onChange` to input events for React compatibility.
+- For standard DOM events Preact lowercases the name (`onClick` listens to `click`); for custom element events the case after `on` is preserved, so `onMyEvent` listens to `MyEvent`.
 
-## Common Pitfalls
+```tsx
+function NameField() {
+  const [name, setName] = useState('');
+  return <input value={name} onInput={e => setName(e.currentTarget.value)} />;
+}
+```
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+## Refs
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+```tsx
+import { useRef, useEffect } from 'preact/hooks';
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+function AutoFocus() {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => { ref.current?.focus(); }, []);
+  return <input ref={ref} />;
+}
+```
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+`forwardRef` lives in `preact/compat`; in Preact you can also pass a ref as a regular prop with a different name.
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+## Context
 
-## Tooling Ecosystem
+```tsx
+import { createContext } from 'preact';
+import { useContext } from 'preact/hooks';
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+const ThemeContext = createContext<'light' | 'dark'>('light');
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+function ThemedButton() {
+  const theme = useContext(ThemeContext);
+  return <button class={`btn btn-${theme}`}>OK</button>;
+}
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+<ThemeContext.Provider value="dark"><ThemedButton /></ThemeContext.Provider>
+```
 
-## Integration Patterns
+## Signals Basics
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
+`@preact/signals` provides fine-grained reactive state that updates only the components (or text nodes) that read it.
 
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
+```tsx
+import { signal, computed } from '@preact/signals';
 
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
+const count = signal(0);
+const double = computed(() => count.value * 2);
 
-## Performance Optimization
+export function SignalCounter() {
+  return (
+    <div>
+      <p>{count} x 2 = {double}</p>      {/* passing the signal itself binds the text node directly */}
+      <button onClick={() => count.value++}>+1</button>
+    </div>
+  );
+}
+```
 
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
+- Read and write with `.value`. Inside components, reading `.value` subscribes the component.
+- Passing a signal directly into JSX (`{count}`) updates only that text node without re-rendering the component.
+- Module-level signals act as simple global stores; use `useSignal`/`useComputed` for component-local signals.
 
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
+Details and patterns in `preact-advanced.md`.
 
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+## Lists and Keys
 
-## Key Points
-- Understand core Preact concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
+```tsx
+<ul>{items.map(item => <li key={item.id}>{item.label}</li>)}</ul>
+```
 
-## Testing Strategy
+Stable keys (IDs, not array indexes) are required for correct reordering and preserved state.
 
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
+## Conditional Rendering and Forms
 
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
+- Conditional: `{loading ? <Spinner /> : <Results />}`, `{error && <ErrorBanner error={error} />}`.
+- Controlled inputs with `value` + `onInput`; uncontrolled with `defaultValue` and refs.
+- Checkboxes: `checked` + `onChange` (native change fires on toggle).
 
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
+## Differences From React to Remember
 
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
+| Topic | Preact | React |
+|-------|--------|-------|
+| Events | Native DOM events | Synthetic events |
+| Text input change | `onInput` (core); `onChange` aliased only via compat | `onChange` per keystroke |
+| `class` attribute | `class` or `className` | `className` |
+| Hooks import | `preact/hooks` | `react` |
+| Compatibility layer | `preact/compat` (aliases `react`, `react-dom`) | n/a |
+| Concurrent features | Not implemented the same way (no full concurrent rendering) | Concurrent rendering, transitions |
+| Size | ~4 kB core | Significantly larger |
 
-## Deployment Strategies
+## Debugging
 
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
+```ts
+// import once in development entry
+if (import.meta.env.DEV) {
+  await import('preact/debug');   // warnings + Preact DevTools browser extension support
+}
+```
 
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
+## Testing
 
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
+```tsx
+import { render, screen, fireEvent } from '@testing-library/preact';
 
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
+test('increments the counter', () => {
+  // Arrange
+  render(<Counter />);
+  // Act
+  fireEvent.click(screen.getByRole('button'));
+  // Assert
+  expect(screen.getByRole('button').textContent).toBe('Clicked 1');
+});
+```
 
-## Configuration Management
+Use Vitest with `jsdom` or `happy-dom` environments.
 
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
+## Checklist
 
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- [ ] `jsxImportSource: preact` configured; `@preact/preset-vite` for Vite
+- [ ] Hooks imported from `preact/hooks`
+- [ ] `onInput` for text fields (or compat semantics deliberately)
+- [ ] Stable keys on lists
+- [ ] `preact/debug` only in development
+- [ ] Tests with `@testing-library/preact`

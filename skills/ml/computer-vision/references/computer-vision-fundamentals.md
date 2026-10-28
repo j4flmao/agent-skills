@@ -1,213 +1,136 @@
 # Computer Vision Fundamentals
 
-## Overview
-Computer Vision is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Core concepts for building computer vision (CV) systems: task types, image representation, convolutional networks and vision transformers, transfer learning with pretrained backbones, data and augmentation, evaluation metrics, and a minimal PyTorch training loop. Preprocessing, detection/segmentation, video, pipelines and deployment have dedicated sibling references.
 
-## Core Concepts
+## Task Types
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Computer Vision helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Task | Output | Typical metric | Example models |
+|---|---|---|---|
+| Image classification | Label(s) per image | Top-1/Top-5 accuracy, F1 | ResNet, EfficientNet, ConvNeXt, ViT |
+| Object detection | Boxes + labels + scores | mAP@[.5:.95], mAP@.5 | YOLO family, DETR/RT-DETR, Faster R-CNN |
+| Semantic segmentation | Class per pixel | mIoU | U-Net, DeepLabv3+, SegFormer |
+| Instance segmentation | Mask per object | Mask mAP | Mask R-CNN, YOLO-seg, Mask2Former |
+| Keypoint/pose estimation | Keypoints per instance | OKS-based AP | HRNet, YOLO-pose |
+| OCR | Text + locations | CER/WER | PaddleOCR, TrOCR, docTR |
+| Image retrieval / similarity | Embedding vectors | Recall@k | CLIP, DINOv2 |
+| Anomaly detection | Normal vs. anomalous | AUROC | PatchCore, PaDiM |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Computer Vision solutions. These principles help maintain code quality and reduce technical debt.
+## Image Representation
+- Tensor layout: PyTorch uses `N x C x H x W` (batch, channels, height, width); many image libraries use `H x W x C`.
+- Pixel values: uint8 0–255 on disk; float32 normalized for models (commonly scaled to 0–1 then normalized with dataset mean/std, e.g. ImageNet mean `[0.485, 0.456, 0.406]`, std `[0.229, 0.224, 0.225]`).
+- Color order: OpenCV loads BGR, PIL/torchvision RGB. Mixing them silently degrades accuracy.
+- Resolution trade-off: higher resolution helps small objects but costs compute roughly quadratically.
 
-### Concept 3: Data Management
-Proper data management is essential for Computer Vision. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Model Families
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+### Convolutional neural networks (CNNs)
+Convolutions share weights across positions (translation equivariance) and build hierarchical features via stacked conv, normalization, activation and pooling layers. Strong inductive bias makes them data-efficient and fast on edge hardware.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Vision Transformers (ViT)
+Split the image into patches (e.g. 16x16), embed them as tokens and apply self-attention. Less inductive bias, so they benefit from large-scale pretraining; excellent transfer performance. Hybrids and hierarchical transformers (Swin) and modern CNNs (ConvNeXt) narrow the gap between the two families.
 
-## Architecture Patterns
+| Consideration | CNN | ViT |
+|---|---|---|
+| Small datasets from scratch | Better | Needs pretraining |
+| Pretrained transfer | Strong | Very strong, especially with large pretraining |
+| Edge latency | Generally efficient | Improving; attention cost grows with token count |
+| Global context | Limited receptive field per layer | Global from the first layer |
 
-### Pattern 1: Standard Architecture
-The standard architecture for Computer Vision follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+## Transfer Learning (default approach)
+Start from a pretrained backbone and fine-tune; training from scratch is rarely justified.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+```python
+from __future__ import annotations
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+import timm
+import torch
+from torch import nn
 
-## Implementation Guide
+device = (
+    torch.device("cuda") if torch.cuda.is_available()
+    else torch.device("mps") if torch.backends.mps.is_available()
+    else torch.device("cpu")
+)
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+model = timm.create_model("convnext_tiny.fb_in22k_ft_in1k", pretrained=True, num_classes=5).to(device)
+data_cfg = timm.data.resolve_data_config({}, model=model)
+train_tf = timm.data.create_transform(**data_cfg, is_training=True)
+eval_tf = timm.data.create_transform(**data_cfg, is_training=False)
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+# Option A: linear probe -> freeze backbone, train the head first
+for p in model.parameters():
+    p.requires_grad = False
+for p in model.get_classifier().parameters():
+    p.requires_grad = True
+```
+Then unfreeze and fine-tune all layers with a smaller learning rate (often 1e-5 to 1e-4 with AdamW and a cosine schedule).
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+## Minimal Training Loop
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+```python
+from torch.utils.data import DataLoader
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+def train_one_epoch(model: nn.Module, loader: DataLoader, optimizer: torch.optim.Optimizer,
+                    scaler: torch.amp.GradScaler, epoch: int) -> float:
+    model.train()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    total = 0.0
+    for images, labels in loader:
+        images, labels = images.to(device, non_blocking=True), labels.to(device, non_blocking=True)
+        optimizer.zero_grad(set_to_none=True)
+        with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+            loss = criterion(model(images), labels)
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+        total += loss.item() * images.size(0)
+    return total / len(loader.dataset)
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+@torch.inference_mode()
+def evaluate(model: nn.Module, loader: DataLoader) -> float:
+    model.eval()
+    correct = n = 0
+    for images, labels in loader:
+        preds = model(images.to(device)).argmax(dim=1).cpu()
+        correct += (preds == labels).sum().item()
+        n += labels.numel()
+    return correct / n
 
-## Best Practices
+scaler = torch.amp.GradScaler(device.type, enabled=False)   # not needed for bf16; enable for fp16
+```
+Use `torch.amp` (the older CUDA-only AMP namespace is deprecated); bf16 on Ampere+ GPUs needs no gradient scaling.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+## Data and Augmentation
+
+| Practice | Why |
+|---|---|
+| Train/val/test splits by source (camera, patient, site, time) | Avoid leakage through near-duplicates |
+| Label quality review and guidelines | Label noise caps accuracy |
+| Class balance analysis | Weighted sampling or loss for rare classes |
+| Augmentation (random resized crop, flip, color jitter, RandAugment/TrivialAugment, Mixup/CutMix) | Generalization |
+| Task-aware augmentation | Do not flip text or left/right-sensitive medical images; transform boxes/masks consistently (torchvision `transforms.v2`, Albumentations) |
+| Deduplicate | Near-duplicate images across splits inflate metrics |
+
+## Evaluation Metrics
+- **Classification**: accuracy can mislead with imbalance; report per-class precision/recall/F1, confusion matrix, and calibration (ECE).
+- **Detection**: IoU threshold matters; COCO mAP averages IoU 0.50–0.95. Inspect precision-recall curves per class and errors by object size.
+- **Segmentation**: IoU per class and mean IoU; Dice for medical imaging; boundary metrics when edges matter.
+- Always evaluate on data matching deployment conditions (lighting, cameras, resolutions).
 
 ## Common Pitfalls
+| Pitfall | Fix |
+|---|---|
+| Different preprocessing in training vs. inference | Share one transform definition; test parity |
+| BGR/RGB confusion | Convert explicitly at load time |
+| Data leakage between splits | Group-aware splitting |
+| Overfitting small datasets | Pretrained backbones, augmentation, early stopping |
+| Judging by a single metric | Per-class and slice analysis |
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Computer Vision concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+## Checklist
+- [ ] Task and metric chosen to match the business decision
+- [ ] Pretrained backbone with documented preprocessing
+- [ ] Leak-free splits by source/group
+- [ ] Task-consistent augmentation
+- [ ] Mixed precision via `torch.amp`; dynamic device selection
+- [ ] Per-class and per-slice evaluation on deployment-like data

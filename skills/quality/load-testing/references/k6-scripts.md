@@ -1,5 +1,7 @@
 # k6 Scripts
 
+Copy-ready k6 scripts for the common test types, open-model scenarios, data-driven runs and CI. Scripts are JavaScript (k6 v1 also runs TypeScript files directly).
+
 ## Installation
 
 ```bash
@@ -9,9 +11,9 @@ choco install k6
 # macOS
 brew install k6
 
-# Linux
-sudo apt install k6
-# or download from https://k6.io/docs/getting-started/installation/
+# Linux (Debian/Ubuntu): add Grafana's k6 apt repository first, then
+sudo apt-get install k6
+# see https://grafana.com/docs/k6/latest/set-up/install-k6/
 
 # Docker
 docker pull grafana/k6
@@ -171,6 +173,46 @@ export default function () {
 }
 ```
 
+### Open Model: Arrival-Rate Scenarios
+
+`stages` with VUs is a closed model: when the system slows down, request rate drops too. To hold a target throughput regardless of latency, use an arrival-rate executor.
+
+```javascript
+export const options = {
+  scenarios: {
+    checkout: {
+      executor: "ramping-arrival-rate",
+      startRate: 10,
+      timeUnit: "1s",          // iterations per second
+      preAllocatedVUs: 50,
+      maxVUs: 300,
+      stages: [
+        { target: 100, duration: "5m" },
+        { target: 100, duration: "20m" },
+        { target: 0, duration: "2m" },
+      ],
+      exec: "checkout",
+    },
+    browse: {
+      executor: "constant-vus",
+      vus: 20,
+      duration: "27m",
+      exec: "browse",
+    },
+  },
+  thresholds: {
+    "http_req_duration{scenario:checkout}": ["p(95)<800"],
+    http_req_failed: ["rate<0.01"],
+    dropped_iterations: ["count<10"], // VU pool too small if this grows
+  },
+};
+
+export function checkout() { /* checkout requests */ }
+export function browse() { /* catalogue requests */ }
+```
+
+Use `abortOnFail` on a threshold (`{ threshold: "rate<0.05", abortOnFail: true }`) to stop a run early once it is clearly failing.
+
 ### Custom Metrics
 ```javascript
 import { Counter, Gauge, Trend, Rate } from "k6/metrics";
@@ -192,6 +234,8 @@ export const options = {
 ### Data-Driven Test
 ```javascript
 // tests/load/data-driven.js
+import http from "k6/http";
+import { check } from "k6";
 import { SharedArray } from "k6/data";
 import papaparse from "https://jslib.k6.io/papaparse/5.1.1/index.js";
 
@@ -199,6 +243,8 @@ const users = new SharedArray("users", function () {
   const data = open("./users.csv");
   return papaparse.parse(data, { header: true }).data;
 });
+
+const BASE_URL = __ENV.BASE_URL || "http://localhost:3000";
 
 export default function () {
   const user = users[__VU % users.length];
@@ -225,10 +271,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: grafana/setup-k6-action@v1
       - name: Run load test
-        uses: grafana/k6-action@v0.3.1
+        uses: grafana/run-k6-action@v1
         with:
-          filename: tests/load/basic.js
+          path: tests/load/basic.js
           flags: --out json=results.json
         env:
           BASE_URL: ${{ vars.STAGING_URL }}
@@ -250,17 +297,28 @@ k6 run -e BASE_URL=http://staging.example.com tests/load/basic.js
 # Run with output
 k6 run --out json=results.json --out csv=results.csv tests/load/basic.js
 
-# Run with Grafana Cloud output
+# Stream results to Grafana Cloud k6 (after `k6 cloud login`)
 k6 run --out cloud tests/load/basic.js
+
+# Write an end-of-test summary for CI artifacts
+k6 run --summary-export=summary.json tests/load/basic.js
 ```
 
 ## Threshold Templates
 
 | Scenario | Threshold |
 |----------|-----------|
-| API latency SLA | `p(95)<500, p(99)<1000` |
-| Error budget | `http_req_failed<0.01` |
-| Login flow | `p(95)<2000` (includes crypto) |
-| File upload | `p(95)<5000` |
-| Database query | `p(95)<200` |
-| Payment processing | `p(99)<3000, http_req_failed<0.001` |
+| API latency SLA | `http_req_duration: ["p(95)<500", "p(99)<1000"]` |
+| Error budget | `http_req_failed: ["rate<0.01"]` |
+| Login flow (password hashing is slow by design) | `"http_req_duration{name:login}": ["p(95)<2000"]` |
+| File upload | `"http_req_duration{type:upload}": ["p(95)<5000"]` |
+| Checks | `checks: ["rate>0.99"]` |
+
+Derive the numbers from your SLOs; the values above are examples, not recommendations. Tag requests (`http.get(url, { tags: { name: "login" } })`) so per-endpoint thresholds work and URLs with IDs do not explode metric cardinality.
+
+## Pitfalls
+
+- `sleep()` models think time; omitting it in closed-model tests turns each VU into a tight loop.
+- Generate load from a machine with headroom; watch k6's own CPU, or results measure the load generator.
+- Use dynamic URLs with a `name` tag (or `http.url` template) to group metrics.
+- Never point load tests at production without an agreed window and a kill switch.

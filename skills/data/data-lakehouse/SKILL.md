@@ -332,7 +332,7 @@ Lakehouse vs data lake: lakehouse adds ACID transactions, schema enforcement, an
 - Liquid clustering: automatic, no manual partition management. Adds metadata overhead.
 - Auto-compaction: runtime overhead ~5%, reduces small file count by 10-100x.
 - Delta cache: enable on frequently queried gold tables (Databricks only). Caches up to 60-70% of working set in local SSD.
-- Photon engine: Databricks vectorized query engine. 2-5x faster on SQL workloads. Enable on gold tables.
+- Photon engine: Databricks native vectorized query engine; speeds up many SQL/DataFrame workloads at a higher DBU rate. Benchmark cost per query before enabling broadly.
 - File skipping: Delta/iceberg partition pruning + min/max stats skip files without relevant data. Z-order improves file skipping by clustering similar values.
 
 Scalability considerations: Bronze layer scales horizontally with object storage (no compute bottleneck). Silver and Gold are compute-bound — provision auto-scaling clusters. For petabyte-scale bronze, partition by source + date and use batch ingestion windows. For Unity Catalog, each metastore supports up to 10,000 tables. Use multiple metastores for larger deployments.
@@ -365,7 +365,7 @@ optimization:
   bi_dashboards:
     engine: "Databricks SQL Warehouse (serverless)"
     config:
-      - use_photon: true  # Vectorized engine (2-10x faster)
+      - use_photon: true  # Vectorized engine; benchmark cost vs speed
       - warehouse_size: "SMALL to LARGE"  # Scale based on concurrency
       - auto_stop: 15min
       - min_clusters: 1

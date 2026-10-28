@@ -46,7 +46,7 @@ Code: TypeScript component and template (inline or separate). No import statemen
 No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
 
 ### Completion Criteria
-- [ ] Standalone components by default. NgModule only for NgRx or specific lazy-loading needs.
+- [ ] Standalone components by default. NgModules only for legacy libraries that still require them (NgRx, Material, routing all have standalone `provide*` APIs).
 - [ ] Signals used for component state (signal(), computed()).
 - [ ] inject() used for DI instead of constructor injection.
 - [ ] New control flow syntax used (@if, @for, @switch).
@@ -147,8 +147,8 @@ src/
 ```typescript
 @Component({
   selector: 'app-user-list',
-  standalone: true,
-  imports: [CommonModule, RouterLink],
+  // Components are standalone by default since Angular 19; add `standalone: true` only on v17-18
+  imports: [RouterLink], // CommonModule not needed with built-in control flow (@if/@for)
   templateUrl: './user-list.component.html',
   styleUrls: ['./user-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -383,7 +383,7 @@ angular_performance:
     - "Preload strategy: PreloadAllModules for small apps, custom for large"
     
   bundle_optimization:
-    - "Standalone components reduce bundle size (no NgModule overhead)"
+    - "Standalone components make dependencies explicit per component, which improves tree-shaking and lazy loading"
     - "Defer heavy third-party components with @defer placeholder"
     - "Image optimization — ngSrc with automatic srcset and lazy loading"
     
@@ -430,7 +430,7 @@ angular_testing:
 ## Migration Patterns
 
 ### Standalone Migration Path
-1. Create new components with `standalone: true` always.
+1. Create new components as standalone (implicit in v19+, `standalone: true` on v17-18). Use `ng generate @angular/core:standalone` to migrate.
 2. Convert existing root AppModule to use `bootstrapApplication` + `appConfig`.
 3. Convert feature NgModules: move declarations to component imports, add `standalone: true`.
 4. Replace `*ngIf`, `*ngFor`, `*ngSwitch` with `@if`, `@for`, `@switch`.
@@ -440,7 +440,7 @@ angular_testing:
 ### NgModule to Standalone Conversion
 | NgModule Pattern | Standalone Equivalent |
 |------------------|----------------------|
-| `declarations: [Comp]` | `standalone: true` on component |
+| `declarations: [Comp]` | Standalone component (default in v19+) listing its own `imports` |
 | `imports: [CommonModule]` | `imports: [CommonModule]` on component |
 | `providers: [Service]` | `providers: [Service]` on component or `providedIn: 'root'` |
 | `bootstrap: [AppComponent]` | `bootstrapApplication(AppComponent, appConfig)` |
@@ -448,7 +448,7 @@ angular_testing:
 
 ## Build/Bundle Considerations
 
-- Standalone components reduce bundle size (no NgModule runtime overhead).
+- Standalone components declare their own dependencies, which makes lazy loading and tree-shaking more precise.
 - `@defer` blocks enable lazy loading of component dependencies.
 - `provideHttpClient(withFetch())` enables the newer, smaller fetch-based HTTP client.
 - `provideZoneChangeDetection({ eventCoalescing: true })` reduces change detection cycles.
@@ -457,7 +457,7 @@ angular_testing:
 - Use `@angular/build` (Vite-based) in Angular 17+ for faster builds.
 
 ## Rules
-- Standalone components by default. NgModules only for NgRx feature states or backward compatibility.
+- Standalone components by default. NgModules only for backward compatibility (NgRx offers `provideStore`/`provideState`).
 - Signals for component and local state. RxJS only for complex async streams (HTTP, WebSocket, debounced inputs).
 - inject() over constructor injection. Cleaner, less boilerplate, tree-shakable.
 - New control flow syntax (@if, @for, @switch) in all new code. No *ngIf, *ngFor, *ngSwitch.
@@ -480,52 +480,6 @@ angular_testing:
 No artifact produced.
 Next skill: angular-patterns — DI, interceptors, guards, NgRx vs Signal Store.
 Carry forward: standalone setup, signal patterns, feature organization.
-## Implementation Patterns
-
-### Factory Pattern for Module Creation
-`
-function createModule<T>(config: ModuleConfig): T {
-  const dependencies = initializeDependencies(config);
-  const module = new Module(dependencies);
-  module.hooks.onInit();
-  return module as T;
-}
-`
-
-### Builder Pattern for Complex Configuration
-`
-class ConfigBuilder {
-  private config: AppConfig = new AppConfig();
-  withDatabase(url: string): ConfigBuilder { ... }
-  withCache(ttl: number): ConfigBuilder { ... }
-  withLogging(level: string): ConfigBuilder { ... }
-  build(): AppConfig { return this.config; }
-}
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Production build with optimizations enabled
-- [ ] Environment variables configured per environment
-- [ ] Health check endpoint responds correctly
-- [ ] Error tracking and monitoring integrated
-- [ ] Logging level configured (not debug in production)
-- [ ] Resource limits configured
-- [ ] Database migrations applied
-- [ ] Static assets built and served from CDN or cache
-- [ ] Feature flags toggled appropriately
-- [ ] Rollback plan documented and tested
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% | Critical | Rollback or fix |
-| p95 latency | > 500ms | Warning | Profile and optimize |
-| Uptime | < 99.9% | Critical | Investigate infrastructure |
-| Memory usage | > 80% | Warning | Check for leaks |
-| CPU usage | > 80% | Warning | Scale up or optimize |
-
 ## Anti-Patterns
 
 | Anti-Pattern | Why It Fails | Correct Approach |

@@ -1,7 +1,7 @@
 ---
 name: design-accessibility
 description: >
-  Use this skill when addressing accessibility, a11y, WCAG compliance, screen reader support, keyboard navigation, color contrast, ARIA patterns, or inclusive design. This skill enforces: WCAG 2.2 AA compliance (AAA where possible), semantic HTML structure, correct ARIA patterns, keyboard interaction design, sufficient color contrast, and screen reader testing protocol. Do NOT use for: general frontend performance optimization, visual design aesthetics, or mobile gesture-only interactions.
+  Use this skill when performing an accessibility (a11y) audit, fixing WCAG/Section 508 failures, implementing ARIA patterns, adding screen-reader support, or auditing keyboard navigation and color contrast. This skill enforces: WCAG 2.2 AA compliance (AAA where possible), semantic HTML before ARIA, correct ARIA patterns, keyboard interaction design, sufficient color contrast, and a screen-reader testing protocol. Do NOT use for: general frontend performance optimization, visual design aesthetics, or mobile gesture-only interactions.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -21,7 +21,7 @@ Ensure digital products meet WCAG compliance with semantic HTML, correct ARIA, k
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "accessibility", "a11y", "WCAG", "screen reader", "keyboard navigation", "color contrast", "ARIA", "inclusive design", "accessible", "508 compliance", "disabled users".
+Exact user phrases: "accessibility audit", "a11y audit", "WCAG compliance", "screen reader support", "keyboard navigation", "color contrast check", "ARIA pattern", "inclusive design", "Section 508", "ADA compliance", "EAA compliance".
 
 ### Input Context
 Before activating, verify:
@@ -45,7 +45,7 @@ Accessibility audit with WCAG compliance plan, ARIA patterns, and testing strate
 <!-- Keyboard interaction implementation -->
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
+No preamble or filler. Lead with findings and fixes. Keep prose tight but include the audit details, ARIA patterns, and config the user needs.
 
 ### Completion Criteria
 - [ ] WCAG level target confirmed (AA minimum)
@@ -76,11 +76,13 @@ WCAG is organized around four principles:
 
 ### WCAG Compliance Levels
 
+WCAG 2.2 success criteria counts (A / AA-additional / AAA-additional):
+
 | Level | Criteria Count | Requirements | Target Scenarios |
 |-------|---------------|--------------|------------------|
-| A | 30 | Minimum accessibility, essential support | All public content |
-| AA | 20 (additional) | Acceptable for most users, standard target | Business, e-commerce, SaaS |
-| AAA | 28 (additional) | Enhanced accessibility, specialized | Government, healthcare, finance |
+| A | 31 | Minimum accessibility, essential support | All public content |
+| AA | 24 (additional) | Acceptable for most users, standard target | Business, e-commerce, SaaS |
+| AAA | 31 (additional) | Enhanced accessibility, specialized | Government, healthcare, finance |
 
 ### Accessibility Maturity Model
 
@@ -115,7 +117,7 @@ Assess current state against target level:
 5. Estimate effort and prioritize fixes
 
 ### Step 2: Semantic HTML
-Use native HTML elements before ARIA: `<nav>` not `<div role="navigation">`, `<button>` not `<div role="button">`, `<heading>` elements in correct hierarchy (h1 → h2 → h3, no skipping). Landmarks: `<header>`, `<main>`, `<nav>`, `<aside>`, `<footer>`. Each page has exactly one `<main>`.
+Use native HTML elements before ARIA: `<nav>` not `<div role="navigation">`, `<button>` not `<div role="button">`, heading elements `<h1>`–`<h6>` in correct hierarchy (h1 → h2 → h3, no skipping). Landmarks: `<header>`, `<main>`, `<nav>`, `<aside>`, `<footer>`. Each page has exactly one `<main>`.
 
 Semantic HTML benefits:
 - Built-in keyboard accessibility (native elements handle Tab, Enter, Space)
@@ -125,14 +127,14 @@ Semantic HTML benefits:
 - Future-proofing (browser improvements apply automatically)
 
 ### Step 3: Color Contrast
-Text contrast ratios: 4.5:1 for normal text (<18px), 3:1 for large text (>=18px bold or >=24px). UI component contrast: 3:1 for borders, icons, focus indicators. Use tools: WebAIM Contrast Checker, axe DevTools, Stark plugin. Never rely on color alone to convey information — add icons, patterns, or text labels.
+Text contrast ratios: 4.5:1 for normal text, 3:1 for large text. WCAG defines large text as **18pt (≈24px) or larger**, or **14pt (≈18.66px) bold or larger**. UI component contrast: 3:1 for borders, icons, focus indicators. Use tools: WebAIM Contrast Checker, axe DevTools, Stark plugin. Never rely on color alone to convey information — add icons, patterns, or text labels.
 
 Contrast requirements by WCAG:
 
 | Element | AA Required | AAA Required |
 |---------|-------------|--------------|
-| Normal text (<18px / <14px bold) | 4.5:1 | 7:1 |
-| Large text (>=18px bold / >=24px) | 3:1 | 4.5:1 |
+| Normal text (<18pt / <14pt bold) | 4.5:1 | 7:1 |
+| Large text (>=18pt / >=14pt bold) | 3:1 | 4.5:1 |
 | UI components (borders, icons) | 3:1 | N/A |
 | Focus indicator | 3:1 against adjacent colors | N/A |
 | Graphs and infographics | 3:1 for data elements | N/A |
@@ -249,20 +251,28 @@ Status: {Open / In Progress / Fixed / Verified}
 ```
 
 ### Focus Management Implementation
+Modal dialogs must use `showModal()` (not `show()`) so the browser traps focus and blocks the background. Always remove the Escape listener when the dialog closes.
+
 ```javascript
 function handleDialogOpen(dialogEl) {
   const previousFocus = document.activeElement;
-  dialogEl.show();
-  trapFocus(dialogEl);
+  dialogEl.showModal(); // traps focus + renders backdrop
 
   function handleEscape(e) {
     if (e.key === 'Escape') {
       dialogEl.close();
-      previousFocus.focus();
     }
   }
 
+  // Restore focus and clean up the listener when the dialog closes
+  function handleClose() {
+    dialogEl.removeEventListener('close', handleClose);
+    document.removeEventListener('keydown', handleEscape);
+    previousFocus?.focus();
+  }
+
   document.addEventListener('keydown', handleEscape);
+  dialogEl.addEventListener('close', handleClose);
 }
 ```
 
@@ -291,7 +301,7 @@ import axe from 'axe-core';
 
 function runA11yTests() {
   axe.run(document, {
-    runOnly: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
+    runOnly: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
   }, (err, results) => {
     if (err) throw err;
     console.log(`${results.violations.length} violations found`);
@@ -317,27 +327,26 @@ function runA11yTests() {
 | NVDA | Screen reader | Full experience | Windows (free) |
 | JAWS | Screen reader | Full experience | Windows (paid) |
 
-## Case Studies
+## Illustrative Scenarios
 
-### Case Study 1: E-commerce Accessibility Redesign Increases Revenue
-An online retailer redesigned their site for WCAG AA compliance. Changes included: semantic HTML restructuring, color contrast improvements, keyboard navigation, screen reader announcements for cart updates, and accessible form validation. Post-launch analytics showed:
-- 20% increase in conversion rate from users with disabilities (estimated from assistive tech detection)
-- 15% improvement in overall conversion (benefits extended to all users)
-- 25% reduction in cart abandonment
-- 40% reduction in form submission errors
+> The metrics below are **illustrative examples** of typical outcomes, not verified studies. Use them to set expectations, not as guarantees.
 
-Method: WCAG AA compliance audit → systematic remediation across 120 pages
-Key insight: Accessibility improvements benefited all users, not just those with disabilities
-Impact: 20% increase in conversions from assistive technology users, 15% overall
+### Scenario 1: E-commerce Accessibility Redesign Increases Revenue
+An online retailer redesigned their site for WCAG AA compliance. Changes included: semantic HTML restructuring, color contrast improvements, keyboard navigation, screen reader announcements for cart updates, and accessible form validation. Typical reported outcomes:
+- Higher conversion rate from users relying on assistive technology
+- Improved overall conversion (benefits extend to all users)
+- Reduced cart abandonment and form submission errors
 
-### Case Study 2: Financial Services App Keyboard Navigation
-A financial services web app received complaints from users who couldn't complete transactions using keyboard alone. A full keyboard audit revealed 47 focus and navigation issues. Fixes included: skip links, logical tab order, visible focus indicators, and keyboard shortcuts for common actions. After fixes, keyboard-only task completion increased from 45% to 95%, and support tickets related to keyboard navigation dropped by 80%.
+Method: WCAG AA compliance audit → systematic remediation across the site
+Key insight: Accessibility improvements often benefit all users, not just those with disabilities
+
+### Scenario 2: Financial Services App Keyboard Navigation
+A financial services web app received complaints from users who couldn't complete transactions using keyboard alone. A full keyboard audit revealed dozens of focus and navigation issues. Fixes included: skip links, logical tab order, visible focus indicators, and keyboard shortcuts for common actions. After fixes, keyboard-only task completion rose significantly and support tickets related to keyboard navigation dropped.
 
 Method: Keyboard-only usability audit → systematic issue remediation
 Key insight: Many power users (not just those with disabilities) prefer keyboard navigation
-Impact: Keyboard task completion 45% to 95%, support tickets -80%
 
-### Case Study 3: Design System Accessibility Integration
+### Scenario 3: Design System Accessibility Integration
 A SaaS company integrated accessibility into their design system by creating accessible component templates with:
 - Built-in ARIA patterns for all interactive components
 - Color token system enforcing minimum contrast ratios
@@ -345,11 +354,10 @@ A SaaS company integrated accessibility into their design system by creating acc
 - Automated testing in the component build pipeline
 - Documentation for each component's accessibility features
 
-Result: New features built with the design system achieved 95% automated compliance out of the box, reducing per-feature accessibility audit effort by 70%. Annual accessibility audit findings decreased by 60% year-over-year.
+Result: New features built with the design system achieved high automated compliance out of the box, reducing per-feature accessibility audit effort.
 
 Method: Accessibility embedded in design system components, tokens, and documentation
 Key insight: Upstream accessibility (in the design system) is more efficient than per-feature fixes
-Impact: Per-feature a11y audit effort -70%, annual findings -60%
 
 ## Rules
 - Semantic HTML first — ARIA only as supplement.
@@ -366,7 +374,7 @@ Impact: Per-feature a11y audit effort -70%, annual findings -60%
 - Custom widgets must follow WAI-ARIA Authoring Practices patterns.
 - Error messages must be programmatically associated with their inputs.
 - All images must have alt text (decorative images get alt="").
-- Touch targets must be minimum 44x44px on mobile.
+- Touch targets: WCAG 2.2 AA (2.5.8) requires minimum 24x24px; aim for 44x44px (Apple HIG / WCAG 2.5.5 AAA) where possible.
 - Content must not require horizontal scrolling at 320px viewport width.
 - Focus must be managed programmatically for dynamic content changes.
 - Accessibility fixes must be prioritized alongside functional bugs.
@@ -470,7 +478,7 @@ Report quarterly to leadership: total issues, issues fixed, issues added, median
 - [ ] Dynamic content: all updates are announced via aria-live regions
 - [ ] Video/audio: captions, transcripts, and accessible controls
 - [ ] PDFs: tagged with proper heading hierarchy and alt text
-- [ ] Mobile: 44x44px minimum touch targets, no horizontal scroll at 320px
+- [ ] Mobile: 24x24px minimum touch targets (WCAG 2.2 AA), 44x44px recommended, no horizontal scroll at 320px
 - [ ] Reduced motion: all animations disable with `prefers-reduced-motion: reduce`
 
 ### Post-Launch Monitoring
@@ -516,9 +524,7 @@ Report quarterly to leadership: total issues, issues fixed, issues added, median
   - references/testing-tools.md — Testing Tools
   - references/wcag-checklist.md — WCAG Checklist
   - references/wcag-guide.md — WCAG Guide
-  - references/accessibility-testing-methods.md — Accessibility Testing Methods
-  - references/accessible-design-patterns.md — Accessible Design Patterns
 ## Handoff
-`design-design-systems` for accessible component library integration.
+`frontend-design-system` for accessible component library integration.
 `quality-visual-testing` for visual regression with a11y states.
 Carry forward: WCAG audit report, ARIA patterns, testing checklist.

@@ -1,213 +1,187 @@
-# Kubernetes Patterns Fundamentals
+# Kubernetes Design Patterns: Fundamentals
 
-## Overview
-Kubernetes Patterns is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+The foundational, structural, and behavioral patterns for designing workloads on Kubernetes (following the pattern language popularized by "Kubernetes Patterns", Ibryam and Huß). Each pattern lists the problem, the Kubernetes primitives that implement it, and common mistakes. Scheduling, stateful workloads, operators, and sidecar injection have their own references in this skill.
 
-## Core Concepts
+## Foundational Patterns
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Kubernetes Patterns helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+### Health Probe
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Kubernetes Patterns solutions. These principles help maintain code quality and reduce technical debt.
+Problem: the platform must know whether a container is alive, ready for traffic, and finished starting.
 
-### Concept 3: Data Management
-Proper data management is essential for Kubernetes Patterns. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+| Probe | Question | Failure action |
+|-------|----------|----------------|
+| `startupProbe` | Has the app finished starting? | Keeps liveness/readiness disabled until it succeeds |
+| `readinessProbe` | Can it serve traffic now? | Removed from Service endpoints |
+| `livenessProbe` | Is it deadlocked/broken? | Container restarted |
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+Mistake: liveness probes that call databases or downstream services, turning a dependency blip into a restart storm.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Predictable Demands
 
-## Architecture Patterns
+Problem: the scheduler needs to know resource needs and dependencies.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Kubernetes Patterns follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+- Set CPU/memory `requests` from observed usage (VPA in recommendation mode helps); set memory limits.
+- QoS classes follow from requests/limits: `Guaranteed` (requests = limits for all containers), `Burstable`, `BestEffort`. Under node pressure, BestEffort pods are evicted first.
+- Declare storage (PVCs), ports, and config dependencies explicitly.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+### Declarative Deployment
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+Problem: update applications without downtime.
 
-## Implementation Guide
+| Strategy | Primitive |
+|----------|-----------|
+| Rolling update | Deployment `RollingUpdate` with `maxSurge`/`maxUnavailable` |
+| Recreate | `strategy.type: Recreate` (for apps that cannot run two versions at once) |
+| Blue-green / canary | Two Deployments + Service/Gateway traffic switching, or Argo Rollouts / Flagger |
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### Managed Lifecycle
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+Problem: apps must react to platform lifecycle events.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+- Handle `SIGTERM`: stop accepting new work, finish in-flight requests, exit before `terminationGracePeriodSeconds`.
+- `preStop` hook (or a short sleep) lets endpoint removal propagate before shutdown.
+- `postStart` runs asynchronously with the entrypoint; do not rely on it for ordering.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+### Automated Placement
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+Problem: control where pods run. Implemented with node selectors, affinity/anti-affinity, taints/tolerations, and topology spread constraints (see `scheduling-placement.md`).
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+## Structural Patterns
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+### Init Container
 
-## Best Practices
+Separate initialization from the main container: run to completion, in order, before app containers start.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+```yaml
+initContainers:
+  - name: wait-for-migrations
+    image: ghcr.io/org/migrator:1.4.0
+    command: ["/migrate", "--check-only"]
+```
 
-## Common Pitfalls
+Use for schema checks, fetching config, or setting permissions. Keep them idempotent: they rerun when the pod restarts.
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+### Sidecar
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+A helper container that extends the main container (log shipping, proxies, config reloaders). Since Kubernetes 1.29 (GA in 1.33) native sidecars are declared as init containers with `restartPolicy: Always`: they start before app containers, keep running, and stop after them.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+```yaml
+initContainers:
+  - name: log-shipper
+    image: fluent/fluent-bit:3.2
+    restartPolicy: Always
+    volumeMounts: [{ name: logs, mountPath: /var/log/app }]
+```
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+Native sidecars fix the classic problems of Jobs that never complete because a sidecar keeps running, and of proxies starting after the app.
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+### Adapter
 
-## Tooling Ecosystem
+A sidecar that converts the main container's output into a standard interface, e.g. a Prometheus exporter translating an app's custom status endpoint into metrics, or a log reformatter.
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+### Ambassador
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+A sidecar that proxies outbound access to external services, hiding complexity (connection pooling, sharding, auth, TLS). Example: a local proxy for a sharded cache or a cloud SQL connector container.
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+## Behavioral Patterns
 
-## Integration Patterns
+### Batch Job
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Kubernetes Patterns concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata: { name: reindex-2026-10-27 }
+spec:
+  completions: 10
+  parallelism: 3
+  completionMode: Indexed            # each pod gets JOB_COMPLETION_INDEX
+  backoffLimit: 4
+  activeDeadlineSeconds: 3600
+  ttlSecondsAfterFinished: 86400
+  podFailurePolicy:
+    rules:
+      - action: FailJob
+        onExitCodes: { containerName: worker, operator: In, values: [42] }   # non-retriable error
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: worker
+          image: ghcr.io/org/reindexer:2.0.1
+```
+
+- `Indexed` mode partitions work deterministically.
+- `podFailurePolicy` distinguishes retriable failures from fatal ones.
+- `ttlSecondsAfterFinished` cleans up finished Jobs.
+
+### Periodic Job
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata: { name: nightly-report }
+spec:
+  schedule: "0 2 * * *"
+  timeZone: "Europe/Berlin"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers: [{ name: report, image: ghcr.io/org/report:3.1.0 }]
+```
+
+`concurrencyPolicy: Forbid` prevents overlapping runs; jobs must still be idempotent, because a CronJob can occasionally create two Jobs or none.
+
+### Daemon Service
+
+DaemonSets run one pod per (selected) node for node agents: log collectors, CNI, CSI node plugins, monitoring exporters. Use tolerations to include tainted nodes and `updateStrategy.rollingUpdate.maxUnavailable` to control rollout speed.
+
+### Singleton Service
+
+Only one active instance:
+- Out-of-application: `replicas: 1` with `Recreate` strategy (accepts downtime during updates), or a StatefulSet of size 1.
+- In-application: leader election with a `coordination.k8s.io/v1` Lease (client-go `leaderelection`, controller-runtime managers) — survives node failure faster and allows warm standbys.
+
+### Stateful Service
+
+StatefulSets give stable identities, ordered rollout, and per-pod volumes. Details in `k8s-stateful-workloads.md`.
+
+### Service Discovery
+
+| Need | Mechanism |
+|------|-----------|
+| In-cluster, load balanced | ClusterIP Service + DNS (`svc.ns.svc.cluster.local`) |
+| Per-pod addresses | Headless Service |
+| External service via cluster DNS | `ExternalName` Service or Service without selector + EndpointSlice |
+| North-south traffic | Gateway API / Ingress / LoadBalancer Service |
+
+## Configuration Patterns
+
+| Pattern | Implementation |
+|---------|---------------|
+| EnvVar configuration | `env` / `envFrom` from ConfigMaps and Secrets |
+| Configuration resource | ConfigMap/Secret mounted as files; supports live reload |
+| Immutable configuration | `immutable: true` ConfigMaps or config baked into versioned images |
+| Configuration template | Init container or Helm/Kustomize rendering environment-specific config |
+
+## Common Mistakes
+
+- One giant pod with many unrelated containers; containers in a pod should share lifecycle and need co-location.
+- Using `latest` tags, defeating declarative rollbacks.
+- CronJobs without `concurrencyPolicy` or idempotency.
+- Sidecars in Jobs implemented as regular containers (Job never completes) on clusters that support native sidecars.
+
+## Checklist
+
+- [ ] Probes, requests/limits, and graceful shutdown on every workload
+- [ ] Init containers idempotent; sidecars declared natively where supported
+- [ ] Jobs with deadlines, TTL, and failure policies
+- [ ] CronJobs with time zone, concurrency policy, and idempotent work
+- [ ] Singletons via leader election when downtime is unacceptable
+- [ ] Configuration externalized and rollout-triggering on change

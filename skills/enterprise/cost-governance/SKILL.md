@@ -542,7 +542,7 @@ Buying reserved instances based on aggregate spend rather than actual usage patt
 ### Anti-Pattern 5: Showback Without Accountability
 Publishing cost reports that no one reads or acts on. Showback is step 1 — the real impact comes when teams can optimize their own spend and see the savings reflected in their budget. Pair visibility with autonomy.
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: Enterprise Tagging Transformation
 A 5000-employee enterprise with $50M annual cloud spend had 60% untagged resources. Implementing enforced tagging through SCPs and Terraform validators took 6 months. The unallocated cost bucket shrank from 60% to 5%. Cost center owners could finally see their teams spend. Within 3 months of visibility, teams identified $4M in annualized savings.

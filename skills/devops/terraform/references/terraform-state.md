@@ -10,7 +10,7 @@ terraform {
     key            = "production/terraform.tfstate"
     region         = "us-east-1"
     encrypt        = true
-    dynamodb_table = "terraform-locks"
+    use_lockfile   = true   # S3-native locking (Terraform >= 1.10); DynamoDB locking is deprecated
   }
 }
 ```

@@ -3,11 +3,11 @@
 ## Test Setup with Vitest
 
 ```typescript
-import { test, beforeAll, afterAll } from 'vitest';
-import Fastify from 'fastify';
+import { test, expect, beforeAll, afterAll } from 'vitest';
+import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app';
 
-let app: ReturnType<typeof buildApp>;
+let app: FastifyInstance;
 
 beforeAll(async () => {
   app = buildApp();
@@ -100,8 +100,7 @@ test('POST /api/orders rejects negative quantity', async () => {
 ## Authentication Testing
 
 ```typescript
-import jwt from '@fastify/jwt';
-
+// Assumes buildApp() registers @fastify/jwt, which decorates app.jwt.
 test('GET /api/protected requires auth', async () => {
   const response = await app.inject({
     method: 'GET',
@@ -186,6 +185,45 @@ test('error handler catches thrown errors', async () => {
 });
 ```
 
+## Built-in Test Runner (node:test)
+
+Fastify's own docs use `node:test`; no extra dependency is needed.
+
+```typescript
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { buildApp } from '../src/app';
+
+test('GET /health', async (t) => {
+  const app = buildApp();
+  t.after(() => app.close());
+
+  const res = await app.inject({ method: 'GET', url: '/health' });
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.json(), { status: 'ok' });
+});
+```
+
+## Replacing Dependencies
+
+Pass collaborators into the factory (or override a decorator) so unit tests never hit a real database or HTTP API.
+
+```typescript
+export function buildApp(deps: { orderRepo: OrderRepo }) {
+  const app = Fastify({ logger: false });
+  app.decorate('orderRepo', deps.orderRepo);
+  app.register(orderRoutes, { prefix: '/api/orders' });
+  return app;
+}
+
+// test
+const fakeRepo = { create: vi.fn().mockResolvedValue({ id: 'o-1' }) };
+const app = buildApp({ orderRepo: fakeRepo });
+```
+
+For outbound HTTP made with `fetch`/undici, intercept with undici's `MockAgent` (`setGlobalDispatcher(mockAgent)`) instead of calling the real service.
+
 ## Snapshot Testing
 
 ```typescript
@@ -211,3 +249,4 @@ test('response matches snapshot', async () => {
 - Snapshot testing catches unexpected response changes
 - Each test should use a fresh app instance for isolation
 - Type provider integration validates Zod schema at runtime
+- Inject fakes through the app factory; never call real external services in unit tests

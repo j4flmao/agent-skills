@@ -1,11 +1,38 @@
 ---
 name: memory-management
-description: Expert game engine memory management — allocator hierarchy (stack/arena/pool/free-list), cache-aware data layout, memory tracking, virtual memory, GPU memory, and zero-GC-pause strategies.
+description: >
+  Use this skill when the user says 'game memory', 'arena allocator', 'pool allocator', 'frame allocator', 'memory fragmentation', 'memory tracking', 'cache layout', 'GC spikes'. Designs engine memory: allocator hierarchy (frame/arena/pool/free-list), cache-aware layout, tracking and budgets, virtual memory, GPU memory and GC-spike avoidance. Do NOT use for: general application memory leaks in web/backend code, embedded static-only allocation (use embedded skills).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, memory, allocators, performance, engine]
 ---
 
 # Game Engine Memory Management — Deep Engineering Guide
 
+## Purpose
 Memory is the #1 source of frame-time jank in shipped games. A 15 ms GC stop-the-world, a cache miss chain, or a fragmented heap turns a 60 FPS target into slideshow. This skill covers the full memory stack of a production game engine: from the raw allocator hierarchy, through cache-aware data layout, to memory tracking and GPU memory management.
+
+## Agent Protocol
+
+### Trigger
+"game memory", "arena allocator", "pool allocator", "frame allocator", "memory fragmentation", "memory tracking", "cache layout", "GC spikes".
+
+### Input Context
+- Language/runtime (C++, C# with GC, Rust)
+- Platform memory limits
+- Profiler/tracker data
+
+### Output Artifact
+Allocator design and code plus a memory budget table. No file unless requested.
+
+### Response Format
+```
+Allocator: {type, lifetime scope}
+Budget: {category -> MB}
+Code: {snippet}
+Tracking: {how leaks/overruns are caught}
+```
 
 ## 1. The Memory Model of a Game
 
@@ -42,7 +69,7 @@ arena / pool / stack           free-list / slabs             system heap / GC
 System heap (malloc / new)      — last resort, slow, fragmented
    ├── Stack allocator           per-frame scratch, O(1) reset, no free
    ├── Arena / Bump allocator    monotonic one-shot regions, O(1) alloc
-   ├── Free-list allocator       variable sizes, defers dealloc, O(1) alloc+free (best-fit/first-fit)
+   ├── Free-list allocator       variable sizes; first/best-fit search is O(free blocks), size-class bins make it ~O(1)
    ├── Pool allocator            fixed block size, no fragmentation, O(1)
    └── Object pools              dedicated recycling for hot objects, type-safe
 ```
@@ -52,7 +79,7 @@ System heap (malloc / new)      — last resort, slow, fragmented
 | Stack | O(1) | O(1) reset | none | frame scratch |
 | Arena | O(1) | — (reset) | none | one-shot regions |
 | Pool | O(1) | O(1) | none | fixed-size objects |
-| Free-list | O(1) | O(1) | low | mixed sizes |
+| Free-list | O(n) fit search (O(1) with size classes / TLSF) | O(1) (+ coalescing) | medium | mixed sizes |
 | System heap | variable | variable | high | rare |
 
 ### 2.1 Stack Allocator (Frame Scratch)
@@ -62,7 +89,9 @@ class StackAllocator {
     uint8_t* buffer; size_t size; size_t top = 0;
 public:
     explicit StackAllocator(size_t n) : size(n) {
-        buffer = static_cast<uint8_t*>(aligned_alloc(16, n));
+        n = (n + 15) & ~size_t(15);                       // aligned_alloc needs size % align == 0
+        buffer = static_cast<uint8_t*>(std::aligned_alloc(16, n)); // MSVC: _aligned_malloc/_aligned_free
+        if (!buffer) throw std::bad_alloc();
     }
     void* alloc(size_t n, size_t align = 16) {
         size_t p = (top + align - 1) & ~(align - 1);
@@ -117,7 +146,7 @@ Every allocator is 64-byte aligned, tags each block with a `MemoryTag` (bucketed
 | RAM (main memory) | ~200–400 |
 | Cache miss chain (pointer chase) | 1000+ |
 
-Layout beats algorithm at this scale: an O(n log n) with a perfect data layout will beat an O(n) with scattered pointers.
+Layout often beats asymptotics at game-sized n: a linear scan of a contiguous array can outrun a pointer-based tree or list with better big-O. Benchmark both.
 
 ### 3.2 AoS vs SoA
 
@@ -145,7 +174,7 @@ Split the rarely-touched data out of the hot struct: `Transform` (hot: position/
 
 ### 3.4 Cache Line Padding & False Sharing
 
-Two threads writing different fields of the same cache line thrash the coherence protocol (~1000x cost). Fix: pad hot per-thread data to 64 bytes:
+Two threads writing different fields of the same cache line force the line to bounce between cores (false sharing), which can make a parallel loop slower than the serial one. Fix: align/pad per-thread data to the cache line (64 B on x86, 128 B on Apple silicon; `std::hardware_destructive_interference_size` where available):
 
 ```cpp
 struct alignas(64) PerThreadScratch {   // one per worker thread
@@ -181,12 +210,12 @@ MemoryTags[MemoryTag::COUNT];         // indexed by enum
 
 Per-frame RSS, per-tag deltas, and an "allocation heatmap" (per-KB bytes) shown in the profiler's memory view. Flag: allocations in the render/input/update hot paths on a histogram.
 
-### 4.4 Common FOAFs
+### 4.4 Common Memory Bugs
 
 | Bug | Symptom | Detection |
 |-----|---------|-----------|
 | Use-after-free | Random corruption, crash on unrelated code | Fill patterns + handle generation tags |
-| Double free | Heap corruption | Canter allocators, guard bytes |
+| Double free | Heap corruption | Debug allocators, guard bytes, AddressSanitizer |
 | Leak | RSS grows monotonically | Shutdown leak report |
 | Fragmentation | Big allocs fail while free memory exists | Free-list stats, pool everything |
 
@@ -197,13 +226,16 @@ Per-frame RSS, per-tag deltas, and an "allocation heatmap" (per-KB bytes) shown 
 Reserve a large virtual region (e.g., 64 GB) and commit lazily as touched. Console "reserve/commit" pattern gives the illusion of huge arrays without physical backing; commit only the working set.
 
 ```cpp
-void* p = VirtualAlloc(region, 64GB, RESERVE, PAGE_READWRITE);  // Win32
-// commit on demand: VirtualAlloc(p, size, COMMIT, ...) when a page is first written
+// Win32: reserve address space only, then commit pages as needed
+void* base = VirtualAlloc(nullptr, 64ull << 30, MEM_RESERVE, PAGE_NOACCESS);
+VirtualAlloc(base, commitBytes, MEM_COMMIT, PAGE_READWRITE);
+// POSIX: mmap(nullptr, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0)
+//        then mprotect(ptr, commitBytes, PROT_READ | PROT_WRITE)
 ```
 
 ### 5.2 Huge / Large Pages
 
-Set `SetProcessWorkingSetSize` + memory manager flags, and `madvise(MADV_HUGEPAGE)` (Linux). 2 MB pages slash TLB misses for big streaming pools (texture streaming, voxel worlds). Watch: huge pages can't be swapped — don't give them a whole level's streaming.
+Windows: `VirtualAlloc(..., MEM_RESERVE | MEM_COMMIT | MEM_LARGE_PAGES, ...)` after granting the process `SeLockMemoryPrivilege` (large pages are non-pageable and may fail when memory is fragmented — keep a fallback). Linux: `madvise(ptr, len, MADV_HUGEPAGE)` for transparent huge pages. 2 MB pages cut TLB misses for big pools (streaming pools, voxel worlds).
 
 ### 5.3 Memory-Mapped Files
 

@@ -26,6 +26,26 @@ tags: [devops, circleci, ci-cd, phase-5]
 ## Purpose
 Define CI/CD pipelines using CircleCI configuration with workflows, jobs, orbs, caching strategies, and parallel execution for fast, reliable builds.
 
+## Agent Protocol
+
+### Trigger
+"CircleCI", "circleci config", "orb", "executors", "CircleCI runner", "test splitting", "dynamic config".
+
+### Input Context
+Languages, test suite duration, executor needs (Docker, machine, macOS, Arm), contexts/secrets, monorepo layout.
+
+### Output Artifact
+`.circleci/config.yml` and orb usage. No file unless requested.
+
+### Response Format
+```
+Executor: {docker|machine|macos|windows|self-hosted runner}
+Workflow: {jobs and dependencies}
+Caching: {cache key template}
+Parallelism: {test splitting by timings}
+Config: {.circleci/config.yml snippet}
+```
+
 ## Architecture Decision Trees
 
 ### Executor Selection
@@ -412,8 +432,6 @@ Putting environment variables in config.yml. Use CircleCI contexts and project e
   - references/config-structure.md
   - references/kubernetes-integration.md
   - references/orb-ecosystem.md
-  - references/performance-optimization.md
-  - references/matrix-builds-guide.md
 
 ## Handoff
 Next: **cicd-pipeline** — general pipeline concepts beyond CircleCI.

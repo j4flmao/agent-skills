@@ -257,7 +257,7 @@ Support:
 
 **Left-digit effect:** $29.00 is perceived as significantly less than $30.00. Use $99 not $100. $29 not $30. The leftmost digit has disproportionate psychological impact.
 
-**Loss aversion:** Customers feel losses 2x more than equivalent gains. Frame annual billing as "save $120/year" not "pay $240 upfront." Frame feature limits as "what you'll lose" at lower tiers.
+**Loss aversion:** Losses weigh roughly twice as much as equivalent gains (Kahneman & Tversky's estimate; varies by context). Frame annual billing as "save $120/year" not "pay $240 upfront." Frame feature limits as "what you'll lose" at lower tiers.
 
 **Fairness perception:** Customers need to feel pricing is fair. Usage-based pricing must have caps and alerts to prevent bill shock. Price increases must be accompanied by value narrative. Grandfathering protects fairness perception during changes.
 
@@ -342,7 +342,7 @@ Sensitivity: test how revenue changes with ±20% price, ±20% conversion, ±20% 
 | Optimizely | Enterprise experimentation | Paid |
 | Statsig | Self-serve experiments | Freemium |
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: Freemium to Tiered Pricing Migration
 A project management SaaS with 100K free users and 2K paid users (all at $19/mo flat rate) was leaving revenue on the table. After WTP research with 200 users, they introduced a three-tier structure: Free ($0), Pro ($29/mo), and Business ($99/mo). Existing users were grandfathered. Within 6 months, ARPU increased from $19 to $34, and paying user count grew from 2K to 4.5K.

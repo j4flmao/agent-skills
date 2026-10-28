@@ -393,8 +393,6 @@ Detection: monthly RI report shows coverage dropped from 65% to 45%. Investigati
 - references/finops-governance.md -- FinOps Governance
 - references/finops-practices.md -- FinOps Practices
 - references/cost-optimization.md -- Cost Optimization
-- references/finops-maturity-model.md -- FinOps Maturity Model
-- references/finops-cost-optimization-levers.md -- Cost Optimization Levers
 
 ## Handoff
 Hand off to finops for cost visibility and optimization. Hand off to cloud-specific skills (aws/azure/gcp) for resource provisioning at optimized price.

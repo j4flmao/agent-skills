@@ -1,298 +1,163 @@
-# Advanced security-best-practices for nestjs
+# NestJS Security Best Practices
 
-## 1. Executive Summary
-This document provides an exhaustive, production-grade reference for implementing security-best-practices in the context of nestjs. It covers architectural decisions, common pitfalls, performance tuning, and security considerations.
+Defensive configuration for NestJS APIs: input validation, authentication and authorization, headers, rate limiting, CORS, secrets and dependency hygiene. Maps to common OWASP API Security Top 10 risks.
 
-## 2. Deep Dive Principle 2
-When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. 
-
-### 2.1 Architectural Considerations
-The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## Input Validation (mass assignment, injection)
 
 ```typescript
-// Advanced Implementation Example 2
-export class security_best_practicesManager_2 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+app.useGlobalPipes(new ValidationPipe({
+  whitelist: true,
+  forbidNonWhitelisted: true,
+  transform: true,
+  transformOptions: { enableImplicitConversion: false },
+}));
+```
 
-  private initialize(): void {
-    console.log('Initializing nestjs security-best-practices subsystem...');
-    // Complex setup logic here
-  }
+- Validate path/query params with pipes: `@Param('id', ParseUUIDPipe) id: string`.
+- Use parameterized queries only. With TypeORM query builder use `:param` bindings; with Prisma avoid `$queryRawUnsafe`, prefer the `$queryRaw` tagged template.
+- Limit body size: Express `app.useBodyParser('json', { limit: '100kb' })` (Nest 10+), Fastify `bodyLimit`.
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for security-best-practices
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
+## Authentication with JWT
+
+```typescript
+// auth/jwt.strategy.ts
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(cfg: ConfigService) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: cfg.getOrThrow('JWT_PUBLIC_KEY'),
+      algorithms: ['RS256'],              // pin algorithms
+      issuer: 'https://auth.example.com',
+      audience: 'orders-api',
+      ignoreExpiration: false,
+    });
+  }
+  validate(payload: { sub: string; roles: string[] }) {
+    return { id: payload.sub, roles: payload.roles };
   }
 }
 ```
 
-### 2.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. 
+Guidelines:
+- Short-lived access tokens (minutes) plus rotating refresh tokens stored server-side (hashed) so they can be revoked.
+- For browser clients prefer an `HttpOnly`, `Secure`, `SameSite` cookie session or BFF over tokens in `localStorage`.
+- Hash passwords with Argon2id (`argon2` package) or bcrypt; never a fast hash.
+- When verifying against an external IdP, use its JWKS endpoint (`jwks-rsa` `passportJwtSecret`).
 
-## 3. Deep Dive Principle 3
-When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. 
+## Global Auth by Default
 
-### 3.1 Architectural Considerations
-The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 3
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class security_best_practices_Processor_3:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 3.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. 
-
-## 4. Deep Dive Principle 4
-When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. 
-
-### 4.1 Architectural Considerations
-The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+Make every route protected unless explicitly public:
 
 ```typescript
-// Advanced Implementation Example 4
-export class security_best_practicesManager_4 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+export const IS_PUBLIC = 'isPublic';
+export const Public = () => SetMetadata(IS_PUBLIC, true);
 
-  private initialize(): void {
-    console.log('Initializing nestjs security-best-practices subsystem...');
-    // Complex setup logic here
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  constructor(private reflector: Reflector) { super(); }
+  canActivate(ctx: ExecutionContext) {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [ctx.getHandler(), ctx.getClass()]);
+    return isPublic ? true : super.canActivate(ctx);
   }
+}
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for security-best-practices
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
+// app.module.ts
+providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }, { provide: APP_GUARD, useClass: RolesGuard }]
+```
+
+## Authorization: Roles and Object Ownership
+
+Role checks are not enough; broken object-level authorization (BOLA) is the top API risk.
+
+```typescript
+@Get(':id')
+async findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+  const order = await this.orders.findForOwner(id, user.id); // WHERE id = $1 AND owner_id = $2
+  if (!order) throw new NotFoundException();                  // 404, do not reveal existence
+  return order;
 }
 ```
 
-### 4.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. 
+For complex policies use CASL (`@casl/ability`) or an external engine (OPA, Cerbos) behind a guard.
 
-## 5. Deep Dive Principle 5
-When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. 
-
-### 5.1 Architectural Considerations
-The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 5
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class security_best_practices_Processor_5:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 5.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. 
-
-## 6. Deep Dive Principle 6
-When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. 
-
-### 6.1 Architectural Considerations
-The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## Security Headers
 
 ```typescript
-// Advanced Implementation Example 6
-export class security_best_practicesManager_6 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs security-best-practices subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for security-best-practices
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
+import helmet from 'helmet';
+app.use(helmet());   // Fastify: await app.register(require('@fastify/helmet'))
 ```
 
-### 6.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. 
+Helmet sets `Strict-Transport-Security`, `X-Content-Type-Options`, `Content-Security-Policy` defaults and others. For pure JSON APIs the CSP matters less, but keep `nosniff` and HSTS.
 
-## 7. Deep Dive Principle 7
-When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. 
-
-### 7.1 Architectural Considerations
-The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 7
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class security_best_practices_Processor_7:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 7.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. 
-
-## 8. Deep Dive Principle 8
-When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. 
-
-### 8.1 Architectural Considerations
-The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## CORS
 
 ```typescript
-// Advanced Implementation Example 8
-export class security_best_practicesManager_8 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs security-best-practices subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for security-best-practices
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
+app.enableCors({
+  origin: ['https://app.example.com'],  // explicit allow-list, never '*' with credentials
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+});
 ```
 
-### 8.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. 
-
-## 9. Deep Dive Principle 9
-When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. 
-
-### 9.1 Architectural Considerations
-The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 9
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class security_best_practices_Processor_9:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 9.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. 
-
-## 10. Deep Dive Principle 10
-When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. When dealing with nestjs, addressing security-best-practices requires a multi-layered approach. 
-
-### 10.1 Architectural Considerations
-The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that security-best-practices must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## Rate Limiting
 
 ```typescript
-// Advanced Implementation Example 10
-export class security_best_practicesManager_10 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+// app.module.ts
+ThrottlerModule.forRoot({ throttlers: [{ name: 'default', ttl: 60_000, limit: 100 }] }),
+providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
 
-  private initialize(): void {
-    console.log('Initializing nestjs security-best-practices subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for security-best-practices
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
+// stricter on login
+@Throttle({ default: { limit: 5, ttl: 60_000 } })
+@Post('login')
+login() {}
 ```
 
-### 10.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. A frequent mistake when implementing security-best-practices in nestjs is ignoring edge cases. 
+Use a Redis storage (`@nest-lab/throttler-storage-redis`) when running multiple replicas. Behind a proxy, configure `trust proxy` so the client IP is correct.
 
-## 11. Conclusion
-This concludes the deep dive into security-best-practices for nestjs. Ensure you review the other 7 references in this category for a holistic understanding.
+## Secrets and Configuration
 
+- Read secrets from environment/secret manager at runtime; validate at boot.
+- Never log tokens, passwords or full request bodies; redact with `pino` `redact` paths.
+- Disable stack traces in error responses (see `error-handling.md`).
+
+## Swagger Exposure
+
+Only mount `SwaggerModule.setup()` in non-production or behind auth; it reveals the full API surface.
+
+## Dependency and Supply Chain
+
+```bash
+npm audit --omit=dev
+npx better-npm-audit audit   # or Snyk / Dependabot / Renovate
+npm ci --ignore-scripts      # where install scripts are not needed
+```
+
+Commit the lockfile, pin the Node base image, and generate an SBOM in CI.
+
+## CSRF
+
+Only relevant for cookie-authenticated browser requests. Use `SameSite=Lax/Strict` cookies plus a CSRF token library (e.g. `csrf-csrf`). Bearer-token APIs are not vulnerable to classic CSRF.
+
+## OWASP API Top 10 Mapping
+
+| Risk | Nest control |
+|------|--------------|
+| Broken object level authorization | Ownership in queries, policy guards |
+| Broken authentication | Passport strategies, pinned algorithms, short TTLs |
+| Broken object property level authorization | `whitelist`, response DTOs |
+| Unrestricted resource consumption | Throttler, body limits, pagination caps |
+| Broken function level authorization | Global guard, `@Roles()` |
+| Security misconfiguration | Helmet, CORS allow-list, Swagger off in prod |
+| SSRF | Allow-list outbound hosts for URL-fetching features |
+
+## Checklist
+
+- [ ] Global auth guard with explicit `@Public()` opt-out
+- [ ] Ownership checked in every resource query
+- [ ] `whitelist` + `forbidNonWhitelisted` validation
+- [ ] Helmet, CORS allow-list, body limits
+- [ ] Distributed rate limiting, stricter on auth routes
+- [ ] Argon2id/bcrypt password hashing
+- [ ] Secrets redacted from logs; Swagger not public in prod
+- [ ] Automated dependency scanning in CI

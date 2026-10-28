@@ -1,11 +1,38 @@
 ---
 name: scaling-architecture
-description: Expert game server scaling — zone sharding, stateless services, state persistence, region/edge routing, observability and capacity/autoscaling orchestration.
+description: >
+  Use this skill when the user says 'game server scaling', 'sharding', 'zone servers', 'agones', 'game server autoscaling', 'game backend capacity'. Designs game-server fleets: zones/shards, stateless vs stateful services, persistence, regions/edge, observability and capacity/autoscaling. Do NOT use for: single-server tick loop (use authoritative-server), generic web autoscaling (use devops/kubernetes-autoscaling).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, scaling, server, infrastructure]
 ---
 
 # Scaling Architecture — Deep Engineering Guide
 
+## Purpose
 From "hundreds playing" to "a million in a weekend": how the server fleet grows without breaking determinism, latency or cost. Skill covers zone/sharding, stateless matchmaking + stateful game pods, persistence, region/edge, observability and capacity/autoscaling.
+
+## Agent Protocol
+
+### Trigger
+"game server scaling", "sharding", "zone servers", "agones", "game server autoscaling", "game backend capacity".
+
+### Input Context
+- Concurrent user targets and regions
+- Session length and state size
+- Hosting (bare metal, Kubernetes/Agones, cloud fleet services)
+
+### Output Artifact
+Fleet architecture and capacity plan. No file unless requested.
+
+### Response Format
+```
+Topology: {services and pods}
+State: {where it lives}
+Capacity: {CCU per server, buffer}
+Scaling: {trigger and policy}
+```
 
 ## 1. The Scale Model (Start Simple, Grow Recursively)
 
@@ -51,7 +78,7 @@ Use interest gating to keep the handshake *small* (only edge entities travel, no
 
 - Region = a cloud region with its own pod pool (see `regions-and-ping`).
 - Player → nearest region (measured, not claimed).
-- **Edge relay** for bandwidth: a CDN/relay that terminates the client UDP, forwards to the pod — absorbs jitter, reduces pod load, lets the pod be anywhere.
+- **Edge relay**: a regional UDP proxy in front of game pods — hides pod IPs (DDoS protection), lets players enter a private backbone close to home, and lets you move/replace pods without changing what clients connect to. It does not remove jitter; it can only shorten the public-internet part of the path.
 
 ```
 client → edge relay (region-local) → game pod
@@ -84,7 +111,7 @@ SaveProgress(playerId, {mmrDelta, unlocks, inventory})
 
 ## 6. Observability (See Everything)
 
-Every service emits red metrics: requests/s, latency, errors, queue depth. Adoption:
+Every service emits RED metrics (rate, errors, duration) plus queue depth:
 
 | Layer | Tool shape |
 |-------|-----------|

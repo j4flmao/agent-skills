@@ -1,5 +1,7 @@
 # Container Queries
 
+Size container queries style an element by the size of an ancestor container instead of the viewport, so a component adapts wherever it is placed. Size queries are Baseline across current Chrome, Edge, Firefox and Safari; style queries are not yet universal.
+
 ## Basic Syntax
 
 ```css
@@ -113,12 +115,14 @@
   container-name: inner;
 }
 
+/* An unnamed @container matches the nearest ancestor container.
+   Name containers to target an outer one explicitly. */
 @container outer (min-width: 500px) {
-  /* ... */
+  .inner { padding: 2rem; }
 }
 
 @container inner (min-width: 300px) {
-  /* ... */
+  .item { display: grid; grid-template-columns: auto 1fr; }
 }
 ```
 
@@ -171,8 +175,9 @@
 @container (min-width: 600px) {
   .child {
     /* cqw = 1% of container width */
-    width: 50cqw;     /* 50% of container width */
-    font-size: 5cqw;  /* responsive to container */
+    width: 50cqi;     /* 50% of container inline size */
+    /* Clamp fluid type so it never ignores the user's zoom/base size */
+    font-size: clamp(1rem, 0.75rem + 2cqi, 1.75rem);
     padding: 2cqi;    /* 2% of container inline size */
   }
 }
@@ -186,3 +191,48 @@
 | `cqb` | 1% of container block size |
 | `cqmin` | Smaller of `cqi` and `cqb` |
 | `cqmax` | Larger of `cqi` and `cqb` |
+
+Without a size container ancestor, `cq*` units fall back to the small viewport units (`svw`, `svh`, ...).
+
+## Range Syntax and Logic
+
+```css
+@container card (400px <= width < 700px) {
+  .card { grid-template-columns: 120px 1fr; }
+}
+
+@container (orientation: landscape) and (min-height: 300px) {
+  /* height/orientation queries need container-type: size */
+  .media { aspect-ratio: 16 / 9; }
+}
+```
+
+## Style Queries (progressive enhancement)
+
+Style queries test computed custom properties on the container. Any element is a style container by default; no `container-type` is needed. Check current browser support before relying on them and keep a sensible default.
+
+```css
+.card-wrapper { --variant: compact; }
+
+@container style(--variant: featured) {
+  .card { border: 2px solid var(--accent); }
+}
+```
+
+## Pitfalls
+
+| Pitfall | Fix |
+|---------|-----|
+| `container-type: size` on an element with auto height | Its height collapses (size containment ignores children); use `inline-size` unless the height is set explicitly |
+| Querying the container itself | A container cannot style itself from its own query; style descendants or wrap it |
+| Making every element a container | Containment changes layout/sizing behaviour; mark only component wrappers |
+| Font sizes in raw `cqw` | Wrap in `clamp()` with `rem` bounds to respect user zoom |
+| Mixing viewport media queries and container queries for the same component | Use media queries for page layout, container queries for component internals |
+
+## Checklist
+
+- [ ] Component wrapper declares `container-type: inline-size` (and a name when nested)
+- [ ] Component CSS uses `@container`, page shell uses `@media`
+- [ ] Fluid units bounded with `clamp()`
+- [ ] Style queries only as enhancement with a default style
+- [ ] Tested by placing the component in narrow and wide slots, not just by resizing the window

@@ -577,8 +577,6 @@ Request-scoped operations with cleanup?
 - Test applications isolated per test case — no shared mutable state.
 
 ## References
-  - references/kotlin-multiplatform-architecture.md — Kotlin Multiplatform Architecture
-  - references/kotlin-ktor-framework.md — Kotlin Ktor Framework Reference
   - references/coroutines-guide.md — Coroutines Guide
   - references/kotlin-backend-patterns.md — Kotlin Backend Patterns
   - references/kotlin-error-handling.md — Kotlin Error Handling Reference

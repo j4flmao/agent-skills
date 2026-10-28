@@ -1,338 +1,281 @@
-# Crossplane Composition Patterns
+# Crossplane Composition Patterns (Pipeline Mode + function-patch-and-transform)
 
-## Overview
+A Composition tells Crossplane which resources to create for a composite resource (XR). Since Crossplane v1.17 the native `mode: Resources` patch-and-transform engine was deprecated, and Crossplane v2 removed it: every Composition is a **pipeline of composition functions**. Patch-and-transform still exists, as `function-patch-and-transform`. This reference covers its patch and transform syntax and the composition patterns built on it. Writing custom functions (Go, Python, KCL, templates) is covered in `composition-functions.md`.
 
-Compositions are the heart of Crossplane — they define how composite resources (XRs) are broken down into managed resources. This reference covers patches, transforms, patch sets, and advanced composition patterns.
+## Crossplane v2 Changes That Affect Compositions
+
+| Area | v1.x | v2 |
+|------|------|----|
+| Composition mode | `Resources` (native P&T) or `Pipeline` | `Pipeline` only |
+| XR scope | Cluster-scoped XR + namespaced Claim | XRs are namespaced by default (`spec.scope: Namespaced`); `LegacyCluster` keeps claims for migration |
+| XRD API | `apiextensions.crossplane.io/v1` | `apiextensions.crossplane.io/v2` |
+| Composed resources | Managed resources only | Any Kubernetes resource (Deployments, ConfigMaps, MRs) |
+
+Check the installed version (`kubectl get deploy -n crossplane-system crossplane -o jsonpath='{.spec.template.spec.containers[0].image}'`) before copying examples between versions.
+
+## Install the Function
+
+```yaml
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-patch-and-transform
+spec:
+  package: xpkg.crossplane.io/crossplane-contrib/function-patch-and-transform:v0.11.2
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-auto-ready
+spec:
+  package: xpkg.crossplane.io/crossplane-contrib/function-auto-ready:v0.7.3
+```
+
+Versions shown were current in October 2026; pin exact tags and upgrade deliberately.
+
+## Minimal Pipeline Composition
+
+```yaml
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: postgres-aws
+  labels:
+    provider: aws
+spec:
+  compositeTypeRef:
+    apiVersion: platform.example.org/v1alpha1
+    kind: PostgresInstance
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: rds
+            base:
+              apiVersion: rds.aws.upbound.io/v1beta1
+              kind: Instance
+              spec:
+                forProvider:
+                  engine: postgres
+                  engineVersion: "16"
+                  instanceClass: db.t3.micro
+                  allocatedStorage: 20
+                  skipFinalSnapshot: true
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.region
+                toFieldPath: spec.forProvider.region
+    - step: automatically-detect-ready
+      functionRef:
+        name: function-auto-ready
+```
+
+Steps run in order; each receives the desired state produced by the previous step.
 
 ## Patch Types
 
-Crossplane supports several patch types, each serving a different purpose:
+| Type | Direction | Typical use |
+|------|-----------|-------------|
+| `FromCompositeFieldPath` | XR → composed | Pass parameters down |
+| `ToCompositeFieldPath` | composed → XR | Surface IDs/endpoints in XR `status` |
+| `CombineFromComposite` | several XR fields → one composed field | Build names, ARNs |
+| `CombineToComposite` | several composed fields → one XR field | Build a connection URL in status |
+| `FromEnvironmentFieldPath` / `ToEnvironmentFieldPath` | environment ↔ composed | Shared per-cluster config (needs an environment-loading step) |
+| `CombineFromEnvironment` / `CombineToEnvironment` | combine with environment | |
+| `PatchSet` | reuse a named list of patches | DRY across resources |
 
-| Patch Type | Description |
-|-----------|-------------|
-| `FromCompositeFieldPath` | Copy field from XR to managed resource |
-| `ToCompositeFieldPath` | Copy field from managed resource to XR |
-| `CombineFromComposite` | Combine multiple XR fields into one managed resource field |
-| `CombineToComposite` | Combine multiple managed resource fields into one XR field |
-| `Environment` | Read from or write to environment configuration |
+### Optional vs Required Source Fields
 
-## Transform Types
-
-| Transform | Description |
-|-----------|-------------|
-| `map` | Map values using a lookup table |
-| `match` | Regex-based replacement |
-| `string` | String operations (prefix, suffix, fmt) |
-| `convert` | Type conversion |
-| `math` | Multiply or add |
-| `regex` | Regex extract and assemble |
-
-## Basic Patch Examples
-
-### Direct Field Mapping
 ```yaml
-patches:
-- type: FromCompositeFieldPath
-  fromFieldPath: spec.parameters.region
-  toFieldPath: spec.forProvider.region
-```
-
-### Conditional Patching
-```yaml
-patches:
 - type: FromCompositeFieldPath
   fromFieldPath: spec.parameters.storageGB
   toFieldPath: spec.forProvider.allocatedStorage
   policy:
-    fromFieldPath: Optional  # Don't error if field is missing
+    fromFieldPath: Required   # default is Optional: patch is skipped if field missing
 ```
 
-## Transform Patterns
+`Required` fails the step when the field is absent, which surfaces bad input instead of silently using the base value.
 
-### Map Transform
+## Transform Types (function-patch-and-transform syntax)
+
 ```yaml
-patches:
-- type: FromCompositeFieldPath
-  fromFieldPath: spec.parameters.tier
-  toFieldPath: spec.forProvider.instanceType
-  transforms:
+transforms:
+  # map: lookup table
   - type: map
     map:
-      development: t3.nano
-      staging: t3.medium
-      production: m5.xlarge
-    # Optional: set default for unmapped values
-    # fallbackValue: t3.micro
-```
+      small: db.t3.micro
+      medium: db.t3.large
+      large: db.r6g.xlarge
 
-### String Transform
-```yaml
-patches:
-- type: FromCompositeFieldPath
-  fromFieldPath: metadata.labels[crossplane.io/claim-name]
-  toFieldPath: metadata.name
-  transforms:
+  # match: literal or regexp patterns with a fallback
+  - type: match
+    match:
+      patterns:
+        - type: literal
+          literal: prod
+          result: true
+        - type: regexp
+          regexp: '^stag.*'
+          result: false
+      fallbackValue: false
+
+  # string: Format, Convert (ToUpper/ToLower/ToBase64/FromBase64/ToJson/ToSha256...), TrimPrefix/TrimSuffix, Regexp, Join, Replace
   - type: string
     string:
-      fmt: "%s-database-instance"
-      # Or use prefix/suffix:
-      # prefix: "platform-"
-      # suffix: "-managed"
-```
+      type: Format
+      fmt: "%s-db"
 
-### Convert Transform
-```yaml
-patches:
-- type: FromCompositeFieldPath
-  fromFieldPath: spec.parameters.storageGB
-  toFieldPath: spec.forProvider.allocatedStorage
-  transforms:
-  - type: convert
-    convert: Multiply  # Multiply by 1 (same)
-    # Other modes: ToString, ToInteger, ToBoolean
-```
+  - type: string
+    string:
+      type: Regexp
+      regexp:
+        match: '^arn:aws:iam::(\d+):.*'
+        group: 1
 
-### Math Transform
-```yaml
-patches:
-- type: FromCompositeFieldPath
-  fromFieldPath: spec.parameters.storageGB
-  toFieldPath: spec.forProvider.allocatedStorage
-  transforms:
+  # math: Multiply, ClampMin, ClampMax
   - type: math
-    multiply: 1073741824  # Convert GB to bytes for some providers
+    math:
+      type: Multiply
+      multiply: 1024
+
+  # convert: change type
+  - type: convert
+    convert:
+      toType: int64          # string | int | int64 | bool | float64 | object | array
 ```
 
-### Regex Transform
-```yaml
-patches:
-- type: FromCompositeFieldPath
-  fromFieldPath: metadata.labels[crossplane.io/claim-namespace]
-  toFieldPath: spec.forProvider.tags
-  transforms:
-  - type: regex
-    regex:
-      match: "^([a-z]+)-([a-z]+)$"
-      group: 0  # Entire match
-      # Or assemble multiple groups
-      # group: 0
-      # assemble: "{1}-{2}-platform"
-```
+Transforms run in list order; a `convert` is often needed after a `string` transform before writing into an integer field.
 
 ## Patch Sets
 
-Reuse common patch groups across multiple resources.
-
 ```yaml
-spec:
+input:
+  apiVersion: pt.fn.crossplane.io/v1beta1
+  kind: Resources
   patchSets:
-  - name: commonTags
-    patches:
-    - type: FromCompositeFieldPath
-      fromFieldPath: spec.parameters.environment
-      toFieldPath: spec.forProvider.tags.Environment
-    - type: FromCompositeFieldPath
-      fromFieldPath: spec.parameters.team
-      toFieldPath: spec.forProvider.tags.Team
-    - type: FromCompositeFieldPath
-      fromFieldPath: metadata.labels[crossplane.io/claim-name]
-      toFieldPath: spec.forProvider.tags.ClaimName
-
-  - name: connectionDetails
-    patches:
-    - type: FromCompositeFieldPath
-      fromFieldPath: metadata.labels[crossplane.io/claim-namespace]
-      toFieldPath: spec.writeConnectionSecretToRef.namespace
-    - type: FromCompositeFieldPath
-      fromFieldPath: metadata.labels[crossplane.io/claim-name]
-      toFieldPath: spec.writeConnectionSecretToRef.name
-
+    - name: common
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.labels[team]
+          toFieldPath: spec.forProvider.tags.team
   resources:
-  - name: rds-instance
-    base:
-      apiVersion: rds.aws.upbound.io/v1beta1
-      kind: Instance
-      spec: { }
-    patches:
-    - type: PatchSet
-      patchSetName: commonTags
-    - type: PatchSet
-      patchSetName: connectionDetails
-
-  - name: elasticache-cluster
-    base:
-      apiVersion: elasticache.aws.upbound.io/v1beta1
-      kind: Cluster
-      spec: { }
-    patches:
-    - type: PatchSet
-      patchSetName: commonTags
+    - name: rds
+      base: { apiVersion: rds.aws.upbound.io/v1beta1, kind: Instance }
+      patches:
+        - type: PatchSet
+          patchSetName: common
+    - name: subnet-group
+      base: { apiVersion: rds.aws.upbound.io/v1beta1, kind: SubnetGroup }
+      patches:
+        - type: PatchSet
+          patchSetName: common
 ```
 
 ## Combine Patches
 
-### CombineFromComposite
 ```yaml
-# Combine multiple XR fields into one value on managed resource
-patches:
 - type: CombineFromComposite
   combine:
     variables:
-    - fromFieldPath: spec.parameters.name
-    - fromFieldPath: spec.parameters.environment
+      - fromFieldPath: spec.parameters.team
+      - fromFieldPath: spec.parameters.env
     strategy: string
     string:
       fmt: "%s-%s-db"
-  toFieldPath: spec.forProvider.dbName
-```
+  toFieldPath: metadata.annotations[crossplane.io/external-name]
 
-### CombineToComposite
-```yaml
-# Combine managed resource fields into one XR field
-patches:
 - type: CombineToComposite
   combine:
     variables:
-    - fromFieldPath: status.atProvider.arn
-    - fromFieldPath: status.atProvider.engine
+      - fromFieldPath: status.atProvider.address
+      - fromFieldPath: status.atProvider.port
     strategy: string
     string:
-      fmt: "arn:%s:engine:%s"
-  toFieldPath: status.connectionEndpoint
-  policy:
-    fromFieldPath: Required
+      fmt: "%s:%d"
+  toFieldPath: status.endpoint
 ```
 
-## Advanced Composition Patterns
+The XRD must declare `status.endpoint` in its schema, or the write is pruned.
 
-### Conditionally Include Resources
+## Readiness
+
+`function-auto-ready` marks the XR ready when all composed resources are ready. For resources without a `Ready` condition, set checks per resource:
+
 ```yaml
-resources:
-- name: read-replica
-  base:
-    apiVersion: rds.aws.upbound.io/v1beta1
-    kind: Instance
-    spec:
-      forProvider:
-        engine: postgres
-        dbInstanceClass: db.t3.small
-  patches:
-  - type: FromCompositeFieldPath
-    fromFieldPath: spec.parameters.region
-    toFieldPath: spec.forProvider.region
-  # Use patch policy to conditionally apply
-  - type: FromCompositeFieldPath
-    fromFieldPath: spec.parameters.readReplica
-    toFieldPath: spec.forProvider.enabled
-    policy:
-      fromFieldPath: Optional
+readinessChecks:
+  - type: MatchCondition
+    matchCondition:
+      type: Synced
+      status: "True"
+  # other types: None, NonEmpty, MatchString, MatchInteger, MatchTrue, MatchFalse (with fieldPath)
 ```
 
-### Multi-Cloud Composition with Selectors
+## Selecting a Composition
+
 ```yaml
-apiVersion: apiextensions.crossplane.io/v1
-kind: Composition
-metadata:
-  name: xpostgresqlinstances.aws.database.example.org
-  labels:
-    provider: aws
-    engine: postgres
----
-apiVersion: apiextensions.crossplane.io/v1
-kind: Composition
-metadata:
-  name: xpostgresqlinstances.gcp.database.example.org
-  labels:
-    provider: gcp
-    engine: postgres
----
-# Claim uses compositionSelector instead of ref:
+# XR picks a composition by labels instead of a fixed name
 spec:
-  compositionSelector:
-    matchLabels:
-      engine: postgres
-    # Automatically selects based on provider context
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        provider: aws
+        tier: standard
 ```
 
-### Nested Compositions
-```yaml
-# Composition that references another XR
-resources:
-- name: networking-stack
-  base:
-    apiVersion: network.example.org/v1alpha1
-    kind: XVPC
-    spec:
-      parameters:
-        cidrBlock: 10.0.0.0/16
-  patches:
-  - type: FromCompositeFieldPath
-    fromFieldPath: spec.parameters.region
-    toFieldPath: spec.parameters.region
-    policy:
-      fromFieldPath: Required
+In v2 namespaced XRs, Crossplane machinery fields live under `spec.crossplane` (`compositionRef`, `compositionSelector`, `compositionUpdatePolicy`, `resourceRefs`). Legacy cluster-scoped XRs and claims keep them directly under `spec`.
 
-- name: compute-stack
-  base:
-    apiVersion: compute.example.org/v1alpha1
-    kind: XCluster
-    spec:
-      parameters:
-        nodeCount: 3
-  patches:
-  - type: FromCompositeFieldPath
-    fromFieldPath: spec.parameters.environment
-    toFieldPath: spec.parameters.environment
+## Conditional Resources
+
+Patch-and-transform cannot conditionally omit a resource. Use a templating or logic step for that:
+
+- `function-go-templating`: wrap a resource in `{{ if eq .observed.composite.resource.spec.parameters.ha true }}`.
+- `function-kcl` or `function-python`: build the resource list in code.
+- Keep P&T for the plain field mapping and put the conditional resources in a separate pipeline step.
+
+## Nested XRs
+
+A Composition can compose another XR (for example `XNetwork` inside `XCluster`). Pass parameters down with patches and read outputs back from the child XR `status` with `ToCompositeFieldPath`. Keep nesting shallow (two levels) so failures stay debuggable with `crossplane beta trace`.
+
+## Validate and Render Locally
+
+```bash
+# Render the desired state without a cluster (needs Docker for functions)
+crossplane render xr.yaml composition.yaml functions.yaml
+
+# Include observed resources to test status patches
+crossplane render xr.yaml composition.yaml functions.yaml --observed-resources=observed/
+
+# Validate rendered output against provider CRD schemas
+crossplane render xr.yaml composition.yaml functions.yaml > out.yaml
+crossplane beta validate extensions/ out.yaml
+
+# Inspect a live XR tree
+crossplane beta trace postgresinstance.platform.example.org/orders-db -n team-a
 ```
 
-## Composition Validation
+## Pitfalls
 
-```yaml
-apiVersion: apiextensions.crossplane.io/v1
-kind: Composition
-metadata:
-  name: validated-composition
-spec:
-  compositeTypeRef:
-    apiVersion: database.example.org/v1alpha1
-    kind: XPostgreSQLInstance
+| Pitfall | Effect | Fix |
+|---------|--------|-----|
+| Copying `mode: Resources` examples | Rejected in v2 | Move `resources:` into a `function-patch-and-transform` step |
+| Writing to an XR status field not in the XRD | Silently pruned | Add the field to the XRD `status` schema |
+| String value patched into integer field | Provider validation error | Add `convert` transform |
+| Renaming a resource `name:` in the list | Crossplane treats it as a new resource and deletes the old one | Keep resource names stable |
+| Forgetting a readiness step | XR never becomes Ready | Add `function-auto-ready` or explicit `readinessChecks` |
 
-  # Validate before provisioning
-  validate: true
+## Checklist
 
-  resources:
-  - name: rds-instance
-    base:
-      apiVersion: rds.aws.upbound.io/v1beta1
-      kind: Instance
-      spec:
-        forProvider:
-          engine: postgres
-          autoMinorVersionUpgrade: true
-    patches:
-    - type: FromCompositeFieldPath
-      fromFieldPath: spec.parameters.storageGB
-      toFieldPath: spec.forProvider.allocatedStorage
-      policy:
-        fromFieldPath: Required
-        validate: true  # Validate field exists
-
-    readinessChecks:
-    - type: NonEmpty
-      fieldPath: status.atProvider.arn
-    - type: MatchCondition
-      matchCondition:
-        type: Ready
-        status: "True"
-```
-
-## Best Practices
-
-1. **Use Patch Sets** for common tagging and labeling patterns across all resources in a composition.
-2. **Prefer map transforms** for environment-to-size mappings instead of embedding provider-specific details in XRDs.
-3. **Always validate** with XRD schema — use `minimum`, `maximum`, `enum`, `pattern` in OpenAPI schema.
-4. **Use composition selectors** over composition refs to allow automatic selection based on labels.
-5. **Set fallback values** in transforms to handle missing fields gracefully.
-6. **Document complex transforms** with annotations on the Composition resource.
-7. **Version compositions** independently from XRDs by using different composition names.
-8. **Test compositions** in a dev environment before promoting to production.
+- [ ] `mode: Pipeline`, functions installed and version-pinned
+- [ ] Required inputs use `policy.fromFieldPath: Required`
+- [ ] Shared patches in `patchSets`
+- [ ] Status outputs declared in the XRD schema
+- [ ] `crossplane render` and `crossplane beta validate` run in CI
+- [ ] Readiness handled for every composed resource

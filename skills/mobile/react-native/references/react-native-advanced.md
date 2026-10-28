@@ -1,90 +1,115 @@
 # React Native Advanced Topics
 
-## Overview
-Advanced React Native topics cover the New Architecture (Fabric + TurboModules), performance profiling, custom native modules, advanced animations, code push, and production monitoring.
+Production topics beyond the basics: the New Architecture runtime model, threading, animations and graphics, native extensibility, OTA updates and monitoring. Deep dives live in siblings: `fabric-renderer.md`, `performance-hermes.md`, `ref6_apis.md` (native modules), `ref8_deployment.md` (release/OTA).
 
-## New Architecture
+## New Architecture Runtime Model
 
-### Fabric Renderer
-Replaces the old bridge-based renderer. Direct communication between JS and native via JSI. Synchronous native method calls (no JSON serialization). Enables React Suspense and concurrent mode. Migration: enable `newArchEnabled` in `gradle.properties` and Podfile.
+The New Architecture (JSI + Fabric + TurboModules + Codegen) became the default in React Native 0.76 and is the only architecture in current releases (0.82 dropped the legacy bridge). Libraries that still rely on the old bridge APIs only work through the interop layer or not at all; check them on reactnative.directory before upgrading.
 
-### TurboModules
-Native modules accessible synchronously from JS. No bridge serialization overhead. Codegen generates C++/Java/ObjC bindings from JavaScript specs. Used by React Native core modules. Custom TurboModule for high-performance native interop.
+| Piece | Role |
+|-------|------|
+| JSI | C++ interface letting JS hold references to native objects and call them directly; no JSON bridge |
+| Fabric | C++ renderer; shadow tree shared across platforms; supports concurrent React features (Suspense, transitions, `useLayoutEffect` reading layout synchronously) |
+| TurboModules | Lazily loaded native modules called through JSI; sync or async methods |
+| Codegen | Generates C++/ObjC++/Java/Kotlin glue from typed TS specs (`NativeFoo.ts`) |
+| Bridgeless mode | Runtime no longer initialises the legacy bridge |
 
-### Codegen
-TypeScript specs define native module interfaces. Run codegen to generate native code stubs. Ensures type safety across JS/native boundary. Reduces manual platform code. Integrates with build phase script.
+### Threads
 
-## Performance Optimization
+| Thread | Runs | Blocking it causes |
+|--------|------|--------------------|
+| JS thread | React render, business logic, event handlers | Dropped JS frames, slow taps |
+| UI (main) thread | Native view mounting, gestures, native animations | Visible jank |
+| Background (Fabric) | Layout (Yoga), shadow tree commit | Late layout |
 
-### JS Thread Profiling
-Use Flipper (React DevTools) for JS thread flamegraphs. Hermes sampling profiler (`hermes-profile-transformer`). `InteractionManager.runAfterInteractions` for deferring non-critical work. Move heavy computation to native via TurboModules or worklets.
+Keep heavy work (JSON parsing of large payloads, crypto, image processing) in native code or off the JS thread.
 
-### UI Thread Optimization
-Reanimated 3 worklets run animations on UI thread (no bridge). `useAnimatedStyle` for performant animated properties. `withSpring`/`withTiming` for native-driven animations. `runOnUI` for UI thread functions. Avoid `useNativeDriver: false` in Animated API.
+## Animations and Gestures
 
-### List Performance
-FlatList with `getItemLayout` for fixed-height items. `windowSize` and `maxToRenderPerBatch` tuning. `removeClippedSubviews` for off-screen items. `React.memo` for list item components. `FlashList` from Shopify for 10x faster lists.
+- **Reanimated 4** (New Architecture only) runs worklets on the UI thread. Worklet runtime moved to `react-native-worklets`; add its Babel plugin (`react-native-worklets/plugin`) as the last plugin.
+- Reanimated 4 adds CSS-style animations and transitions (`animationName`, `transitionProperty` in styles) alongside shared-value APIs (`useSharedValue`, `useAnimatedStyle`, `withTiming`, `withSpring`).
+- **Gesture Handler** (`Gesture.Pan()`, `GestureDetector`) recognises gestures natively; combine with Reanimated so gesture-driven animation never touches the JS thread.
+- Built-in `Animated`: always `useNativeDriver: true` where the property supports it (transform, opacity).
 
-### Image Optimization
-`react-native-fast-image` for disk-cached, prioritized image loading. Downsample images to display size. `Image.getSize` before rendering. Use WebP format (supported on both platforms). Prefetch critical images after app launch.
+```tsx
+const offset = useSharedValue(0);
+const pan = Gesture.Pan()
+  .onChange((e) => { offset.value += e.changeX; })
+  .onEnd(() => { offset.value = withSpring(0); });
+const style = useAnimatedStyle(() => ({ transform: [{ translateX: offset.value }] }));
 
-## Advanced Animations
+return (
+  <GestureDetector gesture={pan}>
+    <Animated.View style={[styles.card, style]} />
+  </GestureDetector>
+);
+```
 
-### Reanimated 3
-Worklet-based animations on UI thread. `useSharedValue` for animatable values. `useAnimatedStyle` for style mapping. `withSpring` / `withTiming` / `withSequence` for complex sequences. `GestureHandler` + Reanimated for gesture-driven animations.
+## Graphics
 
-### Skia
-`@shopify/react-native-skia` for GPU-accelerated 2D graphics. Custom drawing with Canvas API. Path operations, shaders, image filters. Use for charts, creative UI, and game-like interfaces. Not just animations — full rendering control.
+`@shopify/react-native-skia` renders 2D graphics (paths, shaders, image filters, text) on the GPU and integrates with Reanimated shared values. Use it for charts, custom progress indicators and visual effects that would otherwise need many nested views.
 
-### Layout Animations
-`react-native-reanimated` LayoutAnimations for enter/exit transitions. `entering`, `exiting`, `layout` props on Animated components. `FadingTransition`, `SlideInRight`, `ZoomIn` presets. Custom layout transitions with `LayoutAnimationConfig`.
+## Lists and Images
 
-## Custom Native Modules
+| Need | Use |
+|------|-----|
+| Long, heterogeneous lists | `@shopify/flash-list` (v2 needs no `estimatedItemSize` and targets the New Architecture) |
+| Simple list < few hundred rows | `FlatList` with `keyExtractor`, memoised `renderItem`, `getItemLayout` for fixed heights |
+| Image caching, modern formats | `expo-image` (disk/memory cache, blurhash previews while loading, AVIF/WebP) |
 
-### iOS (Objective-C/Swift)
-`RCT_EXPORT_MODULE` for module registration. `RCT_EXPORT_METHOD` for async methods (callback or Promise). `RCTEventEmitter` for native-to-JS events. TurboModule: implement `RCTTurboModule` protocol, register in `ModuleProvider`.
+`react-native-fast-image` is unmaintained; prefer `expo-image`, which works in bare apps via `expo` modules.
 
-### Android (Java/Kotlin)
-Extend `ReactContextBaseJavaModule`. `@ReactMethod` annotation for exported methods. `@ReactModule` annotation. `WritableMap`/`ReadableMap` for data passing. TurboModule: implement generated interface from codegen.
+## Native Extensibility
 
-### Thread Safety
-Native modules receive calls on different threads. Use `@UiThread` / `@WorkerThread` annotations (Android). Dispatch UI work to main queue (iOS). Synchronize access to shared mutable state. Avoid blocking the JS thread.
+Pick, in order of effort:
+1. Existing library (check New Architecture support).
+2. **Expo Modules API** (Swift/Kotlin DSL; works in bare RN with `npx install-expo-modules`).
+3. **Turbo Native Module** with Codegen spec (C++/ObjC++/Kotlin), or a pure **C++ TurboModule** shared across platforms.
+4. **Fabric Native Component** for custom native views.
+
+Details and code in `ref6_apis.md`.
+
+## Over-the-Air Updates
+
+Microsoft App Center, including CodePush, was retired on 2025-03-31. Current options:
+
+| Option | Notes |
+|--------|-------|
+| EAS Update (`expo-updates`) | Works in Expo and bare apps; channels, branches, rollouts, rollback, code signing |
+| Self-hosted server implementing the Expo Updates protocol | Full control, you operate it |
+
+Rules: gate updates by `runtimeVersion` so JS never runs against an incompatible native binary; update only JS/assets (store policies forbid changing app purpose via OTA); roll out to a percentage first and roll back on crash spikes.
+
+## Debugging and Profiling
+
+- **React Native DevTools** (Chrome DevTools frontend for Hermes, opened with `j` in Metro) replaced Flipper and the remote JS debugger; Flipper integration was removed from the template in 0.74.
+- React DevTools Profiler for render counts; Hermes sampling profiler for JS CPU.
+- Native: Xcode Instruments (Time Profiler, Allocations), Android Studio Profiler, Perfetto for system traces.
+- Startup: measure cold start on a release build on a low-end Android device.
 
 ## Production Monitoring
 
-### Crash Reporting
-Sentry React Native for crash tracking. `BeforeSend` callback for breadcrumbs. `react-native-exception-handler` for native crash fallbacks. Hermes debug symbols for symbolicated stack traces. Upload source maps for JS deobfuscation.
+- Crash/error reporting: Sentry React Native or Firebase Crashlytics; upload Hermes source maps and native debug symbols (dSYM, R8 mapping) per build.
+- Performance: Sentry performance or Firebase Performance; track cold start, TTI per screen, slow/frozen frames, JS errors per session.
+- Analytics: strip PII before sending; consistent `object_action` event naming.
 
-### Performance Monitoring
-Firebase Performance for HTTP tracing. `react-native-performance` for custom trace measurements. Native performance monitoring with MetricKit (iOS) and Macrobenchmark (Android). Track TTI, FPS, and memory.
+## Testing at Scale
 
-### Analytics
-Firebase Analytics for event tracking. Amplitude/Mixpanel for product analytics. Segment for multi-destination routing. Event naming: `[category]_[action]` convention. Avoid logging PII — strip before sending.
+- Jest + React Native Testing Library for components (`ref7_testing.md`).
+- E2E: Maestro (YAML flows, simple CI) or Detox (gray-box, synchronises with the JS thread).
+- Storybook for React Native v8+ for component catalogues; the old Storyshots addon is deprecated, so use Storybook test runner or plain RNTL tests for snapshots.
 
-## Code Push
+## Upgrade Practice
 
-### Expo Updates
-`expo-updates` for OTA JS updates (no store review). Update manifest serves new bundle. Rollback capability via version checking. Configure channel per environment (staging/production). Test updates before publishing.
+- Use the React Native Upgrade Helper diff for bare apps; `npx expo install --fix` for Expo projects.
+- Upgrade one minor version at a time on large apps; run E2E on both platforms each step.
+- Read the release blog for removed APIs; enable `strict` TypeScript to catch API changes.
 
-### Microsoft CodePush (App Center)
-Deprecated — migrate to expo-updates or custom solution. Push JS bundle updates without store review. Deployment keys per environment. Mandatory vs optional updates. Rollback monitoring with crash tracking.
+## Checklist
 
-## Advanced Testing
-
-### Detox Advanced
-Mock server with `device.setURLBlacklist` for offline testing. `device.reloadReactNative` for fresh JS context. Device-specific test configurations. Parallel test execution on multiple simulators. CI integration with detox-cli.
-
-### Storybook
-`@storybook/react-native` for component development and visual testing. On-device UI explorer. Snapshot testing with Storyshots. Document component props and states. Share with designers for review.
-
-## Key Points
-- New Architecture (Fabric + TurboModules) for direct native communication
-- Reanimated 3 worklets for UI thread animations
-- FlashList for 10x faster list performance
-- Skia for GPU-accelerated 2D graphics
-- TurboModules for high-performance native interop
-- Expo Updates for OTA JS updates
-- Sentry with Hermes symbols for crash deobfuscation
-- react-native-fast-image with disk caching
-- GestureHandler + Reanimated for gesture-driven animations
-- Storybook for component visual documentation
+- [ ] All native dependencies support the New Architecture
+- [ ] Animations and gestures run on the UI thread (Reanimated/Gesture Handler or native driver)
+- [ ] FlashList or tuned FlatList for long lists; `expo-image` for remote images
+- [ ] OTA updates gated by `runtimeVersion`, staged rollout, rollback plan
+- [ ] Source maps and native symbols uploaded per release
+- [ ] Profiling done on release builds on a low-end device

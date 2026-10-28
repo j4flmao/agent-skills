@@ -132,13 +132,15 @@ func NewUserService(repo UserRepository) *UserService {
 }
 
 func (s *UserService) Register(ctx context.Context, email, name string) (*User, error) {
-  existing, _ := s.repo.FindByEmail(ctx, email)
-  if existing != nil {
-    return nil, fmt.Errorf("register user: %w", ErrEmailAlreadyExists)
+  id, err := uuid.NewV7() // time-ordered IDs keep B-tree inserts sequential
+  if err != nil {
+    return nil, fmt.Errorf("register user: generate id: %w", err)
   }
-  user := User{ID: uuid.New(), Email: email, Name: name, Active: true}
+  user := User{ID: id, Email: email, Name: name, Active: true}
+  // No "find then insert": the UNIQUE(email) constraint decides. The repository
+  // translates the unique-violation error into ErrEmailAlreadyExists.
   if err := s.repo.Save(ctx, &user); err != nil {
-    return nil, fmt.Errorf("register user: %w", err)
+    return nil, fmt.Errorf("register user %s: %w", email, err)
   }
   return &user, nil
 }
@@ -157,27 +159,38 @@ func (r *PostgresUserRepository) FindByID(ctx context.Context, id uuid.UUID) (*U
   user := &User{}
   err := row.Scan(&user.ID, &user.Email, &user.Name, &user.Active, &user.CreatedAt)
   if errors.Is(err, sql.ErrNoRows) {
-    return nil, fmt.Errorf("find user by id: %w", ErrUserNotFound)
+    return nil, fmt.Errorf("find user %s: %w", id, ErrUserNotFound)
   }
-  return user, err
+  if err != nil {
+    return nil, fmt.Errorf("find user %s: %w", id, err)
+  }
+  return user, nil
 }
 ```
 
 ### Step 3: Wire Dependencies in main.go
 ```go
+// import httpapi ".../internal/infrastructure/http" -- alias avoids clashing with net/http
 func main() {
-  cfg := config.Load()
-  db := connectDB(cfg.DatabaseURL)
+  cfg, err := config.Load()
+  if err != nil {
+    log.Fatalf("config: %v", err)
+  }
+  db, err := sql.Open("pgx", cfg.DatabaseURL) // driver: github.com/jackc/pgx/v5/stdlib
+  if err != nil {
+    log.Fatalf("open db: %v", err)
+  }
   defer db.Close()
 
-  userRepo := postgres.NewUserRepository(db)
+  userRepo := postgres.NewPostgresUserRepository(db)
   userService := domain.NewUserService(userRepo)
   createUserUC := application.NewCreateUserUseCase(userService)
-  handler := http.NewUserHandler(createUserUC)
+  handler := httpapi.NewUserHandler(createUserUC)
 
   server := &http.Server{
-    Addr:    ":" + cfg.Port,
-    Handler: handler,
+    Addr:              ":" + cfg.Port,
+    Handler:           handler,
+    ReadHeaderTimeout: 5 * time.Second, // mitigates slowloris
   }
 
   // Graceful shutdown
@@ -191,7 +204,9 @@ func main() {
   <-ctx.Done()
   shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
   defer cancel()
-  server.Shutdown(shutdownCtx)
+  if err := server.Shutdown(shutdownCtx); err != nil {
+    log.Printf("graceful shutdown failed: %v", err)
+  }
 }
 ```
 
@@ -282,40 +297,44 @@ func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 ### Pattern: Repository with Transaction Support
 
 ```go
-// internal/infrastructure/postgres/transaction.go
-type TransactionKey struct{}
-type Transaction struct{ *sql.Tx }
+// internal/infrastructure/postgres/tx.go
+// DBTX is satisfied by both *sql.DB and *sql.Tx (same shape sqlc generates).
+type DBTX interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
 
-func WithTransaction(ctx context.Context, db *sql.DB, fn func(ctx context.Context) error) error {
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+type Store struct{ db *sql.DB }
+
+// WithTx runs fn inside one transaction; repositories built from q share it.
+func (s *Store) WithTx(ctx context.Context, fn func(q DBTX) error) error {
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	ctx = context.WithValue(ctx, TransactionKey{}, &Transaction{tx})
-	if err := fn(ctx); err != nil {
+	if err := fn(tx); err != nil {
 		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("rollback: %v (orig: %w)", rbErr, err)
+			return errors.Join(err, fmt.Errorf("rollback: %w", rbErr))
 		}
 		return err
 	}
-	return tx.Commit()
-}
-
-func GetQuerier(ctx context.Context) Querier {
-	if tx, ok := ctx.Value(TransactionKey{}).(*Transaction); ok {
-		return tx
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
 	}
-	return getDB(ctx) // fallback to direct DB
+	return nil
 }
 
-// Usage
-func (s *UserService) CreateUser(ctx context.Context, user *User) error {
-	return postgres.WithTransaction(ctx, s.db, func(ctx context.Context) error {
-		q := postgres.GetQuerier(ctx)
-		if err := q.InsertUser(ctx, user); err != nil {
-			return fmt.Errorf("insert user: %w", err)
+// Usage: the application layer depends on a TxRunner interface, not on *sql.Tx.
+func (s *Store) CreateUserWithAudit(ctx context.Context, u *User) error {
+	return s.WithTx(ctx, func(q DBTX) error {
+		if _, err := q.ExecContext(ctx,
+			`INSERT INTO users (id, email, name) VALUES ($1, $2, $3)`, u.ID, u.Email, u.Name); err != nil {
+			return fmt.Errorf("insert user %s: %w", u.ID, err)
 		}
-		return q.InsertAuditLog(ctx, user.ID, "created")
+		_, err := q.ExecContext(ctx,
+			`INSERT INTO audit_log (entity_id, action) VALUES ($1, 'created')`, u.ID)
+		return err
 	})
 }
 ```
@@ -362,7 +381,7 @@ func LoggingMiddleware(log *slog.Logger) func(http.Handler) http.Handler {
 - Release file locks
 
 ### Performance
-- Use `pgx` over `database/sql` for PostgreSQL (faster, connection pooling built-in)
+- Use `pgx` (native `pgxpool`, or `pgx/v5/stdlib` with `database/sql`) for PostgreSQL; consider `sqlc` to generate type-safe query code
 - Prefer `sync.Pool` for frequently allocated objects
 - Profile with `pprof` — import `net/http/pprof` behind a build tag
 - Connection pool settings: `SetMaxOpenConns(25)`, `SetMaxIdleConns(10)`, `SetConnMaxLifetime(5*time.Minute)`
@@ -380,7 +399,7 @@ func LoggingMiddleware(log *slog.Logger) func(http.Handler) http.Handler {
 
 ## Security Considerations
 - Validate all inputs at HTTP boundary before passing to domain
-- Use `bcrypt` for passwords, never SHA/MD5
+- Hash passwords with Argon2id (`golang.org/x/crypto/argon2`) or bcrypt (`golang.org/x/crypto/bcrypt`), never SHA/MD5
 - SQL injection: always parameterized queries, never string concatenation
 - JWT: use `golang-jwt/jwt/v5`, validate `alg` header to avoid alg confusion
 - CORS: use `rs/cors` middleware with explicit origins
@@ -406,14 +425,18 @@ Use `testcontainers-go` for PostgreSQL. Each test creates its own DB. Use `txdb`
 
 ### Architecture Tests
 ```go
+// Uses `go list` to get the transitive dependencies of the domain package.
 func TestDomainDoesNotImportInfrastructure(t *testing.T) {
-  domainPkg := "github.com/org/project/internal/domain"
-  infraPkg := "github.com/org/project/internal/infrastructure"
-  imports, err := pkgimports.List(domainPkg)
+  out, err := exec.Command("go", "list", "-deps", "./internal/domain/...").Output()
   require.NoError(t, err)
-  assert.False(t, imports.Contains(infraPkg), "domain must not import infrastructure")
+  for _, dep := range strings.Split(string(out), "\n") {
+    if strings.Contains(dep, "/internal/infrastructure") {
+      t.Fatalf("domain must not depend on infrastructure, found %s", dep)
+    }
+  }
 }
 ```
+Alternatively enforce import rules in CI with golangci-lint's `depguard` linter.
 
 ## Rules
 - internal/ is the default location for ALL application code. pkg/ is for libraries designed for external consumption only.
@@ -423,7 +446,7 @@ func TestDomainDoesNotImportInfrastructure(t *testing.T) {
 - No naked error strings. Always wrap: fmt.Errorf("context: %w", err).
 - No init() functions. Use explicit initialization in main().
 - Package names are part of the import path. A package named "userrepo" is imported as "project/internal/infrastructure/userrepo".
-- Wire dependencies in main.go (or a dedicated wire.go for Wire DI). Never use `sync.Once` to lazily initialize.
+- Wire dependencies explicitly in main.go (or with a DI generator). Avoid hidden lazy globals (`sync.Once` singletons) for application dependencies.
 
 ## References
   - references/go-concurrency.md — Go Concurrency
@@ -436,65 +459,3 @@ func TestDomainDoesNotImportInfrastructure(t *testing.T) {
 No artifact produced.
 Next skill: golang-patterns — concurrency, HTTP servers, error handling.
 Carry forward: package structure, interface definitions, DI wiring approach.
-## Implementation Patterns
-
-### Factory Pattern for Module Creation
-`
-function createModule<T>(config: ModuleConfig): T {
-  const dependencies = initializeDependencies(config);
-  const module = new Module(dependencies);
-  module.hooks.onInit();
-  return module as T;
-}
-`
-
-### Builder Pattern for Complex Configuration
-`
-class ConfigBuilder {
-  private config: AppConfig = new AppConfig();
-  withDatabase(url: string): ConfigBuilder { ... }
-  withCache(ttl: number): ConfigBuilder { ... }
-  withLogging(level: string): ConfigBuilder { ... }
-  build(): AppConfig { return this.config; }
-}
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Production build with optimizations enabled
-- [ ] Environment variables configured per environment
-- [ ] Health check endpoint responds correctly
-- [ ] Error tracking and monitoring integrated
-- [ ] Logging level configured (not debug in production)
-- [ ] Resource limits configured
-- [ ] Database migrations applied
-- [ ] Static assets built and served from CDN or cache
-- [ ] Feature flags toggled appropriately
-- [ ] Rollback plan documented and tested
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% | Critical | Rollback or fix |
-| p95 latency | > 500ms | Warning | Profile and optimize |
-| Uptime | < 99.9% | Critical | Investigate infrastructure |
-| Memory usage | > 80% | Warning | Check for leaks |
-| CPU usage | > 80% | Warning | Scale up or optimize |
-
-## Rules
-- Prefer composition over inheritance
-- Favor immutable data structures
-- Use dependency injection for testability
-- Keep functions pure when possible — no side effects
-- Fail fast with clear error messages
-- Don't repeat yourself (DRY) — extract shared logic
-- Keep it simple (KISS) — avoid unnecessary complexity
-- You aren't gonna need it (YAGNI) — build what's required
-- Separate concerns — single responsibility per module
-- Code to interfaces, not implementations
-- Write self-documenting code — clear names over comments
-- Prefer standard library over third-party dependencies
-- Handle errors explicitly — no silent failures
-- Validate inputs at boundaries
-- Log at appropriate levels (debug, info, warn, error)

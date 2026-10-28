@@ -91,26 +91,29 @@ One DAG per data domain. Structure: `start → extract → validate_extract → 
 #### DAG Template
 
 ```python
+# Airflow 3.x
 from datetime import datetime, timedelta
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+
+from airflow.sdk import DAG
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.python import PythonOperator
+
+from etl.orders import extract_orders, notify_failure  # project code
 
 default_args = {
     'owner': 'data-engineering',
     'depends_on_past': False,
-    'email_on_failure': True,
-    'email': ['pager@company.com'],
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
     'retry_exponential_backoff': True,
     'max_retry_delay': timedelta(hours=1),
     'execution_timeout': timedelta(hours=2),
-    'sla': timedelta(minutes=30),
+    'on_failure_callback': notify_failure,   # or a provider notifier (Slack/SMTP)
 }
 
 with DAG(
-    'etl_orders_daily',
+    dag_id='etl_orders_daily',
     default_args=default_args,
     description='Daily orders ETL from PostgreSQL to warehouse',
     schedule='0 3 * * *',  # Daily 3 AM
@@ -119,12 +122,18 @@ with DAG(
     max_active_runs=1,
     tags=['etl', 'orders', 'daily'],
 ) as dag:
-    start = DummyOperator(task_id='start')
-    extract = PythonOperator(task_id='extract_orders', ...)
-    complete = DummyOperator(task_id='complete')
+    start = EmptyOperator(task_id='start')
+    extract = PythonOperator(task_id='extract_orders', python_callable=extract_orders)
+    load_mart = SQLExecuteQueryOperator(
+        task_id='load_mart',
+        conn_id='warehouse',
+        sql='sql/load_orders_mart.sql',
+    )
+    complete = EmptyOperator(task_id='complete')
 
-    start >> extract >> complete
+    start >> extract >> load_mart >> complete
 ```
+Airflow 3 removed `DummyOperator` (use `EmptyOperator`), task-level `sla` (use Deadline Alerts in 3.1+ or external freshness monitoring), and `schedule_interval`. `PostgresOperator` is superseded by `SQLExecuteQueryOperator`.
 
 ### Task Parameters
 
@@ -135,11 +144,11 @@ with DAG(
 | retry_exponential_backoff | true | Avoid thundering herd on recovery |
 | max_retry_delay | 1 hour | Cap to prevent runaway scheduling |
 | execution_timeout | 2x expected runtime | Prevent stuck tasks |
-| sla | 30 min from schedule | Alert on delays |
+| deadline / freshness alert | 30 min from schedule | Alert on delays (task `sla` was removed in Airflow 3) |
 | pool | domain_pool | Resource management |
 
 ### Scheduling Patterns
-Daily: `0 3 * * *` (off-peak hours). Hourly: `0 * * * *`. Weekly: `0 4 * * 1` (Mondays 4am). Event-driven: use `TriggerDagRunOperator` from another DAG. Data-aware scheduling: use Airflow 2.4+ datasets as dependencies between DAGs. Sensor pattern: `ExternalTaskSensor` or `SqlSensor` to wait for upstream completion.
+Daily: `0 3 * * *` (off-peak hours). Hourly: `0 * * * *`. Weekly: `0 4 * * 1` (Mondays 4am). Event-driven: use `TriggerDagRunOperator` from another DAG. Data-aware scheduling: use Assets (called Datasets in Airflow 2.4-2.x) as dependencies between DAGs. Sensor pattern: `ExternalTaskSensor` or `SqlSensor` to wait for upstream completion.
 
 ## dbt Transformation Patterns
 
@@ -497,7 +506,7 @@ Source → Extract Task
 ## Additional ETL Tools
 
 ### Apache NiFi
-NiFi provides a visual, no-code approach to data routing and transformation. Drag-and-drop processor chaining, data provenance tracking, backpressure, and priority queuing. Ideal for ingestion from heterogeneous sources and protocol translation. Deploy as a standalone cluster with ZooKeeper.
+NiFi provides a visual, no-code approach to data routing and transformation. Drag-and-drop processor chaining, data provenance tracking, backpressure, and priority queuing. Ideal for ingestion from heterogeneous sources and protocol translation. Deploy as a cluster coordinated by ZooKeeper, or with Kubernetes-native clustering in NiFi 2.x.
 
 ### Mage.ai
 Mage.ai is a modern open-source ETL tool with Python-native pipeline definition. Pipelines are blocks connected in a DAG with `@transformer` and `@loader` decorators. Auto-generated UI, real-time monitoring, and built-in dbt/Spark/BigQuery integration.

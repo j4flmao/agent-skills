@@ -116,18 +116,18 @@ No preamble. No postamble. No explanations.
 ### PCI DSS Compliance Scope Decision Tree
 
 1. How is payment data handled?
-   - Direct API (Stripe Elements, PayPal SDK): Payment data goes directly from browser to gateway. Server never sees card data. Lowest PCI scope (SAQ A). No PCI audit needed for most cases.
+   - Direct API (Stripe Elements, PayPal SDK): Payment data goes directly from browser to gateway. Server never sees card data. Lowest PCI scope (typically SAQ A when fields are gateway-hosted iframes/redirects). You still complete and submit an annual SAQ and keep payment-page scripts under control.
    - Server-side API: Card data passes through your server to gateway. Full PCI scope (SAQ D). Annual QSA audit required. Significant compliance burden.
    - Self-hosted payment form: Payment form on your server collecting card data. Full PCI scope. Strongly discouraged.
 
 2. What is the annual transaction volume?
-   - > 6M/year: Level 1. Full QSA audit, ASV scan quarterly, ROC report. Most stringent requirements.
-   - 1-6M/year: Level 2. SAQ D + ASV scan quarterly. QSA may be required depending on acquirer.
+   - > 6M/year (card-brand merchant levels, e.g. Visa): Level 1. Full QSA audit, ASV scan quarterly, ROC report. Most stringent requirements.
+   - 1-6M/year: Level 2. Annual SAQ appropriate to the integration (or ROC if the acquirer requires) + quarterly ASV scans when applicable.
    - 20K-1M/year: Level 3. SAQ + ASV scan quarterly. Self-assessment with validation.
    - < 20K/year: Level 4. SAQ (self-assessment). ASV scan quarterly if e-commerce.
 
 3. Are you storing any cardholder data?
-   - YES -> Extremely limited circumstances (recurring payments without token). Requires PCI DSS 3.4 encryption, access control, key management, audit logging. Highest compliance burden. Use tokenization instead.
+   - YES -> Extremely limited circumstances (recurring payments without token). Requires rendering PAN unreadable wherever stored (PCI DSS v4.0.1 Requirement 3.5.1), access control, key management, audit logging. Highest compliance burden. Use tokenization instead.
    - NO -> Tokenization via gateway reduces scope. All compliance requirements apply to token storage instead of raw PAN data.
 
 ## Workflow
@@ -176,7 +176,7 @@ abstraction_layer:
         adyen: "AdyenPaymentAdapter implements PaymentGatewayInterface"
     webhook_handler:
       stripe: "StripeWebhookHandler parses stripe events"
-      paypal: "PayPalWebhookHandler parses paypal IPN"
+      paypal: "PayPalWebhookHandler verifies and parses PayPal webhook events (IPN is legacy)"
       generic: "Normalized PaymentEvent emitted to internal event bus"
 ```
 
@@ -460,24 +460,35 @@ interface PaymentGateway {
 
 class StripeAdapter implements PaymentGateway {
   async createPaymentIntent(params: PaymentIntentParams): Promise<PaymentIntentResult> {
-    const intent = await stripe.paymentIntents.create({
-      amount: Math.round(params.amount * 100),
-      currency: params.currency.toLowerCase(),
-      payment_method_types: ['card'],
-      metadata: { orderId: params.orderId },
-      idempotencyKey: params.idempotencyKey,
-    });
+    // Amounts are in the currency's minor unit; zero-decimal currencies (JPY, KRW) must not be multiplied by 100.
+    // Prefer passing integer minor units (params.amountMinor) from your pricing layer instead of floats.
+    const intent = await stripe.paymentIntents.create(
+      {
+        amount: params.amountMinor,
+        currency: params.currency.toLowerCase(),
+        automatic_payment_methods: { enabled: true }, // methods configured in the Dashboard
+        capture_method: params.manualCapture ? 'manual' : 'automatic',
+        metadata: { orderId: params.orderId },
+      },
+      { idempotencyKey: params.idempotencyKey }, // request option, not a body parameter
+    );
     return { id: intent.id, clientSecret: intent.client_secret, status: intent.status };
   }
 
   async capturePayment(paymentId: string, amount?: number): Promise<CaptureResult> {
-    const intent = await stripe.paymentIntents.capture(paymentId, { amount_to_capture: amount ? Math.round(amount * 100) : undefined });
-    return { id: intent.id, status: intent.status, amountCaptured: intent.amount_received / 100 };
+    // Only valid for intents created with capture_method: 'manual' and in status requires_capture
+    const intent = await stripe.paymentIntents.capture(paymentId, { amount_to_capture: amount });
+    return { id: intent.id, status: intent.status, amountCapturedMinor: intent.amount_received };
   }
 
   async refundPayment(paymentId: string, amount?: number): Promise<RefundResult> {
-    const refund = await stripe.refunds.create({ payment_intent: paymentId, amount: amount ? Math.round(amount * 100) : undefined });
-    return { id: refund.id, status: refund.status, amount: refund.amount / 100 };
+    const refund = await stripe.refunds.create({ payment_intent: paymentId, amount }); // amount in minor units; omit for full refund
+    return { id: refund.id, status: refund.status, amountMinor: refund.amount };
+  }
+
+  async getPaymentStatus(paymentId: string): Promise<PaymentStatus> {
+    const intent = await stripe.paymentIntents.retrieve(paymentId);
+    return intent.status as PaymentStatus;
   }
 }
 ```

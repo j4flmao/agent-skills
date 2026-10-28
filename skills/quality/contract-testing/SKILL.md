@@ -78,7 +78,7 @@ Contracts are versioned by the consumer's application version (Git commit SHA). 
 When a provider change breaks a consumer contract, the Broker shows exactly which consumer is affected, which interaction failed, and the exact response diff. The developer fixes the issue by making the change backward compatible (add new endpoint instead of modifying existing, add optional fields) or coordinating a multi-service deployment.
 
 ### CI Pipeline Integration
-Consumer CI: test → publish pact → tag version. Provider CI: fetch pending contracts → verify → report results. Deployment check: can-i-deploy verifies all consumer contracts pass before provider deploys. The pipeline blocks deployment if can-i-deploy fails.
+Consumer CI: test → publish pact with branch + version. Provider CI: fetch pending contracts → verify → report results. Deployment check: can-i-deploy verifies all consumer contracts pass before provider deploys. The pipeline blocks deployment if can-i-deploy fails.
 
 ### Spring Cloud Contract Alternative
 Spring Cloud Contract provides Groovy-based contract definitions for JVM projects. Contracts are defined as Groovy DSL files alongside the provider code. The provider generates a test stub from the contract. Consumer-side tests use the WireMock stub generated from the contract. Contracts are stored in a Git repository or Artifactory instead of a Pact Broker.
@@ -110,10 +110,10 @@ await provider.addInteraction({
 Provider verifies all consumer contracts in CI. Run Pact verification against provider API — each interaction's request is sent, response checked against expected. Provider verification must be fast (< 1 min per contract).
 
 ### Step 4: Pact Broker
-Publish contracts from consumer CI: `pact-broker publish ./pacts --consumer-app-version <sha> --tag <branch>`. Provider CI fetches latest contracts: `pact-broker can-i-deploy --pacticipant <service> --version <sha>`. Broker shows network diagram of all service dependencies.
+Publish contracts from consumer CI: `pact-broker publish ./pacts --consumer-app-version <sha> --branch <branch>`. Provider CI verifies pacts selected by consumer version selectors (e.g. `mainBranch`, `deployedOrReleased`), then gates deploys with `pact-broker can-i-deploy --pacticipant <service> --version <sha> --to-environment <env>` and records them with `record-deployment`. Broker shows network diagram of all service dependencies.
 
 ### Step 5: CI Pipeline
-Consumer CI: test → publish pact → tag version. Provider CI: fetch pending contracts → verify → report results. Deployment check: `can-i-deploy` verifies all consumer contracts pass before provider deploys. Matrix of compatible versions stored in broker.
+Consumer CI: test → publish pact with branch + version. Provider CI: fetch pending contracts → verify → report results. Deployment check: `can-i-deploy` verifies all consumer contracts pass before provider deploys. Matrix of compatible versions stored in broker.
 
 ### Step 6: Breaking Change Detection
 When a provider change breaks a consumer contract: developer sees which consumer is affected, which interaction failed, and the exact diff. Fix options: 1) add new endpoint (deprecate old), 2) add optional field (backward compatible), 3) coordinate deploy with consumer.
@@ -130,7 +130,7 @@ Consumer Service Development
   │ 2. Pact creates contract file           │
   │ 3. CI runs consumer tests               │
   │ 4. CI publishes contract to Broker      │
-  │ 5. CI tags version (feat/xxx, main)     │
+  │ 5. CI sets branch (feat/xxx, main)     │
   └─────────────────────────────────────────┘
                       │
                       ▼
@@ -225,10 +225,7 @@ describe("Payment Service Pact", () => {
         headers: { "Content-Type": "application/json" },
         body: {
           id: MatchersV3.string("123"),
-          status: MatchersV3.term({
-            generate: "confirmed",
-            matcher: "^(confirmed|pending|failed)$",
-          }),
+          status: MatchersV3.regex("^(confirmed|pending|failed)$", "confirmed"),
           amount: MatchersV3.decimal(49.99),
         },
       });
@@ -267,9 +264,13 @@ describe("Payment Service Pact", () => {
 ### Python — Consumer Test with Pact
 ```python
 # tests/contract/test_payment_client.py
+# pact-python 2.x API. pact-python 3.x replaces Consumer/Provider with `pact.Pact(...)`
+# (Rust core); check the installed version before copying.
 import atexit
 import pytest
 from pact import Consumer, Provider
+
+from order_service.payment_client import PaymentClient, PaymentNotFound
 
 pact = Consumer("order-service").has_pact_with(
     Provider("payment-service"),
@@ -329,7 +330,7 @@ jobs:
         run: |
           npx pact-broker publish ./pacts \
             --consumer-app-version ${{ github.sha }} \
-            --tag ${{ github.head_ref || 'main' }} \
+            --branch ${{ github.head_ref || github.ref_name }} \
             --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
             --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
 
@@ -348,28 +349,18 @@ jobs:
       - run: npm ci
       - name: Start provider
         run: npm start & npx wait-on http://localhost:3001
-      - name: Verify contracts
-        run: |
-          npx pact-broker can-i-deploy \
-            --pacticipant payment-service \
-            --version ${{ github.sha }} \
-            --to-environment production \
-            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
-            --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
-      - name: Run provider verification
+      - name: Run provider verification (verifier fetches pacts via consumer version selectors and publishes results)
         run: npx jest --testPathPattern="verification"
         env:
           PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
           PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
-      - name: Publish verification results
-        if: always()
+          GIT_SHA: ${{ github.sha }}            # used as providerVersion
+          GIT_BRANCH: ${{ github.head_ref || github.ref_name }}  # providerVersionBranch
+          PACT_PUBLISH_RESULTS: "true"   # read by the verifier config: publishVerificationResult
+      - name: Can I deploy?
         run: |
-          npx pact-broker publish-provider-contracts \
-            --provider payment-service \
-            --provider-app-version ${{ github.sha }} \
-            --branch ${{ github.head_ref || 'main' }} \
-            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
-            --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
+          npx pact-broker can-i-deploy             --pacticipant payment-service             --version ${{ github.sha }}             --to-environment production             --broker-base-url ${{ secrets.PACT_BROKER_URL }}             --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
+      # After deploying: `pact-broker record-deployment --pacticipant payment-service --version $SHA --environment production`
 ```
 
 ## Contract Testing Anti-Patterns
@@ -437,130 +428,6 @@ When a provider verification fails, the affected consumer team must be notified 
 `quality-e2e-testing` for E2E tests that complement contract tests.
 `devops-observability` for monitoring contract verification in CI/CD.
 Carry forward: Pact contracts, broker configuration, CI pipeline config.
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
-## Rules
-- Default-deny security posture — allow only explicitly required access.
-- All inputs validated, all outputs encoded, all errors handled.
-- Defend in depth — multiple layers of security controls.
-- Fail securely — errors default to safe behavior.
-- Log security-relevant events for audit and investigation.
-- Keep dependencies updated — automate vulnerability scanning.
-- Design for observability from day one, not as an afterthought.
-- Document all architectural decisions with rationale.
-- Review code for security, performance, and correctness before merging.
 ## Architecture Decision Trees
 
 ### Contract Testing Strategy
@@ -574,4 +441,4 @@ Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), wri
 ### Provider Verification Scope
 - All consumer contracts → Full verification, safe but slower
 - Changed contracts only → Fast but risk missing broken contracts
-- Tagged contracts → Only verify contracts for current env tag
+- Consumer version selectors → verify pacts from the main branch and versions deployed/released to environments (tags are legacy)

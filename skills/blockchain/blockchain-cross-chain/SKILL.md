@@ -394,8 +394,6 @@ Relayer sustainability:
   - references/layerzero-wormhole.md — LayerZero, Wormhole, Axelar
   - references/message-replay-protection.md — Message Replay Protection
   - references/shared-sequencer.md — Shared Sequencing
-  - references/cross-chain-token-representation.md — Cross-Chain Token Standards & Representation
-  - references/bridge-fee-models.md — Bridge Fee Models & Relayer Economics
 
 ## Architecture Decision Trees
 

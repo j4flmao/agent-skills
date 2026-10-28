@@ -7,6 +7,28 @@ description: Advanced Zero Trust Identity, OIDC/SAML Mechanics, and JWT Validati
 
 Zero Trust assumes hostility at all network boundaries, mandating explicit verification of identity and device context for every access request. This reference details the underlying mechanisms of primary identity federations and token validations.
 
+## Purpose
+Explain Zero Trust identity mechanics — OIDC/OAuth2 flows (Authorization Code + PKCE), JWT signature validation (RS256 vs HS256 and algorithm-substitution defense), and SAML assertions — so engineers implement explicit, per-request verification correctly.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "zero trust identity", "OIDC flow", "PKCE", "JWT validation", "RS256 vs HS256", "SAML SSO", "JWKS".
+
+### Input Context
+- Federation protocol (OIDC/OAuth2 or SAML) and client type (SPA, native, server).
+- Signing scheme and key distribution (shared secret vs JWKS).
+
+### Output Artifact
+A verified auth-flow design and token-validation checklist. No secrets.
+
+### Response Format
+```
+Flow: {Auth Code+PKCE | SAML SP-initiated}
+Signing: {RS256 via JWKS | HS256}
+Validate: {alg, sig, iss, aud, exp, nonce/state}
+```
+
 ## OIDC (OpenID Connect) and OAuth2 Flows
 
 OIDC is an identity layer built on top of the OAuth 2.0 protocol. The Authorization Code Flow (often with PKCE) is the gold standard for secure authentication.

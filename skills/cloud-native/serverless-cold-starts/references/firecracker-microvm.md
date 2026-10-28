@@ -35,4 +35,4 @@ flowchart TD
 3. **Init Code Execution**: Any code located *outside* your `exports.handler = async () => {}` function is executed.
 4. **Invocation**: The actual handler runs.
 
-**Optimization Note**: The resources (CPU/RAM) allocated during the Init phase (Step 3) are boosted beyond your configured Lambda memory limit by AWS to execute initialization as fast as possible.
+**Billing note**: Since 1 August 2025 the INIT phase is billed for on-demand functions on managed runtimes (ZIP), the same as it already was for container images and custom runtimes. Heavy init code now costs money as well as latency. Do not rely on undocumented CPU boosts during init.

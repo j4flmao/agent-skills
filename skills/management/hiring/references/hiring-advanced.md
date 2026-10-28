@@ -1,214 +1,103 @@
-# Hiring Advanced Topics
+# Hiring: Advanced Topics
 
-## Introduction
-Advanced Hiring topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced practices for engineering hiring at scale: designing work-sample assessments, evaluating senior and staff-level candidates, hiring committees and bar raisers, reducing bias with evidence, assessment in the era of AI coding assistants, offer strategy, legal and compliance considerations, and measuring predictive validity. Builds on `hiring-fundamentals.md`.
 
-## Advanced Architecture Patterns
+## Work-Sample Assessment Design
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+Work samples that resemble the actual job tend to predict performance better than puzzles.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+| Format | Strengths | Risks | Mitigation |
+|--------|-----------|-------|------------|
+| Live pair-programming on a realistic task | Observes collaboration and reasoning | Performance anxiety | Warm-up, allow docs/search, interviewer as collaborator |
+| Code review exercise | Senior judgment, communication | Needs good seeded code | Seed real-world issues (bugs, design, security) with a rubric |
+| Debugging exercise | Practical skill | Environment friction | Pre-built repo, containerised setup |
+| Take-home | Realistic, less pressure | Time burden, unverifiable authorship | Time-box (2-4 h) or pay; follow-up discussion of the submission |
+| System design | Architecture trade-offs | Rehearsed answers | Novel constraints, deep follow-ups on failure modes and operations |
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+Design process: define the competencies, write the task, write the rubric with examples at each score, pilot on current employees at the target level, calibrate time and difficulty, then version the exercise and rotate to limit leakage.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+## Assessment and AI Coding Assistants
 
-## Performance Optimization
+- Decide policy explicitly: allowed (like on the job) or not allowed (for a specific signal), and tell candidates in advance.
+- If allowed, assess what matters when tools exist: problem decomposition, verifying generated code, testing, reading unfamiliar code, explaining trade-offs.
+- Code review and debugging exercises, plus deep follow-up questions on any submitted work, remain informative regardless of tool use.
+- Be alert to remote interview fraud (proxy interviewers, identity mismatch): identity verification at stages, consistent interviewer observations across stages, and in-depth follow-ups.
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+## Senior, Staff and Principal Evaluation
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+| Dimension | What to assess | Example evidence |
+|-----------|----------------|------------------|
+| Scope | Size and ambiguity of problems owned | Led a multi-team migration, defined the approach |
+| Technical judgment | Trade-offs, risk management, simplicity | Chose not to build; reversible vs irreversible decisions |
+| Influence | Driving alignment without authority | Wrote RFCs that changed org direction |
+| Multiplier effect | Raising others | Mentoring outcomes, standards adopted across teams |
+| Execution in ambiguity | Delivering through unclear requirements | Defined milestones, de-risked early |
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+Formats: deep-dive on a past project (with probing for the candidate's own contribution), architecture review of a provided design, written exercise (RFC critique), conversations with peers at the target level. Reference checks are more valuable at these levels; ask structured questions about specific behaviours.
 
-## Security Hardening
+## Hiring Committees and Bar Raisers
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+- A **bar raiser** (trained interviewer outside the hiring team) protects the hiring bar against urgency bias and has veto or strong voice per company policy.
+- **Hiring committees** review packets (written feedback, work samples) rather than live debates, which improves consistency across teams.
+- Packet quality matters: evidence-based feedback, consistent rubric use, explicit level recommendation.
+- Rotate committee members and review decision consistency (similar packets, similar outcomes).
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+## Bias Reduction With Evidence
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+| Bias | Where it appears | Countermeasure |
+|------|------------------|----------------|
+| Affinity / similarity | "Culture fit" judgments | Replace with defined values behaviours; avoid "would I have a beer with them" |
+| Halo / horn | One strong/weak moment colours all ratings | Rate competencies independently with evidence |
+| Anchoring | Debrief starts with a strong opinion | Written feedback first; structured debrief order |
+| Pedigree | Brand-name schools/employers | Anonymised or skills-first resume review; work samples |
+| Confirmation | Interviewer seeks evidence for first impression | Standard questions, note-taking, rubric anchors |
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+Monitor stage pass-through rates by demographic group where lawful and with appropriate privacy protections; investigate stages with disproportionate drop-off. In the US, adverse impact analysis commonly uses the four-fifths rule as a screening heuristic.
 
-## Monitoring and Observability
+## Automated Tools and AI in Screening
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+- Automated resume screening and AI-assisted interview analysis raise discrimination and transparency risks.
+- Several jurisdictions regulate them: New York City Local Law 144 requires bias audits and notices for automated employment decision tools; the EU AI Act classifies AI systems used for recruitment and candidate evaluation as high-risk, with obligations phasing in.
+- Keep humans accountable for decisions, document tool validation, and consult legal before adopting such tools.
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+## Offer Strategy
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+- Know the band before the loop; level decisions are made on evidence, then compensation follows the band.
+- Understand the candidate's priorities early (scope, growth, flexibility, compensation components).
+- Explain total compensation clearly (base, bonus, equity with vesting and valuation caveats, benefits).
+- Speed matters: decide and extend offers within days of the final interview.
+- Sell with specifics: team, problems, manager, growth path; let candidates meet future peers.
+- Track decline reasons to improve competitiveness.
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+## Legal and Compliance Basics
 
-## Scalability and Reliability
+- Ask only job-related questions; no questions about protected characteristics.
+- Retain interview records per legal requirements and data-protection rules (GDPR applies to candidate data in the EU: lawful basis, retention limits, access rights).
+- Pay transparency and salary history bans vary by jurisdiction; check before asking about current pay.
+- Background and reference checks need consent and must follow local law.
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+## Measuring Predictive Validity
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+1. Store structured interview scores per competency.
+2. After 6-12 months, collect performance ratings and retention for hires.
+3. Correlate interview scores with outcomes per interview type (small samples: look for consistent patterns, not precise coefficients).
+4. Drop or redesign interviews whose scores show no relationship with outcomes; strengthen those that do.
+5. Review false negatives where possible (strong candidates rejected who succeed elsewhere) through periodic re-engagement data.
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+## Scaling Hiring
 
-## Integration and Interoperability
+- Interviewer pools per competency with load balancing and capacity planning (interview hours per week per engineer).
+- Hiring sprints with dedicated coordinators for large ramps.
+- Standardised loops per role family and level; local variation only with justification.
+- Onboarding linked to interview findings (development areas noted in the packet become onboarding goals).
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+## Checklist
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Work samples piloted, rubric-anchored and rotated
+- [ ] Explicit policy on AI assistant use communicated to candidates
+- [ ] Senior/staff loops assess scope, judgment and influence with deep dives
+- [ ] Bar raiser or committee review for consistency
+- [ ] Bias countermeasures and pass-through monitoring in place
+- [ ] Automated screening tools legally reviewed and audited
+- [ ] Offers fast, transparent, band-driven
+- [ ] Interview scores validated against on-the-job outcomes

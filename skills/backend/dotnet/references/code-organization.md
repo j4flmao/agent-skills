@@ -1,1088 +1,202 @@
-# Code Organization in .NET 8
+# Code Organization in ASP.NET Core (.NET 8/10)
 
-## Purpose
-This document describes best practices for structuring .NET 8 projects, managing namespaces, and implementing modular monoliths.
+How to structure ASP.NET Core services: solution layout, vertical slices vs layers, organizing Minimal API endpoints, dependency injection registration, configuration binding, and build-wide settings. Examples target .NET 10 (LTS, November 2025) and also work on .NET 8 (LTS) unless noted.
 
-## Minimal API Organization
-Instead of placing all routes in `Program.cs`, use extension methods or Carter modules to organize endpoints.
+## Solution Layout
 
+```text
+Orders.sln
+Directory.Build.props          # shared MSBuild settings (nullable, analyzers, warnings as errors)
+Directory.Packages.props       # central package version management
+global.json                    # pinned SDK version
+src/
+  Orders.Api/                  # host: Program.cs, endpoints, middleware, composition root
+  Orders.Application/          # use cases (optional; omit for small services)
+  Orders.Domain/               # entities, value objects, domain rules (no framework references)
+  Orders.Infrastructure/       # EF Core, messaging, external clients
+tests/
+  Orders.UnitTests/
+  Orders.IntegrationTests/
+```
+
+For small services, a single project organized by feature folders is often clearer than four projects. Split projects when you need enforced dependency direction (Domain must not reference Infrastructure) or independent reuse.
+
+## Shared Build Settings
+
+```xml
+<!-- Directory.Build.props -->
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+</Project>
+```
+
+```xml
+<!-- Directory.Packages.props -->
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
+    <PackageVersion Include="Serilog.AspNetCore" Version="9.0.0" />
+  </ItemGroup>
+</Project>
+```
+
+Projects then reference packages without versions: `<PackageReference Include="Serilog.AspNetCore" />`. Use the versions current for your target framework.
+
+## Vertical Slices vs Layers
+
+| Approach | Organize by | Good for | Risk |
+|----------|-------------|----------|------|
+| Layered (Controllers / Services / Repositories) | Technical role | Simple CRUD, teams used to it | Changes touch many folders; anemic services |
+| Clean / Onion | Dependency rings | Complex domains, long-lived systems | Ceremony, interface-per-class sprawl |
+| Vertical slices | Feature (CreateOrder, GetOrder) | Most APIs; changes stay local | Duplication if shared logic is not extracted |
+
+A pragmatic combination: vertical slices in the API/Application project, with a domain project for shared business rules.
+
+```text
+Orders.Api/
+  Features/
+    Orders/
+      CreateOrder.cs        # request, validator, handler, endpoint mapping
+      GetOrder.cs
+      OrdersEndpoints.cs    # MapGroup registration
+    Customers/
+  Infrastructure/
+    OrdersDbContext.cs
+  Program.cs
+```
+
+## Organizing Minimal API Endpoints
 
 ```csharp
-// Endpoint Module Example 0
-public static class UserEndpoints_0
+// Features/Orders/OrdersEndpoints.cs
+public static class OrdersEndpoints
 {
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapOrders(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/users").WithTags("Users");
+        var group = app.MapGroup("/orders")
+            .WithTags("Orders")
+            .RequireAuthorization();
 
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
+        group.MapGet("/{id:guid}", GetOrder.Handle).WithName("GetOrder");
+        group.MapPost("/", CreateOrder.Handle);
+        return app;
+    }
+}
 
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
+// Features/Orders/GetOrder.cs
+public static class GetOrder
+{
+    public static async Task<Results<Ok<OrderDto>, NotFound>> Handle(
+        Guid id, OrdersDbContext db, CancellationToken ct)
+    {
+        var order = await db.Orders.AsNoTracking()
+            .Where(o => o.Id == id)
+            .Select(o => new OrderDto(o.Id, o.CustomerId, o.Total))
+            .FirstOrDefaultAsync(ct);
 
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
+        return order is null ? TypedResults.NotFound() : TypedResults.Ok(order);
+    }
+}
+
+public sealed record OrderDto(Guid Id, Guid CustomerId, decimal Total);
+```
+
+`TypedResults` with `Results<...>` gives compile-time checked responses and accurate OpenAPI metadata. Controllers remain fully supported; pick one style per service.
+
+## Composition Root
+
+Keep `Program.cs` short by grouping registrations in extension methods per module:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services
+    .AddOrdersModule(builder.Configuration)
+    .AddProblemDetails()
+    .AddOpenApi();                       // built-in OpenAPI document generation (.NET 9+)
+
+var app = builder.Build();
+
+app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapOpenApi();
+app.MapOrders();
+app.Run();
+
+public partial class Program;            // allows WebApplicationFactory<Program> in tests
+```
+
+```csharp
+public static class OrdersModule
+{
+    public static IServiceCollection AddOrdersModule(this IServiceCollection services, IConfiguration config)
+    {
+        services.AddDbContext<OrdersDbContext>(o =>
+            o.UseSqlServer(config.GetConnectionString("Orders")));
+        services.AddScoped<IOrderPricing, OrderPricing>();
+        services.AddOptions<PricingOptions>()
+            .Bind(config.GetSection(PricingOptions.Section))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        return services;
     }
 }
 ```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
+
+### Service lifetimes
+
+| Lifetime | Use | Pitfall |
+|----------|-----|---------|
+| Singleton | Stateless, thread-safe services, caches, `HttpClient` handlers via factory | Capturing a scoped service (captive dependency) |
+| Scoped | Per-request: `DbContext`, unit of work | Resolving from root provider outside a scope |
+| Transient | Lightweight, stateless helpers | Disposable transients resolved from root are held until shutdown |
+
+Enable scope validation (on by default in Development) to catch captive dependencies.
+
+## Options Pattern
 
 ```csharp
-// Endpoint Module Example 1
-public static class UserEndpoints_1
+public sealed class PricingOptions
 {
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
+    public const string Section = "Pricing";
+    [Range(0, 1)] public decimal MaxDiscount { get; init; }
+    [Required] public string Currency { get; init; } = "EUR";
 }
 ```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
 
-```csharp
-// Endpoint Module Example 2
-public static class UserEndpoints_2
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
+Inject `IOptions<T>` (static), `IOptionsSnapshot<T>` (per request, scoped) or `IOptionsMonitor<T>` (change notifications). `ValidateOnStart` fails fast at startup instead of on first use.
 
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
+## Interfaces and Abstractions
 
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
+- Introduce an interface when there are multiple implementations or a real test seam (external systems, clocks via `TimeProvider`), not for every class.
+- `DbContext` already implements unit of work and repository patterns; wrap it in repositories only when you need to hide EF Core from the domain or share complex queries.
+- Use `TimeProvider` (built in since .NET 8) instead of `DateTime.UtcNow` for testable time.
 
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
+## Naming and Folder Conventions
 
-```csharp
-// Endpoint Module Example 3
-public static class UserEndpoints_3
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
+| Item | Convention |
+|------|------------|
+| Namespaces | Match folder structure (`Orders.Api.Features.Orders`) |
+| Request/response types | `CreateOrderRequest`, `OrderDto` as records |
+| Async methods | `Async` suffix in libraries; optional in endpoint handlers |
+| Extension registration | `AddXxx` for services, `MapXxx` for endpoints, `UseXxx` for middleware |
 
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
+## Checklist
 
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 4
-public static class UserEndpoints_4
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 5
-public static class UserEndpoints_5
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 6
-public static class UserEndpoints_6
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 7
-public static class UserEndpoints_7
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 8
-public static class UserEndpoints_8
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 9
-public static class UserEndpoints_9
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 10
-public static class UserEndpoints_10
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 11
-public static class UserEndpoints_11
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 12
-public static class UserEndpoints_12
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 13
-public static class UserEndpoints_13
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 14
-public static class UserEndpoints_14
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 15
-public static class UserEndpoints_15
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 16
-public static class UserEndpoints_16
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 17
-public static class UserEndpoints_17
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 18
-public static class UserEndpoints_18
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 19
-public static class UserEndpoints_19
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 20
-public static class UserEndpoints_20
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 21
-public static class UserEndpoints_21
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 22
-public static class UserEndpoints_22
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 23
-public static class UserEndpoints_23
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 24
-public static class UserEndpoints_24
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 25
-public static class UserEndpoints_25
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 26
-public static class UserEndpoints_26
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 27
-public static class UserEndpoints_27
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 28
-public static class UserEndpoints_28
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 29
-public static class UserEndpoints_29
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 30
-public static class UserEndpoints_30
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 31
-public static class UserEndpoints_31
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 32
-public static class UserEndpoints_32
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 33
-public static class UserEndpoints_33
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 34
-public static class UserEndpoints_34
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 35
-public static class UserEndpoints_35
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 36
-public static class UserEndpoints_36
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 37
-public static class UserEndpoints_37
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 38
-public static class UserEndpoints_38
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
-
-```csharp
-// Endpoint Module Example 39
-public static class UserEndpoints_39
-{
-    public static void MapUserEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/users").WithTags("Users");
-
-        group.MapGet("/", async (IUserRepository repo) => 
-            Results.Ok(await repo.GetAllAsync()));
-
-        group.MapGet("/{id}", async (int id, IUserRepository repo) =>
-        {
-            var user = await repo.GetByIdAsync(id);
-            return user is not null ? Results.Ok(user) : Results.NotFound();
-        });
-
-        group.MapPost("/", async (User user, IUserRepository repo) =>
-        {
-            await repo.AddAsync(user);
-            return Results.Created($"/api/users/{user.Id}", user);
-        });
-    }
-}
-```
-By organizing endpoints into logical groups, the `Program.cs` file remains clean and maintainable. This approach scales well as the API surface grows.
+- [ ] SDK pinned in `global.json`; shared settings in `Directory.Build.props`
+- [ ] Central package management enabled
+- [ ] Nullable reference types and analyzers on, warnings as errors
+- [ ] Features organized by slice; dependency direction enforced where layers exist
+- [ ] `Program.cs` delegates to module extension methods
+- [ ] Options validated on start; correct service lifetimes

@@ -447,7 +447,6 @@ Key question: centralized vs decentralized?
   - references/bi-security-governance.md — BI Security and Governance
   - references/bi-tools-architecture.md — BI Tools Architecture
   - references/bi-tools-performance.md — BI Tools Performance Optimization
-  - references/dashboard-design.md — Dashboard Design
   - references/embedding-analytics.md — Embedded Analytics
   - references/lookml-examples.md — LookML Examples
   - references/semantic-layer-patterns.md — Semantic Layer Patterns

@@ -3,6 +3,29 @@ name: high-scale-ecommerce
 description: Playbook for building a High-Scale E-Commerce platform.
 ---
 
+## Purpose
+Reference architecture for a high-scale e-commerce platform: edge-rendered programmatic SEO, headless API-first checkout, resilient payment flow, and Kubernetes-based infrastructure.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "high-scale ecommerce playbook", "build a scalable store", "headless checkout architecture", "programmatic SEO storefront".
+
+### Input Context
+- Product requirements, scale targets, and existing stack.
+- Constraints (budget, compliance, team size).
+
+### Output Artifact
+Architecture guidance and component choices (no files unless requested).
+
+### Response Format
+```
+Layer: {storefront | checkout | infra}
+Choice: {component + why}
+Scale concern: {latency, inventory, peak}
+```
+
+
 # High-Scale E-Commerce Playbook
 
 **AUTHORITATIVE. DENSE. MẠNH.**

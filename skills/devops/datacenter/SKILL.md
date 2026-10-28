@@ -27,6 +27,26 @@ tags: [devops, datacenter, infrastructure, hardware, phase-5]
 ## Purpose
 Design, operate, and manage physical datacenter infrastructure including tier classification, power/cooling, rack layout, cabling, DCIM, and capacity planning.
 
+## Agent Protocol
+
+### Trigger
+"datacenter", "data center", "rack", "power", "cooling", "PDU", "UPS", "Tier classification", "N+1", "2N", "cabling", "PUE".
+
+### Input Context
+IT load (kW), growth forecast, site constraints, redundancy target, budget, colocation vs own build.
+
+### Output Artifact
+Capacity/redundancy design with calculations. No file unless requested.
+
+### Response Format
+```
+Requirement: {capacity kW, tier/redundancy target}
+Design: {power N/N+1/2N, cooling type, rack layout}
+Calculations: {power, cooling, PUE}
+Monitoring: {DCIM, sensors, alerts}
+Risks: {...}
+```
+
 ## Architecture Decision Trees
 
 ### Datacenter Tier Classification
@@ -609,7 +629,6 @@ Only monitoring at room level instead of at rack intake. Rack-level monitoring c
   - references/dcim.md
   - references/rack-power-cooling.md
   - references/tier-classification.md
-  - references/ashrae-guidelines.md
 
 ## Handoff
 Next: **network-infrastructure** — datacenter network architecture.

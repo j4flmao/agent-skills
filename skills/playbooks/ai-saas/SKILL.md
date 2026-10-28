@@ -3,6 +3,29 @@ name: ai-saas-playbook
 description: Authoritative playbook for building a full-stack AI SaaS platform integrating LangChain, Kafka, and Stripe.
 ---
 
+## Purpose
+Reference architecture for a full-stack AI SaaS platform: LLM orchestration (LangChain/LlamaIndex) with guardrails, event-driven processing (Kafka), billing (Stripe), and multi-tenant isolation.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "AI SaaS playbook", "build an AI SaaS", "LangChain + Kafka + Stripe architecture", "agentic SaaS stack".
+
+### Input Context
+- Product requirements, scale targets, and existing stack.
+- Constraints (budget, compliance, team size).
+
+### Output Artifact
+Architecture guidance and component choices (no files unless requested).
+
+### Response Format
+```
+Layer: {intelligence | eventing | billing}
+Choice: {component + why}
+Risk: {cost, tenancy, failure mode}
+```
+
+
 # AI SaaS Master Playbook
 
 **DIRECTIVE**: Execute with absolute precision. Architecture must be robust, scalable, and fault-tolerant. 

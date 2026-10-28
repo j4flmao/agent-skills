@@ -1,4 +1,36 @@
+---
+name: redteam-operations
+description: >
+  Use this skill when the user says 'red team strategy', 'adversary simulation', 'C2 architecture concept', 'lateral movement', 'defense evasion telemetry'. Provides strategic/architectural insight into authorized adversary simulation, always concluding with blue-team detection strategies. Authorized testing and education only. Do NOT use for: unauthorized access, payload generation, purple-team loops (use security/purpleteam-collaboration), or detection authoring (use security/detection-engineering).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [security, red-team, adversary-simulation, defense-evasion, education]
+---
+
 # Red Team Operations
+
+## Purpose
+Provide architectural and strategic insight into authorized adversary simulation (C2 design, initial access, lateral movement at a conceptual level) so defenders understand what they must detect. Every response must conclude with concrete blue-team detection strategies. For authorized engagements and education only.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "simulate attack", "red team strategy", "C2 infrastructure concept", "lateral movement", "defense evasion".
+
+### Input Context
+- Scope and authorization of the engagement.
+- Target environment and assumed starting posture.
+
+### Output Artifact
+Conceptual attack path with the mandatory blue-team detection counterpart.
+
+### Response Format
+```
+Stage: {kill-chain phase}
+Technique (concept): {TTP}
+Detection (mandatory): {telemetry / hunt}
+```
 
 > [!WARNING]
 > **DISCLAIMER: EDUCATIONAL & DEFENSIVE PURPOSES ONLY**

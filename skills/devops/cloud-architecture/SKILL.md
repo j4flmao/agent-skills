@@ -26,6 +26,26 @@ tags: [devops, cloud-architecture, well-architected, phase-5]
 ## Purpose
 Design cloud architectures following the Well-Architected Framework, landing zone patterns, multi-cloud strategies, and resilience patterns for production workloads.
 
+## Agent Protocol
+
+### Trigger
+"cloud architecture", "Well-Architected", "landing zone", "multi-cloud", "hybrid cloud", "cloud design", "cloud patterns".
+
+### Input Context
+Workload description, non-functional requirements, compliance, budget, team skills, provider preference.
+
+### Output Artifact
+Architecture decision with diagram and IaC outline. No file unless requested.
+
+### Response Format
+```
+Context: {workload, NFRs, constraints}
+Architecture: {style + key services}
+Pillar review: {security, reliability, performance, cost, operations, sustainability}
+Trade-offs: {...}
+IaC/diagram: {snippet or mermaid}
+```
+
 ## Architecture Decision Trees
 
 ### Deployment Model Decision
@@ -504,9 +524,6 @@ Deploying manually leads to configuration drift, inconsistent environments, and 
   - references/landing-zone.md
   - references/multi-cloud-strategy.md
   - references/well-architected.md
-  - references/adr-template.md
-  - references/disaster-recovery-guide.md
-  - references/service-mesh-comparison.md
 
 ## Handoff
 Next: **landing-zone** — detailed landing zone implementation.

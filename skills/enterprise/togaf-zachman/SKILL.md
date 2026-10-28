@@ -342,7 +342,7 @@ Zachman: 6x6 matrix ontology for classifying EA artifacts. ArchiMate: visual mod
 5. Non-conformant projects require re-architecture or board escalation
 6. Review artifacts added to governance log
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: TOGAF ADM for Financial Services Transformation
 A large bank with 40+ legacy systems needed to modernize their customer onboarding process. Using TOGAF ADM, the EA team started with Phase A (Architecture Vision) to align stakeholders across retail banking, compliance, and IT. Phase B documented the as-is business process requiring 14 system touchpoints and 3-day onboarding time. Phase C mapped data entities (customer, KYC documents, account products) and identified 7 redundant data stores. Phase D designed the target technology architecture with an API gateway, event-driven microservices, and a customer data platform.

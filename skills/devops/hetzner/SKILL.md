@@ -440,11 +440,7 @@ Cost-saving strategies:
 - Not monitoring included traffic — unexpected overage charges.
 
 ## References
-  - references/hetzner-cloud-advanced.md — Hetzner Cloud Advanced Topics
-  - references/hetzner-cloud-fundamentals.md — Hetzner Cloud Fundamentals
-  - references/hetzner-dedicated.md — Hetzner Dedicated Server Setup
   - references/hetzner-kubernetes.md — Kubernetes on Hetzner (k3s, Talos, Rancher)
-  - references/hetzner-cost-optimization.md — Hetzner Cost Optimization
 ## Handoff
 - `devops-kubernetes` for deploying workloads on Hetzner K8s.
 - `devops-terraform` for Terraform state and module patterns.

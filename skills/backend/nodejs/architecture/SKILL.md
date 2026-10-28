@@ -663,7 +663,6 @@ Single service deployment?
 - Secrets managed via environment variables or secrets manager, never in code.
 
 ## References
-  - references/nodejs-architecture-patterns.md — Node.js Architecture Patterns
   - references/nodejs-module-system-di.md — Node.js Module System and DI
   - references/express-setup.md — Express Setup Reference
   - references/fastify-setup.md — Fastify Setup

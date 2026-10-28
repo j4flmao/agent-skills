@@ -1,7 +1,7 @@
 ---
 name: planning-bdd-atdd
 description: >
-  Use this skill when the user asks about BDD, ATDD, behavior-driven development, acceptance test-driven development, Gherkin, Cucumber, SpecFlow, specification by example, executable specifications, living documentation, three amigos, example mapping, or acceptance criteria refinement. Covers: Gherkin syntax and deep features (Scenario Outline, Data Tables, Doc Strings), Specification by Example methodology, BDD tools (Cucumber, SpecFlow, Behave, JBehave), ATDD workflow with three amigos and example mapping. Do NOT use for: unit testing (unit-testing), integration testing (integration-testing), or manual test planning.
+  Use this skill when the user asks about BDD, ATDD, behavior-driven development, acceptance test-driven development, Gherkin, Cucumber, SpecFlow, specification by example, executable specifications, living documentation, three amigos, example mapping, or acceptance criteria refinement. Covers: Gherkin syntax and deep features (Scenario Outline, Data Tables, Doc Strings), Specification by Example methodology, BDD tools (Cucumber, Reqnroll (formerly SpecFlow), Behave, JBehave), ATDD workflow with three amigos and example mapping. Do NOT use for: unit testing (unit-testing), integration testing (integration-testing), or manual test planning.
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -21,7 +21,7 @@ Drive development through shared examples and executable specifications using Be
 ## Agent Protocol
 
 ### Trigger
-"BDD", "ATDD", "behavior-driven development", "acceptance test-driven development", "Gherkin", "Cucumber", "SpecFlow", "specification by example", "executable specification", "living documentation", "three amigos", "example mapping", "acceptance criteria", "scenario", "feature file", "step definition".
+"BDD", "ATDD", "behavior-driven development", "acceptance test-driven development", "Gherkin", "Cucumber", "SpecFlow", "Reqnroll", "specification by example", "executable specification", "living documentation", "three amigos", "example mapping", "acceptance criteria", "scenario", "feature file", "step definition".
 
 ### Input Context
 - Feature or user story to be implemented
@@ -257,11 +257,12 @@ Each role has veto power on ambiguity. If any amigo can't explain what a scenari
 - World: shared context object
 - Reports: JSON, HTML, JUnit XML
 
-### SpecFlow (.NET)
-- Step definition matching: regex, method attributes
+### Reqnroll (.NET) — successor of SpecFlow
+SpecFlow reached end of life on 2024-12-31; Reqnroll is the community fork with the same binding model (migrate by swapping packages and the `TechTalk.SpecFlow` namespace for `Reqnroll`).
+- Step definition matching: Cucumber Expressions or regex on method attributes (`[Given]`, `[When]`, `[Then]`)
 - Hooks: BeforeScenario, AfterScenario, BeforeFeature
-- Context injection: dependency injection for shared state
-- Reports: TRX, HTML, LivingDoc
+- Context injection: constructor dependency injection for shared state
+- Reports: TRX/JUnit via the test runner, HTML formatter
 
 ### Behave (Python)
 - Step definition matching: decorators with regex
@@ -334,10 +335,10 @@ Best practices: run smoke BDD tests on every commit (tagged @smoke), run full BD
 | Tool | Language | Step Matching | CI Integration | Reporting | License |
 |------|----------|--------------|----------------|-----------|---------|
 | Cucumber | Ruby/JVM/JS | Cucumber Expr/Regex | Native | HTML, JSON, JUnit | Open source |
-| SpecFlow | .NET | Attributes/Regex | Native | LivingDoc, TRX | Open source |
+| Reqnroll (ex-SpecFlow) | .NET | Attributes + Cucumber Expr/Regex | Native | HTML, TRX | Open source |
 | Behave | Python | Decorators/Regex | Native | JSON, JUnit | Open source |
 | JBehave | Java | Annotations | Native | HTML, XML | Open source |
-| Kiwi | Swift | Closures | XCTest | XCTest | Open source |
+| pytest-bdd | Python | Decorators + parsers | pytest | JUnit, Cucumber JSON | Open source |
 
 ## Success Metrics
 
@@ -487,7 +488,7 @@ What programming language is the project using?
   |-- Python --> Use Behave with regex step definitions
   |-- JavaScript/TypeScript --> Use Cucumber.js with Cucumber Expressions
   |-- Java --> Use Cucumber-JVM with @Annotations
-  |-- C#/.NET --> Use SpecFlow with method attributes
+  |-- C#/.NET --> Use Reqnroll (SpecFlow successor) with method attributes
   |-- Go --> Use Godog with function-based steps
   |-- Swift --> Use XCTest-Gherkin or Quick+Nimble
 
@@ -502,14 +503,14 @@ Are step definitions becoming complex to maintain?
 ```
 What is the team's primary language?
   |-- Ruby/JVM/JS --> Cucumber (most mature ecosystem)
-  |-- .NET --> SpecFlow (native .NET integration)
+  |-- .NET --> Reqnroll (native .NET integration; SpecFlow is end-of-life)
   |-- Python --> Behave or pytest-bdd
   |-- Java-only --> JBehave (simpler than Cucumber-JVM)
   |-- Go --> Godog
   |-- Mobile (iOS) --> XCTest-Gherkin or Cucumberish
 
 Does the team need living documentation reporting?
-  |-- YES --> Cucumber + LivingDoc or SpecFlow LivingDoc
+  |-- YES --> Cucumber HTML/JSON reports published as living docs (e.g., Cucumber Reports, Allure)
   |-- NO --> Any BDD tool with basic HTML report
 
 Is CI integration important?
@@ -517,7 +518,7 @@ Is CI integration important?
   |-- NO --> Any BDD tool
 
 Is parallel execution needed?
-  |-- YES --> Cucumber with polyglot or SpecFlow with split tests
+  |-- YES --> Cucumber with polyglot runners or Reqnroll with split test projects
   |-- NO --> Any BDD tool
 ```
 
@@ -659,8 +660,5 @@ On release candidate: all tags (comprehensive)
   - references/atdd-workflow.md — ATDD Workflow
   - references/bdd-atdd-advanced.md — Bdd Atdd Advanced Topics
   - references/bdd-atdd-fundamentals.md — Bdd Atdd Fundamentals
-  - references/gherkin-patterns-catalog.md — Gherkin Patterns Catalog
-  - references/step-definition-guide.md — Step Definition Implementation Guide
-  - references/bdd-ci-pipeline.md — BDD CI Pipeline Setup
 ## Handoff
 `create-story` for converting discovered stories into backlog items. `create-tech-spec` for implementation details from step definitions. `create-prd` for aligning feature files with product requirements.

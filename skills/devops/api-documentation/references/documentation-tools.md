@@ -4,7 +4,6 @@
 
 ```yaml
 # Docker deployment
-version: "3"
 services:
   swagger-ui:
     image: swaggerapi/swagger-ui:latest

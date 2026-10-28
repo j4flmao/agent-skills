@@ -238,7 +238,7 @@ Both are lightweight alternatives to React. SolidJS avoids VDOM entirely for fin
 - Preact core: ~3KB gzipped (vs React ~45KB).
 - Compat layer: ~2KB additional.
 - Signals: ~1KB.
-- Total Preact + signals: ~4KB — 10x smaller than React alone.
+- Total Preact + signals: a few KB min+gzip, far smaller than react + react-dom.
 
 ### Rendering Performance
 - Preact 10+ uses a modern diff algorithm similar to React but lighter.
@@ -460,32 +460,9 @@ function App() {
 
 ## Performance Optimization
 
-- **Signal-based reactivity over re-renders**: Signals only re-render the specific DOM nodes that depend on them. No virtual DOM diff for the parent component. 10x faster for fine-grained updates.
+- **Signal-based reactivity over re-renders**: Signals only re-render the specific DOM nodes that depend on them. No virtual DOM diff for the parent component, so frequent fine-grained updates are much cheaper.
 - **Aliasing react to preact/compat**: Configure in bundler (vite, webpack) to redirect `react` imports to `preact/compat`. Enables using React ecosystem with Preact's small bundle size.
 - **No synthetic event pooling**: Preact doesn't pool events like React does. No nullification of event properties after callback. Improves performance for event-heavy components.
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Production build with optimizations enabled
-- [ ] Environment variables configured per environment
-- [ ] Health check endpoint responds correctly
-- [ ] Error tracking and monitoring integrated
-- [ ] Logging level configured (not debug in production)
-- [ ] Resource limits configured
-- [ ] Database migrations applied
-- [ ] Static assets built and served from CDN or cache
-- [ ] Feature flags toggled appropriately
-- [ ] Rollback plan documented and tested
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% | Critical | Rollback or fix |
-| p95 latency | > 500ms | Warning | Profile and optimize |
-| Uptime | < 99.9% | Critical | Investigate infrastructure |
-| Memory usage | > 80% | Warning | Check for leaks |
-| CPU usage | > 80% | Warning | Scale up or optimize |
-
 ## Security Considerations
 
 - **DangerousHtml sanitization**: Preact doesn't auto-sanitize `dangerouslySetInnerHTML`. Always sanitize HTML content through DOMPurify before injecting. Never set `__html` from untrusted sources.

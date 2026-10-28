@@ -486,7 +486,7 @@ Container deployment with cold-start requirements?
 
 ## Best Practices
 
-1. **RESTEasy Reactive for all HTTP endpoints** — never Jakarta REST (deprecated in Quarkus 3.x).
+1. **Quarkus REST (formerly RESTEasy Reactive, `quarkus-rest`) for HTTP endpoints** — it implements Jakarta REST annotations; avoid the legacy RESTEasy Classic extension (`quarkus-resteasy`) in new projects.
 2. **Panache for data access** — active record or repository per preference.
 3. **application.properties for all configuration** — env vars via ${VAR_NAME} syntax.
 4. **Dev Services in dev/test only** — never in production profiles.
@@ -550,8 +550,6 @@ Container deployment with cold-start requirements?
 - Health checks for each downstream dependency (DB, Kafka, external API).
 
 ## References
-  - references/quarkus-reactive-programming.md — Quarkus Reactive Programming
-  - references/quarkus-native-compilation.md — Quarkus Native Compilation
   - references/quarkus-deployment.md — Quarkus Deployment
   - references/quarkus-extension-guide.md — Quarkus Extension Guide
   - references/quarkus-reactive.md — Quarkus Reactive

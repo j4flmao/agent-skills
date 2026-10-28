@@ -35,6 +35,15 @@ Exact user phrases: "generate API client", "OpenAPI client", "Swagger codegen", 
 ### Output Artifact
 Generated API client with typed models, service methods, authentication, error handling, and generated code configuration.
 
+### Response Format
+```
+Spec: {path/url} ({OpenAPI 3.x|GraphQL|proto}) — validated: {yes/no}
+Generator: {tool + version pin} -> {language}, output {dir}
+Auth: {bearer|api key|oauth2} via {interceptor/middleware}
+Errors: {typed error model}
+Regenerate: `{command}` (CI step: {job})
+```
+
 ### Completion Criteria
 - [ ] API spec validated and loaded
 - [ ] Generation tool selected and configured
@@ -101,7 +110,6 @@ outputDir: ./src/generated/api
 additionalProperties:
   npmName: "@myorg/api-client"
   npmVersion: "1.0.0"
-  typescriptThreePlus: true
   supportsES6: true
   withInterfaces: true
   useSingleRequestParameter: true
@@ -139,7 +147,7 @@ kiota generate -l typescript \
 
 ```typescript
 // src/api/client.ts - Typed wrapper around generated client
-import { Configuration, DefaultApi, type ApiResponse } from '../generated/api';
+import { Configuration, DefaultApi, type Item, type CreateItemRequest } from '../generated/api';
 
 export interface ApiClientConfig {
   baseUrl: string;
@@ -153,15 +161,15 @@ export class ApiClient {
   constructor(private config: ApiClientConfig) {
     const apiConfig = new Configuration({
       basePath: config.baseUrl,
-      accessToken: config.tokenProvider,
+      accessToken: async () => (await config.tokenProvider()) ?? '',
       middleware: [{
-        post: async (context): Promise<ApiResponse> => {
+        post: async (context): Promise<Response | void> => {
           if (!context.response.ok) {
-            const error = await this.parseError(context.response);
+            const error = await this.parseError(context.response.clone());
             config.onError?.(error);
             throw error;
           }
-          return context.response as unknown as ApiResponse;
+          return context.response;
         }
       }]
     });
@@ -179,11 +187,13 @@ export class ApiClient {
 
   private async parseError(response: Response): Promise<ApiError> {
     const body = await response.text();
-    return new ApiError(
-      response.status,
-      response.statusText,
-      body ? JSON.parse(body) : null
-    );
+    let parsed: unknown = body;
+    try {
+      parsed = body ? JSON.parse(body) : null;
+    } catch {
+      // non-JSON error body (e.g. HTML from a proxy) — keep raw text
+    }
+    return new ApiError(response.status, response.statusText, parsed);
   }
 }
 ```
@@ -345,7 +355,6 @@ jobs:
 # TypeScript (fetch)
 generatorName: typescript-fetch
 additionalProperties:
-  typescriptThreePlus: true
   withInterfaces: true
 
 # C#
@@ -375,6 +384,7 @@ additionalProperties:
 ```python
 from typing import Dict, List, Optional
 import json
+import logging
 import subprocess
 from pathlib import Path
 
@@ -434,15 +444,15 @@ class OpenAPIClientGenerator:
 
     def _run(self, cmd: List[str]) -> bool:
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode == 0:
-                print(f"Generated client at {self.output_dir}")
-                return True
-            print(f"Generation failed: {result.stderr[:200]}")
-            return False
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         except FileNotFoundError as e:
-            print(f"Generator not found: {e}")
-            return False
+            raise RuntimeError(f"Generator executable not found for command {cmd[0]!r}: {e}") from e
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Client generation failed for spec {self.spec_path} (exit {result.returncode}): {result.stderr[-2000:]}"
+            )
+        logging.getLogger(__name__).info("Generated client at %s", self.output_dir)
+        return True
 ```
 
 ## Architecture Decision Trees
@@ -452,10 +462,10 @@ class OpenAPIClientGenerator:
 ```
 What language/framework?
 ├── TypeScript
-│   ├── axios-based → @openapitools/typescript-axios
-│   ├── fetch-based → @openapitools/typescript-fetch
-│   ├── Angular → @openapitools/typescript-angular
-│   └── Node.js → @openapitools/typescript-node
+│   ├── axios-based → generator `typescript-axios`
+│   ├── fetch-based → generator `typescript-fetch`
+│   ├── Angular → generator `typescript-angular`
+│   └── Node.js → generator `typescript-node` (or typescript-fetch on Node 18+, which has global fetch)
 │
 ├── Python
 │   └── httpx/requests → openapi-generator python

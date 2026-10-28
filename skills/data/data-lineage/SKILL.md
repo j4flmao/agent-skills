@@ -79,51 +79,32 @@ Each entity has a unique identifier (FQN), type, and metadata. Edges represent d
 ## OpenLineage Integration
 
 ### Airflow Integration
-```python
-from openlineage.airflow import DAG
-
-dag = DAG(
-    dag_id='orders_pipeline',
-    schedule='0 3 * * *',
-    catchup=False,
-    description='Orders ETL with lineage tracking'
-)
-
-with dag:
-    extract = PostgresOperator(
-        task_id='extract_orders',
-        postgres_conn_id='source_db',
-        sql='SELECT * FROM orders WHERE created_at > :last_run'
-    )
-    transform = dbtRunOperator(
-        task_id='transform_orders',
-        models='orders'
-    )
+Install `apache-airflow-providers-openlineage`; supported operators (SQL, dbt Cloud, Spark, BigQuery, Snowflake, ...) emit lineage automatically. No DAG code changes are needed.
+```ini
+# airflow.cfg (or env AIRFLOW__OPENLINEAGE__TRANSPORT / AIRFLOW__OPENLINEAGE__NAMESPACE)
+[openlineage]
+namespace = prod_airflow
+transport = {"type": "http", "url": "http://marquez:5000", "endpoint": "api/v1/lineage"}
 ```
+For `PythonOperator` code, declare lineage with `inlets=`/`outlets=` or emit events with the OpenLineage client.
 
 ### dbt Integration
-```yaml
-# profiles.yml dbt-cloud config
-openlineage:
-  enabled: true
-  url: http://marquez:5000
-  namespace: prod_warehouse
-  dataset_namespace: postgresql://warehouse:5432/prod
-
-# dbt_project.yml
-vars:
-  openlineage_compression: true
-  openlineage_flush_size: 100
+Run dbt through the `dbt-ol` wrapper (package `openlineage-dbt`); it reads the run artifacts and emits lineage per model.
+```bash
+export OPENLINEAGE_URL=http://marquez:5000
+export OPENLINEAGE_NAMESPACE=prod_warehouse
+dbt-ol run --select orders
 ```
 
 ### Spark Integration
-```xml
-<!-- spark-defaults.conf -->
+```properties
+# spark-defaults.conf (pin the openlineage-spark version matching your Spark/Scala build)
+spark.jars.packages=io.openlineage:openlineage-spark_2.12:<version>
 spark.extraListeners=io.openlineage.spark.agent.OpenLineageSparkListener
-spark.openlineage.host=http://marquez:5000
+spark.openlineage.transport.type=http
+spark.openlineage.transport.url=http://marquez:5000
 spark.openlineage.namespace=prod_spark
 spark.openlineage.parentJobName=daily_aggregations
-spark.openlineage.parentRunId=run-uuid-here
 ```
 
 ## Marquez Deployment
@@ -501,29 +482,42 @@ Lineage Collection Strategy
     └── No → Proprietary (Atlan, Datahub native)
 ```
 
-**Decision criteria**: Balance lineage granularity, collection latency, and storage cost. Column-level lineage requires 10x more storage.
+**Decision criteria**: Balance lineage granularity, collection latency, and storage cost. Column-level lineage needs considerably more storage and parsing effort than table-level lineage.
 
 ## Implementation Patterns
 
 ### OpenLineage Spark Listener
 ```python
 # data_lineage/spark_listener.py
-from openlineage.spark import OpenLineageSparkListener
+# The Spark listener itself is a JVM jar (see spark-defaults.conf above); this Python
+# reporter emits lineage for custom jobs that no integration covers.
+from datetime import datetime, timezone
+from uuid import uuid4
+
 from openlineage.client import OpenLineageClient
-from openlineage.client.transport import KafkaTransport
+from openlineage.client.event_v2 import InputDataset, Job, OutputDataset, Run, RunEvent, RunState
+from openlineage.client.transport.kafka import KafkaConfig, KafkaTransport
+
+PRODUCER = "https://github.com/acme/data-platform/lineage-reporter"
 
 class LineageReporter:
-    def __init__(self, topic: str, bootstrap_servers: str):
-        config = {"bootstrap.servers": bootstrap_servers}
-        transport = KafkaTransport(topic, config)
-        self.client = OpenLineageClient(transport=transport)
-
-    def enrich_metric(self, dataset: str, column: str, metric: dict):
-        self.client.emit(
-            event_type="ColumnMetric",
-            inputs=[{"namespace": "bigquery", "name": dataset}],
-            facets={"column_metric": {"column": column, **metric}}
+    def __init__(self, topic: str, bootstrap_servers: str, namespace: str = "custom_jobs"):
+        transport = KafkaTransport(
+            KafkaConfig(topic=topic, config={"bootstrap.servers": bootstrap_servers}, flush=True)
         )
+        self.client = OpenLineageClient(transport=transport)
+        self.namespace = namespace
+
+    def report_run(self, job_name: str, inputs: list[str], outputs: list[str]) -> None:
+        self.client.emit(RunEvent(
+            eventType=RunState.COMPLETE,
+            eventTime=datetime.now(timezone.utc).isoformat(),
+            run=Run(runId=str(uuid4())),
+            job=Job(namespace=self.namespace, name=job_name),
+            producer=PRODUCER,
+            inputs=[InputDataset(namespace="bigquery", name=n) for n in inputs],
+            outputs=[OutputDataset(namespace="bigquery", name=n) for n in outputs],
+        ))
 ```
 
 ### SQL Parser Lineage

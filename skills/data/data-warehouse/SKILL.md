@@ -283,7 +283,7 @@ ALTER TABLE fact_orders RECLUSTER;
 ## Specialized Analytics Engines
 
 ### ClickHouse
-ClickHouse is a column-oriented OLAP database for real-time analytics. Uses columnar storage with vectorized query execution (SIMD), achieving 100-1000x faster queries than row-oriented databases on analytical workloads. Key features: MergeTree table engine family (ReplacingMergeTree for dedup, SummingMergeTree for pre-aggregation, CollapsingMergeTree for mutable state), incremental materialized views, distributed query across shards, and SQL with array/higher-order functions. Excels at: real-time dashboards, time-series analytics, log analytics, sub-second queries on billions of rows. Deploy alongside a primary warehouse for high-performance serving of pre-aggregated or real-time data.
+ClickHouse is a column-oriented OLAP database for real-time analytics. Uses columnar storage with vectorized query execution (SIMD), which makes scans and aggregations over few columns far faster than in row-oriented databases. Key features: MergeTree table engine family (ReplacingMergeTree for dedup, SummingMergeTree for pre-aggregation, CollapsingMergeTree for mutable state), incremental materialized views, distributed query across shards, and SQL with array/higher-order functions. Excels at: real-time dashboards, time-series analytics, log analytics, sub-second queries on billions of rows. Deploy alongside a primary warehouse for high-performance serving of pre-aggregated or real-time data.
 
 ```sql
 CREATE TABLE events (

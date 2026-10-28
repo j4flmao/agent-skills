@@ -1,214 +1,236 @@
-# Bun Advanced Topics
-
-## Introduction
-Advanced Bun topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# Bun Advanced: Routing, WebSockets, Built-in Clients, Workers, FFI and Bundling
+
+Advanced Bun runtime features for production services: declarative routes in `Bun.serve`, WebSocket pub/sub, built-in PostgreSQL, S3 and Redis clients, workers, the foreign function interface, macros and bundler plugins, and single-file executables. Features were added across Bun 1.1 to 1.3; check the version you run (`bun --version`) against the docs for each API.
+
+## Bun.serve Routes
+
+Since Bun 1.2.3, `Bun.serve` accepts a `routes` object with path parameters, per-method handlers and static responses.
+
+```ts
+const server = Bun.serve({
+  port: Number(Bun.env.PORT ?? 3000),
+  idleTimeout: 30,                          // seconds; default 10
+  routes: {
+    "/health": new Response("ok"),          // static response, served without calling JS
+    "/api/users/:id": async (req) => {
+      const user = await findUser(req.params.id);
+      return user ? Response.json(user) : new Response("Not found", { status: 404 });
+    },
+    "/api/posts": {
+      GET: () => Response.json(listPosts()),
+      POST: async (req) => {
+        const body = await req.json();
+        return Response.json(await createPost(body), { status: 201 });
+      },
+    },
+    "/api/*": Response.json({ error: "Not found" }, { status: 404 }),
+  },
+  fetch(req) {                              // fallback for unmatched requests
+    return new Response("Not found", { status: 404 });
+  },
+  error(err) {
+    console.error("Unhandled error", err);
+    return new Response("Internal Server Error", { status: 500 });
+  },
+});
+
+console.log(`Listening on ${server.url}`);
+```
+
+- Route precedence: exact paths, then parameterized, then wildcards.
+- `server.reload({ routes })` swaps handlers without restarting.
+- HTML imports (`import page from "./index.html"` used as a route value) let Bun bundle and serve frontend assets in full-stack apps.
+- Frameworks (Hono, Elysia) remain useful for middleware, validation and OpenAPI generation.
+
+## WebSockets with Pub/Sub
+
+```ts
+type SocketData = { userId: string; room: string };
+
+Bun.serve<SocketData, {}>({
+  fetch(req, server) {
+    const url = new URL(req.url);
+    const userId = authenticate(req);                   // validate token/cookie before upgrading
+    if (!userId) return new Response("Unauthorized", { status: 401 });
+    const ok = server.upgrade(req, { data: { userId, room: url.searchParams.get("room") ?? "lobby" } });
+    return ok ? undefined : new Response("Upgrade failed", { status: 400 });
+  },
+  websocket: {
+    maxPayloadLength: 64 * 1024,
+    idleTimeout: 120,
+    open(ws) {
+      ws.subscribe(ws.data.room);
+    },
+    message(ws, message) {
+      ws.publish(ws.data.room, JSON.stringify({ from: ws.data.userId, text: String(message) }));
+    },
+    close(ws) {
+      ws.unsubscribe(ws.data.room);
+    },
+  },
+});
+```
+
+`publish` fans out within one process. With multiple instances, bridge topics through Redis pub/sub or a message broker. Watch `ws.send` return values for backpressure (`-1` means queued due to backpressure, `0` means dropped).
+
+## Built-in SQL Client
+
+```ts
+import { sql, SQL } from "bun";
+
+// Uses DATABASE_URL / POSTGRES_URL from the environment by default
+const users = await sql`SELECT id, email FROM users WHERE active = ${true} LIMIT ${50}`;
+
+const db = new SQL({ url: Bun.env.DATABASE_URL!, max: 20, idleTimeout: 30 });
+
+await db.begin(async (tx) => {
+  const [order] = await tx`INSERT INTO orders (user_id, total) VALUES (${userId}, ${total}) RETURNING id`;
+  await tx`INSERT INTO order_items ${tx(items.map((i) => ({ ...i, order_id: order.id })))}`;
+});
+```
+
+- Tagged template values are sent as parameters, not concatenated, so they are safe from SQL injection. Never build query text with string concatenation; use `sql.unsafe` only for trusted, static fragments.
+- PostgreSQL support arrived in Bun 1.2; MySQL and SQLite adapters behind the same API arrived later. ORMs (Drizzle, Prisma, Kysely) also run on Bun.
+
+## Built-in S3 Client
+
+```ts
+import { s3, S3Client } from "bun";
+
+// Default client reads S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY / S3_BUCKET / S3_REGION / S3_ENDPOINT
+// (AWS_* equivalents are also recognized); prefer instance/workload credentials where supported.
+const report = s3.file("reports/2026-10.json");
+await report.write(JSON.stringify(data), { type: "application/json" });
+const text = await report.text();
+
+const url = report.presign({ expiresIn: 900, method: "GET" });   // 15-minute download link
+
+const r2 = new S3Client({
+  bucket: "assets",
+  endpoint: "https://<account-id>.r2.cloudflarestorage.com",
+  accessKeyId: Bun.env.R2_ACCESS_KEY_ID,
+  secretAccessKey: Bun.env.R2_SECRET_ACCESS_KEY,
+});
+```
+
+Works with S3-compatible stores (Cloudflare R2, MinIO, Google Cloud Storage interoperability, DigitalOcean Spaces). Large uploads are streamed with multipart automatically through `file.writer()`.
+
+## Built-in Redis Client
+
+```ts
+import { redis, RedisClient } from "bun";
+
+await redis.set("session:abc", JSON.stringify(session), "EX", 3600);
+const raw = await redis.get("session:abc");
+
+const cache = new RedisClient(Bun.env.REDIS_URL);
+```
+
+Available since Bun 1.2.9; supports common commands, pipelining, and pub/sub on dedicated connections. Use `ioredis` or `node-redis` if you need cluster or sentinel features not yet covered.
+
+## Workers
+
+```ts
+// main.ts
+const worker = new Worker(new URL("./hash-worker.ts", import.meta.url).href);
+worker.postMessage({ password: "example" });
+worker.onmessage = (e) => console.log("hash", e.data);
+
+// hash-worker.ts
+declare var self: Worker;
+self.onmessage = async (e: MessageEvent<{ password: string }>) => {
+  const hash = await Bun.password.hash(e.data.password);   // argon2id by default
+  postMessage(hash);
+};
+```
+
+Use workers for CPU-bound work so the event loop keeps serving requests. `node:worker_threads` is also supported. For many short tasks, keep a pool of workers rather than spawning per request.
+
+## Foreign Function Interface (bun:ffi)
+
+```ts
+import { dlopen, FFIType, suffix } from "bun:ffi";
+
+const lib = dlopen(`./libmath.${suffix}`, {
+  add: { args: [FFIType.i32, FFIType.i32], returns: FFIType.i32 },
+});
+
+console.log(lib.symbols.add(2, 3));
+lib.close();
+```
+
+`bun:ffi` calls C ABI functions directly (Rust, Zig, C, C++ with `extern "C"`). Bun documents it as experimental; memory safety is your responsibility, and N-API addons are the more stable option for distributed packages.
+
+## Bundler, Plugins and Macros
+
+```ts
+await Bun.build({
+  entrypoints: ["./src/index.ts"],
+  outdir: "./dist",
+  target: "bun",              // "browser" | "bun" | "node"
+  format: "esm",
+  minify: true,
+  sourcemap: "linked",
+  splitting: true,
+  external: ["pg-native"],
+  plugins: [yamlPlugin],
+});
+```
+
+```ts
+import type { BunPlugin } from "bun";
+
+export const yamlPlugin: BunPlugin = {
+  name: "yaml",
+  setup(build) {
+    build.onLoad({ filter: /\.ya?ml$/ }, async (args) => {
+      const { parse } = await import("yaml");
+      const data = parse(await Bun.file(args.path).text());
+      return { contents: `export default ${JSON.stringify(data)};`, loader: "js" };
+    });
+  },
+};
+```
+
+Macros run at bundle time and inline their return value:
+
+```ts
+import { gitCommit } from "./build-info.ts" with { type: "macro" };
+export const VERSION = gitCommit();     // evaluated during bundling, embedded as a string
+```
+
+Only use macros from trusted code: they execute during the build.
+
+## Single-File Executables
+
+```bash
+bun build ./src/index.ts --compile --minify --sourcemap --bytecode --outfile dist/server
+bun build ./src/index.ts --compile --target=bun-linux-x64 --outfile dist/server-linux     # cross-compile
+bun build ./src/index.ts --compile --target=bun-linux-arm64-musl --outfile dist/server-alpine-arm64
+```
+
+- Embeds the Bun runtime and your bundled code into one binary; `--bytecode` precompiles to reduce startup time.
+- Embed assets with `import file from "./public/logo.png" with { type: "file" }`.
+- The binary includes the full runtime (tens of MB); size matters for some distribution channels.
+
+## Performance and Debugging
+
+```bash
+bun --inspect src/index.ts          # WebKit Inspector protocol; open debug.bun.sh
+bun --inspect-brk src/index.ts      # break on first line
+bun --smol src/index.ts             # smaller heap, more frequent GC for memory-constrained containers
+```
+
+- Measure with real load (`oha`, `bombardier`, k6); micro-benchmarks of hello-world servers say little about your app.
+- `Bun.nanoseconds()` and `performance.now()` for timing; `bun:jsc` exposes `heapStats()` for memory inspection.
+- Use `Bun.gc(true)` only in diagnostics, never in request paths.
+
+## Checklist
+
+- [ ] Bun version supports each API used (routes 1.2.3+, SQL 1.2+, Redis 1.2.9+)
+- [ ] WebSocket upgrades authenticate before `server.upgrade`; cross-instance fan-out via broker
+- [ ] SQL only through tagged templates or an ORM; no string-built queries
+- [ ] Credentials from environment or workload identity, never in code
+- [ ] CPU-bound work moved to workers
+- [ ] FFI isolated and covered by tests; macros only from trusted sources
+- [ ] Executables built per target platform in CI

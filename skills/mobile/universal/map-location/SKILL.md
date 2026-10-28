@@ -1,7 +1,46 @@
-# Map and Location Skill
+---
+name: map-location
+description: >
+  Use this skill when the user says 'maps', 'map SDK', 'MapKit', 'Google Maps SDK', 'Mapbox', 'location tracking', 'GPS', 'geofencing', 'background location', 'geocoding', 'marker clustering'. Chooses a map SDK and implements location permissions, foreground/background tracking, geofencing, geocoding and map rendering performance on iOS, Android and cross-platform apps. Do NOT use for: backend geospatial queries (use data/relational-database with PostGIS), game world maps, indoor positioning hardware.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [mobile, universal, maps, location, geofencing]
+---
 
-## Overview
-Map integration provides location-based features including interactive maps, geocoding, routing, and location tracking. This skill covers platform-specific APIs (MapKit, Google Maps, Mapbox), cross-platform solutions, and location services.
+# Map and Location
+
+## Purpose
+Map integration provides interactive maps, geocoding, routing and location tracking. This skill picks the right SDK (MapKit, Google Maps, Mapbox, MapLibre), requests location permissions at the minimum level needed, and implements tracking that respects battery and privacy rules on iOS and Android.
+
+## Agent Protocol
+
+### Trigger
+"maps", "map SDK", "MapKit", "Google Maps", "Mapbox", "location tracking", "GPS", "geofencing", "background location", "geocoding", "marker clustering".
+
+### Input Context
+- Platforms and framework (native iOS/Android, Flutter, React Native)
+- Features needed (display, search, routing, offline, geofences, background tracking)
+- Accuracy/battery needs and privacy constraints (store review, GDPR)
+
+### Output Artifact
+SDK choice, permission strings/manifest entries, and location/map code. No file unless requested.
+
+### Response Format
+```
+SDK: {MapKit | Google Maps | Mapbox | MapLibre}
+Permissions: {iOS keys / Android permissions, when requested}
+Tracking: {foreground | background | significant-change | geofence}
+Code: {snippet}
+Battery/privacy notes: {accuracy level, update interval, data retention}
+```
+
+### Rules
+- Request "when in use" first; ask for background ("Always" / `ACCESS_BACKGROUND_LOCATION`) only for a feature that needs it, after explaining why. Android 11+ makes the user grant background location from Settings, separately from foreground.
+- iOS 14+ users can grant approximate location only; check `CLLocationManager.accuracyAuthorization` and request temporary full accuracy (`requestTemporaryFullAccuracyAuthorization(withPurposeKey:)`) when needed.
+- Android 12+: requesting `ACCESS_FINE_LOCATION` requires also requesting `ACCESS_COARSE_LOCATION`; the user may grant only approximate.
+- Background tracking on Android needs a foreground service with `foregroundServiceType="location"` (and the `FOREGROUND_SERVICE_LOCATION` permission on Android 14+).
+- Use the lowest accuracy and longest interval that satisfies the feature; prefer geofences or significant-change monitoring over continuous GPS.
 
 ## Decision Tree: Map Platform Selection
 
@@ -155,7 +194,8 @@ class MapHelper(private val googleMap: GoogleMap) {
 ```
 iOS:
   - NSLocationWhenInUseUsageDescription (foreground only)
-  - NSLocationAlwaysUsageDescription (background tracking)
+  - NSLocationAlwaysAndWhenInUseUsageDescription (background; NSLocationAlwaysUsageDescription is the pre-iOS 11 key)
+  - UIBackgroundModes: location (Info.plist) for continuous background updates
   - CLLocationManager.requestWhenInUseAuthorization()
   - CLLocationManager.requestAlwaysAuthorization()
 
@@ -467,127 +507,11 @@ function optimizeRoute(points: LatLng[], startIndex: number = 0): LatLng[] {
 - **Cluster on the server**: For large datasets (>10K markers), pre-compute clusters on the server and return clustered data based on viewport bounds.
 - **Simplify polylines**: Use the Ramer-Douglas-Peucker algorithm to reduce polyline vertex count by 70-90% without visible quality loss.
 - **Lazy-load POI details**: Show marker popups with placeholder data first, then fetch details asynchronously. Cache POI responses in local storage.
-## Implementation Patterns
 
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
-## Rules
-- Default-deny security posture — allow only explicitly required access.
-- All inputs validated, all outputs encoded, all errors handled.
-- Defend in depth — multiple layers of security controls.
-- Fail securely — errors default to safe behavior.
-- Log security-relevant events for audit and investigation.
-- Keep dependencies updated — automate vulnerability scanning.
-- Design for observability from day one, not as an afterthought.
-- Document all architectural decisions with rationale.
-- Review code for security, performance, and correctness before merging.
+## References
+- `references/map-sdks.md` — SDK comparison and selection
+- `references/map-integration.md` — map setup per platform
+- `references/map-customization.md` — styling, markers, overlays
+- `references/location-services.md` — location APIs and tracking modes
+- `references/location-privacy.md` — permissions and privacy rules
+- `references/geofencing-patterns.md` — geofence limits and patterns

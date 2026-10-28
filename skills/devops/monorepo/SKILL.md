@@ -353,7 +353,6 @@ npx nx g @nx/js:lib shared --directory=packages/shared
 ### Step 13: Nx Cloud On-Prem Configuration
 ```bash
 # docker-compose for self-hosted Nx Cloud
-version: '3.8'
 services:
   nx-cloud:
     image: nrwl/nx-cloud:latest

@@ -1,203 +1,113 @@
 # Regression Testing Fundamentals
 
-## Overview
-Regression testing verifies that recent code changes haven't broken existing functionality. Every time a change is made — new feature, bug fix, refactor, dependency update — regression tests ensure the system still works as expected. Effective regression testing balances coverage against execution time.
+Regression testing checks that changes (features, fixes, refactors, dependency or configuration updates) have not broken behavior that previously worked. This reference covers the core concepts: what a regression suite contains, levels of regression testing, selection approaches, suite health and how it fits into CI/CD. Deeper treatments: `test-selection.md`, `risk-based-selection.md`, `flaky-test-management.md`, `regression-suites.md`, `regression-metrics.md`.
 
-## Core Concepts
+## Sources of Regressions
 
-### Concept 1: Regression Test Selection
-Running the full test suite on every change is impractical. Selection strategies:
-- **Full suite**: Run everything (nightly or pre-release, not on every commit)
-- **Impact analysis**: Run tests related to changed code (module-level, dependency graph)
-- **Risk-based**: Prioritize tests for high-risk areas (critical features, recent changes, known fragile code)
-- **Time-window**: Run tests based on last successful run age
-- **Machine learning**: Model predicts which tests are likely to fail based on change patterns
+| Source | Example |
+|--------|---------|
+| Code changes | Refactor alters an edge case |
+| Dependency updates | Library changes default behavior |
+| Configuration and feature flags | New default flag value disables a path |
+| Data and schema changes | Migration changes nullability |
+| Infrastructure | Runtime/OS/browser version changes |
+| Third-party APIs | Provider changes response format |
 
-### Concept 2: Test Suite Optimization
-A healthy regression suite balances speed and coverage. Optimize by: removing redundant tests, converting slow E2E tests to fast API tests, breaking large suites into parallelizable shards, and retiring tests that never fail. Target: regression suite completes within 30 minutes.
+Regression testing must cover more than code diffs: dependency bumps and config changes need the same safety net.
 
-### Concept 3: Flaky Test Management
-Flaky tests (non-deterministic pass/fail) erode trust in the regression suite. Detect flaky tests by running multiple times, tracking pass rates, and flagging inconsistent results. Quarantine flaky tests within 24 hours and fix them within one sprint.
+## What a Regression Suite Contains
 
-### Concept 4: Regression Test Automation
-Automated regression testing runs on every PR, on merge to main, and on scheduled cadence. CI pipeline stages: unit regression (fast, every commit), integration regression (on PR merge), E2E regression (nightly, pre-release). Each stage has different scope and time budget.
+| Layer | Content | Speed |
+|-------|---------|-------|
+| Unit tests | Business logic, edge cases, past bug reproductions | Seconds |
+| Integration/API tests | Service + DB, API contracts | Minutes |
+| Contract tests | Provider/consumer compatibility | Minutes |
+| UI/E2E tests | Critical user journeys only | Minutes to tens of minutes |
+| Visual regression | Screenshot diffs of key components/pages | Minutes |
+| Non-functional | Performance baselines, accessibility checks | Varies |
 
-## Implementation Guide
+Every fixed defect should add a test at the lowest level that reproduces it, so the same bug cannot silently return.
 
-### Step 1: Categorize Tests by Risk
+## Regression Test Selection
+
+| Approach | Description | Trade-off |
+|----------|-------------|-----------|
+| Retest all | Run the entire suite | Safest, slowest |
+| Change-based / test impact analysis | Run tests that depend on changed files/modules (dependency graph, coverage maps) | Fast; misses indirect effects (config, data) |
+| Risk-based | Prioritize critical, complex, frequently failing areas | Needs maintained risk ratings |
+| Prioritization | Run all, but most valuable first for faster failure feedback | Still full cost, earlier signal |
+
+Common combination: impact-based selection on pull requests, full suite on main/nightly, plus a fixed smoke set always.
+
+Monorepo tools provide affected-target detection (Nx `affected`, Turborepo filters, Bazel query, Gradle build cache). Jest `--changedSince` and Vitest `--changed` offer file-level selection for JavaScript projects.
+
+## Tiered Execution in CI/CD
+
+| Trigger | Scope | Time budget (team-defined) |
+|---------|-------|----------------------------|
+| Pre-commit / local | Affected unit tests, lint | Seconds |
+| Pull request | Affected unit + integration, smoke E2E, contract tests | Short enough not to block flow |
+| Merge to main | Full unit/integration, broader E2E | Longer |
+| Nightly / pre-release | Full E2E, visual, performance, cross-browser | Longest |
+| Post-deploy | Smoke tests and synthetic monitoring in each environment | Minutes |
+
 ```yaml
-regression_suite:
-  tier_1_critical:
-    description: "Run on every PR — must complete in < 5 min"
-    tests:
-      - "Core checkout flow"
-      - "User authentication"
-      - "Payment processing"
-      - "Search functionality"
-    allowed_failures: 0
-
-  tier_2_high:
-    description: "Run on merge to main — complete in < 15 min"
-    tests:
-      - "All API endpoints smoke tests"
-      - "Database migration tests"
-      - "Cross-feature integration tests"
-    allowed_failures: "1 failure allowed, must be fixed within 24h"
-
-  tier_3_full:
-    description: "Run nightly — complete in < 60 min"
-    tests:
-      - "Full E2E suite"
-      - "Visual regression suite"
-      - "Performance regression suite"
-      - "All integration tests"
-    allowed_failures: "Quarantine flaky tests, fix within sprint"
-```
-
-### Step 2: Write Regression Tests
-```python
-# tests/regression/test_checkout_regression.py
-"""Regression tests for checkout — run on every PR."""
-import pytest
-from httpx import AsyncClient
-
-class TestCheckoutRegression:
-    """Critical path tests — must pass for any PR merge."""
-
-    async def test_complete_checkout_flow(self, client: AsyncClient):
-        """Regression: full checkout flow should complete successfully."""
-        # Add item to cart
-        await client.post("/api/cart", json={"product_id": 1, "quantity": 1})
-        # Checkout
-        response = await client.post("/api/checkout")
-        assert response.status_code == 200
-        data = response.json()
-        assert "order_id" in data
-        assert data["status"] == "confirmed"
-
-    async def test_checkout_with_empty_cart(self, client: AsyncClient):
-        """Regression: checkout with empty cart returns 400."""
-        response = await client.post("/api/checkout")
-        assert response.status_code == 400
-        assert "empty" in response.json()["error"].lower()
-
-    async def test_checkout_idempotency(self, client: AsyncClient):
-        """Regression: same idempotency key returns same order."""
-        await client.post("/api/cart", json={"product_id": 1, "quantity": 1})
-        resp1 = await client.post("/api/checkout", headers={"Idempotency-Key": "key-1"})
-        await client.post("/api/cart", json={"product_id": 2, "quantity": 1})
-        resp2 = await client.post("/api/checkout", headers={"Idempotency-Key": "key-1"})
-        assert resp1.json()["order_id"] == resp2.json()["order_id"]
-```
-
-### Step 3: CI Regression Pipeline
-```yaml
-# .github/workflows/regression.yml
-name: Regression Tests
-on:
-  pull_request:
-    branches: [main]
-  schedule:
-    - cron: "0 4 * * 1-5"  # Nightly full suite
-
+# GitHub Actions excerpt: affected tests on PRs, full suite on main
 jobs:
-  tier-1:
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
       - run: npm ci
-      - name: Tier 1 — Critical path regression
-        run: npx vitest run --project=tier-1
-
-  tier-2:
-    needs: tier-1
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - run: npm ci
-      - name: Tier 2 — Integration regression
-        run: npx vitest run --project=tier-2
-
-  tier-3:
-    needs: [tier-1, tier-2]
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    if: github.event_name == 'schedule'
-    steps:
-      - uses: actions/checkout@v4
-      - run: npm ci
-      - name: Tier 3 — Full regression suite
-        run: npx vitest run --project=tier-3
+      - name: Affected tests (PR)
+        if: github.event_name == 'pull_request'
+        run: npx nx affected -t test --base=origin/${{ github.base_ref }}
+      - name: Full suite (main)
+        if: github.ref == 'refs/heads/main'
+        run: npx nx run-many -t test
 ```
 
-### Step 4: Impact Analysis for Test Selection
-```python
-# scripts/select_regression_tests.py
-import subprocess
-import json
+## Suite Health
 
-def get_changed_files(branch: str) -> list[str]:
-    """Get files changed in the current branch vs main."""
-    result = subprocess.run(
-        ["git", "diff", "--name-only", f"origin/main...{branch}"],
-        capture_output=True, text=True, check=True,
-    )
-    return result.stdout.strip().split("\n")
+| Problem | Effect | Practice |
+|---------|--------|----------|
+| Flaky tests | Teams ignore failures | Detect via reruns/history, quarantine with owner and deadline, fix root cause (timing, shared state, order dependence) |
+| Slow suite | Feedback delayed, people skip tests | Parallelize/shard, move checks to lower levels, remove redundant E2E |
+| Redundant tests | Maintenance cost | Remove duplicates covered at lower levels |
+| Obsolete tests | False failures after intended changes | Update or delete with the feature change |
+| Weak assertions | Tests pass despite bugs | Mutation testing on critical modules |
 
-def get_affected_tests(changed_files: list[str]) -> list[str]:
-    """Map changed files to potentially affected test files."""
-    module_tests = {
-        "src/pricing": ["tests/integration/test_pricing.py", "tests/unit/test_pricing.py"],
-        "src/checkout": ["tests/integration/test_checkout.py"],
-        "src/user": ["tests/unit/test_user.py", "tests/integration/test_auth.py"],
-    }
-    affected = set()
-    for changed in changed_files:
-        for module, tests in module_tests.items():
-            if changed.startswith(module):
-                affected.update(tests)
-    return list(affected)
+Automatic retries can hide flakiness; if used, record and report retried passes rather than treating them as clean.
 
-if __name__ == "__main__":
-    branch = subprocess.run(
-        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-        capture_output=True, text=True, check=True,
-    ).stdout.strip()
-    changed = get_changed_files(branch)
-    tests = get_affected_tests(changed)
-    print(f"::set-output name=test-files::{','.join(tests)}")
-```
+## Writing Good Regression Tests
 
-## Best Practices
-- Tier regression tests by criticality and execution time
-- Always run critical path tests on every PR
-- Use impact analysis to select relevant tests for the change
-- Quarantine flaky tests immediately — don't let them block CI
-- Track regression suite health: pass rate, execution time, flakiness
-- Convert slow E2E regression tests to faster API-level tests
-- Regular test suite cleanup: remove redundant tests, retire never-failing tests
-- Use test sharding for parallel execution in CI
-- Monitor regression test coverage — ensure new features get regression tests
-- Automate regression test selection based on code change analysis
+- Deterministic: control time, randomness (seeded), and external services (mocks/containers).
+- Independent: each test sets up and cleans its own data; can run in any order and in parallel.
+- Behavior-focused: assert observable outcomes, not implementation details, so refactors do not cause false failures.
+- Clear failure messages pointing to the broken behavior.
+- Named after the behavior or the bug they guard (`refund_rejects_amount_above_captured_total`).
 
-## Common Pitfalls
-- Running the full regression suite on every commit (too slow, blocks development)
-- Ignoring flaky tests (erodes trust, masks real failures)
-- No test selection strategy (wastes time on unrelated tests)
-- Only adding, never removing tests (suite grows unbounded)
-- E2E-heavy regression suite (brittle, slow, expensive)
-- No coverage tracking (can't tell if new features are covered)
-- Tests dependent on test order (fragile, hard to debug)
-- Regression tests that duplicate lower-level tests (wasted effort)
+## Visual and Snapshot Regression
 
-## Key Points
-- Regression testing prevents existing functionality from breaking
-- Tier tests by criticality: critical on every PR, full suite nightly
-- Use impact analysis to select relevant tests for each change
-- Manage flaky tests: detect, quarantine, fix
-- Optimize suite to fit within time budgets
-- Track suite health metrics: pass rate, execution time, flakiness
-- Convert slow tests to faster alternatives
-- Clean up the suite regularly — remove redundant tests
+- Visual tools (Playwright `toHaveScreenshot`, Chromatic, Percy) catch layout regressions; stabilize fonts, animations and dynamic data.
+- Keep snapshot tests small and reviewed; large auto-updated snapshots become rubber stamps.
+
+## Measuring Effectiveness
+
+- Escaped regressions per release (bugs in previously working functionality found after release).
+- Time from commit to regression signal.
+- Flaky rate and quarantine count.
+- Share of fixed defects that received a regression test.
+
+## Checklist
+
+- [ ] Every bug fix adds a regression test at the lowest effective level
+- [ ] Dependency and config changes run the regression suite
+- [ ] Impact-based selection on PRs, full suite on main/nightly
+- [ ] Smoke tests after each deployment
+- [ ] Flaky tests quarantined with owners and deadlines
+- [ ] Suite duration tracked; slow layers pushed down the pyramid
+- [ ] Escaped regressions reviewed to improve coverage

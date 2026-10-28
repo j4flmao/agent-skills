@@ -1,7 +1,7 @@
 ---
 name: aspirational-roadmapping
 description: >
-  Use when the user asks about strategic roadmapping, technology roadmapping, product roadmap creation, prioritization frameworks (RICE, WSJF, MoSCoW), OKR alignment, stakeholder alignment, timeline planning, or roadmap communication. Do NOT use for: project management task tracking, sprint planning, or technical architecture design.
+  Use this skill when the user asks about strategic roadmapping, technology roadmapping, product roadmap creation, prioritization frameworks (RICE, WSJF, MoSCoW), OKR alignment, stakeholder alignment, timeline planning, or roadmap communication. Do NOT use for: project management task tracking, sprint planning, or technical architecture design.
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -18,6 +18,36 @@ tags: [aspirational, roadmapping, phase-3]
 
 ## Purpose
 Create, communicate, and execute strategic roadmaps that align technology initiatives with business outcomes. Apply prioritization frameworks, connect work to OKRs, manage stakeholder expectations, and plan timelines that balance innovation with delivery.
+
+## Agent Protocol
+
+### Trigger
+"roadmap", "product roadmap", "technology roadmap", "now-next-later", "RICE", "WSJF", "MoSCoW", "OKR alignment", "roadmap review", "stakeholder alignment", "planning horizon".
+
+### Input Context
+- Strategy or vision statement and current OKRs (company and team level).
+- Candidate initiatives with rough effort, owners, and known dependencies.
+- Audience for the roadmap (executive, engineering, customer) and planning period.
+- Capacity: team size, committed work, expected unplanned load.
+
+### Output Artifact
+A roadmap (Now/Next/Later or outcome-driven) with scored priorities, OKR traceability, dependencies, risks, and an audience-specific view. No file unless requested.
+
+### Response Format
+```
+Period: {e.g. H1 2027}   Framework: {now-next-later|outcome|capability}
+Theme: {name} -> Objective: {O}
+  [{horizon}] {initiative} | score {RICE/WSJF} | KR {ids} | owner {team} | deps {ids}
+Trade-offs: {what is explicitly not being done}
+Risks: If {event} -> then {consequence}; mitigation {action}
+```
+
+### Completion Criteria
+- [ ] Every initiative maps to at least one KR or is explicitly marked as keep-the-lights-on.
+- [ ] Prioritization method stated and scores shown, not just a ranked list.
+- [ ] Capacity buffer included (planned work well below 100%).
+- [ ] Dependencies and top risks listed with owners.
+- [ ] View tailored to the stated audience (dates only where certainty is high).
 
 ## Workflow
 
@@ -93,7 +123,7 @@ CAPABILITY: Developer Self-Service
 CAPABILITY: API Reliability
 ├── Q2: Multi-region active-active
 ├── Q3: Automated failover
-|── Q4: SLA dashboard for consumers
+├── Q4: SLA dashboard for consumers
 └── Q1 2027: Chaos engineering program
 
 CAPABILITY: API Ecosystem
@@ -155,7 +185,7 @@ initiative: Multi-region deployment
 
 ### WSJF (Weighted Shortest Job First)
 
-Used in SAFe for prioritizing jobs by dividing value by duration.
+Used in SAFe: Cost of Delay divided by job size (a proxy for duration). All four inputs are relative estimates on a modified Fibonacci scale (1, 2, 3, 5, 8, 13, 20), scored column by column against the other candidates.
 
 ```
 WSJF = (User-Business Value + Time Criticality + Risk Reduction/Opportunity Enablement) / Job Size
@@ -166,14 +196,14 @@ initiative: API version v3 migration
   user_value: 8   (major DX improvement)
   time_criticality: 6 (v2 sunset deadline approaching)
   risk_reduction: 5 (security improvements in v3)
-  job_size: 5 (5 sprints)
-  wsJF: (8 + 6 + 5) / 5 = 3.8
+  job_size: 5 (relative Fibonacci estimate, not sprints)
+  wsjf: (8 + 6 + 5) / 5 = 3.8
 
 initiative: Developer portal redesign
   user_value: 5 (nice-to-have improvement)
   time_criticality: 2 (no deadline)
   risk_reduction: 2 (cosmetic)
-  job_size: 8 (8 sprints)
+  job_size: 8 (relative Fibonacci estimate)
   wsjf: (5 + 2 + 2) / 8 = 1.125
 ```
 
@@ -283,6 +313,14 @@ class OKRHealthCheck:
                 "recommended_action": self.recommend_action(status, risks),
             })
         return results
+
+    @staticmethod
+    def recommend_action(status: str, risks: list[str]) -> str:
+        if status == "at_risk":
+            return f"Escalate in next roadmap review; re-plan or descope ({len(risks)} KR(s) below 70% of expected)"
+        if status == "needs_attention":
+            return "Review blockers with the owning team this week"
+        return "No action; keep monthly check-in"
 ```
 
 ## Stakeholder Alignment
@@ -365,17 +403,20 @@ Current trade-off:
 ### Planning Horizons
 ```yaml
 planning_horizons:
-  strategic: 12-24 months
+  strategic:
+    span: 12-24 months
     detail: initiative-level, outcome-focused
     owner: CPO / VP Product
     review: quarterly
 
-  tactical: 3-6 months
+  tactical:
+    span: 3-6 months
     detail: epic-level, milestone-focused
     owner: Product Director
     review: monthly
 
-  operational: 1-3 months
+  operational:
+    span: 1-3 months
     detail: story-level, delivery-focused
     owner: Product Manager
     review: biweekly
@@ -648,7 +689,7 @@ roadmap_health:
     target: > 90%
     measurement: OKR-linked initiatives / total initiatives
 
-   stakeholder_satisfaction:
+  stakeholder_satisfaction:
     description: Stakeholder satisfaction with roadmap process
     target: > 4.0 / 5.0
     measurement: Quarterly survey

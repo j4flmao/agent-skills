@@ -652,7 +652,7 @@ Retry-After: 30  (on 429 responses only)
   - references/response-envelope.md — Response Envelope Reference
   - references/api-response-fundamentals.md — API Response Fundamentals
   - references/api-response-advanced.md — API Response Advanced Patterns
-  - references/response-compression.md — Response Compression and Optimization
+  - references/api-response-compression.md — Response Compression and Optimization
 
 ## Handoff
 Hand off to `backend/universal/api-design/SKILL.md` for endpoint routing and resource design. Hand off to `backend/universal/oop-principles/SKILL.md` for exception class hierarchy design.

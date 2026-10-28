@@ -1,213 +1,228 @@
-# Ember Fundamentals
+# Ember.js Fundamentals (Octane and Template Tag)
+
+Core concepts of modern Ember: the router and routes, components written in template-tag format (`.gjs`/`.gts`), tracked state, actions and modifiers, helpers, services, and data loading. This describes Octane-era idioms; classic components, mixins and computed properties are legacy.
+
+## Mental Model
+
+```text
+URL ─► Router ─► Route (model hook loads data) ─► Template (renders) ─► Components
+                                                            │
+                                         Services (shared state, singletons, injected)
+```
+
+- **Router** maps URLs to nested routes.
+- **Routes** load data and handle transitions.
+- **Components** render UI and own local state.
+- **Services** hold app-wide state and side effects (session, API client, notifications).
+- **Autotracking** re-renders whatever reads `@tracked` state that changed.
+
+## Routing
+
+```js
+// app/router.js
+import EmberRouter from '@ember/routing/router';
+import config from 'my-app/config/environment';
+
+export default class Router extends EmberRouter {
+  location = config.locationType;
+  rootURL = config.rootURL;
+}
+
+Router.map(function () {
+  this.route('orders', function () {
+    this.route('order', { path: '/:order_id' });
+  });
+  this.route('not-found', { path: '/*path' });
+});
+```
+
+```js
+// app/routes/orders/order.js
+import Route from '@ember/routing/route';
+import { service } from '@ember/service';
+
+export default class OrderRoute extends Route {
+  @service api;
+
+  async model({ order_id }) {
+    return this.api.fetchOrder(order_id);
+  }
+}
+```
+
+The model hook may return a promise; Ember waits for it and shows `loading` substates (`orders/order-loading` or `loading` templates) and `error` substates on rejection.
+
+## Components (template tag)
+
+```gjs
+// app/components/order-summary.gjs
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { on } from '@ember/modifier';
+import { fn } from '@ember/helper';
+
+const formatMoney = (minor, currency) =>
+  new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(minor / 100);
+
+export default class OrderSummary extends Component {
+  @tracked expanded = false;
+
+  toggle = () => {
+    this.expanded = !this.expanded;
+  };
+
+  get itemCount() {
+    return this.args.order.lines.length;
+  }
+
+  <template>
+    <section class="order-summary">
+      <h2>Order {{@order.id}}</h2>
+      <p>{{this.itemCount}} items, total {{formatMoney @order.totalMinor @order.currency}}</p>
+      <button type="button" {{on "click" this.toggle}} aria-expanded="{{this.expanded}}">
+        {{if this.expanded "Hide" "Show"}} details
+      </button>
+      {{#if this.expanded}}
+        <ul>
+          {{#each @order.lines key="id" as |line|}}
+            <li>{{line.name}} × {{line.qty}}
+              <button type="button" {{on "click" (fn @onRemove line.id)}}>Remove</button>
+            </li>
+          {{/each}}
+        </ul>
+      {{/if}}
+    </section>
+  </template>
+}
+```
+
+Key points:
+- `@name` reads arguments passed by the parent; `this.x` reads component state. Arguments are read-only; communicate upward with callback arguments (`@onRemove`).
+- Template-tag files import everything they use (components, helpers, modifiers), giving explicit dependencies and better tooling.
+- Plain functions work as helpers; getters derive state and are autotracked.
+- Template-only components can be just a `<template>` in a `.gjs` file.
 
-## Overview
-Ember is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+## Tracked State
 
-## Core Concepts
+```js
+import { tracked } from '@glimmer/tracking';
+import { TrackedArray, TrackedMap } from 'tracked-built-ins';
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Ember helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+class Cart {
+  @tracked coupon = null;
+  lines = new TrackedArray([]);    // mutations like push() are tracked
+}
+```
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Ember solutions. These principles help maintain code quality and reduce technical debt.
+- Re-assign `@tracked` properties to trigger updates; mutating a plain array/object in place does not notify.
+- Use `tracked-built-ins` (or reassign copies) for collections.
+- Avoid setting tracked state during render (it triggers an assertion about updating a value already consumed in the same render).
 
-### Concept 3: Data Management
-Proper data management is essential for Ember. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Modifiers
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+Modifiers attach behaviour to DOM elements.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+```gjs
+import { modifier } from 'ember-modifier';
 
-## Architecture Patterns
+const autofocus = modifier((element) => {
+  element.focus();
+});
 
-### Pattern 1: Standard Architecture
-The standard architecture for Ember follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+<template>
+  <input {{autofocus}} aria-label="Search" />
+</template>
+```
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+Built-in `{{on}}` handles events; use modifiers instead of `didInsertElement`-style lifecycle hooks.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+## Services
 
-## Implementation Guide
+```js
+// app/services/session.js
+import Service from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+export default class SessionService extends Service {
+  @tracked user = null;
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+  get isAuthenticated() {
+    return this.user !== null;
+  }
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+  signIn(user) { this.user = user; }
+  signOut() { this.user = null; }
+}
+```
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+Inject with `@service session;` in routes, components, or other services. Services are singletons per application instance (per test in tests).
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+## Data Loading Options
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+| Option | Use |
+|--------|-----|
+| `fetch` in a service | Simple APIs, full control |
+| EmberData / WarpDrive | Normalized cache, requests, JSON:API or custom formats |
+| GraphQL clients | GraphQL backends |
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+Load route-level data in `model()`; load component-level data with resources or tasks (see advanced reference) rather than in constructors.
 
-## Best Practices
+## Forms and Input
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+```gjs
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { on } from '@ember/modifier';
 
-## Common Pitfalls
+export default class EmailForm extends Component {
+  @tracked email = '';
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+  update = (event) => { this.email = event.target.value; };
+  submit = (event) => {
+    event.preventDefault();
+    this.args.onSubmit(this.email);
+  };
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+  <template>
+    <form {{on "submit" this.submit}}>
+      <label for="email">Email</label>
+      <input id="email" type="email" required value={{this.email}} {{on "input" this.update}} />
+      <button type="submit">Save</button>
+    </form>
+  </template>
+}
+```
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+Ember favours "data down, actions up": the component owns the input value, and the parent receives the result via a callback.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## Testing Basics
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+```js
+import { module, test } from 'qunit';
+import { setupRenderingTest } from 'my-app/tests/helpers';
+import { render, click } from '@ember/test-helpers';
+import OrderSummary from 'my-app/components/order-summary';
 
-## Tooling Ecosystem
+module('Integration | Component | order-summary', function (hooks) {
+  setupRenderingTest(hooks);
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+  test('toggles details', async function (assert) {
+    const order = { id: '7', totalMinor: 1999, currency: 'EUR', lines: [{ id: 'a', name: 'Mug', qty: 1 }] };
+    const noop = () => {};
+    await render(<template><OrderSummary @order={{order}} @onRemove={{noop}} /></template>);
+    assert.dom('ul').doesNotExist();
+    await click('button');
+    assert.dom('li').hasText(/Mug × 1/);
+  });
+});
+```
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+Test types: unit (services, utils), rendering/integration (components), application/acceptance (`visit`, full routing).
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+## Checklist
 
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Ember concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- [ ] Glimmer components with template tag; no classic components or mixins in new code
+- [ ] State in `@tracked` properties or tracked collections; arguments treated as read-only
+- [ ] Route `model()` for page data; loading/error substates provided
+- [ ] Modifiers for DOM behaviour; services for shared state
+- [ ] Rendering and application tests for user-visible behaviour

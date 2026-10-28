@@ -148,7 +148,7 @@ When Mermaid is not available, use step-by-step:
 |----------|----------|
 | Performance | Response time < 2s, supports 1000 concurrent users |
 | Security | TLS 1.3, OAuth2, input sanitization |
-| Usability | WCAG 2.1 AA, mobile-responsive |
+| Usability | WCAG 2.2 AA, mobile-responsive |
 | Reliability | 99.9% uptime, automatic failover |
 | Scalability | Horizontal scaling, stateless design |
 
@@ -384,10 +384,10 @@ rtm:
       status: Proposed
       test_cases: []
       design_docs: []
-      release: TBD
+      release: null  # assigned at release planning
 ```
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: E-Commerce Checkout Redesign
 An e-commerce company's checkout had 40% abandonment. BA analysis using process mapping revealed 7 required fields, 3 page loads, and no guest checkout. User stories with acceptance criteria covered: guest checkout, address autocomplete, progress indicator, saved payment methods. After implementation, abandonment dropped to 22%. Key factor: stakeholder workshops included customer support agents who knew the top abandonment reasons.

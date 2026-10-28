@@ -1,213 +1,164 @@
-# Classical Ml Fundamentals
+# Classical ML Fundamentals: Problem Framing, Data Splits, Leakage, Pipelines and Algorithm Choice
 
-## Overview
-Classical Ml is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Core concepts for building classical (non-deep-learning) machine learning models on tabular data with scikit-learn: framing the problem, the bias-variance trade-off, correct train/validation/test splits, avoiding data leakage, the estimator API and pipelines, baselines, and choosing an algorithm. Feature engineering, model selection, imbalanced data and interpretability have dedicated sibling references.
 
-## Core Concepts
+## Framing the Problem
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Classical Ml helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Question | Why it matters |
+|----------|----------------|
+| What decision will the prediction drive? | Defines the metric and acceptable error types |
+| What is the target, exactly, and when is it known? | Label definition and prediction time determine which features are legal |
+| Classification, regression, ranking, or clustering? | Algorithm family and metrics |
+| What is the cost of false positives vs false negatives? | Threshold and metric choice |
+| What does a trivial baseline achieve? | Measures whether ML adds value |
+| How will it be served (batch, online, latency)? | Constrains model complexity and features |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Classical Ml solutions. These principles help maintain code quality and reduce technical debt.
+Write the prediction point explicitly: "At the moment an order is placed, predict whether it will be returned within 30 days." Every feature must be available at that moment.
 
-### Concept 3: Data Management
-Proper data management is essential for Classical Ml. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Bias-Variance Trade-off
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+| Symptom | Diagnosis | Remedies |
+|---------|-----------|----------|
+| High training error, similar validation error | High bias (underfitting) | More expressive model, better features, less regularization |
+| Low training error, much higher validation error | High variance (overfitting) | More data, regularization, simpler model, feature selection, ensembling (bagging) |
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+Learning curves (score vs training set size) show which regime you are in: if validation score still rises with more data, collecting data helps.
 
-## Architecture Patterns
+## Data Splits
 
-### Pattern 1: Standard Architecture
-The standard architecture for Classical Ml follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+| Situation | Split strategy |
+|-----------|----------------|
+| i.i.d. rows | Random train/validation/test (for example 70/15/15) or train/test + cross-validation |
+| Imbalanced classes | Stratified splits (`stratify=y`, `StratifiedKFold`) |
+| Repeated entities (customers, patients) | Group splits (`GroupKFold`, `GroupShuffleSplit`) so an entity is never in both train and test |
+| Time-dependent data | Time-based split: train on the past, test on the future (`TimeSeriesSplit`); never shuffle |
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+```python
+from sklearn.model_selection import train_test_split
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
+```
 
-## Implementation Guide
+The test set is used once, at the end. Repeatedly checking it while tuning turns it into a validation set and makes the final estimate optimistic.
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+## Data Leakage
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+Leakage means the model sees information during training that will not be available at prediction time. It produces excellent offline scores and poor production performance.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+| Leakage type | Example | Prevention |
+|--------------|---------|------------|
+| Target leakage | Feature "refund_issued" when predicting returns | Check each feature's availability at prediction time |
+| Preprocessing leakage | Scaling or imputing using statistics computed on the full dataset | Fit transformers inside a pipeline on training folds only |
+| Temporal leakage | Random split on time series; features aggregated over future windows | Time-based splits; point-in-time feature computation |
+| Group leakage | Same customer in train and test | Group-aware splits |
+| Duplicate leakage | Near-duplicate rows across splits | Deduplicate before splitting |
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+A suspiciously high score (for example AUC near 1.0 on a hard problem) is a leakage signal; inspect the top features.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+## scikit-learn Estimator API
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+| Method | Purpose |
+|--------|---------|
+| `fit(X, y)` | Learn parameters from training data |
+| `predict(X)` | Predictions (labels or values) |
+| `predict_proba(X)` / `decision_function(X)` | Scores for ranking and thresholding |
+| `transform(X)` / `fit_transform(X)` | Transformers (scalers, encoders) |
+| `score(X, y)` | Default metric (accuracy or R2); prefer explicit metrics |
+| `get_params()` / `set_params()` | Hyperparameters, used by search tools |
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+Fitted attributes end with an underscore (`coef_`, `feature_importances_`, `classes_`).
 
-## Best Practices
+## Pipelines and ColumnTransformer
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+Pipelines bundle preprocessing and model so that cross-validation fits preprocessing on training folds only, and the same transformations apply in production.
 
-## Common Pitfalls
+```python
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+numeric = ["age", "tenure_months", "monthly_spend"]
+categorical = ["plan", "region"]
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+preprocess = ColumnTransformer([
+    ("num", Pipeline([("impute", SimpleImputer(strategy="median")),
+                      ("scale", StandardScaler())]), numeric),
+    ("cat", Pipeline([("impute", SimpleImputer(strategy="most_frequent")),
+                      ("onehot", OneHotEncoder(handle_unknown="ignore"))]), categorical),
+])
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+model = Pipeline([
+    ("prep", preprocess),
+    ("clf", LogisticRegression(max_iter=1000, class_weight="balanced")),
+])
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+scores = cross_val_score(model, X_train, y_train, cv=cv, scoring="roc_auc")
+print(f"ROC AUC {scores.mean():.3f} +/- {scores.std():.3f}")
+```
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+- `handle_unknown="ignore"` prevents failures on unseen categories at inference.
+- `model.set_output(transform="pandas")` keeps feature names through transformations for inspection.
 
-## Tooling Ecosystem
+## Baselines
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+Always compare against:
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+| Baseline | Tool |
+|----------|------|
+| Majority class / mean prediction | `DummyClassifier(strategy="most_frequent")`, `DummyRegressor()` |
+| Simple heuristic or business rule | Domain logic |
+| Linear model | `LogisticRegression`, `Ridge` |
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+If a gradient-boosted model beats logistic regression by a negligible margin, the simpler model may be preferable for interpretability and maintenance.
 
-## Integration Patterns
+## Algorithm Overview
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
+| Algorithm | Strengths | Weaknesses | Scaling needed? |
+|-----------|-----------|------------|-----------------|
+| Linear / logistic regression (with L1/L2) | Fast, interpretable, good baseline | Needs feature engineering for non-linearity | Yes |
+| k-nearest neighbors | Simple, no training | Slow prediction, curse of dimensionality | Yes |
+| Naive Bayes | Very fast, good for text counts | Strong independence assumption | No |
+| Support vector machines | Effective in high dimensions, kernels | Scales poorly beyond tens of thousands of rows (kernel SVM) | Yes |
+| Decision tree | Interpretable, handles mixed data | High variance alone | No |
+| Random forest | Robust, little tuning | Larger models, less accurate than boosting on many tasks | No |
+| Gradient boosting (HistGradientBoosting, XGBoost, LightGBM, CatBoost) | Usually strongest on tabular data, handles missing values | More hyperparameters, can overfit small data | No |
+| Clustering (k-means, DBSCAN, Gaussian mixtures) | Unsupervised structure discovery | Results depend on scaling and parameters | Yes |
 
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
+For most tabular supervised problems, start with a linear baseline and a gradient boosting model.
 
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
+## Evaluating Correctly
 
-## Performance Optimization
+- Choose the metric from the decision: ROC AUC or PR AUC for ranking quality, precision/recall at an operating threshold for actions, MAE/RMSE for regression in business units.
+- Report variability across folds, not only the mean.
+- Inspect errors by segment (region, customer type) to find where the model fails.
+- Calibrate probabilities if they are used as probabilities (see the advanced reference).
 
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
+## Persisting Models
 
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
+Save the whole fitted pipeline, not only the final estimator. `joblib.dump` uses pickle: loading a pickle can execute arbitrary code, so only load files you trust; `skops.io` provides a safer format for scikit-learn models. Record library versions: models pickled with one scikit-learn version may not load or behave identically in another.
 
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
+## Common Mistakes
 
-## Key Points
-- Understand core Classical Ml concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
+| Mistake | Fix |
+|---------|-----|
+| Preprocessing fit on all data before splitting | Pipelines inside cross-validation |
+| Random split on temporal data | Time-based split |
+| Accuracy on imbalanced data | PR AUC, recall/precision, balanced accuracy |
+| Tuning on the test set | Separate validation or nested CV |
+| No baseline | Dummy and linear baselines |
+| Ignoring how features are computed in production | Same pipeline object or shared feature code |
 
-## Testing Strategy
+## Checklist
 
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- [ ] Prediction point and label defined; features available at prediction time
+- [ ] Split strategy matches data structure (stratified, grouped, temporal)
+- [ ] Preprocessing and model in one pipeline evaluated with cross-validation
+- [ ] Baselines reported alongside candidate models
+- [ ] Metric chosen from the business decision; variance across folds reported
+- [ ] Test set used once; fitted pipeline persisted with versions recorded

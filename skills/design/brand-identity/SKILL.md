@@ -34,6 +34,15 @@ Exact user phrases: "brand identity", "brand guidelines", "visual identity", "br
 ### Output Artifact
 Brand identity system with mission/values, visual language, voice guidelines, and application rules.
 
+### Response Format
+```
+Brand: {name}  Archetype: {primary/secondary}
+Positioning: {one sentence}
+Visual: logo system {variants}, palette {roles}, type {families}
+Voice: {3 attributes} with do/don't examples
+Governance: {owner, asset library, review flow}
+```
+
 ### Completion Criteria
 - [ ] Brand mission, vision, and values documented
 - [ ] Brand personality defined (5 traits with behavioral examples)
@@ -292,16 +301,18 @@ touchpoints:
 overall_score: 5/6 (83%)
 ```
 
-## Case Studies
+## Illustrative Scenarios
 
-### Case Study 1: Brand Unification After Merger
+> Hypothetical scenarios for illustration. The figures are examples, not measured results from real projects.
+
+### Scenario 1: Brand Unification After Merger
 Two SaaS companies merged, each with established but conflicting brand identities. Company A was blue, serious, enterprise-focused. Company B was orange, playful, startup-oriented. The merged brand audit showed 78% inconsistency across touchpoints. The solution was not to blend but to create a third identity — a deep purple primary with a new positioning ("Powerful yet approachable") that neither company owned. The visual identity was entirely new, avoiding favoritism. Post-launch employee satisfaction with brand identity rose from 42% to 89%, and customer surveys showed 34% improvement in brand perception clarity.
 
 Method: Strategy-first rebrand with neutral territory visual identity
 Key insight: After mergers, a completely new identity avoids "us vs them" dynamics
 Impact: Brand perception clarity +34%, employee satisfaction +47 points
 
-### Case Study 2: Design System Improves Brand Consistency
+### Scenario 2: Design System Improves Brand Consistency
 A 200-person product team had 14 different button styles, 6 different blues, and 8 distinct border radii across products. Brand consistency audits scored below 40%. Implementing a comprehensive design system with brand tokens, component library, and automated linting raised consistency to 95% within 6 months. The design system enforced brand rules at the code level, making violations impossible rather than merely discouraged.
 
 Method: Brand tokens → Component library → Automated enforcement
@@ -430,95 +441,16 @@ Brand colors must meet WCAG AA minimums:
 | Brand audit report | Slide deck/PDF | Leadership | Consistency scores, violations, remediation plan |
 
 ## References
+  - references/brand-consistency.md — Brand Consistency
+  - references/brand-guidelines.md — Brand Guidelines Structure
   - references/brand-identity-advanced.md — Brand Identity Advanced Topics
   - references/brand-identity-fundamentals.md — Brand Identity Fundamentals
-  - references/brand-messaging.md — Brand Messaging and Voice Reference
-  - references/brand-touchpoint-audit.md — Brand Touchpoint Audit Reference
-  - references/logo-design.md — Logo Design Reference
-  - references/visual-identity-guidelines.md — Visual Identity Guidelines Reference
+  - references/brand-voice.md — Brand Voice Guide
+  - references/color-theory.md — Color Theory for Brand Identity
+  - references/logo-systems.md — Logo Systems
+  - references/visual-identity-system.md — Visual Identity System
 ## Handoff
 Hand off to `design-visual-design` for visual system implementation. Hand off to `design-design-systems` for token/component implementation. Hand off to `design-ux-research` for audience validation.
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
 ## Architecture Decision Trees
 
 ### Brand Architecture Decision Tree

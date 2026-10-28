@@ -1,11 +1,38 @@
 ---
 name: ecs-architecture
-description: Expert ECS (Entity Component System) architecture patterns - storage models, system scheduling, archetypes, cache-friendliness, and real-world engine comparisons.
+description: >
+  Use this skill when the user says 'ecs', 'entity component system', 'archetype', 'sparse set', 'system scheduling', 'data-oriented design'. Compares and designs ECS storage models (archetype vs sparse set), queries, system scheduling and when ECS is the right choice. Do NOT use for: engine-specific ECS tuning in depth (use ecs-pattern), Unity DOTS code (use unity-csharp).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, ecs, data-oriented, architecture]
 ---
 
 # ECS Architecture (Entity Component System) — Deep Guide
 
+## Purpose
 ECS is a data-driven design pattern for game engines that separates **entities** (IDs), **components** (pure data), and **systems** (logic operating on component sets). Its core win: cache-friendly iteration over contiguous component arrays plus implicit parallelism.
+
+## Agent Protocol
+
+### Trigger
+"ecs", "entity component system", "archetype", "sparse set", "system scheduling", "data-oriented design".
+
+### Input Context
+- Engine/library (custom, EnTT, flecs, Bevy, Unity Entities)
+- Entity counts and component churn
+- Threading model
+
+### Output Artifact
+ECS architecture decision with storage/scheduling rationale and code sketch. No file unless requested.
+
+### Response Format
+```
+Storage: {archetype | sparse set | hybrid}
+Why: {access pattern reasoning}
+Systems: {ordered list with read/write sets}
+Code: {snippet}
+```
 
 ## 1. Core Concepts
 
@@ -62,7 +89,7 @@ Archetype "Transform+Velocity":
 
 - Adding/removing a component **moves the entity to another archetype** (type change).
 - Iterating a system = iterate matching archetypes only. Perfect locality.
-- Used by Unity DOTS, Flecs, Bevy (design).
+- Used by Unity Entities, flecs and Bevy (Bevy also offers per-component sparse-set storage).
 
 ### 3.3 Hybrid / ECS-storage-as-optional
 
@@ -97,7 +124,7 @@ TransformSystem <-> PlayerMovement <-> CameraSystem
 
 - Build a graph of per-storage access; parallelize systems whose storages don't conflict.
 - `After(system)`, `Before(system)` ordering; or "this system writes X so those that read X run next".
-- Job-based: each system dispatched to worker threads (Bevy `ParForEach`, Unity `ScheduleParallel`).
+- Job-based: systems (and chunks within a system) dispatched to worker threads (Bevy's executor + `Query::par_iter`, Unity `IJobEntity.ScheduleParallel`).
 
 ### 5.2 Per-Frame vs Fixed-Rate
 
@@ -114,7 +141,7 @@ Adding/removing components mid-iteration invalidates iterators. Rule: queue stru
 
 - Each storage keeps a per-frame "changed" bitset or version per archetype row.
 - Systems like "network send", "recompute bounds", or "update render node" only run on entities whose components changed.
-- Bevy `Added<T>`, `Changed<T>` filters; Unity `SystemAPI.GetComponentLookup`.
+- Bevy `Added<T>`, `Changed<T>` query filters; Unity per-chunk change versions (`WithChangeFilter<T>()` on `SystemAPI.Query`, `[WithChangeFilter]` on `IJobEntity`).
 
 ### 6.2 Relationships & Query Hierarchies
 
@@ -135,10 +162,9 @@ ECS events (collision events, input) as transient entity/component pools — eve
 | Engine | Storage | Strengths |
 |--------|---------|-----------|
 | **Unity DOTS** | Archetype (Burst/Jobs) | SIMD burst, editor tooling, ECS + jobs |
-| **Bevy** | Archetype (Rust) | safe parallelism, great ergonomics, GPU-driven |
+| **Bevy** | Archetype tables + optional sparse-set components (Rust) | borrow-checked parallel scheduling, ergonomic queries |
 | **EnTT** | Sparse-set (C++) | no-reflection, header-only, fastest add/remove |
 | **Flecs** | Archetype+C (C/... plugins) | fast, relations, prefab support, single include |
-| **Machina/Garnet** | sparse / arche | niche |
 
 ### 8.1 When NOT to use ECS
 

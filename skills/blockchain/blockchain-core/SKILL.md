@@ -436,10 +436,6 @@ func (mp *Mempool) Add(tx *Transaction) bool {
   - references/node-implementation.md — Node Implementation Deep Dive
   - references/p2p-networking.md — P2P Networking for Blockchain
   - references/state-machines.md — Blockchain State Machine Design
-  - references/blockchain-fork-choice.md — Fork Choice Rules
-  - references/light-client-protocols.md — Light Client Protocols
-  - references/transaction-ordering-policies.md — Transaction Ordering Policies
-  - references/mempool-design-patterns.md — Mempool Design Patterns
 
 ## Architecture Decision Trees
 

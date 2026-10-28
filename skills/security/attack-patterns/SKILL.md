@@ -1,4 +1,37 @@
+---
+name: attack-patterns
+description: >
+  Use this skill when the user says 'SSRF', 'HTTP request smuggling', 'insecure deserialization', 'MITRE ATT&CK mapping', 'vulnerability class deep dive'. Explains the mechanical root cause of common web/network vulnerability classes and maps them to MITRE ATT&CK for threat modeling and architectural hardening. Defensive and educational only. Do NOT use for: generating working payloads, SIEM detection rules (use security/detection-engineering), or secrets handling (use security/secrets-management).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [security, attack-patterns, mitre-attack, threat-modeling, defensive]
+---
+
 # Attack Patterns & MITRE ATT&CK
+
+## Purpose
+Explain the root cause and conceptual structure of major vulnerability classes (SSRF, request smuggling, deserialization) and map them to MITRE ATT&CK technique IDs. Used for threat modeling, secure design, and defensive engineering — not for producing actionable exploits.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "explain SSRF", "SQL injection deep dive", "deserialization gadget chain", "HTTP request smuggling", "map to ATT&CK".
+
+### Input Context
+- The vulnerability class or component under review.
+- The stack/framework (affects which mitigations apply).
+
+### Output Artifact
+Root-cause explanation, ATT&CK technique ID, and the architectural fix. No actionable exploit.
+
+### Response Format
+```
+Class: {vuln class}
+ATT&CK: {Txxxx}
+Root cause: {mechanism}
+Mitigation: {secure design / control}
+```
 
 > [!WARNING]
 > **DISCLAIMER: EDUCATIONAL & DEFENSIVE PURPOSES ONLY**

@@ -571,8 +571,6 @@ groups:
   - references/node-deployment.md — Node Deployment
   - references/performance-benchmarking.md — Performance Benchmarking
   - references/rpc-infrastructure.md — RPC Infrastructure
-  - references/validator-operations.md — Validator Operations Guide
-  - references/blockchain-devops-tooling.md — Blockchain DevOps Tooling
 
 ## Phase
 blockchain → blockchain-infrastructure

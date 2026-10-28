@@ -1,11 +1,38 @@
 ---
-name: multiplayer-netcode
-description: Engine-level multiplayer netcode engineering - transport protocols, replication, latency hiding (prediction/interpolation), lag compensation, rollback, and scalability for game engines.
+name: game-engine-multiplayer-netcode
+description: >
+  Use this skill when the user says 'engine netcode architecture', 'replication system design', 'netcode in custom engine', 'snapshot interpolation engine', 'rollback engine integration'. Engine-level netcode architecture: transport, replication model, prediction/interpolation, lag compensation and rollback, and how Unity/Unreal/Godot map onto it. Do NOT use for: gameplay-level netcode recipes (use multiplayer-netcode), dedicated server fleet scaling (use scaling-architecture).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, netcode, replication, engine, multiplayer]
 ---
 
 # Engine-Level Multiplayer Netcode
 
+## Purpose
 Building netcode that is fast, fair, and stable requires decisions at the transport, protocol, simulation, and presentation layers. This skill gives the full architecture used by modern FPS/MOBA engines, independent of any specific engine — then shows how each engine (Unity/Unreal/Godot) maps onto it.
+
+## Agent Protocol
+
+### Trigger
+"engine netcode architecture", "replication system design", "netcode in custom engine", "snapshot interpolation engine", "rollback engine integration".
+
+### Input Context
+- Genre and player count
+- Engine and transport
+- Authority model (server-authoritative, P2P rollback)
+
+### Output Artifact
+Netcode architecture and engine integration code. No file unless requested.
+
+### Response Format
+```
+Model: {snapshot | state sync | rollback}
+Tick: {sim Hz / send Hz}
+Latency hiding: {prediction, interpolation delay}
+Code: {snippet}
+```
 
 ## 1. Core Architecture
 
@@ -78,11 +105,12 @@ Server::Tick(tick) {
 
 ```cpp
 void Client::OnSnapshot(const Snapshot& s) {
-    auto& predicted = history_[s.tick];
-    if (dist(predicted.pos, s.pos) > kTolerance) {
-        state_ = s.state;                      // rebase
-        for (auto& p : pendingAfter(tick))     // replay
-             Simulate(p.input);
+    pending_.dropUpTo(s.lastProcessedInputSeq);    // server has applied these
+    const State& predicted = history_.at(s.tick);
+    if (dist(predicted.pos, s.state.pos) > kTolerance) {
+        state_ = s.state;                          // rebase on authority
+        for (const auto& p : pending_)             // replay unacknowledged inputs
+            state_ = Simulate(state_, p.input);
     }
 }
 ```
@@ -105,7 +133,6 @@ void Client::OnSnapshot(const Snapshot& s) {
 
 - Keep a history window of last N ticks of full world state; on late input: rewind, apply, resimulate, render.
 - Requires deterministic simulation and fixed ticks.
-- Null-space for exact replay of "same inputs -> same state".
 
 ## 9. Bandwidth & Interest Management
 
@@ -118,7 +145,7 @@ void Client::OnSnapshot(const Snapshot& s) {
 
 - Position: 3×12 bytes → quantize to 3×12 bits (or 8-10 bits/axis) → ~4 bytes.
 - Include only deltas.
-- Entities per player budget: ~32 per second target, total ~200B-1KB per frame.
+- Set a byte budget per client per send tick and let a priority accumulator decide which entities fit; starved entities gain priority each tick.
 
 ## 10. Replication & Object Authority
 
@@ -132,13 +159,13 @@ void Client::OnSnapshot(const Snapshot& s) {
 | Feature | Unity (NGO) | Unreal | Godot (HLLAPI) |
 |---------|-------------|--------|----------------|
 | Main loop | `NetworkManager` tick | `NetTick` | `SceneMultiplayer` |
-| RPC | `[ServerRpc]/[ClientRpc]` | `UFUNCTION(Server)` | `rpc()` |
+| RPC | `[Rpc(SendTo.Server)]` (older: `[ServerRpc]`) | `UFUNCTION(Server, Reliable)` | `@rpc` + `func.rpc()` |
 | Sync | NetworkVariables | ReplicatedProps+conditions | MultiplayerSynchronizer |
 | Prediction | custom (no built-in) | built-in move | manual |
-| Interpolation | NetworkTransform (lerp) | built-in | MultiplayerSynchronizer |
-| Rollback | custom | built-in (fighter support) | custom |
+| Interpolation | NetworkTransform (interpolate option) | built-in for characters | manual (Synchronizer does not interpolate) |
+| Rollback | custom (Netcode for Entities predicts/rolls back) | no general rollback; Chaos physics resimulation and the Mover/Network Prediction plugins are experimental | custom / addons (netfox) |
 
-Old Unity `MLAPI` migrated to Netcode for GameObjects (2023.1+). Unreal has the strongest built-in for prediction. Godot's is minimal — you implement buffers yourself.
+Unity: MLAPI became Netcode for GameObjects (2021); Netcode for Entities adds built-in prediction and lag compensation. Unreal has the strongest built-in for prediction. Godot's is minimal — you implement buffers yourself.
 
 ## 12. Connection Lifecycle
 

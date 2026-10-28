@@ -1,213 +1,144 @@
-# User Research Fundamentals
+# User Research Fundamentals: Questions, Study Design, Participants, Ethics and Bias
 
-## Overview
-User Research is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+The foundations of user research for product teams: what research is for, the main dimensions of methods, turning decisions into research questions, planning a study, sampling and recruiting, consent and data protection, common biases, and sharing findings so they change decisions. Method details, interview technique and synthesis frameworks are in sibling references.
 
-## Core Concepts
+## What User Research Is For
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for User Research helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+User research reduces the risk of building the wrong thing or building it the wrong way. It answers questions about people's needs, contexts, behaviors and how they experience a product. Good research is tied to a decision: if no decision depends on the answer, the study is not worth running yet.
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing User Research solutions. These principles help maintain code quality and reduce technical debt.
+| Product stage | Typical research questions |
+|---------------|----------------------------|
+| Discovery | What problems do these users have? How do they solve them today? What matters most? |
+| Definition | Which needs should we address first? What would success look like for users? |
+| Design | Can people understand and use this concept/prototype? Where do they struggle? |
+| Launch and growth | How is it used in reality? Why do people drop off? What drives retention? |
 
-### Concept 3: Data Management
-Proper data management is essential for User Research. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Dimensions of Methods
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+| Dimension | Ends | Example |
+|-----------|------|---------|
+| Purpose | Generative (explore problems) vs evaluative (assess solutions) | Contextual inquiry vs usability test |
+| Data type | Qualitative (why, how) vs quantitative (how many, how much) | Interviews vs surveys/analytics |
+| Source | Attitudinal (what people say) vs behavioral (what people do) | Survey vs session recordings |
+| Context | Natural use vs scripted task vs decontextualized | Diary study vs lab test vs card sort |
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+Behavioral data is generally more reliable than self-reports about future behavior ("Would you use this?" predicts little). Combine methods to cover each other's weaknesses.
 
-## Architecture Patterns
+## From Decision to Research Question
 
-### Pattern 1: Standard Architecture
-The standard architecture for User Research follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+```text
+Decision:          Should we build bulk editing in Q3?
+Assumptions:       Admins edit many records weekly; current workflow is slow; they would switch tools
+Research questions: How often and in what situations do admins change many records?
+                   What do they do today, and what does it cost them?
+                   What makes a workaround acceptable or not?
+Method:            Contextual interviews with 8 to 10 admins + analytics on edit frequency
+```
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+Rules for research questions:
+- Ask about past behavior and current context, not hypothetical future behavior.
+- Keep them open enough to learn, specific enough to inform the decision.
+- Prioritize the riskiest assumptions (high uncertainty, high impact).
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+## Planning a Study
 
-## Implementation Guide
+A one-page research plan:
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+| Section | Content |
+|---------|---------|
+| Background and decision | What is being decided, by whom, by when |
+| Research questions | 3 to 5 questions |
+| Method and rationale | Why this method answers these questions |
+| Participants | Criteria, number, recruitment channel, incentive |
+| Logistics | Dates, tools, roles (moderator, note-taker, observers) |
+| Materials | Discussion guide, tasks, prototype, consent form |
+| Analysis and outputs | How findings will be synthesized and shared |
+| Risks and ethics | Sensitive topics, vulnerable participants, data handling |
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+Pilot the guide or tasks with one person (even a colleague) to catch confusing wording and timing problems.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+## Sample Size Guidance
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+| Study type | Typical size | Rationale |
+|------------|--------------|-----------|
+| Qualitative interviews per segment | 5 to 12 | Themes tend to saturate; more segments need more participants |
+| Formative usability test per round | About 5 per distinct user group | Finds many major issues; iterate in rounds rather than one large test |
+| Summative usability benchmark | 20 or more | Needed for metrics with useful confidence intervals |
+| Surveys | Depends on required margin of error and segment comparisons | Calculate before fielding |
+| Card sorting (open) | 15 to 30 | Stable groupings |
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+Qualitative findings describe what exists and why; they do not estimate prevalence. Use quantitative methods to size findings.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+## Recruiting Participants
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+- **Screeners**: short questionnaires that select on behavior ("In the last month, how many times did you...") rather than self-labels. Hide the study's purpose to avoid people answering to qualify.
+- **Sources**: existing customers (CRM, in-app intercepts), research panels and recruiting services, community groups, customer-facing teams.
+- **Mix**: include different experience levels, contexts and, where relevant, people with disabilities and different devices.
+- **Incentives**: appropriate to the time and audience; follow company policy for customers and procurement rules for public-sector participants.
+- **No-shows**: over-recruit slightly or keep backups.
 
-## Best Practices
+Avoid relying only on the most engaged or friendliest customers; they are not representative.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+## Ethics, Consent and Data Protection
+
+| Principle | Practice |
+|-----------|----------|
+| Informed consent | Explain purpose, what is recorded, how data is used and stored, right to stop at any time; obtain consent before recording |
+| Minimize data | Collect only what the research questions need |
+| Protect identity | Pseudonymize notes and quotes; restrict access to recordings; set retention periods |
+| Legal basis | Under GDPR and similar laws, document the lawful basis and inform participants; honor deletion requests |
+| Avoid harm | Care with sensitive topics; no deception beyond what is necessary and approved; debrief where needed |
+| Vulnerable participants | Extra safeguards and approvals (children, health contexts) |
+
+Recordings and transcripts are personal data. Uploading them to third-party tools (including AI transcription or analysis services) requires approval under your data protection policies.
+
+## Bias and How to Reduce It
+
+| Bias | Description | Mitigation |
+|------|-------------|------------|
+| Leading questions | Wording suggests the answer | Neutral, open questions ("Tell me about...") |
+| Confirmation bias | Seeing evidence for what you believe | Write assumptions down first; look for disconfirming evidence; involve multiple analysts |
+| Social desirability | Participants give socially acceptable answers | Ask about specific past events; observe behavior |
+| Sampling bias | Participants differ from target users | Behavior-based screeners, diverse sources |
+| Hawthorne / observer effect | People behave differently when observed | Natural tasks, diary studies, analytics |
+| Recency and vividness | One striking session dominates | Synthesize across all sessions systematically |
+| Moderator effects | Moderator's reactions influence participants | Neutral reactions, standard guide, practice |
+
+## Note-Taking and Synthesis Basics
+
+- Separate observations ("clicked Export three times") from interpretations ("did not notice the success message").
+- Capture verbatim quotes with timestamps.
+- Synthesize promptly: debrief after each session, then affinity mapping or thematic analysis across sessions.
+- Express findings as insights with evidence and implications, not as a list of everything heard.
+
+## Sharing Findings
+
+| Format | Use |
+|--------|-----|
+| Topline summary within days | Keep momentum; key findings and next steps |
+| Insight report or deck | Decisions, evidence, recommendations, confidence level |
+| Highlight reel | Short clips that build empathy (with consent) |
+| Research repository entry | Findings searchable for future teams |
+| Workshop | Co-create next steps with product, design and engineering |
+
+State confidence and limits: who was and was not included, sample size, and open questions.
 
 ## Common Pitfalls
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+| Pitfall | Fix |
+|---------|-----|
+| Research started without a decision to inform | Define decision and owner first |
+| Asking users what features they want | Explore problems and behaviors; design solutions yourself |
+| Testing too late to change anything | Test early with low-fidelity prototypes |
+| Generalizing from 5 interviews to market size | Quantify separately |
+| Findings not reaching decision makers | Involve stakeholders as observers; short, timely readouts |
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+## Checklist
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core User Research concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- [ ] Decision, owner and research questions written down
+- [ ] Method chosen to match the question (generative/evaluative, qual/quant, behavioral/attitudinal)
+- [ ] Behavior-based screener and diverse recruitment
+- [ ] Consent, data minimization and retention defined
+- [ ] Guide piloted; neutral questions
+- [ ] Systematic synthesis with evidence and confidence levels
+- [ ] Findings shared quickly and stored for reuse

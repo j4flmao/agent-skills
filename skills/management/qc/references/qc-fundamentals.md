@@ -1,213 +1,116 @@
-# Qc Fundamentals
+# Quality Control Fundamentals: Defect Taxonomy, Severity and Root Cause Analysis
 
-## Overview
-Qc is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Core quality-control concepts for software teams: how QC differs from QA, how to classify defects consistently, how to set severity and priority, the defect lifecycle, and root cause analysis that leads to prevention. Process, gates, checklists and dashboards are covered in sibling references.
 
-## Core Concepts
+## QC vs QA
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Qc helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| | Quality Assurance | Quality Control |
+|---|---|---|
+| Focus | Process: preventing defects | Product: detecting defects |
+| Activities | Standards, training, process design, audits | Reviews, static analysis, testing, inspections |
+| Timing | Throughout the lifecycle | At checkpoints / gates |
+| Output | Improved process | Defect reports, pass/fail decisions |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Qc solutions. These principles help maintain code quality and reduce technical debt.
+QC findings feed QA: recurring defect types indicate process changes.
 
-### Concept 3: Data Management
-Proper data management is essential for Qc. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Defect Taxonomy
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+Classify every defect on a few independent dimensions; keep the lists short so classification is consistent.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+| Dimension | Values (example) |
+|---|---|
+| Type | Functional, data/validation, UI, performance, security, reliability, compatibility, usability, documentation |
+| Origin (phase introduced) | Requirements, design, code, configuration, build/deploy, third-party |
+| Detection phase | Review, static analysis, unit test, integration test, system test, UAT, production |
+| Trigger | What exposed it: new feature, regression, environment change, data edge case |
+| Component | Service/module owning the fix |
 
-## Architecture Patterns
+Orthogonal Defect Classification (ODC, IBM) is a well-known formal scheme with defect type and trigger attributes; adopt a subset rather than inventing categories per team.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Qc follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+## Severity vs Priority
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+Severity = impact on the system/user. Priority = order of fixing (business decision).
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+| Severity | Definition |
+|---|---|
+| S1 Critical | Data loss/corruption, security breach, core function unavailable, no workaround |
+| S2 Major | Core function impaired, workaround exists but is costly |
+| S3 Minor | Non-core function impaired, easy workaround |
+| S4 Trivial | Cosmetic, no functional impact |
 
-## Implementation Guide
+| Priority | Meaning |
+|---|---|
+| P1 | Fix immediately / hotfix |
+| P2 | Fix in current iteration |
+| P3 | Schedule in backlog |
+| P4 | Fix if time permits |
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+They usually correlate but not always: a typo in the company name on the login page is S4 but P1; a crash in a rarely used admin export may be S2 but P3.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+## Defect Report Essentials
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+```markdown
+Title: Checkout total ignores discount when cart has > 50 items
+Environment: staging, build 2026.10.24-3, Chrome 130 / API v2
+Steps: 1) add 51 items 2) apply code SAVE10 3) open summary
+Expected: total reduced by 10%
+Actual: discount line shown, total unchanged
+Severity: S2   Priority: P2   Type: Functional   Component: pricing-service
+Evidence: screenshot, request ID 7f3c..., log excerpt
+Regression: yes (worked in 2026.10.10)
+```
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+Good reports are reproducible, minimal, and include expected vs actual, environment and evidence.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+## Defect Lifecycle
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+```
+New → Triaged → In Progress → Fixed → Verified → Closed
+          ↘ Rejected (not a bug / duplicate / won't fix, with reason)
+Verified fails → Reopened → In Progress
+```
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+Triage within a fixed SLA (e.g. one business day): confirm, deduplicate, set severity/priority/owner. Track reopen rate as a fix-quality signal.
 
-## Best Practices
+## Root Cause Analysis
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+Apply to S1/S2 defects, production escapes and recurring defect clusters.
 
-## Common Pitfalls
+5 Whys example:
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+```
+Defect: discount ignored for large carts
+Why? Pricing used paginated cart query, only first 50 items loaded
+Why? Repository method defaults to page size 50
+Why? Default added in refactor; callers not reviewed
+Why? No test covered carts larger than one page
+Why? Test data templates only generate small carts
+Root causes: unsafe default in shared API; missing boundary test data
+Actions: remove implicit pagination default; add boundary cases to test data generator; review other callers
+```
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+Other tools: fishbone (Ishikawa) diagram across categories (people, process, tools, code, environment, requirements), fault tree analysis for complex failures, and Pareto analysis to find the few defect types causing most impact.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+Rules:
+- Stop at causes you can act on (process, tooling, design), not at "developer made a mistake".
+- Every RCA produces preventive actions with owners and due dates, plus a detection improvement (test, lint rule, alert).
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## Detection Effectiveness
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Qc concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+| Metric | Definition | Use |
+|---|---|---|
+| Defect detection percentage (DDP) | defects found before release / (before + after release) | Effectiveness of pre-release QC |
+| Escape rate | production defects / total defects | Inverse view of DDP |
+| Phase containment | defects found in the phase they were introduced / defects introduced in that phase | Where to strengthen reviews/tests |
+| Defect density | defects / size (KLOC, function points, or per change) | Compare components over time, not teams |
+| Reopen rate | reopened / fixed | Fix and verification quality |
+
+Use metrics to find process weaknesses, never as individual performance targets (incentivizes hiding defects).
+
+## Checklist
+- [ ] Shared defect taxonomy with short value lists
+- [ ] Severity and priority defined separately with examples
+- [ ] Defect report template enforced in the tracker
+- [ ] Triage SLA and lifecycle states configured
+- [ ] RCA for S1/S2 and escapes with preventive and detection actions
+- [ ] Detection-effectiveness metrics reviewed per release

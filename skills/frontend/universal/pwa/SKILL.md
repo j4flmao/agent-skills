@@ -1,550 +1,252 @@
-# Progressive Web App Skill
+---
+name: frontend-pwa
+description: >
+  Use this skill when the user says 'PWA', 'progressive web app', 'service worker', 'offline support', 'web app manifest', 'installable web app', 'Workbox', 'vite-plugin-pwa', 'web push notifications', 'background sync', 'update available prompt'. It makes a web app installable and offline-capable: manifest, service worker caching strategies with Workbox, safe update flow, web push and offline write queues, with real browser-support limits. Do NOT use for: HTTP cache headers and CDN caching (use frontend-browser-caching), native mobile apps (use the mobile skills), or Core Web Vitals tuning (use web-performance).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [frontend, pwa, service-worker, workbox, manifest, offline, web-push]
+---
 
-## Overview
-Progressive Web Apps (PWAs) provide native-app-like experiences on the web with offline support, push notifications, and installability. This skill covers service workers, caching strategies, manifest configuration, and performance optimization.
+# Progressive Web Apps
 
-## Decision Tree: PWA Requirements
+## Purpose
+A PWA is a web app with a manifest (installability, app identity) and a service worker (network proxy enabling offline, caching and push). This skill produces a manifest that installs on all major platforms, a Workbox service worker with per-resource caching strategies, an update flow that never strands users on stale code, and offline/push features with honest support caveats.
 
-### Should I Build a PWA?
+## Agent Protocol
+
+### Trigger
+"pwa", "service worker", "offline", "manifest.json", "install prompt", "workbox", "vite-plugin-pwa", "web push", "background sync", "new version available".
+
+### Input Context
+- Framework/bundler (Vite, Next.js, Angular — `@angular/pwa`, SvelteKit).
+- Which routes/data must work offline; is data user-specific?
+- Target platforms (iOS Safari constraints matter) and need for push.
+
+### Output Artifact
+`manifest.webmanifest`, service worker (Workbox or plugin config), registration/update UI code.
+
+### Response Format
 ```
-Does my app need PWA features?
-├── Users have unreliable connectivity → YES (offline support is critical)
-├── Need to reduce bounce rate → YES (faster loading, install prompt)
-├── Want app-like experience without App Store → YES (installable web app)
-├→ Need push notifications → YES (re-engagement without native app)
-├── Already have a native app → PWA as complement (lightweight alternative)
-├── Complex hardware access (Bluetooth, NFC) → Native app (PWA limitations)
-├── Heavy background processing → Native app (PWA service worker has limits)
-└── Simple content site → PWA optional (benefits minimal for static content)
-```
-
-### Service Worker Strategy Selection
-```
-What kind of content?
-├── Static assets (CSS, JS, images) → Cache-first (fastest, works offline)
-├── API data that changes frequently → Network-first (fresh, falls back to cache)
-├── API data that rarely changes → Stale-while-revalidate (instant, updates async)
-├── Critical page shell → Cache-first (app shell architecture)
-├── User-specific data → Network-only (must be fresh)
-├── Analytics pings → Network-only (no cache needed)
-└── Media files (images, video) → Cache-first with size limits
-```
-
-## Caching Strategies
-
-### Cache-First Pattern
-```javascript
-// sw.js
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetchAndCache(event.request);
-    })
-  );
-});
-
-async function fetchAndCache(request) {
-  const response = await fetch(request);
-  if (response.ok) {
-    const clone = response.clone();
-    caches.open('dynamic-v1').then((cache) => {
-      cache.put(request, clone);
-    });
-  }
-  return response;
-}
+Install: manifest fields + icons {sizes, purpose}
+Precache: {app shell files}
+Runtime routes: {pattern -> strategy, cache name, expiration}
+Offline: {fallback page | IndexedDB queue}
+Update flow: {prompt | auto} 
+Push: {VAPID, permission trigger, platforms}
 ```
 
-### Network-First Pattern
-```javascript
-self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/api/')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          return cacheAndReturn(event.request, response);
-        })
-        .catch(() => {
-          return caches.match(event.request);
-        })
-    );
-  }
-});
-```
+## Do You Need It?
+| Need | PWA fit |
+|------|---------|
+| Works on flaky networks, field/retail apps | Strong |
+| Installable icon, standalone window without app stores | Strong |
+| Re-engagement via notifications | Good (iOS/iPadOS 16.4+ only for home-screen-installed apps) |
+| Bluetooth/NFC/background location, heavy background work | Weak — Web Bluetooth/NFC are Chromium-only; SW background execution is limited |
+| Static content site | Optional; a simple offline page may be enough |
 
-### Stale-While-Revalidate Pattern
-```javascript
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request)
-        .then((response) => {
-          caches.open('revalidated-v1').then((cache) => cache.put(event.request, response));
-          return response.clone();
-        })
-        .catch(() => cached);
+## Manifest
 
-      return cached || fetchPromise;
-    })
-  );
-});
-```
-
-### App Shell Pattern
-```javascript
-const PRECACHE = 'app-shell-v1';
-const PRECACHE_URLS = [
-  '/', '/index.html', '/app.js', '/styles.css',
-  '/offline.html', '/icons/icon-192.png',
-];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(PRECACHE).then((cache) => cache.addAll(PRECACHE_URLS))
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match('/offline.html'))
-    );
-  }
-});
-```
-
-## Push Notifications
-
-### Subscribe Pattern
-```javascript
-// Client side
-async function subscribeToPush() {
-  const registration = await navigator.serviceWorker.ready;
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-  });
-  await fetch('/api/push/subscribe', {
-    method: 'POST',
-    body: JSON.stringify(subscription),
-  });
-}
-
-// Service worker
-self.addEventListener('push', (event) => {
-  const data = event.data?.json() ?? { title: 'Default title', body: '' };
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/badge.png',
-      data: { url: data.url },
-      actions: [
-        { action: 'open', title: 'Open' },
-        { action: 'dismiss', title: 'Dismiss' },
-      ],
-    })
-  );
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  if (event.action === 'open' || !event.action) {
-    clients.openWindow(event.notification.data.url);
-  }
-});
-```
-
-## Web App Manifest
-
-### Complete Manifest
 ```json
 {
-  "name": "My Progressive Web App",
-  "short_name": "MyPWA",
-  "description": "A full-featured progressive web application",
+  "id": "/",
+  "name": "Acme Field Service",
+  "short_name": "Acme",
   "start_url": "/?source=pwa",
-  "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
   "scope": "/",
-  "lang": "en-US",
-  "dir": "ltr",
-  "categories": ["business", "productivity"],
-  "prefer_related_applications": false,
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1d4ed8",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "screenshots": [
-    { "src": "/screenshots/desktop.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide" },
-    { "src": "/screenshots/mobile.png", "sizes": "720x1280", "type": "image/png", "form_factor": "narrow" }
+    { "src": "/screenshots/wide.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide" },
+    { "src": "/screenshots/narrow.png", "sizes": "720x1280", "type": "image/png", "form_factor": "narrow" }
   ]
 }
 ```
+- Provide separate `any` and `maskable` icons (a combined `"any maskable"` icon gets cropped or padded badly in one of the contexts).
+- `screenshots` enable the richer install UI in Chromium.
+- iOS: add `<link rel="apple-touch-icon" href="/icons/apple-180.png">`; iOS has no `beforeinstallprompt` — users install via Share → Add to Home Screen.
+- HTTPS (or localhost) is required for service workers.
 
-## Background Sync
+## Strategy per Resource
+| Resource | Strategy | Notes |
+|----------|----------|-------|
+| Hashed JS/CSS from the build | Precache (installed with SW) | Revisioned automatically by Workbox |
+| HTML navigations | NetworkFirst with short timeout, offline fallback | Avoid serving stale HTML that references deleted chunks |
+| Images | StaleWhileRevalidate or CacheFirst + expiration | Cap entries; opaque cross-origin responses cost quota |
+| Public API reads (non-personal) | NetworkFirst (timeout) or StaleWhileRevalidate | |
+| Authenticated/personal API data | NetworkOnly, or cache per user and clear on logout | Shared devices leak data otherwise |
+| Analytics, payments, auth endpoints | NetworkOnly | |
 
-### Sync Pattern
-```javascript
-// Client: register sync
-async function queueAction(data) {
-  const registration = await navigator.serviceWorker.ready;
-  await registration.sync.register('sync-actions');
-  // Store data in IndexedDB for service worker to process
-}
+## Workbox Service Worker (injectManifest)
 
-// Service worker: handle sync
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-actions') {
-    event.waitUntil(processQueuedActions());
+```ts
+// src/sw.ts
+/// <reference lib="webworker" />
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching';
+import { registerRoute, NavigationRoute, setCatchHandler } from 'workbox-routing';
+import { NetworkFirst, StaleWhileRevalidate, NetworkOnly } from 'workbox-strategies';
+import { ExpirationPlugin } from 'workbox-expiration';
+import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+import { BackgroundSyncPlugin } from 'workbox-background-sync';
+
+declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision: string | null }> };
+
+precacheAndRoute(self.__WB_MANIFEST);   // includes /offline.html via globPatterns
+cleanupOutdatedCaches();
+
+registerRoute(
+  new NavigationRoute(
+    new NetworkFirst({ cacheName: 'pages', networkTimeoutSeconds: 3, plugins: [new CacheableResponsePlugin({ statuses: [200] })] }),
+    { denylist: [/^\/api\//, /^\/auth\//] },
+  ),
+);
+
+registerRoute(
+  ({ request }) => request.destination === 'image',
+  new StaleWhileRevalidate({
+    cacheName: 'images',
+    plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 30 * 24 * 3600, purgeOnQuotaError: true })],
+  }),
+);
+
+registerRoute(
+  ({ url }) => url.pathname.startsWith('/api/public/'),
+  new NetworkFirst({ cacheName: 'api-public', networkTimeoutSeconds: 3, plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 300 })] }),
+);
+
+// Offline writes: failed POSTs are queued and replayed (Background Sync API in Chromium; Workbox
+// falls back to replaying on the next SW startup in other browsers)
+registerRoute(
+  ({ url, request }) => url.pathname === '/api/notes' && request.method === 'POST',
+  new NetworkOnly({ plugins: [new BackgroundSyncPlugin('notes-queue', { maxRetentionTime: 24 * 60 })] }),
+  'POST',
+);
+
+setCatchHandler(async ({ request }) => {
+  if (request.destination === 'document') {
+    const offline = await caches.match('/offline.html');
+    if (offline) return offline;
   }
+  return Response.error();
 });
 
-async function processQueuedActions() {
-  const actions = await getQueuedActions(); // from IndexedDB
-  for (const action of actions) {
-    try {
-      await fetch(action.url, { method: action.method, body: action.body });
-      await removeQueuedAction(action.id);
-    } catch (e) {
-      console.error('Background sync failed:', e);
-    }
-  }
-}
+// Update flow: only activate when the page asks (user accepted the prompt)
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting();
+});
 ```
+POST replays must be idempotent on the server (send an `Idempotency-Key`), because a request can be delivered more than once.
 
-## Performance Optimization
+## vite-plugin-pwa
 
-### Loading Performance
-```html
-<!-- Preload critical resources -->
-<link rel="preload" href="/app.js" as="script">
-<link rel="preload" href="/styles.css" as="style">
-
-<!-- Preconnect to origins -->
-<link rel="preconnect" href="https://api.example.com">
-<link rel="dns-prefetch" href="https://cdn.example.com">
-
-<!-- Lazy load non-critical -->
-<link rel="preload" href="/hero-image.jpg" as="image" media="(min-width: 768px)">
-```
-
-### Webpack/Vite PWA Plugins
-```javascript
-// Vite PWA plugin
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
     VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['**/*.{png,jpg,svg}'],
-      manifest: {
-        name: 'My App',
-        short_name: 'MyApp',
-        theme_color: '#3b82f6',
-        icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https?:\/\/api\.example\.com\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 86400 },
-            },
-          },
-        ],
-      },
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      registerType: 'prompt',
+      injectManifest: { globPatterns: ['**/*.{js,css,html,svg,png,woff2}'] },
+      manifest: false, // using public/manifest.webmanifest
     }),
   ],
 });
 ```
 
-## Testing PWA Features
+```tsx
+// UpdatePrompt.tsx (React; vue/svelte variants exist)
+import { useRegisterSW } from 'virtual:pwa-register/react';
 
-### Lighthouse Audit Checklist
-```
-□ Service worker registered
-□ Page loads offline (200 from cache)
-□ HTTPS used
-□ Manifest has start_url
-□ Manifest has 192px and 512px icons
-□ Redirects HTTP to HTTPS
-□ Configured for custom splash screen
-□ Sets background_color
-□ Has <meta name="theme-color">
-□ Uses <meta name="viewport">
-□ Content sized correctly for viewport
-□ font-display: swap on custom fonts
-□ Minimizes main-thread work
-```
-
-### Manual Testing
-```bash
-# Chrome DevTools → Application → Service Workers
-# Check: offline checkbox, update on reload, push simulation
-# Chrome DevTools → Application → Cache Storage
-# Chrome DevTools → Application → Manifest
-# Check install prompt behavior
-```
-
-## Key Anti-Patterns
-- **Caching uncacheable content**: Never cache user-specific data across sessions
-- **No cache versioning**: Always version cache names for clean upgrades
-- **Service worker without `skipWaiting`**: Users stuck on old version
-- **Not cleaning old caches**: Storage quota exceeded errors
-- **Overfetching in precache**: Only cache what's needed for app shell
-- **Caching large files in install**: Causes install to fail; use runtime caching
-- **Missing offline fallback**: Users see browser error page instead of branded offline page
-- **Not handling `fetch` errors**: Always provide cache fallback
-- **Push without permission context**: Ask after user takes an action, not on load
-- **Ignoring `display` modes**: Test standalone, minimal-ui, and browser modes
-- **Not testing on slow networks**: DevTools network throttling
-- **No `update` event handling**: Prompt users to refresh for new version
-
-## Implementation Patterns
-
-### Service Worker with Workbox
-
-```javascript
-// sw.js — Workbox-based service worker
-import { precacheAndRoute } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
-import { StaleWhileRevalidate, CacheFirst, NetworkFirst } from 'workbox-strategies';
-import { ExpirationPlugin } from 'workbox-expiration';
-import { CacheableResponsePlugin } from 'workbox-cacheable-response';
-
-precacheAndRoute(self.__WB_MANIFEST);
-
-// App shell — Cache First for instant load
-registerRoute(
-  ({ request }) => request.mode === 'navigate',
-  new NetworkFirst({
-    cacheName: 'pages',
-    plugins: [
-      new CacheableResponsePlugin({ statuses: [200] }),
-    ],
-  })
-);
-
-// Static assets — Cache First with versioning
-registerRoute(
-  ({ request }) =>
-    request.destination === 'style' ||
-    request.destination === 'script' ||
-    request.destination === 'font',
-  new CacheFirst({
-    cacheName: 'static-assets',
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 }),
-    ],
-  })
-);
-
-// Images — Stale While Revalidate
-registerRoute(
-  ({ request }) => request.destination === 'image',
-  new StaleWhileRevalidate({
-    cacheName: 'images',
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 60 * 24 * 60 * 60 }),
-    ],
-  })
-);
-
-// API calls — Network First with timeout
-registerRoute(
-  ({ url }) => url.pathname.startsWith('/api/'),
-  new NetworkFirst({
-    cacheName: 'api-responses',
-    networkTimeoutSeconds: 3,
-    plugins: [
-      new CacheableResponsePlugin({ statuses: [200] }),
-      new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 5 * 60 }),
-    ],
-  })
-);
-
-// Skip waiting and activate immediately
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
-});
-
-// Listen for messages from the app
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-
-// Background sync
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-pending-data') {
-    event.waitUntil(syncPendingData());
-  }
-});
-
-async function syncPendingData() {
-  const cache = await caches.open('pending-actions');
-  const requests = await cache.keys();
-  for (const request of requests) {
-    try {
-      await fetch(request);
-      await cache.delete(request);
-    } catch (err) {
-      console.error('Sync failed for', request.url, err);
-    }
-  }
+export function UpdatePrompt() {
+  const { needRefresh: [needRefresh, setNeedRefresh], updateServiceWorker } = useRegisterSW({
+    onRegisterError(error) { console.error('Service worker registration failed', error); },
+  });
+  if (!needRefresh) return null;
+  return (
+    <div role="status">
+      A new version is available.
+      <button onClick={() => updateServiceWorker(true)}>Reload</button>
+      <button onClick={() => setNeedRefresh(false)}>Later</button>
+    </div>
+  );
 }
 ```
 
-### Push Notification Handler
+## Update Lifecycle Rules
+- A new SW installs, then **waits** until all tabs using the old one close. Calling `skipWaiting()` unconditionally swaps code under open pages, which can break lazy-loaded chunks; prefer the prompt flow above.
+- `clients.claim()` makes the first SW control already-open pages; use it deliberately.
+- Serve `sw.js` with `Cache-Control: no-cache` (browsers also revalidate it at most every 24 h regardless).
+- Precached assets must be revisioned (hashed names or Workbox revisions) or users never get updates.
 
-```javascript
-// Main thread — request permission and subscribe
-async function subscribeToPush() {
+## Web Push
+
+```ts
+export async function subscribeToPush(vapidPublicKey: string): Promise<PushSubscription> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    return null;
+    throw new Error('Push not supported in this browser (on iOS, install to Home Screen first)');
   }
-  const registration = await navigator.serviceWorker.ready;
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
+  const permission = await Notification.requestPermission(); // call from a click handler
+  if (permission !== 'granted') throw new Error(`Notification permission ${permission}`);
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidPublicKey });
+  const res = await fetch('/api/push/subscriptions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub),
   });
-  await fetch('/api/push/subscribe', {
-    method: 'POST',
-    body: JSON.stringify(subscription),
-    headers: { 'Content-Type': 'application/json' },
-  });
-  return subscription;
+  if (!res.ok) throw new Error(`Saving push subscription failed: ${res.status}`);
+  return sub;
 }
-
-// Service worker — handle push events
+```
+```ts
+// in sw.ts
 self.addEventListener('push', (event) => {
-  if (!event.data) return;
-  const data = event.data.json();
-  const options = {
-    body: data.body,
-    icon: '/icon-192.png',
-    badge: '/badge-72.png',
-    vibrate: [200, 100, 200],
-    data: { url: data.url, id: data.id },
-    actions: [
-      { action: 'open', title: 'Open' },
-      { action: 'dismiss', title: 'Dismiss' },
-    ],
-  };
-  event.waitUntil(self.registration.showNotification(data.title, options));
+  const data = event.data?.json() as { title: string; body: string; url: string } | undefined;
+  if (!data) return;
+  event.waitUntil(self.registration.showNotification(data.title, { body: data.body, icon: '/icons/icon-192.png', data: { url: data.url } }));
 });
-
-// Handle notification click
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  if (event.action === 'open' || !event.action) {
-    clients.openWindow(event.notification.data.url);
-  }
+  event.waitUntil(self.clients.openWindow(event.notification.data.url));
 });
 ```
+- `applicationServerKey` accepts the base64url VAPID public key string in modern browsers (or a `Uint8Array`).
+- Every push must show a notification (`userVisibleOnly: true`); silent push is not allowed.
+- Server sends via Web Push protocol (e.g. `web-push` npm library) with the VAPID private key from a secret store; delete subscriptions that return 404/410.
+- Ask for permission after a user action that explains the value, never on page load.
 
-### Offline Fallback Page
+## Storage
+- Check usage with `navigator.storage.estimate()`; request durability with `navigator.storage.persist()` for offline-critical data.
+- Safari may evict script-writable storage for sites not visited for ~7 days unless installed to the Home Screen; treat caches as rebuildable.
+- Use IndexedDB (e.g. via `idb`) for structured offline data, not Cache Storage.
 
-```javascript
-// sw.js — offline fallback for navigation requests
-const OFFLINE_PAGE = '/offline.html';
+## Testing
+- DevTools → Application: Manifest (installability errors), Service Workers (update on reload, offline), Cache Storage, Storage quota.
+- Lighthouse removed its PWA category in v12 (2024); use DevTools installability checks and Playwright tests with `context.setOffline(true)`.
 
-self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(OFFLINE_PAGE))
-    );
-  }
-});
-```
+## Anti-patterns
+| Anti-pattern | Fix |
+|--------------|-----|
+| Unconditional `skipWaiting()` + lazy chunks | Prompt-based update |
+| CacheFirst for HTML | NetworkFirst with offline fallback |
+| Caching personal API responses in shared caches | NetworkOnly or per-user caches cleared on logout |
+| Permission prompt on load | Ask in context after user intent |
+| No `cleanupOutdatedCaches()` / cache versioning | Clean old caches on activate |
+| Assuming Background Sync everywhere | Workbox fallback + visible "pending" UI |
 
-```html
-<!-- offline.html — branded offline experience -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>You're Offline</title>
-  <style>
-    body { font-family: system-ui; text-align: center; padding: 2rem; }
-    h1 { font-size: 2rem; color: #333; }
-    p { color: #666; max-width: 400px; margin: 1rem auto; }
-    .icon { font-size: 4rem; margin-bottom: 1rem; }
-    button { padding: 0.75rem 1.5rem; background: #0066ff; color: white; border: none; border-radius: 8px; cursor: pointer; }
-  </style>
-</head>
-<body>
-  <div class="icon">📡</div>
-  <h1>You're Offline</h1>
-  <p>Check your connection and try again. Some content may still be available.</p>
-  <button onclick="window.location.reload()">Try Again</button>
-</body>
-</html>
-```
-
-## Architecture Decision Trees
-
-### Caching Strategy Selection
-
-```
-What type of content?
-├── App shell (HTML, CSS, JS, fonts)
-│   └── Cache First → Instant load, periodic background update
-│
-├── Static assets (versioned)
-│   └── Cache First → Long max-age, never revalidate
-│
-├── Images and media
-│   └── Stale While Revalidate → Show cached, update in background
-│
-├── API responses
-│   ├── Non-critical, stale OK → Stale While Revalidate
-│   ├── Critical, fresh preferred → Network First with timeout
-│   └── Must be fresh → Network Only (never cache)
-│
-├── User-generated content
-│   └── Network Only + Background Sync for offline creation
-│
-└── Third-party resources (analytics, ads)
-    └── Network Only — never cache third-party content
-```
-
-## Production Considerations
-
-- **Cache size limits**: Service worker storage is limited (per origin). Monitor with `navigator.storage.estimate()`. Implement quota-aware cache eviction. Warn users when storage exceeds 80%.
-- **Update flow prompt**: Listen for `controllerchange` event to detect new SW. Show "Update available" toast with refresh button. Never force-update without user consent.
-- **Background sync with retry**: Use SyncManager for offline data submission. Implement exponential backoff for retries. Show sync status indicator to users.
-- **Analytics while offline**: Queue analytics events in IndexedDB when offline. Flush to server when connection restores. Tag replayed events to avoid double-counting.
-
-## Anti-Patterns
-
-| Anti-Pattern | Why It Fails | Correct Approach |
-|---|---|---|
-| Caching user-specific data in SW | Privacy violation, stale data | Never cache per-user responses |
-| No SW version management | Users stuck on stale versions | Use cache-busting strategy, update prompt |
-| Caching everything aggressively | Storage quota exceeded | Selective caching based on content type |
-| No offline fallback for navigation | Users see browser error page | Serve branded offline page |
-| Not handling SW update race | Multiple SW versions serving inconsistent state | Proper activate event + clients.claim() |
-| Ignoring `fetch` errors in SW | Unhandled rejections crash the SW | Always provide catch handler in respondWith |
-| Push without permission context | Users deny or ignore | Ask permission in response to user action |
-
-## Performance Optimization
-
-- **Precache critical assets only**: Precache app shell (HTML, CSS, JS entry point). Runtime cache everything else. Reduces install time and avoids downloading unused assets.
-- **Cache-first for navigation**: Serve cached HTML immediately, update in background. Eliminates the flash of empty content. User always sees something instantly.
-- **Image lazy loading with IntersectionObserver**: Only load images when they enter viewport. Combine with responsive images (srcset/sizes) for optimal bandwidth. Use WebP with AVIF fallback.
-- **Font-display: swap**: Use `font-display: swap` to render text immediately with fallback font. Avoid invisible text during font load. Reduces Largest Contentful Paint by up to 300ms.
+## Checklist
+- [ ] Manifest with `id`, separate `any`/`maskable` icons, screenshots; Apple touch icon.
+- [ ] SW precaches revisioned shell; per-route strategies documented.
+- [ ] Offline fallback page and offline write queue (idempotent server).
+- [ ] Update prompt flow; `sw.js` served `no-cache`.
+- [ ] Push permission requested in context; dead subscriptions pruned.
+- [ ] Offline and update behaviour covered by automated tests.

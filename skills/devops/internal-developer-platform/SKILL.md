@@ -630,10 +630,6 @@ Caching:
 - references/idp-scorecard.md — IDP Scorecard: Maturity Assessment Framework
 - references/internal-developer-platform-advanced.md — Internal Developer Platform Advanced Topics
 - references/internal-developer-platform-fundamentals.md — Internal Developer Platform Fundamentals
-- references/catalog-modeling.md — Entity Catalog Modeling
-- references/template-design.md — Software Template Design Patterns
-- references/permission-framework.md — Backstage Permission Framework
-- references/techdocs-config.md — TechDocs Configuration Guide
 
 ## Handoff
 Related skills: platform-engineering (IDP high-level strategy), policy-as-code (guardrails), progressive-delivery (deployment), sre-practices (reliability SLOs), cicd-pipeline (CI/CD integration).

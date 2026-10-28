@@ -608,12 +608,6 @@ jobs:
 - Large templates with no `_helpers.tpl` — violates DRY principle, harder to maintain.
 
 ## References
-  - references/helm-advanced.md — Helm Advanced Topics
-  - references/helm-fundamentals.md — Helm Fundamentals
-  - references/helmfile.md — Helmfile Multi-Environment Management
-  - references/helm-secrets.md — SOPS and SealedSecrets for Helm
-  - references/helm-ci-cd.md — Helm CI/CD Pipeline Patterns
-  - references/helm-testing.md — Helm Unit and Integration Testing
   - references/helm-security.md — Chart Signing and Supply Chain Security
 ## Handoff
 - `devops-kubernetes` for deploying Helm charts to Kubernetes clusters.

@@ -448,7 +448,7 @@ Hand off to devops-observability for alerting and monitoring infrastructure. For
 ## Implementation Patterns
 
 ### Isolation Forest for Anomaly Detection
-`python
+```python
 import numpy as np
 from sklearn.ensemble import IsolationForest
 from sklearn.model_selection import train_test_split
@@ -465,10 +465,10 @@ model.fit(X_train)
 
 scores = model.decision_function(X_test)
 predictions = model.predict(X_test)  # 1 = normal, -1 = anomaly
-`
+```
 
 ### Autoencoder-Based Anomaly Detection
-`python
+```python
 import tensorflow as tf
 from tensorflow.keras import layers, Model
 
@@ -491,7 +491,7 @@ class AnomalyAutoencoder(Model):
     def anomaly_score(self, x):
         reconstructed = self(x)
         return tf.reduce_mean(tf.square(x - reconstructed), axis=1)
-`
+```
 
 ## Performance Optimization
 

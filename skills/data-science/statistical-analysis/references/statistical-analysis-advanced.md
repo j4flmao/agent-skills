@@ -1,214 +1,136 @@
-# Statistical Analysis Advanced Topics
+# Advanced Statistical Analysis: Models Beyond OLS, Resampling, Multilevel Data, Power and Robustness
 
-## Introduction
-Advanced Statistical Analysis topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced methods for applied analysis when basic tests and ordinary least squares are not enough: generalized linear models, mixed-effects models for clustered data, robust and quantile regression, bootstrap and permutation inference, multiple comparisons, survival analysis, missing data, and simulation-based power analysis. Fundamentals are in `statistical-analysis-fundamentals.md`; Bayesian methods in `bayesian-methods.md`.
 
-## Advanced Architecture Patterns
+## Generalized Linear Models (GLMs)
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+| Outcome | Family / link | Example |
+|---------|---------------|---------|
+| Binary | Binomial / logit | Churned or not |
+| Counts | Poisson / log; Negative binomial if overdispersed | Support tickets per account |
+| Positive continuous, skewed | Gamma / log | Order value, durations |
+| Proportions with known trials | Binomial with weights | Clicks out of impressions |
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+```python
+import numpy as np
+import statsmodels.formula.api as smf
+import statsmodels.api as sm
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+m = smf.glm("tickets ~ plan + seats + C(region)", data=df,
+            family=sm.families.NegativeBinomial(alpha=1.0), offset=np.log(df["months_active"])).fit()
+print(m.summary())
+```
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+- Exponentiated coefficients in log-link models are multiplicative effects (rate ratios, odds ratios).
+- Check overdispersion for Poisson (residual deviance much larger than degrees of freedom); estimate the negative binomial dispersion rather than fixing it when possible (`smf.negativebinomial`).
+- Use offsets for exposure (time, population).
 
-## Performance Optimization
+## Mixed-Effects (Multilevel) Models
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+Observations clustered within groups (students in schools, sessions within users, repeated measures) violate independence. Options:
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+| Approach | When |
+|----------|------|
+| Cluster-robust standard errors | Interest in population-average effect; many clusters |
+| Mixed-effects models (random intercepts/slopes) | Model group variation explicitly; partial pooling |
+| GEE (generalized estimating equations) | Population-averaged effects for non-normal outcomes |
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+```python
+m = smf.mixedlm("score ~ treatment + baseline", data=df, groups=df["school_id"],
+                re_formula="~treatment").fit()
+```
 
-## Security Hardening
+In R, `lme4::lmer(score ~ treatment + baseline + (1 + treatment | school_id))`. Few clusters (fewer than roughly 30-50) make cluster-robust errors unreliable; consider wild cluster bootstrap.
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+## Robust and Quantile Regression
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+- Heteroscedasticity: use heteroscedasticity-consistent standard errors (`fit(cov_type="HC3")`).
+- Outliers: Huber or Tukey M-estimators (`sm.RLM`), or transform the outcome with care.
+- Quantile regression models effects on medians or tails (e.g. p90 latency), not just the mean:
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+```python
+q90 = smf.quantreg("latency_ms ~ cache_enabled + payload_kb", df).fit(q=0.9)
+```
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+## Resampling Inference
 
-## Monitoring and Observability
+Bootstrap for confidence intervals when analytic formulas are awkward (medians, ratios, complex estimators):
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+```python
+import numpy as np
+rng = np.random.default_rng(42)
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+def bootstrap_ci(x: np.ndarray, stat=np.median, B: int = 10_000, alpha: float = 0.05):
+    boots = np.array([stat(rng.choice(x, size=x.size, replace=True)) for _ in range(B)])
+    return np.quantile(boots, [alpha / 2, 1 - alpha / 2])
+```
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+- Resample the independent unit (users, clusters), not individual rows within them.
+- BCa intervals (`scipy.stats.bootstrap(method="BCa")`) correct bias and skewness.
+- Permutation tests give exact-style p-values under the null of exchangeability: shuffle labels, recompute the statistic, compare.
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+## Multiple Comparisons
 
-## Scalability and Reliability
+| Method | Controls | Use |
+|--------|----------|-----|
+| Bonferroni | Family-wise error rate | Few confirmatory tests |
+| Holm | FWER, more powerful than Bonferroni | Default FWER choice |
+| Benjamini-Hochberg | False discovery rate | Many exploratory tests (genes, segments, metrics) |
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+```python
+from statsmodels.stats.multitest import multipletests
+reject, p_adj, _, _ = multipletests(pvals, alpha=0.05, method="fdr_bh")
+```
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+## Survival (Time-to-Event) Analysis
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+For durations with censoring (churn time, time to failure):
+- Kaplan-Meier curves for survival estimates; log-rank test to compare groups.
+- Cox proportional hazards for covariate effects (hazard ratios); check the proportional hazards assumption (Schoenfeld residuals).
+- Python: `lifelines` (`KaplanMeierFitter`, `CoxPHFitter`); R: `survival`.
 
-## Integration and Interoperability
+Treating censored users as "not churned" or dropping them biases results.
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+## Missing Data
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+| Mechanism | Meaning | Implication |
+|-----------|---------|-------------|
+| MCAR | Missingness unrelated to anything | Complete-case analysis unbiased but less efficient |
+| MAR | Depends on observed variables | Multiple imputation or likelihood methods valid |
+| MNAR | Depends on unobserved values | Requires sensitivity analysis or modeling the mechanism |
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+Multiple imputation (e.g. MICE: `statsmodels.imputation.mice`, R `mice`) creates several completed datasets and pools estimates with Rubin's rules. Single mean imputation understates variance.
 
-## DevOps and Automation
+## Power Analysis by Simulation
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+When designs are complex (clustered, GLMs, unequal allocation), simulate:
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+```python
+def simulated_power(n_clusters, per_cluster, effect, icc, sims=1000, alpha=0.05):
+    hits = 0
+    for _ in range(sims):
+        df = simulate_clustered(n_clusters, per_cluster, effect, icc, rng)
+        p = smf.mixedlm("y ~ treat", df, groups=df["cluster"]).fit().pvalues["treat"]
+        hits += p < alpha
+    return hits / sims
+```
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+Design effect for cluster randomization: `1 + (m - 1) x ICC`, where m is cluster size; it inflates required sample size.
 
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
+## Model Diagnostics and Robustness
 
-## Data Management
+- Residual plots, leverage and influence (Cook's distance).
+- Multicollinearity (variance inflation factors) affects coefficient interpretation, not prediction.
+- Specification checks: add plausible covariates, alternative functional forms (splines), and report whether conclusions change.
+- Report effect sizes with intervals and practical significance, not only p-values.
 
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
+## Checklist
 
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Model family matches outcome type; overdispersion checked
+- [ ] Clustering handled by robust errors, mixed models or GEE
+- [ ] Heteroscedasticity-robust or quantile methods where appropriate
+- [ ] Resampling at the independent unit level
+- [ ] Multiple-comparison correction matched to confirmatory vs exploratory goals
+- [ ] Censoring handled with survival methods
+- [ ] Missing-data mechanism considered; multiple imputation if MAR
+- [ ] Power assessed (simulation for complex designs) before data collection

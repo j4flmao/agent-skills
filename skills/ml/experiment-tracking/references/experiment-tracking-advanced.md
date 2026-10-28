@@ -1,214 +1,170 @@
 # Experiment Tracking Advanced Topics
 
-## Introduction
-Advanced Experiment Tracking topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Running experiment tracking as shared infrastructure: production tracking-server architecture, security, hyperparameter sweeps and nested runs, distributed training logging, lineage from data to deployed model, tracking LLM and GenAI work (traces and evaluations), automated promotion gates, and data retention.
+
+## Tracking Server Architecture (MLflow)
+
+```text
+clients (training jobs, notebooks, CI)
+   │ HTTPS + auth
+   ▼
+reverse proxy / auth gateway (OIDC)
+   ▼
+mlflow server (stateless, N replicas)
+   ├─ backend store: PostgreSQL / MySQL (runs, params, metrics, registry)
+   └─ artifact store: S3 / GCS / Azure Blob (models, files)  ← proxied through the server or direct
+```
+
+```bash
+mlflow server \
+  --host 0.0.0.0 --port 5000 \
+  --backend-store-uri "postgresql+psycopg2://mlflow:${DB_PASSWORD}@db.internal:5432/mlflow" \
+  --artifacts-destination s3://ml-artifacts/mlflow \
+  --serve-artifacts \
+  --workers 4
+```
+
+- `--serve-artifacts` proxies artifact uploads/downloads through the server, so clients need no direct bucket credentials; disable it and grant scoped bucket access only when artifact traffic must bypass the server for throughput.
+- Use a managed relational database with backups; never SQLite for shared servers.
+- Run database migrations (`mlflow db upgrade <uri>`) as a controlled step when upgrading MLflow.
+- Put large-metric workloads (per-step metrics for thousands of runs) on a database sized for write throughput; batch metric logging (`log_metrics`, `log_batch`).
+
+### Security
+| Concern | Control |
+|---------|---------|
+| Authentication | SSO via reverse proxy (OIDC), or MLflow's built-in basic auth app (`--app-name basic-auth`) for small setups |
+| Authorization | Per-experiment/registered-model permissions (built-in auth) or a managed platform (Databricks, SageMaker, Azure ML) |
+| Secrets in params/tags | Never log API keys, connection strings or PII; scan or redact |
+| Artifact access | Bucket encryption, least-privilege IAM, no public buckets |
+| Model loading | Pickled models execute code on load; only load models from trusted registries |
+
+## Sweeps and Nested Runs
+
+```python
+import optuna
+import mlflow
+
+def objective(trial: optuna.Trial) -> float:
+    params = {
+        "lr": trial.suggest_float("lr", 1e-5, 1e-2, log=True),
+        "depth": trial.suggest_int("depth", 4, 12),
+    }
+    with mlflow.start_run(nested=True, run_name=f"trial-{trial.number}"):
+        mlflow.log_params(params)
+        score = train_and_evaluate(params)
+        mlflow.log_metric("val_auc", score)
+    return score
+
+with mlflow.start_run(run_name="optuna-sweep-2026-10") as parent:
+    mlflow.set_tag("sweep", "optuna-tpe")
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=50)
+    mlflow.log_params({f"best_{k}": v for k, v in study.best_params.items()})
+    mlflow.log_metric("best_val_auc", study.best_value)
+```
+
+- Parent run = sweep definition and best result; children = trials.
+- Log the search space and sampler as tags/params so the sweep can be rerun.
+- After the sweep, retrain the best config with several seeds and report mean/std before promoting.
+- W&B Sweeps provide hosted search controllers with agents on your compute.
+
+## Distributed Training
+
+Only one process should create the run and log metrics, or logs are duplicated and races occur.
+
+```python
+import os
+import torch.distributed as dist
+
+is_main = int(os.environ.get("RANK", "0")) == 0
+
+if is_main:
+    mlflow.start_run(run_name="ddp-8xgpu")
+    mlflow.log_params(cfg)
+
+for step, batch in enumerate(loader):
+    loss = train_step(batch)
+    if step % 50 == 0:
+        reduced = loss.detach().clone()
+        dist.all_reduce(reduced, op=dist.ReduceOp.AVG)   # average across ranks
+        if is_main:
+            mlflow.log_metric("train/loss", reduced.item(), step=step)
+
+if is_main:
+    mlflow.end_run()
+```
+
+Log aggregated values (all-reduced) rather than rank-0's local value. Frameworks (PyTorch Lightning, Hugging Face `Trainer` with `report_to=["mlflow"]` or `["wandb"]`) handle rank-zero logging for you.
+
+## Lineage
+
+Connect every deployed model back to its inputs:
+
+```text
+raw data snapshot ─► feature pipeline run ─► training dataset version ─► training run ─► model version ─► deployment
+     (lakeFS/Delta version)   (orchestrator run ID)     (DVC hash / table version)     (run ID)      (registry alias)  (service revision)
+```
 
-## Advanced Architecture Patterns
+- Log dataset inputs explicitly (`mlflow.log_input(mlflow.data.from_pandas(df, source=..., name=...), context="training")`) so the run records dataset name, digest and source.
+- Tag model versions with the training run ID and data version; tag deployments with the model version.
+- Store the orchestrator run ID (Airflow, Kubeflow, Dagster) in the run's tags.
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+## LLM and GenAI Tracking
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+Classic params/metrics are not enough for prompt- and LLM-based systems:
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+| Need | Approach |
+|------|----------|
+| Prompt and configuration versions | Version prompts (prompt registry or files in Git) and log prompt version as a param |
+| Request-level traces | Tracing (MLflow Tracing, W&B Weave, OpenTelemetry GenAI semantic conventions) capturing inputs, outputs, tool calls, latency, token usage |
+| Quality evaluation | Evaluation datasets + automated scorers (exact match, LLM-as-judge with rubric, groundedness) logged as metrics per run |
+| Cost | Tokens and cost per evaluation run |
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+```python
+import mlflow
 
-## Performance Optimization
+mlflow.openai.autolog()          # traces OpenAI client calls; similar integrations exist for other SDKs/frameworks
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+@mlflow.trace
+def answer(question: str) -> str:
+    context = retrieve(question)
+    return generate(question, context)
+```
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+Treat LLM-judge scores as noisy: calibrate judges against human labels and track judge prompt/model versions.
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+## Automated Promotion Gates
 
-## Security Hardening
+```python
+client = mlflow.MlflowClient()
+challenger = client.get_model_version_by_alias("churn-classifier", "challenger")
+champion = client.get_model_version_by_alias("churn-classifier", "champion")
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+c_auc = client.get_run(challenger.run_id).data.metrics["test_auc"]
+p_auc = client.get_run(champion.run_id).data.metrics["test_auc"]
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+if c_auc >= p_auc + 0.005 and fairness_checks_pass(challenger) and latency_ok(challenger):
+    client.set_registered_model_alias("churn-classifier", "champion", challenger.version)
+else:
+    raise RuntimeError(f"challenger v{challenger.version} rejected: auc {c_auc:.4f} vs champion {p_auc:.4f}")
+```
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+Gates belong in CI/CD with evaluation on a frozen test set, plus checks for fairness slices, calibration, latency and model size. Record the gate decision as a tag on the model version.
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+## Retention and Cost
 
-## Monitoring and Observability
+- Artifact storage grows fastest: set lifecycle rules for checkpoints of non-registered runs (e.g. delete after N days) while keeping registered model artifacts.
+- Archive or delete abandoned experiments; MLflow soft-deletes runs, and `mlflow gc` permanently removes deleted runs and their artifacts.
+- Downsample per-step metrics for very long training runs.
+- Keep audit-relevant runs (deployed models) for the period your governance requires.
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+## Checklist
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Tracking server with RDBMS backend, object-store artifacts, SSO and backups
+- [ ] No secrets/PII in params, tags or artifacts; trusted-source model loading
+- [ ] Sweeps as parent/child runs with search space recorded; best config re-run with seeds
+- [ ] Rank-zero logging of all-reduced metrics in distributed jobs
+- [ ] Dataset inputs and orchestrator IDs logged for lineage
+- [ ] Traces and evaluation runs for LLM systems with versioned prompts and judges
+- [ ] Promotion gates automated with recorded decisions
+- [ ] Retention policies and garbage collection scheduled

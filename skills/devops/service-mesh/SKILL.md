@@ -109,7 +109,7 @@ kubectl annotate namespace default linkerd.io/inject=enabled
 
 ### VirtualService with Weighted Canary
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: myapp
@@ -140,7 +140,7 @@ spec:
       allowMethods: [GET, POST, PUT, DELETE]
 ```
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
   name: myapp
@@ -172,7 +172,7 @@ spec:
 
 ### Fault Injection for Resilience Testing
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: myapp-fault
@@ -197,7 +197,7 @@ spec:
 
 ### Traffic Mirroring (Shadow Traffic)
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: myapp-mirror
@@ -218,7 +218,7 @@ spec:
 
 ### Ingress Gateway with TLS Termination
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: Gateway
 metadata:
   name: myapp-gateway
@@ -236,7 +236,7 @@ spec:
       mode: SIMPLE
       credentialName: myapp-tls-cert
 ---
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: myapp-ingress
@@ -261,7 +261,7 @@ spec:
 ### mTLS: PERMISSIVE to STRICT Migration
 ```yaml
 # Step 1: Mesh-wide PERMISSIVE
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 metadata:
   name: default
@@ -271,7 +271,7 @@ spec:
     mode: PERMISSIVE
 ---
 # Step 2: Per-namespace STRICT
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 metadata:
   name: default
@@ -281,7 +281,7 @@ spec:
     mode: STRICT
 ---
 # Step 3: Per-workload override (opt-out)
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 metadata:
   name: legacy-workload
@@ -296,7 +296,7 @@ spec:
 
 ### AuthorizationPolicy (Default Deny)
 ```yaml
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
   name: deny-all
@@ -304,7 +304,7 @@ metadata:
 spec:
   {}
 ---
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
   name: myapp-allow
@@ -331,7 +331,7 @@ spec:
 
 ### RequestAuthentication (JWT Validation)
 ```yaml
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: RequestAuthentication
 metadata:
   name: jwt-auth

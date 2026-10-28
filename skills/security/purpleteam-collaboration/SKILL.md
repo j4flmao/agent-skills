@@ -1,4 +1,37 @@
+---
+name: purpleteam-collaboration
+description: >
+  Use this skill when the user says 'purple team exercise', 'adversary emulation plan', 'security validation', 'red vs blue feedback loop', 'detection coverage'. Orchestrates continuous collaboration where offensive emulation drives defensive tuning, tracked against MITRE ATT&CK. Defensive and educational only. Do NOT use for: pure offensive simulation (use security/redteam-operations), detection authoring (use security/detection-engineering), or IR (use security/blueteam-operations).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [security, purple-team, adversary-emulation, validation, mitre-attack]
+---
+
 # Purple Team Collaboration
+
+## Purpose
+Orchestrate purple-team exercises as a continuous feedback loop: threat-intel-driven emulation plans, validation of whether detections fire, and iterative detection/evasion tuning. Tracks coverage against ATT&CK and emphasizes capability improvement over "winning".
+
+## Agent Protocol
+
+### Trigger
+User phrases: "purple team exercise", "adversary emulation", "security validation", "red vs blue".
+
+### Input Context
+- Target threat actor / TTPs to emulate.
+- Current detection stack and coverage gaps.
+
+### Output Artifact
+Emulation plan mapped to ATT&CK with red execution steps and expected blue telemetry.
+
+### Response Format
+```
+Technique: {Txxxx}
+Red step: {action}
+Expected telemetry: {log/alert}
+Outcome: {Logged | Detected | Blocked}
+```
 
 > [!WARNING]
 > **DISCLAIMER: EDUCATIONAL & DEFENSIVE PURPOSES ONLY**

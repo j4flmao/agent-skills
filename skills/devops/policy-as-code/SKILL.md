@@ -735,9 +735,6 @@ Both:
 - references/policy-as-code-fundamentals.md — Policy As Code Fundamentals
 - references/policy-ci-cd.md — Policy-as-Code in CI/CD
 - references/policy-testing.md — OPA/Rego Policy Patterns
-- references/policy-lifecycle.md — Policy Lifecycle and Versioning
-- references/kyverno-mutation.md — Kyverno Mutation Patterns
-- references/performance-tuning.md — Policy Engine Performance Tuning
 
 ## Handoff
 Related skills: platform-engineering (guardrails in IDP), gitops-advanced (policy sync with GitOps), kubernetes-operators (admission webhooks), security-container-security (Pod Security Standards), enterprise-compliance-audit (compliance reporting).

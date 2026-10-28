@@ -25,7 +25,7 @@ Exact user phrases: "Next.js", "App Router", "Server Component", "Client Compone
 
 ### Input Context
 Before activating, verify:
-- next.config exists (Next.js 14+).
+- next.config exists; check the Next.js major (15/16 make `params`, `searchParams`, `cookies()`, `headers()` async and stop caching `fetch` by default; 16 adds Cache Components and renames `middleware.ts` to `proxy.ts`).
 - Whether the project uses Pages Router or App Router.
 
 ### Output Artifact
@@ -95,12 +95,11 @@ How often does the data change?
 
 ```
 Is the fetch result user-specific?
-  ├── Yes -> no cache
-  │    ├── User in cookie -> `cache: 'no-store'`
-  │    └── User in header -> `cache: 'no-store'`
-  └── No -> cache (default)
-       ├── Can be stale 60s -> `next: { revalidate: 60 }`
-       └── Never stale -> default fetch caching
+  ├── Yes -> no cache (fetch is uncached by default since Next.js 15; reading cookies()/headers() makes the route dynamic)
+  └── No -> opt in to caching
+       ├── Can be stale 60s -> `next: { revalidate: 60 }` (or 'use cache' + cacheLife with cacheComponents)
+       ├── Static until invalidated -> `cache: 'force-cache'` + `next: { tags: [...] }`, invalidate with revalidateTag
+       └── Next.js 13/14 only: fetch was cached by default — don't rely on it after upgrading
 ```
 
 ## Component Design Patterns
@@ -185,8 +184,9 @@ export default function Layout({ children, feed, notifications }: {
 
 ```typescript
 // app/(.)photo/[id]/page.tsx
-export default function PhotoModal({ params }: { params: { id: string } }) {
-  return <div className="modal"><Photo id={params.id} /></div>
+export default async function PhotoModal({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params // params is async in Next.js 15+
+  return <div className="modal"><Photo id={id} /></div>
 }
 ```
 
@@ -268,7 +268,7 @@ export const useCart = create<{ items: CartItem[]; add(item: CartItem): void }>(
 import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   images: { formats: ['image/avif', 'image/webp'] },
-  experimental: { ppr: true }, // Partial Prerendering
+  cacheComponents: true, // Next.js 16: PPR via Cache Components (replaces experimental.ppr)
   logging: { fetches: { fullUrl: true } },
   serverExternalPackages: ['bcrypt'],
 }
@@ -437,8 +437,8 @@ Functions, Date objects, and undefined values crash between Server and Client Co
 
 1. `next build --debug` — build analysis
 2. `@next/bundle-analyzer` — visualize bundles
-3. `next lint` — ESLint with Next.js rules
-4. `next dev --turbo` — Turbopack
+3. ESLint CLI with `@next/eslint-plugin-next` (flat config) — `next lint` was removed in Next.js 16
+4. Turbopack — default bundler for `next dev`/`next build` in Next.js 16 (`--webpack` to opt out)
 5. `@next/codemod` — migration upgrades
 6. `next-sitemap` — sitemaps
 7. `@sentry/nextjs` — error tracking

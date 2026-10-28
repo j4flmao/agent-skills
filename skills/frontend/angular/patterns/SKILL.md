@@ -58,7 +58,7 @@ Per pattern: 20 lines.
 
 | Approach | Trade-off | When to Use |
 |----------|-----------|-------------|
-| Standalone components (default since v17) | No NgModules, simpler | New projects, new features |
+| Standalone components (`ng new` default since v17; implicit `standalone: true` since v19) | No NgModules, simpler | New projects, new features |
 | NgModules-based | Legacy, shared declarations | Existing Angular <17 projects |
 | Signal Store (manual or @ngrx/signals) | Lighter than NgRx | Small-medium apps, CRUD |
 | NgRx (Store + Effects + Entity) | Full Redux pattern | Large apps, complex side effects |
@@ -175,7 +175,7 @@ Unnecessary subscriptions waste memory. Use `takeUntilDestroyed()` (Angular 16+)
 Signals are lightweight compared to RxJS Subjects:
 - `signal()` and `computed()` have near-zero overhead
 - No Subscription objects, no operators, no schedulers
-- Direct integration with Angular's change detection (no zone.js needed with zoneless)
+- Direct integration with Angular's change detection; zoneless change detection (`provideZonelessChangeDetection()`, stable since v20.2 and the default for new apps in v21) relies on signals
 
 ## Ecosystem & Tooling
 
@@ -325,12 +325,15 @@ export class HasPermissionDirective {
   private readonly viewContainer = inject(ViewContainerRef)
   private readonly auth = inject(AuthService)
 
-  @Input() set appHasPermission(permission: string) {
-    if (this.auth.hasPermission(permission)) {
-      this.viewContainer.createEmbeddedView(this.templateRef)
-    } else {
+  readonly appHasPermission = input.required<string>()
+
+  constructor() {
+    effect(() => {
       this.viewContainer.clear()
-    }
+      if (this.auth.hasPermission(this.appHasPermission())) {
+        this.viewContainer.createEmbeddedView(this.templateRef)
+      }
+    })
   }
 }
 ```
@@ -438,52 +441,6 @@ describe('UserStore', () => {
 No artifact produced.
 Next skill: frontend-testing — test Angular components.
 Carry forward: interceptor setup, store pattern choice (Signal Store/NgRx), RxJS conventions.
-## Implementation Patterns
-
-### Factory Pattern for Module Creation
-`
-function createModule<T>(config: ModuleConfig): T {
-  const dependencies = initializeDependencies(config);
-  const module = new Module(dependencies);
-  module.hooks.onInit();
-  return module as T;
-}
-`
-
-### Builder Pattern for Complex Configuration
-`
-class ConfigBuilder {
-  private config: AppConfig = new AppConfig();
-  withDatabase(url: string): ConfigBuilder { ... }
-  withCache(ttl: number): ConfigBuilder { ... }
-  withLogging(level: string): ConfigBuilder { ... }
-  build(): AppConfig { return this.config; }
-}
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Production build with optimizations enabled
-- [ ] Environment variables configured per environment
-- [ ] Health check endpoint responds correctly
-- [ ] Error tracking and monitoring integrated
-- [ ] Logging level configured (not debug in production)
-- [ ] Resource limits configured
-- [ ] Database migrations applied
-- [ ] Static assets built and served from CDN or cache
-- [ ] Feature flags toggled appropriately
-- [ ] Rollback plan documented and tested
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% | Critical | Rollback or fix |
-| p95 latency | > 500ms | Warning | Profile and optimize |
-| Uptime | < 99.9% | Critical | Investigate infrastructure |
-| Memory usage | > 80% | Warning | Check for leaks |
-| CPU usage | > 80% | Warning | Scale up or optimize |
-
 ## Architecture Decision Trees
 
 ### State Management Decision Tree

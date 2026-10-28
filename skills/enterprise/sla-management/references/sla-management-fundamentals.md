@@ -1,213 +1,122 @@
-# Sla Management Fundamentals
+# SLA Management Fundamentals
 
-## Overview
-Sla Management is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Service Level Agreements (SLAs) are commitments to customers with consequences; SLOs are internal targets; SLIs are the measurements. This reference covers the vocabulary, the anatomy of an SLA, availability math, measurement rules, and the basic management lifecycle. Detailed definition, negotiation, monitoring, and error-budget topics have their own references in this directory.
 
-## Core Concepts
+## 1. Vocabulary
+
+| Term | Definition | Owner |
+|---|---|---|
+| SLI (indicator) | Measured ratio of good events to valid events (e.g. successful requests / all requests) | Engineering |
+| SLO (objective) | Target for an SLI over a window (e.g. 99.9% over 30 days) | Engineering + product |
+| SLA (agreement) | Contractual commitment, usually looser than the SLO, with remedies such as service credits | Business, legal, customer |
+| OLA (operational level agreement) | Commitment between internal teams supporting a service | Internal teams |
+| UC (underpinning contract) | Commitment from an external supplier the service depends on | Vendor management |
+| Error budget | 1 − SLO: allowed unreliability in the window | Engineering + product |
+
+Set the SLA below the SLO (e.g. SLO 99.95%, SLA 99.9%) so the team acts on SLO breaches before contractual breaches occur.
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Sla Management helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+## 2. Anatomy of an SLA
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Sla Management solutions. These principles help maintain code quality and reduce technical debt.
-
-### Concept 3: Data Management
-Proper data management is essential for Sla Management. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
-
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Sla Management follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
-
-## Implementation Guide
-
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
-
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Sla Management concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+| Section | Content |
+|---|---|
+| Service description | What is covered: components, regions, plans/tiers |
+| Metrics | Precise definitions: availability, latency, support response, RPO/RTO where relevant |
+| Measurement | Data source, measurement point (server-side, synthetic, client), aggregation window, time zone |
+| Targets | Thresholds per metric and tier |
+| Exclusions | Scheduled maintenance (with notice period), force majeure, customer-caused issues, beta features, third-party failures outside provider control |
+| Remedies | Service credits table, claim process, deadline to claim, credit caps |
+| Reporting | Frequency and format of SLA reports, access to status page |
+| Support | Severity definitions, response and update times, escalation contacts |
+| Responsibilities | Customer obligations (supported configurations, timely reporting) |
+| Review and change | How SLA terms change, notice periods |
+
+## 3. Availability Math
+
+Allowed downtime:
+
+| Target | Per 30-day month | Per year (365 days) |
+|---|---|---|
+| 99% | 7 h 12 min | 3.65 days |
+| 99.5% | 3 h 36 min | 43.8 h |
+| 99.9% | 43.2 min | 8.76 h |
+| 99.95% | 21.6 min | 4.38 h |
+| 99.99% | 4.32 min | 52.6 min |
+| 99.999% | 25.9 s | 5.26 min |
+
+Each extra nine is roughly ten times harder and usually much more expensive; commit only to what the architecture and operations can sustain.
+
+## 4. Composite Availability
+
+Serial dependencies multiply:
+
+```
+API (99.95%) → database (99.99%) → payment provider (99.9%)
+Composite ≈ 0.9995 × 0.9999 × 0.999 = 0.9984  (≈ 99.84%)
+```
+
+Redundant components in parallel (independent failures):
+
+```
+Two regions each 99.9%: 1 − (0.001 × 0.001) = 0.999999 (theoretical)
+```
+
+The parallel result assumes independent failures and perfect failover; real systems share failure modes (deployments, DNS, control planes), so treat it as an upper bound. A service cannot promise more than its critical serial dependencies allow unless it has fallbacks for them.
+
+## 5. Measurement Rules
+
+Write these into the SLA, not just the dashboards:
+- **Unit**: request-based (good requests / total) or time-based (minutes in which the service was available). Request-based reflects user experience under partial outages; time-based is easier to explain.
+- **Definition of "down"**: e.g. a minute is unavailable if the error rate exceeds 5% or synthetic checks from two or more regions fail.
+- **Window**: calendar month is common for SLAs; rolling 28/30 days for SLOs.
+- **Source of truth**: provider monitoring, third-party synthetic monitoring, or both; how disputes are resolved.
+- **Exclusions**: scheduled maintenance windows announced at least N days in advance, limited to a stated duration.
+
+## 6. Service Credits
+
+| Monthly availability | Credit (% of monthly fee for the affected service) |
+|---|---|
+| < 99.9% and ≥ 99.0% | 10% |
+| < 99.0% and ≥ 95.0% | 25% |
+| < 95.0% | 100% |
+
+Values are an example structure; actual tiers are a commercial decision. Typical terms: customer must claim within a set number of days, credits apply to future invoices, credits are the sole remedy, and total credits are capped.
+
+## 7. Lifecycle
+
+```
+Define (SLIs, SLOs, draft SLA) → Agree (negotiate, legal review) → Implement (monitoring, reporting)
+      ↑                                                                        │
+      └──────── Review (quarterly: performance, breaches, customer feedback) ◄──┘
+```
+
+| Activity | Cadence |
+|---|---|
+| SLO/SLA performance review | Monthly |
+| Customer SLA reports | Monthly or per contract |
+| Breach analysis and credit processing | Per breach |
+| SLA catalogue review (targets, exclusions, dependencies) | Quarterly or annually |
+
+## 8. Roles
+
+| Role | Responsibility |
+|---|---|
+| Service owner | Accountable for meeting SLAs |
+| SRE / operations | SLIs, monitoring, incident response |
+| Service level manager | SLA catalogue, reporting, reviews (ITIL practice) |
+| Legal / commercial | Contract terms, credits, liability |
+| Vendor manager | Underpinning contracts aligned with customer SLAs |
+
+## Pitfalls
+
+- SLA equal to SLO: no warning before contractual breach.
+- Vague metric definitions ("the service will be available") leading to disputes.
+- Promising more nines than dependencies support.
+- Measuring only from inside the data center, missing DNS/CDN/network failures customers see.
+
+## Checklist
+
+- [ ] SLIs precisely defined with data source and measurement point.
+- [ ] SLOs stricter than SLAs.
+- [ ] SLA document includes exclusions, credits, claim process, and reporting.
+- [ ] Composite availability checked against dependencies and underpinning contracts.
+- [ ] Review cadence and owners assigned.

@@ -1,51 +1,106 @@
-# Flink State Management 2 Internal Wiki
+# Flink Checkpointing and Exactly-Once Commits to Lake Tables
 
-### Architectural Deep Dive: Flink State Management 2
-In modern distributed systems, Flink State Management 2 represents a critical bottleneck and opportunity for optimization. State management relies on asynchronous RocksDB snapshots, reducing checkpoint blocking time. Memory is bounded by strict heap limits. By isolating the compute layer from the storage plane, we achieve elastic scalability.
+How Flink checkpoints interact with lake table commits: lake sinks commit on checkpoint completion, so the checkpoint interval controls data latency, file sizes and commit rate. Part 2 of the Flink series (index in `flink_state_management_1.md`).
 
-To further guarantee ACID compliance and low-latency reads, the system implements multi-version concurrency control (MVCC). For Flink State Management 2, this means readers are never blocked by writers. The compaction daemon runs asynchronously to merge small files and reclaim space.
+## How Lake Sinks Achieve Exactly-Once
 
-### System Architecture
-```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
-graph TD
-    RocksDB_State["RocksDB_State Layer"] -->|Stream| KMS_Auth["KMS_Auth Processor"]
-    KMS_Auth -->|Checkpoint| FlinkStateManagement2_C
-    KMS_Auth -->|Optimize| FlinkStateManagement2_B["FlinkStateManagement2_B Engine"]
-    FlinkStateManagement2_B -->|Write| FlinkStateManagement2_A
-    FlinkStateManagement2_A -->|Persist| S3_Bucket
-    ORC_Writer -.->|Authenticate| FlinkStateManagement2_B
+```
+records --> writer tasks write data files (uncommitted)
+checkpoint barrier --> writers flush, report file list in checkpoint state
+checkpoint completes --> committer commits the files to the table (one snapshot/commit)
+failure before completion --> restart from last checkpoint, uncommitted files discarded (cleaned as orphans)
 ```
 
-### Mathematical Thresholds
-To determine the optimal configuration for Flink State Management 2, we apply the following mathematical formula to calculate the system threshold:
+Consequences:
+- Data becomes visible to readers only after a successful checkpoint.
+- One commit (snapshot) per checkpoint per sink table.
+- The committer stores the last committed checkpoint ID in table metadata (Iceberg snapshot summary `flink.max-committed-checkpoint-id`, together with the job ID) so a replay does not commit twice.
 
-$$ H(K) = - \sum_{j=1}^{M} p(x_j) \log_2 p(x_j) \ge 256 \text{ bits} $$
+## Choosing the Interval
 
-### Code Implementation
-Below is a highly optimized production-grade implementation addressing Flink State Management 2:
+| Interval | Latency | Files per commit | Commits/day |
+|---|---|---|---|
+| 10 s | very low | many tiny | 8,640 |
+| 1 min | low | small | 1,440 |
+| 5 min | moderate | medium | 288 |
+| 15 min | high | larger | 96 |
 
-```java
-// Flink Java Implementation
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+For lake sinks, 1–5 minutes is the usual range. Shorter intervals multiply snapshots, manifests and small files; always pair with compaction and snapshot expiration.
 
-public class StreamingJob {
-    public static void main(String[] args) throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.enableCheckpointing(60000); // 1 min RocksDB checkpoints
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env);
-        
-        tableEnv.executeSql(
-            "CREATE TABLE sink_table (" +
-            "  id BIGINT, " +
-            "  data STRING" +
-            ") WITH (" +
-            "  'connector' = 'hudi', " +
-            "  'path' = 's3a://lakehouse/hudi/', " +
-            "  'table.type' = 'MERGE_ON_READ'" +
-            ")"
-        );
-    }
-}
+## Core Settings
+
+```yaml
+execution.checkpointing.interval: 2min
+execution.checkpointing.mode: EXACTLY_ONCE
+execution.checkpointing.timeout: 10min
+execution.checkpointing.min-pause: 30s                 # breathing room between checkpoints
+execution.checkpointing.max-concurrent-checkpoints: 1
+execution.checkpointing.tolerable-failed-checkpoints: 3
+execution.checkpointing.unaligned.enabled: false       # see part 8 before enabling
 ```
+
+(Pre-1.20 key for unaligned: `execution.checkpointing.unaligned`.)
+
+## Source Side Requirements
+
+Exactly-once end to end also needs replayable sources:
+- Kafka source: offsets stored in Flink state; committed back to Kafka only for monitoring (`commit.offsets.on.checkpoint`).
+- CDC sources: binlog/LSN position in state.
+- Files: the FileSource tracks processed splits in state.
+
+## Kafka to Iceberg (Flink SQL)
+
+```sql
+SET 'execution.checkpointing.interval' = '2min';
+
+CREATE CATALOG lake WITH (
+  'type' = 'iceberg',
+  'catalog-type' = 'rest',
+  'uri' = 'https://catalog.internal/api/catalog',
+  'warehouse' = 'prod'
+);
+
+CREATE TEMPORARY TABLE orders_kafka (
+  order_id BIGINT, customer_id BIGINT, amount DECIMAL(18,2), order_ts TIMESTAMP(3),
+  WATERMARK FOR order_ts AS order_ts - INTERVAL '5' MINUTE
+) WITH (
+  'connector' = 'kafka',
+  'topic' = 'orders',
+  'properties.bootstrap.servers' = 'kafka:9092',
+  'properties.group.id' = 'orders-to-lake',
+  'scan.startup.mode' = 'group-offsets',
+  'properties.auto.offset.reset' = 'earliest',
+  'format' = 'json'
+);
+
+INSERT INTO lake.bronze.orders SELECT * FROM orders_kafka;
+```
+
+## Kafka Sink Exactly-Once (for comparison)
+
+When Flink writes back to Kafka with `DeliveryGuarantee.EXACTLY_ONCE`, it uses Kafka transactions; `transaction.timeout.ms` must exceed the maximum checkpoint duration plus restart time, and consumers must read with `isolation.level=read_committed`.
+
+## Monitoring
+
+| Metric (Web UI / metrics reporter) | Watch for |
+|---|---|
+| `lastCheckpointDuration` | Approaching timeout |
+| `lastCheckpointSize` | Unbounded growth |
+| `numberOfFailedCheckpoints` | Any steady increase |
+| Checkpoint alignment / start delay (UI) | Backpressure delaying barriers |
+| Sink commit duration | Catalog or storage slowness |
+
+Lake-side: snapshots per hour and average data file size per commit.
+
+## Pitfalls
+- Disabling checkpointing: lake sinks never commit (Iceberg FlinkSink commits only on checkpoints).
+- Very long checkpoint timeout hiding backpressure; data latency silently grows.
+- Running the same job twice (blue/green) against one table without distinct job IDs/committer state: conflicting commits.
+- Expecting `AT_LEAST_ONCE` checkpoint mode to give exactly-once table writes: duplicates possible on replay for appends.
+
+## Checklist
+- [ ] Interval chosen from latency need and file-size budget
+- [ ] Sources replayable and positions stored in state
+- [ ] Timeout, min-pause and tolerable failures set
+- [ ] Compaction and snapshot expiration scheduled for sink tables
+- [ ] Checkpoint and commit metrics alerted

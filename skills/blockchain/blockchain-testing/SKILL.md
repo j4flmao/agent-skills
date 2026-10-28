@@ -426,9 +426,6 @@ contract VaultHandler is Test {
   - references/fuzz-property-testing.md — Fuzz, Property & Invariant Testing Reference
   - references/hardhat-testing.md — Hardhat Testing Reference
   - references/integration-e2e.md — Integration & E2E Testing Reference
-  - references/forge-cheatcodes.md — Foundry Cheatcode Reference
-  - references/test-strategy-templates.md — Test Strategy Templates
-  - references/foundry-fuzz-best-practices.md — Foundry Fuzz Best Practices
 
 ## Architecture Decision Trees
 

@@ -1,214 +1,131 @@
-# Network Infrastructure Advanced Topics
+# Network Infrastructure: Advanced Topics
+
+Advanced practices for operating production networks: network automation and source of truth, pre-change verification, model-driven telemetry, BGP security (RPKI, filtering), EVPN-VXLAN operations, traffic engineering, QoS, DDoS defence and zero-touch provisioning. Fabric and BGP fundamentals are in `leaf-spine.md` and `bgp-anycast.md`; monitoring in `network-monitoring.md`.
+
+## Source of Truth and Automation
+
+```
+NetBox / Nautobot (intended state: devices, IPs, VLANs, circuits, cabling)
+      -> templates (Jinja2) / models
+      -> config generation
+      -> verification (Batfish, lint, diff)
+      -> deployment (Ansible, Nornir, NAPALM, vendor APIs, gNMI Set)
+      -> validation (state checks, telemetry)
+```
+
+| Tool | Role |
+|------|------|
+| NetBox / Nautobot | Source of truth for intended state; APIs and webhooks |
+| Ansible (vendor collections), Nornir | Orchestration of config pushes |
+| NAPALM | Vendor-neutral get/compare/commit/rollback |
+| gNMI / OpenConfig | Model-driven config and streaming telemetry |
+| Batfish | Offline analysis of configs: reachability, ACL behaviour, BGP sessions, differential impact |
+| Containerlab | Lab topologies with containerized NOS images for CI |
 
-## Introduction
-Advanced Network Infrastructure topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+### GitOps for Network Config
 
-## Advanced Architecture Patterns
+1. Change data in the source of truth or templates via pull request.
+2. CI renders configs, runs lint and Batfish checks, and deploys to a Containerlab replica.
+3. Reviewers see rendered config diffs.
+4. Deploy in waves (one device, one pod, then fabric) with automatic post-checks and rollback (`commit confirmed` where supported).
+
+### Batfish Example
+
+```python
+from pybatfish.client.session import Session
+from pybatfish.datamodel.flow import HeaderConstraints
+
+bf = Session(host="localhost")
+bf.set_network("dc1")
+bf.init_snapshot("snapshots/candidate", name="candidate", overwrite=True)
+
+sessions = bf.q.bgpSessionStatus().answer().frame()
+assert (sessions["Established_Status"] == "ESTABLISHED").all(), sessions
+
+answer = bf.q.reachability(
+    pathConstraints=None,
+    headers=HeaderConstraints(srcIps="10.10.0.0/16", dstIps="10.20.5.10", applications=["https"]),
+    actions="SUCCESS",
+).answer().frame()
+assert not answer.empty, "web tier must reach payments VIP on 443"
+```
+
+## Model-Driven Telemetry
+
+- Streaming telemetry (gNMI Subscribe, sampled or on-change) replaces SNMP polling for counters, BGP state and optics at higher resolution.
+- Collect with gnmic or Telegraf, store in Prometheus/VictoriaMetrics/InfluxDB, alert on interface errors, BGP state changes, optic power, buffer drops.
+- Flow telemetry (sFlow, IPFIX) for traffic matrices and DDoS detection.
+
+## BGP Security and Hygiene
+
+| Control | Purpose |
+|---------|---------|
+| Prefix filters (IRR-based, e.g. bgpq4-generated) | Accept only prefixes a peer/customer is authorized to announce |
+| RPKI Route Origin Validation | Drop RPKI-invalid routes (RFC 6811); publish ROAs for your own prefixes |
+| Max-prefix limits | Protect against full-table leaks from peers |
+| Bogon and default-route filters | Never accept or leak bogons |
+| BGP roles / Only-to-Customer (RFC 9234) | Prevent route leaks where supported |
+| TCP-AO (or the older RFC 2385 TCP signature option) and GTSM (TTL security) | Protect sessions |
+| ASPA | Emerging AS path validation; track vendor support |
+| Graceful shutdown community (RFC 8326) | Drain traffic before maintenance |
+
+Run RPKI validators (Routinator, rpki-client, FORT) redundantly and feed routers via RTR.
+
+## EVPN-VXLAN Operations
+
+- Control plane: BGP EVPN route types 2 (MAC/IP), 3 (inclusive multicast for BUM), 5 (IP prefix).
+- Symmetric IRB with L3 VNIs for inter-subnet routing; anycast gateway (same gateway IP/MAC on every leaf).
+- ESI multihoming (EVPN all-active) instead of MLAG for standards-based server dual-homing.
+- Operational checks: VTEP reachability, VNI-to-VLAN mapping consistency, EVPN route counts per VNI, duplicate MAC detection, MTU headroom for VXLAN (50 bytes).
+- Segment tenants with VRFs; route leaking between VRFs only through explicit policy or firewalls.
+
+## Traffic Engineering
+
+| Technique | Use |
+|-----------|-----|
+| BGP attributes (local-pref, MED, AS-path prepend, communities) | Inter-domain inbound/outbound preferences |
+| ECMP / UCMP | Spread load across equal or weighted paths |
+| Segment Routing (SR-MPLS, SRv6) | Source-routed paths, TI-LFA fast reroute, controller-driven TE |
+| RSVP-TE | Legacy MPLS TE; largely replaced by SR in new designs |
+
+Fast convergence: BFD for sub-second failure detection, BGP PIC (prefix independent convergence), tuned timers only where hardware supports them.
+
+## Quality of Service
+
+- Classify and mark at the edge (DSCP), trust markings only from known sources.
+- Queue per class with strict priority for real-time traffic (bounded), weighted queues for others.
+- Data center lossless classes (PFC + ECN/DCQCN) for RDMA/RoCE storage and AI training traffic; misconfigured PFC can cause deadlocks and head-of-line blocking, so monitor pause frames.
+- AI/ML fabrics: high-radix, non-blocking designs, adaptive routing and congestion control features (vendor- and Ultra Ethernet-specific); validate with collective-communication benchmarks.
+
+## DDoS Defence
+
+| Layer | Defence |
+|-------|---------|
+| Volumetric (L3/L4) | Upstream scrubbing services, cloud DDoS protection, anycast distribution, RTBH (remote triggered black hole) and BGP Flowspec |
+| Protocol (SYN floods) | SYN cookies, stateful firewall tuning, rate limits |
+| Application (L7) | WAF, bot management, rate limiting at CDN/edge |
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+Pre-arrange scrubbing activation (BGP diversion, GRE return tunnels), test it, and keep runbooks with thresholds.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+## Zero-Touch Provisioning
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+- Devices boot, obtain DHCP options pointing to a ZTP/provisioning server, download OS image and day-0 config generated from the source of truth.
+- Verify device identity (serial/secure ZTP with certificates per RFC 8572 where supported) before handing out configs containing secrets.
+- Post-provisioning: automated validation (LLDP neighbours match intended cabling, BGP sessions up).
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+## Change Safety
 
-## Performance Optimization
+- Maintenance windows for risky changes; pre-checks and post-checks captured automatically (route counts, BGP neighbours, interface states).
+- Drain before change (BGP graceful shutdown, MLAG/ESI isolation), verify traffic moved, change, undrain.
+- Keep rollback configs; use `commit confirmed` / candidate config features.
+- Post-incident: add a Batfish or lab test reproducing the failure.
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+## Checklist
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Source of truth drives generated configs; no manual drift
+- [ ] Batfish and lab validation in CI before deployment
+- [ ] Streaming telemetry for interfaces, BGP and optics
+- [ ] RPKI ROV, IRR filters, max-prefix and session protection on all external BGP
+- [ ] EVPN-VXLAN consistency checks and MTU headroom
+- [ ] DDoS mitigation path tested
+- [ ] Changes deployed in waves with drain, checks and rollback

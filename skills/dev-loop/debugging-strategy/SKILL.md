@@ -34,6 +34,16 @@ Exact user phrases: "debugging", "debug strategy", "how to debug", "root cause",
 ### Output Artifact
 Debugging plan with hypothesis, isolation strategy, reproduction steps, and root cause analysis.
 
+### Response Format
+```
+Symptom: {observed vs expected}
+Reproduction: {steps | not yet reproducible}
+Hypotheses (ranked): {H1 -> test}, {H2 -> test}
+Isolation: {bisect/binary search/minimal repro}
+Root cause: {cause + evidence}
+Fix + regression test: {change, test name}
+```
+
 ### Completion Criteria
 - [ ] Bug reproduction steps documented and confirmed
 - [ ] Initial hypothesis formed with expected vs actual behavior
@@ -301,8 +311,8 @@ techniques:
 ## References
   - references/debugging-strategy-advanced.md — Debugging Strategy Advanced Topics
   - references/debugging-strategy-fundamentals.md — Debugging Strategy Fundamentals
-  - references/debugging-tools.md — Debugging Tools Reference
-  - references/root-cause-analysis.md — Root Cause Analysis Reference
+  - references/toolchain.md — Debugging Toolchain
+  - references/debugging-workflow.md — Debugging Workflow
 ## Handoff
 Hand off to `dev-loop-performance-profiler` if the bug is performance-related. Hand off to `dev-loop-code-review` for security-related bugs.
 

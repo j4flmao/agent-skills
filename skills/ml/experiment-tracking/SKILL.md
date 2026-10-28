@@ -1,7 +1,7 @@
 ---
 name: ml-experiment-tracking
 description: >
-  Use this skill when asked about MLflow, W&B, Neptune, DVC, experiment tracking, run logging, metric logging, artifact store, model registry, hyperparameter logging, or experiment comparison. This skill enforces: experiment tracking platform setup (MLflow, W&B, Neptune), run logging conventions (params, metrics, artifacts), model registry versioning with stage promotion, experiment comparison using parallel coordinates, and full reproducibility through code + data + environment tracking. Do NOT use for: model training itself, feature engineering pipelines, or production deployment.
+  Use this skill when asked about MLflow, W&B, Neptune, DVC, experiment tracking, run logging, metric logging, artifact store, model registry, hyperparameter logging, or experiment comparison. This skill enforces: experiment tracking platform setup (MLflow, W&B, Neptune), run logging conventions (params, metrics, artifacts), model registry versioning with alias-based promotion, experiment comparison using parallel coordinates, and full reproducibility through code + data + environment tracking. Do NOT use for: model training itself, feature engineering pipelines, or production deployment.
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -37,7 +37,7 @@ Do you need experiment tracking for deep learning specifically?
   |-- NO --> MLflow (sufficient for sklearn, XGBoost, lightGBM)
 
 Do you need model registry with CI/CD integration?
-  |-- YES --> MLflow Model Registry (stages, API, deployment)
+  |-- YES --> MLflow Model Registry (versions, aliases, tags, API)
   |-- NO --> Platform-specific registry is sufficient
 
 Is cost a primary constraint?
@@ -59,11 +59,11 @@ Self-hosted MLflow
 
 ### Model Registry Stage Flow
 ```
-Training → Register Model (None)
-  → Validate → Transition to Staging
-    → A/B Test → OK? → Transition to Production
-      → Monitor → Degraded? → Transition to Archived → Retrain
-    → FAIL → Transition to Archived → Debug and Retrain
+Training → Register Model (new version)
+  → Validate → set alias "challenger"
+    → A/B Test → OK? → move alias "champion" to this version
+      → Monitor → Degraded? → move "champion" back to previous version → Retrain
+    → FAIL → tag status=rejected → Debug and Retrain
 ```
 
 ## Agent Protocol
@@ -92,7 +92,7 @@ Experiment tracking configuration with logging setup, artifact structure, and mo
 ```yaml
 # MLflow tracking server config
 # Artifact store configuration
-# Model registry stage rules
+# Model registry alias rules
 ```
 
 No preamble. No postamble. No explanations. No filler. Compress output.
@@ -101,7 +101,7 @@ No preamble. No postamble. No explanations. No filler. Compress output.
 - [ ] Experiment tracking platform selected and configured
 - [ ] Run logging conventions established (params, metrics, tags)
 - [ ] Artifact store configured with structure (models, plots, datasets)
-- [ ] Model registry set up with versioning and stage promotion
+- [ ] Model registry set up with versioning and alias-based promotion
 - [ ] Reproducibility ensured (code version, data version, environment)
 - [ ] Experiment comparison setup (parallel coordinates, scatter plots)
 - [ ] Alerting or regression detection for metric degradation
@@ -194,10 +194,11 @@ artifacts/
 ```
 
 ### Step 4: Model Registry
-Model versioning: each logged model creates a new version. Stage promotion: None -> Staging -> Production -> Archived. Transition rules: automated via metric thresholds, manual approval for production.
+Model versioning: each logged model creates a new version. Promotion uses aliases (e.g. `challenger`, `champion`) and tags; the old fixed stages (Staging/Production/Archived) are deprecated since MLflow 2.9. Automate alias moves on metric thresholds; require manual approval for `champion`.
 
 ```python
 # Register model with signature
+import mlflow
 from mlflow.models import infer_signature
 
 signature = infer_signature(X_train, model.predict(X_train))
@@ -209,25 +210,19 @@ mlflow.sklearn.log_model(
     registered_model_name="recommendation_xgb",
 )
 
-# Programmatic stage transitions
-from mlflow.tracking import MlflowClient
+# Promote with aliases (stages are deprecated)
+from mlflow import MlflowClient
 
 client = MlflowClient()
-client.transition_model_version_stage(
-    name="recommendation_xgb",
-    version=3,
-    stage="Staging",
-)
+client.set_registered_model_alias(name="recommendation_xgb", alias="challenger", version=3)
 
-# Query by stage
-latest_staging = client.get_latest_versions("recommendation_xgb", stages=["Staging"])
+# Resolve by alias at load time
+challenger = client.get_model_version_by_alias("recommendation_xgb", "challenger")
+model = mlflow.pyfunc.load_model("models:/recommendation_xgb@challenger")
 
-# Archive old versions
-client.transition_model_version_stage(
-    name="recommendation_xgb",
-    version=2,
-    stage="Archived",
-)
+# Promote after validation; previous champion keeps its version number for rollback
+client.set_registered_model_alias(name="recommendation_xgb", alias="champion", version=3)
+client.set_model_version_tag("recommendation_xgb", "2", "status", "retired")
 ```
 
 ### Step 5: Experiment Comparison
@@ -414,8 +409,8 @@ services:
 - Git commit hash always logged as a tag.
 - Dataset hash or version always logged as a tag.
 - Environment pinned at the package level.
-- Model registry stages: None -> Staging -> Production -> Archived.
-- Automated promotion only to Staging, manual approval for Production.
+- Model registry aliases: `challenger` -> `champion` (stages are deprecated since MLflow 2.9).
+- Automated promotion only to `challenger`, manual approval for `champion`.
 - Never delete runs — archive them instead.
 
 ## Best Practices
@@ -449,7 +444,7 @@ services:
 - MLflow tracking server overhead: < 1ms per log call (local), 5-20ms (remote).
 - Artifact storage: depends on network speed to artifact store.
 - Parallel coordinates rendering: 500+ runs may cause lag in UI.
-- Registry lookup: sub-second for stage-based queries, seconds for full history.
+- Registry lookup: sub-second for alias-based lookups, seconds for full history.
 
 ## Tooling/Methodology
 - **MLflow**: Tracking Server, Model Registry, Projects, Models (serving).
@@ -488,7 +483,7 @@ services:
 ## Implementation Patterns
 
 ### MLflow Experiment Tracking
-`python
+```python
 import mlflow
 import mlflow.sklearn
 from sklearn.ensemble import RandomForestRegressor
@@ -516,10 +511,10 @@ with mlflow.start_run(run_name="rf_v3") as run:
     mlflow.sklearn.log_model(model, "model")
 
     print(f"Run ID: {run.info.run_id}")
-`
+```
 
 ### Hyperparameter Sweep with MLflow
-`python
+```python
 import optuna
 import mlflow
 
@@ -537,7 +532,7 @@ def objective(trial):
 
 study = optuna.create_study(direction="maximize")
 study.optimize(objective, n_trials=50)
-`
+```
 
 ## Performance Optimization
 

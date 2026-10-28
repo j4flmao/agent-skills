@@ -254,18 +254,18 @@ Pass initial data from Astro frontmatter to framework islands as props. Islands 
 
 ```astro
 ---
-import TodoWidget from '../components/TodoWidget.tsx'
-const initialTodos = await getCollection('todos')
+import TaskWidget from '../components/TaskWidget.tsx'
+const initialTasks = await getCollection('tasks')
 ---
-<TodoWidget client:load initialTodos={initialTodos.map(t => ({ id: t.id, text: t.data.text }))} />
+<TaskWidget client:load initialTasks={initialTasks.map(t => ({ id: t.id, text: t.data.text }))} />
 ```
 
 ```tsx
-// TodoWidget.tsx
+// TaskWidget.tsx
 import { useState } from 'react'
-export default function TodoWidget({ initialTodos }) {
-  const [todos, setTodos] = useState(initialTodos)
-  return <ul>{todos.map(t => <li key={t.id}>{t.text}</li>)}</ul>
+export default function TaskWidget({ initialTasks }) {
+  const [tasks, setTasks] = useState(initialTasks)
+  return <ul>{tasks.map(t => <li key={t.id}>{t.text}</li>)}</ul>
 }
 ```
 
@@ -287,7 +287,7 @@ import Receiver from '../components/Receiver.svelte'
     window.dispatchEvent(new CustomEvent('app:message', { detail: 'hello' }))
   }
 </script>
-<button on:click={send}>Send</button>
+<button onclick={send}>Send</button> <!-- Svelte 5 event attribute; Svelte 4 used on:click -->
 ```
 
 ```svelte
@@ -809,12 +809,11 @@ Use `@astrojs/netlify`, `@astrojs/vercel`, `@astrojs/cloudflare` adapters. For S
 ## References
 - references/astro-collections.md — Astro Collections & Content Management
 - references/astro-content.md — Astro Content — Collections, Schemas, Rendering, Images
+- references/astro-data-fetching.md — Astro Data Fetching
 - references/astro-data-loading.md — Astro Data Loading
 - references/astro-integrations.md — Astro Integrations
 - references/astro-islands.md — Astro Islands — Client Directives, Hydration Strategies, Framework Components
 - references/astro-project-architecture.md — Astro Architecture
-- references/astro-islands-architecture.md — Astro Islands Architecture Deep Dive
-- references/astro-data-fetching.md — Astro Data Fetching Strategies
 
 ## Handoff
 No artifact produced.

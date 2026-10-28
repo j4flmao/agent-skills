@@ -1,8 +1,8 @@
 ---
 name: oak-backend
 description: >
-  Use this skill when building Oak backend applications — Deno native HTTP framework, middleware context, composable middleware. This skill enforces: middleware composition, proper context usage, Deno permissions, type-safe routing. Do NOT use for: Node.js Express projects, Hono on Deno, traditional Node.js backends.
-version: "1.0.0"
+  Use this skill when the user says 'oak', 'oak backend', 'deno oak', 'oak middleware', 'oak router', 'oak context'. Structures Oak (jsr:@oak/oak) applications on Deno: router modules, middleware pipeline, typed context state, body parsing, error handling and handler-level testing. Do NOT use for: general Deno setup and permissions (deno), Hono on Deno (nodejs-hono), Express on Node.js (nodejs-express-skill).
+version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -24,10 +24,10 @@ Define Oak backend application architecture: Deno-native HTTP server, middleware
 User request includes: `oak`, `oak backend`, `deno oak`, `oak middleware`, `oak router`, `deno http`, `oak context`, `oak typescript`.
 
 ### Input Context
-- Deno version (1.40+)
-- Oak version (13.x)
+- Deno version (2.x assumed)
+- Oak version (17.x on JSR: `jsr:@oak/oak`; v13+ changed the body API)
 - Language (TypeScript)
-- Database (Deno KV, MongoDB via deno_mongo, PostgreSQL via deno_postgres)
+- Database (Deno KV, PostgreSQL via `npm:pg` or `jsr:@db/postgres`, MongoDB via `npm:mongodb`)
 - Templating (eta, deno mustache)
 - Deployment (Deno Deploy, self-hosted)
 
@@ -40,7 +40,7 @@ A markdown document containing:
 - Error handling middleware
 - State management (context state)
 - Environment configuration (Deno.env)
-- Testing (Deno.test, superdeno)
+- Testing (Deno.test with `app.handle()`, or superoak)
 
 ### Response Format
 Produce the artifact directly. No preamble, no postamble, no explanations. No filler, no hedging. Compress output.
@@ -50,7 +50,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 - Middleware pipeline composed with app.use()
 - Error middleware catches all exceptions
 - State typed via OakMiddleware type parameter
-- Tests use superdeno or fetch-based requests
+- Tests call `app.handle(new Request(...))` or use superoak
 - Lockfile generated and committed
 
 ### Max Response Length
@@ -65,11 +65,11 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 | Middleware ecosystem | Rich (cors, auth, rate-limit, static) | Growing (cors, etag, jwt) | Manual |
 | TypeScript context typing | Generic `State` param | `c.req.valid()` | Manual |
 | Router pattern | `Router({ prefix })` | Chained `.get().post()` | Switch/match |
-| File upload | `ctx.request.body({ type: 'form-data' })` | `c.req.parseBody()` | Manual |
-| WebSocket | `oak_websocket` | Built-in `hono/ws` | Manual |
-| Community | Mature (12.x, stable) | Growing (4.x) | Std lib |
+| File upload | `await ctx.request.body.formData()` | `c.req.parseBody()` | `req.formData()` |
+| WebSocket | `ctx.upgrade()` | `upgradeWebSocket` from `hono/deno` | `Deno.upgradeWebSocket` |
+| Multi-runtime | Deno first (also Node/Bun) | Deno, Node, Bun, Workers | Deno only |
 
-Decision: Complex middleware needs → Oak. TypeScript validation-first → Hono. Max throughput/minimal → std/http.
+Decision: existing Koa-style middleware stack → Oak. Typed validation and multi-runtime portability → Hono. Tiny single-purpose service → `Deno.serve`.
 
 ### Route Organization Strategy
 
@@ -91,7 +91,8 @@ cd order-service
 # Initialize
 deno init
 
-# Add oak dependency (import_map.json or deno.json)
+# Add oak (writes to deno.json imports)
+deno add jsr:@oak/oak jsr:@std/assert npm:zod
 ```
 
 ### Step 2: Project Structure
@@ -120,22 +121,21 @@ order-service/
 │   ├── app_test.ts
 │   └── orders_test.ts
 ├── deno.json
-└── import_map.json
+└── deno.lock
 ```
 
 ### Step 3: App Initialization
 ```typescript
 // src/app.ts
-import { Application } from 'oak'
+import { Application } from '@oak/oak'
 import { errorMiddleware } from './middleware/error.ts'
 import { loggerMiddleware } from './middleware/logger.ts'
 import { router } from './router/index.ts'
+import type { AppState } from './types/index.ts'
 
-export function createApp(): Application {
-  const app = new Application()
-
-  // State
-  app.state.startTime = Date.now()
+export function createApp(): Application<AppState> {
+  // state: initial app-wide state; each request gets a copy in ctx.state
+  const app = new Application<AppState>({ state: {} as AppState })
 
   // Middleware pipeline (order matters)
   app.use(errorMiddleware)
@@ -158,7 +158,7 @@ await app.listen({ port })
 ### Step 4: Router and Controller
 ```typescript
 // src/router/orders.ts
-import { Router } from 'oak'
+import { Router } from '@oak/oak'
 import { OrderController } from '../controllers/order.controller.ts'
 
 const router = new Router({ prefix: '/api/orders' })
@@ -173,7 +173,7 @@ router.delete('/:id', controller.deleteById)
 export { router as orderRouter }
 
 // src/controllers/order.controller.ts
-import type { RouterContext } from 'oak'
+import type { RouterContext } from '@oak/oak'
 import * as orderService from '../services/order.service.ts'
 
 export class OrderController {
@@ -194,7 +194,7 @@ export class OrderController {
   }
 
   async create(ctx: RouterContext<'/'>) {
-    const body = await ctx.request.body().value
+    const body = await ctx.request.body.json() // Oak v13+ body API
     const order = await orderService.create(body)
     ctx.response.status = 201
     ctx.response.body = order
@@ -205,26 +205,26 @@ export class OrderController {
 ### Step 5: Middleware Pipeline
 ```typescript
 // src/middleware/error.ts
-import type { Middleware } from 'oak'
+import { isHttpError, type Middleware } from '@oak/oak'
 
 export const errorMiddleware: Middleware = async (ctx, next) => {
   try {
     await next()
   } catch (err) {
-    ctx.response.status = err.status ?? 500
-    ctx.response.body = {
-      success: false,
-      error: {
-        code: err.code ?? 'INTERNAL_ERROR',
-        message: err.message ?? 'Unexpected error',
-      },
+    if (isHttpError(err) && err.expose) {
+      ctx.response.status = err.status
+      ctx.response.body = { success: false, error: { code: err.name, message: err.message } }
+    } else {
+      console.error(`unhandled error on ${ctx.request.method} ${ctx.request.url.pathname}`, err)
+      ctx.response.status = 500
+      ctx.response.body = { success: false, error: { code: 'INTERNAL_ERROR', message: 'Unexpected error' } }
     }
     ctx.response.type = 'json'
   }
 }
 
 // src/middleware/logger.ts
-import type { Middleware } from 'oak'
+import type { Middleware } from '@oak/oak'
 
 export const loggerMiddleware: Middleware = async (ctx, next) => {
   const start = Date.now()
@@ -245,7 +245,7 @@ export interface AppState {
 }
 
 // src/middleware/auth.ts
-import type { Middleware } from 'oak'
+import type { Middleware } from '@oak/oak'
 import type { AppState } from '../types/index.ts'
 
 export const authMiddleware: Middleware<AppState> = async (ctx, next) => {
@@ -267,13 +267,13 @@ export const authMiddleware: Middleware<AppState> = async (ctx, next) => {
 
 ```typescript
 // src/middleware/validate.ts
-import { z } from 'zod/mod.ts'
-import type { Middleware } from 'oak'
+import { z } from 'zod'
+import type { Middleware } from '@oak/oak'
 
 export function validate(schema: z.ZodSchema): Middleware {
   return async (ctx, next) => {
-    const body = ctx.request.body().value
-    const result = schema.safeParse(body)
+    if (!ctx.request.hasBody) ctx.throw(400, 'Request body required')
+    const result = schema.safeParse(await ctx.request.body.json())
     if (!result.success) {
       ctx.response.status = 400
       ctx.response.body = {
@@ -295,30 +295,25 @@ export function validate(schema: z.ZodSchema): Middleware {
 ```typescript
 // tests/orders_test.ts
 import { createApp } from '../src/app.ts'
-import { assertEquals, assertExists } from 'std/testing/asserts.ts'
+import { assertEquals } from '@std/assert'
 
+const validPayload = { customerId: 'c-1', items: [{ sku: 'A', qty: 1 }] }
+
+// app.handle() runs the middleware stack on a Request without opening a port
 Deno.test('POST /api/orders creates order', async () => {
   const app = createApp()
-  const listener = app.listen({ port: 0 })
-
-  const port = (await listener).port
-  const res = await fetch(`http://localhost:${port}/api/orders`, {
+  const res = await app.handle(new Request('http://localhost/api/orders', {
     method: 'POST',
     body: JSON.stringify(validPayload),
     headers: { 'Content-Type': 'application/json' },
-  })
-  assertEquals(res.status, 201)
-
-  listener.close()
+  }))
+  assertEquals(res?.status, 201)
 })
 
 Deno.test('GET /api/orders/:id returns 404 for missing', async () => {
   const app = createApp()
-  const listener = app.listen({ port: 0 })
-  const { port } = await listener
-  const res = await fetch(`http://localhost:${port}/api/orders/nonexistent`)
-  assertEquals(res.status, 404)
-  listener.close()
+  const res = await app.handle(new Request('http://localhost/api/orders/nonexistent'))
+  assertEquals(res?.status, 404)
 })
 ```
 
@@ -328,7 +323,7 @@ Deno.test('GET /api/orders/:id returns 404 for missing', async () => {
 
 ```typescript
 // src/router/index.ts
-import { Router } from 'oak'
+import { Router } from '@oak/oak'
 import { orderRouter } from './orders.ts'
 import { userRouter } from './users.ts'
 import { healthRouter } from './health.ts'
@@ -347,11 +342,10 @@ export { router }
 ### Pattern: Static File Serving
 
 ```typescript
-import { send } from 'oak/send.ts'
-
-// Serve static files
+// Serve static files (send() rejects paths escaping root)
 router.get('/static/:path+', async (ctx) => {
-  await send(ctx, ctx.params.path!, {
+  await ctx.send({
+    path: ctx.params.path!,
     root: `${Deno.cwd()}/public`,
     maxage: 86400,
   })
@@ -387,16 +381,16 @@ app.use(async (ctx, next) => {
 - Structure error responses consistently: `{ success: false, error: { code, message, details? } }`
 
 ### Performance Tuning
-- Oak Router uses radix tree for path matching — keep prefix depth reasonable
-- Avoid `JSON.parse/stringify` in hot middleware — Oak handles this internally
-- Use `ctx.send()` for large file responses instead of reading into memory
-- Connection pooling for database — max 10-20 connections per Deno instance
-- Compile with `deno compile --v8-flags=--max-old-space-size=512` for production
+- Oak routers match routes in registration order (path-to-regexp patterns); register hot routes first and avoid huge numbers of routes on one router
+- Setting `ctx.response.body` to an object serializes it to JSON once; avoid extra stringify/parse in middleware
+- Use `ctx.send()` for files so they stream instead of being read into memory
+- Size the DB connection pool to the database's limits divided by instance count
+- Memory cap: `--v8-flags=--max-old-space-size=512` on `deno run`/`deno compile`
 
 ### Deployment
-- Deno Deploy: entrypoint is `src/app.ts` exporting `app.handle` not `app.listen`
-- Docker: user `deno:alpine` image, run as non-root user
-- PM2 alternative: systemd service with `Restart=always`
+- Deno Deploy: `app.listen()` works; set no fixed hostname
+- Docker: `denoland/deno` image pinned to a version, `USER deno`, `--cached-only`
+- Self-hosted VM: systemd service with `Restart=always`
 
 ## Anti-Patterns
 
@@ -407,11 +401,12 @@ app.use(async (ctx, next) => {
 | `ctx.request.body()` multiple reads | Body stream is consumed once | Call once, store in context state |
 | Missing `allowedMethods()` | Returns 404 instead of 405 on wrong method | Always add `router.allowedMethods()` |
 | Hardcoded CORS origins | Security issue in production | Read from env var or config |
-| No type on Application | `ctx.state` is `any` | Always parameterize `Application<AppState>` |
+| No type on Application | `ctx.state` is loosely typed | Parameterize `Application<AppState>` |
+| `ctx.request.body()` (pre-v13 API) | Removed in Oak v13+ | `ctx.request.body.json()` / `.formData()` / `.text()` |
 
 ## Security Considerations
 - Always validate `Content-Type` header — reject unexpected types
-- Set `Deno.permissions` with exact `--allow-*` flags per deployment
+- Run with exact `--allow-*` flags per deployment (see the deno skill)
 - Use `secure: true` on cookies in production (HTTPS only)
 - Rate limit by IP or token — store counters in Deno KV
 - Sanitize `ctx.params` — Oak does not auto-escape/validate path params
@@ -428,7 +423,7 @@ Deno.test('calculateOrderTotal', () => {
 ```
 
 ### Integration Testing with Database
-Use in-memory KV for test isolation. Mock external HTTP calls via `std/testing/mock.ts`. Test error paths explicitly — validation errors, auth failures, 404s, 500s.
+Use in-memory KV (`Deno.openKv(':memory:')`) for test isolation. Mock external HTTP calls with `stub` from `@std/testing/mock`. Test error paths explicitly — validation errors, auth failures, 404s, 500s.
 
 ## Rules
 - TypeScript strict mode — all files .ts extension.
@@ -437,7 +432,7 @@ Use in-memory KV for test isolation. Mock external HTTP calls via `std/testing/m
 - Context state for per-request data (user, requestId).
 - Oak Router prefix for route grouping — never manual path concatenation.
 - Deno.env for all configuration — never hardcoded values.
-- deno.json for imports — import_map.json for legacy projects.
+- deno.json `imports` for dependencies (`jsr:@oak/oak`).
 - Always add `router.allowedMethods()` after each router.
 - Never read `ctx.request.body` more than once per request.
 
@@ -450,65 +445,3 @@ Use in-memory KV for test isolation. Mock external HTTP calls via `std/testing/m
   - references/oak-testing.md — Oak Testing
 ## Handoff
 Hand off to `backend/universal/api-response/SKILL.md` for API response standards.
-## Implementation Patterns
-
-### Factory Pattern for Module Creation
-`
-function createModule<T>(config: ModuleConfig): T {
-  const dependencies = initializeDependencies(config);
-  const module = new Module(dependencies);
-  module.hooks.onInit();
-  return module as T;
-}
-`
-
-### Builder Pattern for Complex Configuration
-`
-class ConfigBuilder {
-  private config: AppConfig = new AppConfig();
-  withDatabase(url: string): ConfigBuilder { ... }
-  withCache(ttl: number): ConfigBuilder { ... }
-  withLogging(level: string): ConfigBuilder { ... }
-  build(): AppConfig { return this.config; }
-}
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Production build with optimizations enabled
-- [ ] Environment variables configured per environment
-- [ ] Health check endpoint responds correctly
-- [ ] Error tracking and monitoring integrated
-- [ ] Logging level configured (not debug in production)
-- [ ] Resource limits configured
-- [ ] Database migrations applied
-- [ ] Static assets built and served from CDN or cache
-- [ ] Feature flags toggled appropriately
-- [ ] Rollback plan documented and tested
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% | Critical | Rollback or fix |
-| p95 latency | > 500ms | Warning | Profile and optimize |
-| Uptime | < 99.9% | Critical | Investigate infrastructure |
-| Memory usage | > 80% | Warning | Check for leaks |
-| CPU usage | > 80% | Warning | Scale up or optimize |
-
-## Rules
-- Prefer composition over inheritance
-- Favor immutable data structures
-- Use dependency injection for testability
-- Keep functions pure when possible — no side effects
-- Fail fast with clear error messages
-- Don't repeat yourself (DRY) — extract shared logic
-- Keep it simple (KISS) — avoid unnecessary complexity
-- You aren't gonna need it (YAGNI) — build what's required
-- Separate concerns — single responsibility per module
-- Code to interfaces, not implementations
-- Write self-documenting code — clear names over comments
-- Prefer standard library over third-party dependencies
-- Handle errors explicitly — no silent failures
-- Validate inputs at boundaries
-- Log at appropriate levels (debug, info, warn, error)

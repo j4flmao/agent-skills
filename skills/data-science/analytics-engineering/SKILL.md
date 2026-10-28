@@ -210,33 +210,58 @@ GROUP BY order_date
 
 ### Step 6: Metrics Layer
 ```yaml
-# models/marts/schema.yml — dbt Metrics
-version: 2
+# models/marts/semantic.yml — dbt Semantic Layer (MetricFlow, dbt 1.6+)
+semantic_models:
+  - name: orders
+    model: ref('fct_orders')
+    defaults:
+      agg_time_dimension: order_date
+    entities:
+      - name: order_id
+        type: primary
+      - name: customer_id
+        type: foreign
+    dimensions:
+      - name: order_date
+        type: time
+        type_params:
+          time_granularity: day
+      - name: customer_tier
+        type: categorical
+      - name: region
+        type: categorical
+      - name: status
+        type: categorical
+    measures:
+      - name: order_total
+        agg: sum
+        expr: total_amount
+      - name: active_customers
+        agg: count_distinct
+        expr: customer_id
+
 metrics:
   - name: total_revenue
     label: Total Revenue
-    model: ref('fct_orders')
     description: "Sum of completed order amounts"
-    calculation_method: sum
-    expression: total_amount
-    timestamp: order_date
-    time_grains: [day, week, month, quarter, year]
-    dimensions:
-      - customer_tier
-      - product_category
-      - region
-    filters:
-      - field: status
-        operator: =
-        value: completed
+    type: simple
+    type_params:
+      measure: order_total
+    filter: "{{ Dimension('order_id__status') }} = 'completed'"
+
+  - name: active_customers
+    label: Active Customers
+    type: simple
+    type_params:
+      measure: active_customers
 
   - name: revenue_per_customer
     label: Revenue Per Customer
     description: "Average revenue per active customer"
-    calculation_method: derived
-    expression: "{{ metric('total_revenue') }} / {{ metric('active_customers') }}"
-    timestamp: order_date
-    time_grains: [month, quarter, year]
+    type: ratio
+    type_params:
+      numerator: total_revenue
+      denominator: active_customers
 ```
 
 ### Step 7: Tests and Documentation

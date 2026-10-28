@@ -34,6 +34,15 @@ Exact user phrases: "technical debt", "tech debt", "code debt", "debt tracking",
 ### Output Artifact
 Tech debt inventory with prioritized items, remediation estimates, and tracking system.
 
+### Response Format
+```
+Item: {ID} {title} ({type})
+Impact {1-5} × Frequency {1-5} / Effort {1-5} = Priority {score}
+Interest: {cost per sprint if left}
+Plan: {sprint allocation, owner}
+Status: {OPEN|IN PROGRESS|DONE}
+```
+
 ### Completion Criteria
 - [ ] Debt discovery methods established (automated scans + developer input)
 - [ ] Debt items cataloged with type, location, impact, and effort
@@ -105,7 +114,7 @@ automated_discovery:
       - "Bugs: 0 (zero tolerance)"
       - "Code Smells: trending up"
 
-  eslint / tslint:
+  eslint (typescript-eslint; TSLint is deprecated):
     rules:
       - "no-unused-vars: warn"
       - "no-nested-ternary: warn"
@@ -157,15 +166,15 @@ prioritization_matrix:
 ```markdown
 # Tech Debt Backlog
 
-| ID | Item | Type | Impact | Effort | Priority | Status |
-|----|------|------|--------|--------|----------|--------|
-| T-001 | Extract validation logic from OrderService | Code | 4 | 2 | 10.0 | TODO |
-| T-002 | Update deprecated auth library | Dependency | 5 | 3 | 5.0 | TODO |
-| T-003 | Add test coverage for payment module | Test | 3 | 5 | 1.5 | TODO |
-| T-004 | Standardize error handling across API | Architecture | 4 | 3 | 4.0 | IN PROGRESS |
-| T-005 | Remove dead code in user module | Code | 2 | 1 | 6.0 | TODO |
-| T-006 | Reduce flaky E2E tests | Test | 5 | 8 | 1.5 | PRIORITIZED |
-| T-007 | Update Docker base image | Infrastructure | 3 | 1 | 9.0 | DONE |
+| ID | Item | Type | Impact | Frequency | Effort | Priority | Status |
+|----|------|------|--------|-----------|--------|----------|--------|
+| T-001 | Extract validation logic from OrderService | Code | 4 | 5 | 2 | 10.0 | OPEN |
+| T-002 | Update deprecated auth library | Dependency | 5 | 3 | 3 | 5.0 | OPEN |
+| T-003 | Add test coverage for payment module | Test | 3 | 3 | 5 | 1.8 | OPEN |
+| T-004 | Standardize error handling across API | Architecture | 4 | 3 | 3 | 4.0 | IN PROGRESS |
+| T-005 | Remove dead code in user module | Code | 2 | 3 | 1 | 6.0 | OPEN |
+| T-006 | Reduce flaky E2E tests | Test | 5 | 2 | 5 | 2.0 | PRIORITIZED |
+| T-007 | Update Docker base image | Infrastructure | 3 | 3 | 1 | 9.0 | DONE |
 ```
 
 ### Step 4: Track Interest Rate
@@ -307,8 +316,8 @@ labels: ["tech-debt", "needs-triage"]
 ## References
   - references/tech-debt-tracker-advanced.md — Tech Debt Tracker Advanced Topics
   - references/tech-debt-tracker-fundamentals.md — Tech Debt Tracker Fundamentals
-  - references/tech-debt-tracker-metrics.md — Tech Debt Metrics Reference
-  - references/tech-debt-tracker-prioritization.md — Tech Debt Prioritization Reference
+  - references/debt-tracking.md — Debt Tracking and Metrics
+  - references/tech-debt-prioritization.md — Tech Debt Prioritization
 ## Handoff
 Hand off to `dev-loop-refactor-guide` for refactoring implementation of debt items. Hand off to `dev-loop-security-auditor` for security-related debt.
 

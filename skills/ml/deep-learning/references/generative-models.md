@@ -90,7 +90,7 @@ def ddpm_sample(model, shape, num_steps=1000):
 
 | Metric | What It Measures | Range | Notes |
 |--------|-----------------|-------|-------|
-| FID | Realism and diversity | 0 (best) | Most common, correlates with human judgment |
+| Fréchet Inception Distance | Realism and diversity (feature-distribution distance to real images) | Lower = better, 0 ideal | Most common; sensitive to sample count and image preprocessing, so compare only under identical settings |
 | IS (Inception Score) | Quality + diversity | Higher = better | Can be gamed |
 | CLIP Score | Image-text alignment | Higher = better | For text-to-image |
 | LPIPS | Perceptual similarity | Lower = better | For reconstruction |

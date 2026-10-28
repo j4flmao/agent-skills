@@ -1042,7 +1042,7 @@ workflows:
 
 ```
 External Secrets Operator manifest:
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: SecretStore
 metadata:
   name: vault-backend
@@ -1060,7 +1060,7 @@ spec:
           serviceAccountRef:
             name: "external-secrets-sa"
 ---
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: db-credentials

@@ -1,298 +1,188 @@
-# Advanced testing-strategies for kotlin
+# Kotlin Backend Testing Strategies
 
-## 1. Executive Summary
-This document provides an exhaustive, production-grade reference for implementing testing-strategies in the context of kotlin. It covers architectural decisions, common pitfalls, performance tuning, and security considerations.
+Test pyramid, tools, and patterns for Kotlin services: unit tests for domain logic, coroutine tests, HTTP tests with Ktor's test host or Spring slices, and integration tests with Testcontainers.
 
-## 2. Deep Dive Principle 2
-When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. 
+## Tooling
 
-### 2.1 Architectural Considerations
-The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+| Purpose | Library |
+|---------|---------|
+| Test runner | JUnit 5 (Jupiter) or Kotest |
+| Assertions | Kotest assertions, AssertJ, or `kotlin.test` |
+| Mocking | MockK (`coEvery`/`coVerify` for suspend functions) |
+| Coroutines | `kotlinx-coroutines-test` (`runTest`, `StandardTestDispatcher`) |
+| Flows | Turbine |
+| HTTP (Ktor) | `ktor-server-test-host` (`testApplication`) |
+| HTTP (Spring) | `@WebFluxTest` / `@WebMvcTest`, `WebTestClient`, MockMvc Kotlin DSL |
+| Real dependencies | Testcontainers (PostgreSQL, Kafka, Redis) |
+| Property-based | Kotest property testing |
+| Architecture | Konsist, ArchUnit |
 
-```typescript
-// Advanced Implementation Example 2
-export class testing_strategiesManager_2 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+## Pyramid
 
-  private initialize(): void {
-    console.log('Initializing kotlin testing-strategies subsystem...');
-    // Complex setup logic here
-  }
+1. **Unit** (most): domain and use cases with fakes; milliseconds each.
+2. **Slice/HTTP**: routing, serialization, validation, error mapping.
+3. **Integration**: repositories against a real database; message consumers against a real broker.
+4. **End-to-end** (few): deployed service, smoke paths only.
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for testing-strategies
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
+## Unit Tests with Fakes
+
+Prefer hand-written fakes for ports over mocks; they keep tests readable and survive refactoring.
+
+```kotlin
+class InMemoryOrderRepository : OrderRepository {
+    private val data = mutableMapOf<OrderId, Order>()
+    override suspend fun find(id: OrderId) = data[id]
+    override suspend fun save(order: Order) = order.also { data[it.id] = it }
+}
+
+class PayOrderTest {
+    private val orders = InMemoryOrderRepository()
+    private val payments = mockk<PaymentGateway>()
+    private val payOrder = PayOrder(orders, payments, TransactionRunner.noop())
+
+    @Test
+    fun `marks order paid when charge succeeds`() = runTest {
+        // Arrange
+        orders.save(Order(OrderId(1), customerId = 7, totalCents = 500, status = Order.Status.PENDING))
+        coEvery { payments.charge(7, 500, "order-1") } returns ChargeResult.Success("ch_1")
+
+        // Act
+        val result = payOrder(OrderId(1))
+
+        // Assert
+        assertEquals(Order.Status.PAID, result.status)
+        coVerify(exactly = 1) { payments.charge(any(), any(), any()) }
     }
-  }
+
+    @Test
+    fun `throws when order missing`() = runTest {
+        assertFailsWith<OrderNotFound> { payOrder(OrderId(99)) }
+    }
 }
 ```
 
-### 2.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. 
+## Coroutine Testing
 
-## 3. Deep Dive Principle 3
-When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. 
+- `runTest` uses virtual time: `delay` skips instantly, so timeouts and retries test fast.
+- Inject dispatchers (`CoroutineDispatcher` constructor parameter) rather than hard-coding `Dispatchers.IO`, then pass `StandardTestDispatcher(testScheduler)` in tests.
+- Use `advanceUntilIdle()` / `advanceTimeBy()` to drive scheduled work.
 
-### 3.1 Architectural Considerations
-The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 3
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class testing_strategies_Processor_3:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 3.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. 
-
-## 4. Deep Dive Principle 4
-When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. 
-
-### 4.1 Architectural Considerations
-The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 4
-export class testing_strategiesManager_4 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing kotlin testing-strategies subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for testing-strategies
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
+```kotlin
+@Test
+fun `retries three times with backoff`() = runTest {
+    var calls = 0
+    val result = retrying(times = 3, initialDelayMs = 100) {
+        calls++
+        if (calls < 3) error("transient") else "ok"
     }
-  }
+    assertEquals("ok", result)
+    assertEquals(3, calls)
+    assertEquals(300, currentTime)   // 100 + 200 virtual ms with doubling backoff
 }
 ```
 
-### 4.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. 
+### Flows with Turbine
 
-## 5. Deep Dive Principle 5
-When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. 
-
-### 5.1 Architectural Considerations
-The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 5
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class testing_strategies_Processor_5:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 5.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. 
-
-## 6. Deep Dive Principle 6
-When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. 
-
-### 6.1 Architectural Considerations
-The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 6
-export class testing_strategiesManager_6 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing kotlin testing-strategies subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for testing-strategies
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
+```kotlin
+@Test
+fun `emits updated flags`() = runTest {
+    val source = MutableSharedFlow<Map<String, Boolean>>()
+    val flags = FeatureFlags(backgroundScope, FakeFlagSource(source))
+    flags.flags.test {
+        assertEquals(emptyMap(), awaitItem())
+        source.emit(mapOf("beta" to true))
+        assertEquals(mapOf("beta" to true), awaitItem())
     }
-  }
 }
 ```
 
-### 6.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. 
+`backgroundScope` (inside `runTest`) is cancelled automatically at the end, ideal for `stateIn` collectors.
 
-## 7. Deep Dive Principle 7
-When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. 
+## Ktor HTTP Tests
 
-### 7.1 Architectural Considerations
-The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+```kotlin
+class OrderRoutesTest {
+    @Test
+    fun `returns 404 problem for unknown order`() = testApplication {
+        application { module(testDependencies()) }
+        val client = createClient { install(ContentNegotiation) { json() } }
 
-```python
-# Advanced Python Implementation 7
-import asyncio
-import logging
+        val response = client.post("/orders/99/pay")
 
-logger = logging.getLogger(__name__)
-
-class testing_strategies_Processor_7:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 7.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. 
-
-## 8. Deep Dive Principle 8
-When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. 
-
-### 8.1 Architectural Considerations
-The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 8
-export class testing_strategiesManager_8 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing kotlin testing-strategies subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for testing-strategies
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertEquals("order_not_found", response.body<Problem>().type)
     }
-  }
 }
 ```
 
-### 8.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. 
+Make `Application.module` accept dependencies (or use Koin test modules) so tests can swap adapters.
 
-## 9. Deep Dive Principle 9
-When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. 
+## Spring Slice Tests
 
-### 9.1 Architectural Considerations
-The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+```kotlin
+@WebFluxTest(OrderController::class)
+class OrderControllerTest(@Autowired val client: WebTestClient) {
+    @MockkBean lateinit var payOrder: PayOrder    // springmockk
 
-```python
-# Advanced Python Implementation 9
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class testing_strategies_Processor_9:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 9.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. 
-
-## 10. Deep Dive Principle 10
-When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. When dealing with kotlin, addressing testing-strategies requires a multi-layered approach. 
-
-### 10.1 Architectural Considerations
-The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 10
-export class testing_strategiesManager_10 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing kotlin testing-strategies subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for testing-strategies
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
+    @Test
+    fun `pays order`() {
+        coEvery { payOrder(OrderId(1)) } returns sampleOrder()
+        client.post().uri("/orders/1/pay").exchange().expectStatus().isOk
     }
-  }
 }
 ```
 
-### 10.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. A frequent mistake when implementing testing-strategies in kotlin is ignoring edge cases. 
+## Integration Tests with Testcontainers
 
-## 11. Conclusion
-This concludes the deep dive into testing-strategies for kotlin. Ensure you review the other 7 references in this category for a holistic understanding.
+```kotlin
+@Testcontainers
+class OrderRepositoryIT {
+    companion object {
+        @Container @JvmStatic
+        val postgres = PostgreSQLContainer("postgres:17-alpine")
+    }
 
+    @Test
+    fun `round-trips an order`() = runTest {
+        val repo = ExposedOrderRepository(connect(postgres.jdbcUrl, postgres.username, postgres.password))
+        val saved = repo.save(newOrder())
+        assertEquals(saved, repo.find(saved.id))
+    }
+}
+```
+
+- Run migrations (Flyway) in test setup so schema matches production.
+- Reuse one container per test class or JVM; isolate tests with transactions rolled back or truncation.
+- Spring Boot: `@ServiceConnection` on the container bean wires connection properties automatically.
+
+## Contract and Property Tests
+
+- Consumer-driven contracts (Pact, Spring Cloud Contract) for service-to-service APIs.
+- Property-based tests for parsers, money arithmetic, and state machines:
+
+```kotlin
+class MoneyProps : StringSpec({
+    "adding zero is identity" {
+        checkAll(Arb.long(-1_000_000L..1_000_000L)) { cents ->
+            Money(cents) + Money.ZERO shouldBe Money(cents)
+        }
+    }
+})
+```
+
+## Pitfalls
+
+- `runBlocking` in tests: real delays, slow suites; use `runTest`.
+- Mocking data classes or the system under test; mock only boundaries.
+- `every` instead of `coEvery` for suspend functions (MockK fails at runtime).
+- H2 instead of the real database: dialect differences hide bugs.
+- Tests sharing mutable fixtures across classes, causing order dependence.
+
+## Checklist
+
+- [ ] Domain and use cases covered by fast unit tests (AAA structure)
+- [ ] Dispatchers injected; coroutine tests use `runTest`
+- [ ] HTTP error mapping and validation covered by route/slice tests
+- [ ] Repositories tested against real DB via Testcontainers
+- [ ] Edge cases: empty input, not found, conflicts, timeouts
+- [ ] Contract tests for external consumers

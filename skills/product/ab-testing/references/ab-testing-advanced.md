@@ -1,214 +1,114 @@
-# Ab Testing Advanced Topics
+# Advanced Experimentation: Variance Reduction, Sequential Testing, Interference, Holdouts and Program Scale
 
-## Introduction
-Advanced Ab Testing topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Techniques used by mature experimentation programs: CUPED variance reduction, ratio metrics and the delta method, sequential and always-valid inference, multiple testing control, network and marketplace interference designs, long-term holdouts, heterogeneous effects, and governance of an experimentation platform.
 
-## Advanced Architecture Patterns
+## Variance Reduction with CUPED
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+CUPED (Controlled-experiment Using Pre-Experiment Data) adjusts each user's metric using a pre-experiment covariate correlated with it:
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+```
+Y_adj = Y - theta x (X - mean(X)),   theta = cov(X, Y) / var(X)
+```
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+where X is the same metric measured before the experiment (e.g. prior-period purchases). Variance shrinks by roughly a factor of (1 - rho^2), where rho is the correlation between X and Y, so the same precision needs fewer users.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+```python
+import numpy as np
 
-## Performance Optimization
+def cuped(y: np.ndarray, x: np.ndarray) -> np.ndarray:
+    theta = np.cov(x, y, ddof=1)[0, 1] / np.var(x, ddof=1)
+    return y - theta * (x - x.mean())
+```
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+Compute theta on pooled data across variants. New users without history get X imputed (e.g. 0 with an indicator), or use regression adjustment with several covariates (CUPAC uses ML predictions as the covariate).
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+## Ratio Metrics and the Delta Method
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+Metrics like click-through rate per page view (clicks / views) when randomizing by user are ratios of per-user sums; the per-page-view observations are not independent. Use the delta method or bootstrap at the user level for variance:
 
-## Security Hardening
+```
+R = mean(C) / mean(V)
+Var(R) ≈ (1/n) x [ var(C)/mean(V)^2 - 2 x mean(C) x cov(C,V)/mean(V)^3 + mean(C)^2 x var(V)/mean(V)^4 ]
+```
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+Naive variance treating page views as independent underestimates uncertainty and inflates false positives.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+## Sequential Testing
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+Repeatedly checking a fixed-horizon test inflates false positives. Options that allow monitoring:
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+| Method | Notes |
+|--------|-------|
+| Group sequential designs (O'Brien-Fleming, Pocock alpha spending) | Pre-planned interim looks; strict early, lenient late |
+| Always-valid inference (mixture sequential probability ratio tests, confidence sequences) | Continuous monitoring; wider intervals than fixed-horizon at the same sample |
+| Bayesian with decision thresholds | Interpretable posteriors; still needs calibration of stopping rules for error control |
 
-## Monitoring and Observability
+Many commercial and open-source platforms (e.g. GrowthBook, Statsig, Eppo, Optimizely) offer sequential options; know which one your platform uses and what guarantees it provides.
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+## Multiple Testing
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+| Situation | Control |
+|-----------|---------|
+| Several variants vs control | Bonferroni/Holm on comparisons, or Dunnett's test |
+| Many secondary metrics | Benjamini-Hochberg false discovery rate; treat as exploratory |
+| Many segments | Pre-register key segments; others hypothesis-generating |
+| Many experiments in a program | Expect some false positives; replicate important wins |
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+Keep a single pre-registered primary metric to avoid the problem for the decision itself.
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+## Interference and Alternative Designs
 
-## Scalability and Reliability
+When one user's treatment affects others (SUTVA violation), standard user-level tests are biased.
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+| Setting | Problem | Design |
+|---------|---------|--------|
+| Two-sided marketplaces (riders/drivers, buyers/sellers) | Treatment changes shared supply | Switchback (randomize time windows x regions), cluster randomization by market |
+| Social networks | Effects spill over through connections | Graph cluster randomization, ego-network designs |
+| Pricing and inventory | Shared budgets/stock | Budget-split designs, geo experiments |
+| Ads/auctions | Competition within the auction | Budget-split or counterfactual logging |
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+Geo experiments (randomizing regions, analyzed with synthetic control or difference-in-differences) measure effects of marketing or offline changes when user-level randomization is impossible.
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+## Long-Term Effects and Holdouts
 
-## Integration and Interoperability
+- Short-term metrics may not predict long-term value (novelty, learning effects, cannibalization).
+- Long-term holdout: keep a small percentage of users out of all launched features for a quarter or more, and measure cumulative impact.
+- Surrogate metrics: validated short-term proxies that predict long-term outcomes.
+- Monitor effects over time within a test (effect vs days since exposure).
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+## Heterogeneous Treatment Effects
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+- Pre-specified segments (new vs returning, platform, country) for decision-relevant differences.
+- ML methods (causal forests, meta-learners such as T-/X-learners) to discover heterogeneity; validate on held-out experiments before targeting.
+- Beware Simpson's paradox when allocation varies across segments over time.
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+## Trustworthiness Checks
 
-## DevOps and Automation
+| Check | Purpose |
+|-------|---------|
+| Sample ratio mismatch test | Assignment/logging bugs |
+| A/A tests | Validate platform false-positive rate |
+| Pre-period balance | Randomization sanity on covariates |
+| Exposure vs assignment consistency | Triggering bugs |
+| Metric definition tests | Pipeline regressions |
+| Carryover from previous experiments | Re-salt or shuffle buckets between experiments |
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+## Experimentation Platform Practices
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Central assignment service with deterministic hashing and mutually exclusive layers when experiments could interact.
+- Metric catalog with owners, definitions in code, and version history.
+- Automated analysis with CUPED, SRM checks, guardrails and sequential monitoring.
+- Experiment registry: hypothesis, design, results and decision for organizational learning.
+- Review process for experiment design (power, metrics) before launch.
+- Ethics and privacy review for experiments affecting pricing, vulnerable users, or sensitive data.
+
+## Checklist
+
+- [ ] CUPED or regression adjustment applied where pre-period data exists
+- [ ] Delta method or user-level bootstrap for ratio metrics
+- [ ] Sequential method chosen if results will be monitored continuously
+- [ ] Multiple-comparison control for variants, metrics and segments
+- [ ] Interference assessed; switchback/cluster/geo designs where needed
+- [ ] Long-term holdouts or surrogates for strategic decisions
+- [ ] SRM, A/A and balance checks automated
+- [ ] Results and decisions recorded in a searchable registry

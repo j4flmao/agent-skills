@@ -798,12 +798,7 @@ jenkins:
 ## References
   - references/jenkins-advanced.md — Jenkins Advanced Topics
   - references/jenkins-fundamentals.md — Jenkins Fundamentals
-  - references/jenkins-casc.md — Configuration as Code
   - references/jenkins-shared-libraries.md — Shared Library Development
-  - references/jenkins-security.md — Security Hardening Guide
-  - references/jenkins-ha.md — High Availability Configuration
-  - references/jenkins-kubernetes.md — Jenkins on Kubernetes
-  - references/jenkins-pipeline-patterns.md — Pipeline Pattern Catalog
 ## Handoff
 - `devops-cicd-pipeline` for CI/CD pipeline design and integration.
 - `devops-github-actions` for comparing/transitioning to GitHub Actions.

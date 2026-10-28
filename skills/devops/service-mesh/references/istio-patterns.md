@@ -14,7 +14,7 @@ Profiles: default (production), demo (all components), minimal (just ingress/egr
 
 ## Sidecar Configuration
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: Sidecar
 metadata:
   name: default
@@ -34,7 +34,7 @@ Restrict sidecar egress to only necessary hosts for security. Proxy resource lim
 
 ## VirtualService
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: myapp
@@ -71,7 +71,7 @@ Fault injection and mirroring also configurable in VirtualService. Timeouts and 
 
 ## DestinationRule
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
   name: myapp-dr
@@ -105,7 +105,7 @@ Subsets correspond to workload version labels. Circuit breaker protects downstre
 
 ## Gateway
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: Gateway
 metadata:
   name: myapp-gateway
@@ -128,7 +128,7 @@ Gateway handles TLS termination at edge. Multiple Gateways for different domains
 
 ## mTLS
 ```yaml
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 metadata:
   name: default
@@ -141,7 +141,7 @@ Also set mesh-wide via `meshConfig.defaultConfig.tlsMode=ISTIO_MUTUAL`. Verifica
 
 ## AuthorizationPolicy
 ```yaml
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
   name: myapp-authz
@@ -177,7 +177,7 @@ kubectl port-forward -n istio-system svc/kiali 20001:20001
 
 ## Egress Gateway
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: ServiceEntry
 metadata:
   name: external-api

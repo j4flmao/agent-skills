@@ -85,7 +85,7 @@ spec:
     DB_PASSWORD: AgBy3i4...
 
 # External Secrets Operator — sync from external provider
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: app-secrets

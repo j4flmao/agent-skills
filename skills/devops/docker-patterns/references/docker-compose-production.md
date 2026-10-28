@@ -188,8 +188,6 @@ services:
 ## Full Production Example
 
 ```yaml
-version: "3.8"
-
 services:
   traefik:
     image: traefik:v3.0

@@ -526,3 +526,13 @@ async function testEmailDelivery() {
 - `backend/sms-messaging` — Alternative messaging channel for 2FA and notifications
 - `data/analytics` — Email analytics and reporting integration
 - `security/compliance` — GDPR and data retention compliance patterns
+
+## References
+- [deliverability](references/deliverability.md)
+- [delivery setup](references/delivery-setup.md)
+- [email analytics](references/email-analytics.md)
+- [email compliance](references/email-compliance.md)
+- [email testing](references/email-testing.md)
+- [mjml templates](references/mjml-templates.md)
+- [transactional email advanced](references/transactional-email-advanced.md)
+- [transactional email fundamentals](references/transactional-email-fundamentals.md)

@@ -52,7 +52,7 @@ spec:
 ## Virtual Service Configuration
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: api-gateway
@@ -103,7 +103,7 @@ spec:
 ## Destination Rule
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
   name: user-service

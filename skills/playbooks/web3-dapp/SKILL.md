@@ -3,6 +3,29 @@ name: web3-dapp-playbook
 description: Playbook for building full-stack Web3 applications (Next.js, Solidity, Kubernetes).
 ---
 
+## Purpose
+Reference architecture for a full-stack Web3 dApp: Next.js frontend with wallet integration, Solidity contracts, indexing, and Kubernetes deployment.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "web3 dapp playbook", "build a full-stack dapp", "Next.js + Solidity architecture", "dapp scaffold".
+
+### Input Context
+- Product requirements, scale targets, and existing stack.
+- Constraints (budget, compliance, team size).
+
+### Output Artifact
+Architecture guidance and component choices (no files unless requested).
+
+### Response Format
+```
+Layer: {contracts | frontend | infra}
+Choice: {component + why}
+Risk: {security, gas, RPC reliability}
+```
+
+
 # Web3 DApp Playbook
 
 **MẠNH. CONCISE. AUTHORITATIVE.**

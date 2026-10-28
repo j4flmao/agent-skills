@@ -1,214 +1,140 @@
-# Oracle Cloud Advanced Topics
-
-## Introduction
-Advanced Oracle Cloud topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# OCI Advanced: Landing Zones, Hub-Spoke Networking, Multi-Region DR, Governance
+
+Patterns for running OCI at scale: landing zones, hub-and-spoke networks with DRG and Network Firewall, hybrid connectivity, multi-region disaster recovery, security posture services, and cost governance. Foundations are in `oracle-cloud-fundamentals.md`.
+
+## 1. Landing Zone
+
+Oracle publishes CIS-aligned landing zone Terraform (OCI Core Landing Zone, successor to the CIS Landing Zone) that creates:
+- Compartments for network, security, application, database, and exadata workloads.
+- Groups and least-privilege policies per role (network admin, security admin, app admin, auditor).
+- Cloud Guard, Security Zones (optional), Vulnerability Scanning, logging, notifications, and events.
+- Hub/spoke or standalone VCN topologies.
+
+Fork or wrap the landing zone modules rather than hand-building the baseline; keep changes in version control and apply via Resource Manager or CI.
+
+## 2. Hub-and-Spoke Networking
+
+```
+           On-premises
+     (FastConnect / IPSec VPN)
+                │
+               DRG ───────────── remote peering (RPC) ──► DR region DRG
+           ┌────┴─────────────┐
+       Hub VCN            Spoke VCNs (prod, nonprod, shared services)
+   ┌───────────────┐
+   │ OCI Network    │  all spoke-to-spoke, spoke-to-on-prem, and egress
+   │ Firewall       │  traffic routed through the firewall
+   └───────────────┘
+```
+
+Key mechanisms:
+- DRG attachments for each VCN; DRG route tables and import distributions control which attachments learn which routes.
+- VCN ingress route tables on the hub's DRG attachment send traffic to the firewall's private IP.
+- Spokes have no internet gateway; egress via hub NAT or firewall.
+- Service Gateway in each spoke (or centralized) for Oracle Services Network access.
+
+```hcl
+resource "oci_core_drg_attachment" "spoke_prod" {
+  drg_id       = oci_core_drg.hub.id
+  display_name = "spoke-prod"
+  network_details {
+    id   = oci_core_vcn.prod.id
+    type = "VCN"
+  }
+  drg_route_table_id = oci_core_drg_route_table.spokes.id
+}
+```
+
+## 3. Hybrid Connectivity
+
+| Option | Characteristics |
+|---|---|
+| Site-to-Site IPSec VPN | Quick to set up, over internet, two tunnels per connection for redundancy |
+| FastConnect | Private dedicated connectivity via partner or colocation, predictable latency |
+| FastConnect + VPN backup | VPN as failover path with BGP preferences |
+| Multicloud interconnects (Azure, Google Cloud) | Private interconnect between clouds in paired regions |
+| Oracle Database@Azure / @AWS / @Google Cloud | Oracle database services running in the other cloud's data centers |
+
+Use BGP with redundant circuits in different locations; test failover.
+
+## 4. Multi-Region Disaster Recovery
+
+| Layer | Mechanism |
+|---|---|
+| Orchestration | OCI Full Stack Disaster Recovery: DR protection groups and plans for switchover/failover of compute, volumes, databases, OKE, load balancers |
+| Block volumes | Cross-region volume group replication; volume backups copied to another region |
+| Object Storage | Cross-region replication policies per bucket |
+| Autonomous Database | Autonomous Data Guard standby (local or cross-region), backup-based cross-region DR |
+| Base / Exadata Database | Data Guard with cross-region standby |
+| DNS / traffic | OCI DNS Traffic Management steering policies (failover) with health checks |
+| Infrastructure | Same Terraform applied per region, region-specific variables |
+
+Define RPO/RTO per application, then pick replication mechanisms that meet them. Run DR drills with Full Stack DR plans, including switchback.
+
+## 5. Security Posture Services
+
+| Service | Use |
+|---|---|
+| Cloud Guard | Detector recipes (configuration and activity) and responder recipes per target compartment |
+| Security Zones | Enforce policies (e.g. no public buckets, encryption with customer keys) on compartments; violating actions are denied |
+| Vault | Customer-managed keys (software or HSM-protected) and secrets |
+| Bastion | Time-limited SSH sessions to private resources without public IPs |
+| Vulnerability Scanning | Host and container image scanning |
+| Web Application Firewall | Layer 7 protection for load balancers and edge |
+| Audit | Records API calls; retention configurable (default 365 days) |
+| Logging Analytics / Service Connector Hub | Route logs to SIEM (Splunk, Sentinel, etc.) |
+
+Example Security Zone-aligned policy hygiene: deny public buckets, require customer-managed keys for block volumes and buckets in production compartments.
+
+## 6. Advanced IAM Patterns
+
+```
+# Network admins can manage network in shared-network, but not delete the DRG
+Allow group 'Default'/'NetworkAdmins' to manage virtual-network-family in compartment shared-network
+  where request.permission != 'DRG_DELETE'
+
+# Time-bound / tag-based conditions
+Allow group 'Default'/'AppADevelopers' to manage instance-family in compartment prod
+  where target.resource.tag.Ownership.Team = 'app-a'
+
+# OKE workload identity: pods in a namespace/service account read one bucket
+Allow any-user to read objects in compartment prod:app-a
+  where all { request.principal.type = 'workload',
+              request.principal.namespace = 'payments',
+              request.principal.service_account = 'reporter',
+              request.principal.cluster_id = '<cluster-ocid>',
+              target.bucket.name = 'reports' }
+```
+
+Review policies with the policy simulator/analysis tools and audit logs; avoid `manage all-resources` outside break-glass groups.
+
+## 7. Cost Governance
+
+- Compartment quotas: `zero compute-core quotas in compartment sandbox` then `set compute-core quota standard-e5-core-count to 16 in compartment sandbox`.
+- Budgets with forecast-based alerts per compartment or cost-tracking tag.
+- Cost reports exported to Object Storage for FinOps tooling.
+- Commitments: Universal Credits (annual flex) and support rewards; model before committing.
+- Rightsize with Cloud Advisor recommendations; use flexible shapes to match OCPU/memory.
+
+## 8. Operations at Scale
+
+- Events + Notifications/Functions for automated responses (e.g. tag enforcement on create).
+- OS Management Hub for patching fleets.
+- Monitoring alarms (MQL) on service metrics; route to PagerDuty/Slack via Notifications.
+- Resource Manager stacks with drift detection.
+
+## Pitfalls
+
+- Flat VCN peering mesh instead of DRG hub: unmanageable routes and no inspection point.
+- DR plans never executed; switchover fails on first real use.
+- Cloud Guard enabled without responders or triage ownership: findings pile up.
+- Quotas not set on sandbox compartments.
+
+## Checklist
+
+- [ ] Landing zone baseline applied from code.
+- [ ] Hub-and-spoke with DRG routing and centralized inspection.
+- [ ] Redundant hybrid connectivity with tested failover.
+- [ ] DR per application with defined RPO/RTO and rehearsed Full Stack DR plans.
+- [ ] Cloud Guard, Security Zones, Vault, Bastion, audit export in place.
+- [ ] Quotas, budgets, and tag-based cost reporting per compartment.

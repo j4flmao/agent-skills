@@ -1,214 +1,106 @@
-# Fintech Patterns Advanced Topics
+# Fintech Patterns: Advanced Topics
 
-## Introduction
-Advanced Fintech Patterns topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced patterns for payment platforms and financial products at scale: card payment lifecycle and disputes, real-time and account-to-account rails, ISO 20022 messaging, multi-currency and FX, settlement and treasury, ledger scaling, open banking, and tokenization. Builds on `fintech-patterns-fundamentals.md`.
 
-## Advanced Architecture Patterns
+## Card Payment Lifecycle
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+| Phase | What happens | Engineering concerns |
+|-------|--------------|----------------------|
+| Authorization | Issuer approves and places a hold | Idempotent auth requests, 3-D Secure / SCA, decline code mapping, auth expiry |
+| Incremental / partial auth | Hold adjusted (hotels, rentals) | Track current authorized amount |
+| Capture | Merchant claims funds (full, partial, multiple) | Capture windows vary by network/MCC; release uncaptured holds |
+| Clearing | Transaction details sent to networks | Batch files, interchange qualification data (Level 2/3) |
+| Settlement | Funds move acquirer to merchant, net of fees | Payout reconciliation; fees known after the fact |
+| Refund | New credit transaction | Partial refunds, refund to original method |
+| Chargeback / dispute | Cardholder disputes via issuer | Evidence submission deadlines, representment, pre-arbitration |
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+Model authorization holds, captured amounts, fees and disputes as separate ledger accounts so the merchant balance can be explained at any point.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+### Disputes
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+- Ingest dispute events (webhooks/files), freeze or debit the disputed amount plus fee, collect evidence automatically (receipts, delivery proof, logs), track network deadlines.
+- Track dispute ratio per merchant; card network monitoring programs penalise high ratios.
 
-## Performance Optimization
+## Network Tokens and Tokenization
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+- Network tokens (Visa Token Service, Mastercard MDES) replace PANs for card-on-file and improve authorization rates and lifecycle updates.
+- Vault tokenization (processor or third-party vault) keeps PANs out of your PCI scope; store only tokens, last4, brand, expiry.
+- Card account updater services refresh expired/reissued cards for subscriptions.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+## Account-to-Account and Real-Time Rails
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+| Rail | Region | Characteristics |
+|------|--------|-----------------|
+| SEPA Instant Credit Transfer | Euro area | Seconds, 24/7; EU Instant Payments Regulation requires PSPs to offer it at no more than the price of standard transfers, plus Verification of Payee |
+| SEPA Credit Transfer / Direct Debit | Euro area | Batch; direct debits have mandates and refund rights |
+| Faster Payments | UK | Near real-time; Confirmation of Payee |
+| FedNow, RTP | US | Real-time, irrevocable |
+| ACH (Nacha) | US | Batch; returns up to days later (R-codes) |
+| Pix | Brazil | Instant, QR-based |
+| UPI | India | Instant, VPA-based |
 
-## Security Hardening
+Engineering consequences:
+- Instant rails are irrevocable: run fraud and sanctions checks before submission; design for authorized push payment (APP) fraud controls.
+- Batch rails with late returns (ACH, direct debit): keep funds in a pending state or accept risk with limits; handle returns as reversing ledger entries.
+- Cut-off times and banking calendars determine value dates; model them explicitly.
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+## ISO 20022
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+- The XML (and JSON-capable) messaging standard for payments: `pain.001` (customer credit transfer initiation), `pacs.008` (FI-to-FI customer credit transfer), `pacs.002` (status report), `pacs.004` (return), `camt.053` (bank statement), `camt.054` (debit/credit notification).
+- SWIFT cross-border payments moved to ISO 20022; the MT/MX coexistence period for payment instructions ended in November 2025.
+- Rich structured data: structured addresses, remittance information, purpose codes, Legal Entity Identifiers. Preserve the **end-to-end ID** and **UETR** through your system for tracing and reconciliation.
+- Validate messages against XSD schemas plus scheme-specific usage guidelines (e.g. EPC rulebooks for SEPA, CBPR+ for cross-border).
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+## Multi-Currency and FX
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+- Hold balances per currency; never mix currencies in one account.
+- FX conversion is a pair of ledger entries via an FX account, recording rate, source, timestamp and markup.
+- Quote-then-execute: give customers a rate quote with expiry; execution checks the quote is still valid.
+- Rate sources and spreads are configuration with audit history.
+- Revaluation for reporting (mark-to-market of foreign balances) is an accounting process, separate from transactional conversion.
 
-## Monitoring and Observability
+## Settlement, Treasury and Safeguarding
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+- Map money flows: customer funds (safeguarded/segregated accounts where required), operating funds, processor reserves.
+- Daily processes: match processor settlement reports and bank statements (`camt.053`) to the ledger; investigate breaks.
+- Liquidity forecasting for payouts on real-time rails (prefunding accounts).
+- Safeguarding rules for e-money and payment institutions require customer funds to be segregated or insured and reconciled daily in many jurisdictions.
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+## Ledger at Scale
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+| Challenge | Pattern |
+|-----------|---------|
+| Hot accounts (fee account, settlement account touched by every transaction) | Shard the account into sub-accounts and sum for balance; or batch postings to the hot account asynchronously |
+| High write throughput | Purpose-built ledgers (e.g. TigerBeetle) or partitioned relational ledgers |
+| Balance reads | Maintain balance projections updated in the same transaction as entries; snapshots for historical balances |
+| Corrections | Reversing entries only; no updates/deletes |
+| Multi-region | Single writer per account/partition; avoid multi-master for balances |
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+## Workflow Orchestration
 
-## Scalability and Reliability
+- Long-running money workflows (payouts, onboarding, loan disbursement) benefit from durable workflow engines (Temporal, AWS Step Functions) with explicit compensation steps.
+- Every activity calling external systems is idempotent; workflow history doubles as an audit trail.
+- Events to other services via the transactional outbox; consumers deduplicate.
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+## Open Banking
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+- EU/UK: PSD2 access to account (AIS) and payment initiation (PIS) APIs; PSD3/PSR reforms are in progress. UK uses the Open Banking Standard; US: CFPB Section 1033 personal financial data rights rule (with phased compliance and ongoing revisions).
+- Security profiles: FAPI 2.0 (OAuth 2.0 + PAR, PKCE, sender-constrained tokens via mTLS or DPoP).
+- Consent management: scopes, expiry, revocation, and audit of data access.
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+## Risk Controls in Real-Time Systems
 
-## Integration and Interoperability
+- Pre-transaction checks in a defined latency budget: limits, velocity rules, device/behavioural signals, sanctions screening, ML fraud scores (see `fraud-detection.md`).
+- Decisions logged with model version and feature values for explainability and disputes.
+- Kill switches per rail, merchant or corridor.
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+## Checklist
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Card lifecycle states and ledger accounts cover holds, captures, fees, refunds, disputes
+- [ ] PAN-free architecture with vault or network tokens
+- [ ] Rail-specific rules: irrevocability, returns, cut-offs, payee verification
+- [ ] ISO 20022 identifiers (end-to-end ID, UETR) preserved end to end
+- [ ] FX entries record rate, source and markup; quotes expire
+- [ ] Daily settlement and safeguarding reconciliation
+- [ ] Hot-account strategy for high-volume ledgers
+- [ ] Durable workflows with compensations; outbox for events

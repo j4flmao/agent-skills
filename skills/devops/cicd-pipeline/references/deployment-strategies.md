@@ -62,7 +62,7 @@ spec:
     version: blue  # Switch to 'green' to cut over
 
 # Or use Istio VirtualService for gradual switch
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: myapp
@@ -124,7 +124,7 @@ Route a small percentage of traffic to the new version, gradually increase as co
 
 ```yaml
 # Istio canary deployment
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: myapp

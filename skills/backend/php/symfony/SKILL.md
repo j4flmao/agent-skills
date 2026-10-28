@@ -549,7 +549,7 @@ Need message persistence and guaranteed delivery?
 
 5. **.env file committed to repository**: Contains secrets. Use .env.local for local overrides, .env for defaults only.
 
-6. **Controller as service not configured**: Prior to Symfony 6, services need explicit wiring. Use #[AsController] attribute.
+6. **Controller not registered as a service**: With the default `services.yaml` (autowire + autoconfigure, src/Controller resource), controllers are services automatically. If you exclude that directory or load controllers from elsewhere, tag them with `controller.service_arguments` or add the `#[AsController]` attribute.
 
 7. **Forgetting flush() after persist**: Entity changes not written to DB until flush(). Wrap in transaction for consistency.
 
@@ -589,7 +589,7 @@ Need message persistence and guaranteed delivery?
 
 ## Performance
 
-- Symfony 7 with PHP 8.3 handles ~2,000 req/s (single worker, full framework).
+- Throughput depends on workload; benchmark your own endpoints. Enable OPcache with preloading (`opcache.preload` pointing to `config/preload.php`) and consider a worker runtime (FrankenPHP worker mode, RoadRunner) to avoid per-request kernel boot.
 - Doctrine: Use query cache (`apcu`), result cache, metadata cache in production.
 - Twig template cache: Enabled by default in production (`twig/cache` directory).
 - Messenger: Doctrine transport for reliability, Redis for throughput. Consumer count: 2-4 per queue.
@@ -631,8 +631,6 @@ Need message persistence and guaranteed delivery?
 - Rate limiter applied to all API endpoints in production.
 
 ## References
-  - references/symfony-doctrine-orm.md — Symfony Doctrine ORM Reference
-  - references/symfony-messenger-queue.md — Symfony Messenger Queue Reference
   - references/symfony-architecture.md — Symfony Architecture
   - references/symfony-deployment.md — Symfony Deployment
   - references/symfony-doctrine.md — Symfony Doctrine Guide

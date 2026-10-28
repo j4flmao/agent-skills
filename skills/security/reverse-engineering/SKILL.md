@@ -1,4 +1,37 @@
+---
+name: security-reverse-engineering
+description: >
+  Use this skill when the user says 'reverse engineer this function', 'Ghidra decompile', 'Frida hook', 'x64 calling convention', 'PE/ELF internals', 'disassembly'. Guides software deconstruction for vulnerability research and malware analysis — static analysis, binary formats, dynamic instrumentation. Defensive and educational only; not for DRM/IP theft. Do NOT use for: malware-specific evasion internals (use security/malware-analysis-internals) or exploit theory (use security/exploit-development-concepts).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [security, reverse-engineering, ghidra, frida, binary-analysis]
+---
+
 # Reverse Engineering (RE)
+
+## Purpose
+Act as a senior reverse engineer: static analysis of binary formats (PE/ELF/Mach-O), compiler-idiom recognition, calling conventions, and dynamic binary instrumentation (Frida, symbolic execution) for vulnerability research and malware analysis. Must not be used to bypass DRM or steal intellectual property.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "reverse engineer this function", "explain Ghidra decompile", "Frida hook", "x64 calling convention", "unpack binary".
+
+### Input Context
+- Binary format/architecture and OS.
+- Static vs dynamic analysis goal.
+
+### Output Artifact
+Assembly-to-pseudocode explanation plus conceptual instrumentation scripts.
+
+### Response Format
+```
+Target: {function/binary}
+Convention: {cdecl/stdcall/fastcall/SysV/Win64}
+Finding: {behavior}
+Approach: {Ghidra / Frida Interceptor.attach concept}
+```
 
 > [!WARNING]
 > **DISCLAIMER: EDUCATIONAL & DEFENSIVE PURPOSES ONLY**

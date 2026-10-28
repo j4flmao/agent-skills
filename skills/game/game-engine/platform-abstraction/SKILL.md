@@ -1,17 +1,44 @@
 ---
 name: platform-abstraction
-description: Expert platform abstraction layers for game engines — OS abstraction, filesystem, threads, windowing, input, timers, dynamic loading, and platform-conditional code across Windows/Linux/console.
+description: >
+  Use this skill when the user says 'platform abstraction layer', 'PAL', 'cross-platform engine', 'windowing', 'engine filesystem', 'dynamic library loading', 'platform ifdef'. Designs the platform abstraction layer: OS, filesystem, threads, windowing, input devices, timers and dynamic loading across Windows/Linux/macOS/consoles. Do NOT use for: mobile app platform APIs (use mobile skills), build systems (use devops/monorepo or language skills).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, platform, portability, engine]
 ---
 
 # Platform Abstraction Layer — Deep Engineering Guide
 
+## Purpose
 The PAL (Platform Abstraction Layer) is the layer that lets one engine codebase run on Windows, Linux, macOS, and every console generation. If it's leaky, every feature becomes a platform #ifdef. If it's designed well, 95% of engine code is pure, portable C++.
+
+## Agent Protocol
+
+### Trigger
+"platform abstraction layer", "PAL", "cross-platform engine", "windowing", "engine filesystem", "dynamic library loading", "platform ifdef".
+
+### Input Context
+- Target platforms
+- Language and build system
+- Existing libraries (SDL3, GLFW, custom)
+
+### Output Artifact
+Interface design and per-platform implementation sketch. No file unless requested.
+
+### Response Format
+```
+Interface: {header}
+Backends: {platform -> implementation}
+Code: {snippet}
+Pitfalls: {paths, unicode, threading}
+```
 
 ## 1. The Contract — What the PAL Must Cover
 
 | Concern | Platform-specific | Engine API |
 |---------|-------------------|------------|
-| Memory | VirtualAlloc / mmap / heap | `VirtualAlloc`, `Memory::Reserve` |
+| Memory | VirtualAlloc / mmap / heap | `Memory::Reserve`, `Memory::Commit` |
 | Threads | CreateThread / pthread / fiber | `Thread`, `JobSystem` handles |
 | Filesystem | CreateFile / open | `FileSystem::Open`, paths `{Platform.VirtualPath}` |
 | Time | QueryPerformanceCounter / clock_gettime | `Time::Now()`, `Time::Delta()` |
@@ -22,7 +49,7 @@ The PAL (Platform Abstraction Layer) is the layer that lets one engine codebase 
 | Render RHI | D3D12 / Vulkan / Metal | `RHIDevice` (see vulkan skill) |
 | Networking | winsock / BSD sockets | `NetworkProtocol` (see netcode skill) |
 
-Rule: **every** platform-only symbol lives behind an interface; portals are forbidden (`#ifdef WIN32` inside gameplay code).
+Rule: **every** platform-only symbol lives behind an interface; leaks are forbidden (`#ifdef _WIN32` inside gameplay code).
 
 ## 2. Abstracting the OS
 
@@ -56,7 +83,7 @@ Debug-build placeholder: a `NullPAL` that asserts on unsupported calls keeps uns
 ### 2.2 Platform Selection
 
 - Windows: `PlatformWindows.cpp` — Win32 + DirectXMath conveniences.
-- Linux/BSD: `PlatformPosix.cpp` — pthread, `open`, `clock_gettime(CLOCK_MONOTONIC_RAW)`.
+- Linux/BSD: `PlatformPosix.cpp` — pthread, `open`, `clock_gettime(CLOCK_MONOTONIC)`.
 - Consoles: per-SDK, behind a private porting SDK; engine build ships only one active implementation.
 
 ### 2.3 graceful Degradation
@@ -81,7 +108,7 @@ Path p = Platform::ResolveVirtual("{GameData}/shaders/lighting.hlsl");
 {EngineRoot}   -> engine-source-tree
 {GameData}     -> <install>/GameData
 {SaveFiles}    -> platform writable dir (AppData / xdg-data-home / console save)
-{Temp}         -> sphere-scoped scratch
+{Temp}         -> per-session scratch dir
 ```
 
 Save dir differs per platform — the PAL owns the resolution. All asset loading goes through the mount table (no raw `D:\` paths in assets).
@@ -95,7 +122,7 @@ See `virtual-memory.md` and `asset-pipeline.md`. Crude: `ReadFile`, `fopen`. Pro
 ### 4.1 The Clock
 
 - Windows: `QueryPerformanceCounter` (QPC), divisor = frequency.
-- Linux: `clock_gettime(CLOCK_MONOTONIC_RAW)` (unaffected by NTP jumps).
+- Linux: `clock_gettime(CLOCK_MONOTONIC)` (never jumps; `CLOCK_MONOTONIC_RAW` additionally ignores NTP rate slewing).
 - Console: device-specific. Use device monotonic, never wall-clock, for sim.
 
 ```cpp
@@ -117,7 +144,7 @@ PAL threads wrap `CreateThread`/`std::thread` with generous split:
 - `JobSystem` (see its skill) uses PAL threads underneath.
 
 ```cpp
-Thread* t = Platform::CreateThread(bind(&MySystem::Run), this, 256 * 1024);
+Thread* t = Platform::CreateThread(&MySystem::ThreadEntry, this, 256 * 1024); // static void ThreadEntry(void*)
 ```
 
 ### 5.2 Fibers

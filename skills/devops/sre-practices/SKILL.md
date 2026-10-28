@@ -632,9 +632,6 @@ reliability_maturity:
 - references/sre-practices-fundamentals.md — SRE Practices Fundamentals
 - references/sre-slos.md — SLO / SLI / SLA Definitions
 - references/toil-automation.md — Toil Reduction Guide
-- references/burn-rate-alerts.md — Multi-Window Burn Rate Alert Design
-- references/prr-checklist.md — Production Readiness Review Checklist
-- references/reliability-maturity.md — Reliability Maturity Model
 
 ## Handoff
 Related skills: platform-engineering (IDP for self-service toil reduction), incident-response (on-call and incident management), chaos-engineering (resilience testing), monitoring (observability stack for SLO data), progressive-delivery (deployment strategies for safe changes).

@@ -512,7 +512,7 @@ Hand off to ml-experiment-tracking for logging evaluation results. Hand off to m
 ## Implementation Patterns
 
 ### Cross-Validation with Metrics
-`python
+```python
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.metrics import (
     make_scorer, accuracy_score, precision_score,
@@ -541,10 +541,10 @@ results = cross_validate(
 for metric in scoring:
     scores = results[f'test_{metric}']
     print(f'{metric}: {scores.mean():.4f} +/- {scores.std():.4f}')
-`
+```
 
 ### Model Comparison Report
-`python
+```python
 import matplotlib.pyplot as plt
 from sklearn.metrics import RocCurveDisplay, PrecisionRecallDisplay
 
@@ -559,7 +559,7 @@ ax1.set_title('ROC Curves')
 ax2.set_title('Precision-Recall Curves')
 plt.tight_layout()
 plt.savefig('model_comparison.png')
-`
+```
 
 ## Performance Optimization
 
@@ -569,7 +569,7 @@ plt.savefig('model_comparison.png')
 - **GPU-accelerated metrics**: Use CuPy/RAPIDS for large-scale metric computation. Speed up bootstrapped confidence intervals.
 
 ### Bootstrap Confidence Intervals
-`python
+```python
 from sklearn.utils import resample
 
 def bootstrap_ci(y_true, y_pred, metric_fn, n_iterations=1000, ci=0.95):
@@ -582,7 +582,7 @@ def bootstrap_ci(y_true, y_pred, metric_fn, n_iterations=1000, ci=0.95):
     lower = scores[int((1 - ci) / 2 * n_iterations)]
     upper = scores[int((1 + ci) / 2 * n_iterations)]
     return lower, upper, np.mean(scores)
-`
+```
 
 ## Security Considerations
 

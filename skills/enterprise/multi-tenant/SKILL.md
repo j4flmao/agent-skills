@@ -412,7 +412,7 @@ Estimated time: 3-5 minutes
 - OpenPolicyAgent / OPA for tenant access policy enforcement
 - Jaeger / OpenTelemetry for tenant-span tracing
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: HIPAA-Compliant Multi-Tenant Healthcare Platform
 A healthcare SaaS platform needed HIPAA compliance while serving 200 hospital customers. Each hospital required strict data isolation (PHI separation). The platform implemented DB-per-tenant for patient data (AES-256 encrypted at rest, per-tenant KMS keys) and shared schema for lookup data (states, ICD codes, drug databases). Tenant provisioning automated end-to-end with 5-minute setup time. Audit logging at tenant granularity. Passed HIPAA audit with zero findings on data isolation controls.

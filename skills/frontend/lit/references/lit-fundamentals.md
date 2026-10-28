@@ -1,213 +1,167 @@
-# Lit Fundamentals
+# Lit Fundamentals: Setup, Templates, Styling and Interop
 
-## Overview
-Lit is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Lit (v3) is a small library for building fast, standards-based Web Components. Components extend `LitElement`, render with tagged `html` templates that update only changed parts, and run in any framework or none. This reference covers project setup, decorator configurations, template binding syntax, styling and slots, and using Lit components from frameworks. Reactive properties in depth, lifecycle, events, directives, SSR and architecture are covered in sibling references.
 
-## Core Concepts
+## What Lit Gives You
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Lit helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Piece | Purpose |
+|---|---|
+| `LitElement` | Base class adding reactive properties, rendering and scoped styles on top of `HTMLElement` |
+| `lit-html` templates (`html`) | Declarative templates with efficient updates (no virtual DOM diffing of the whole tree) |
+| Reactive properties | Changing them schedules an asynchronous, batched update |
+| `css` + Shadow DOM | Encapsulated styles |
+| Directives | Template helpers (`repeat`, `classMap`, `styleMap`, `when`, `ref`, ...) |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Lit solutions. These principles help maintain code quality and reduce technical debt.
+Lit components are standard custom elements: they work in plain HTML, React, Vue, Angular, Svelte and server-rendered pages.
 
-### Concept 3: Data Management
-Proper data management is essential for Lit. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Setup
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+```bash
+npm create vite@latest my-components -- --template lit-ts
+cd my-components && npm install && npm run dev
+# or add to an existing project
+npm install lit
+```
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+### Decorators: pick one configuration
+| Mode | tsconfig | Field syntax |
+|---|---|---|
+| TypeScript experimental decorators (common today) | `"experimentalDecorators": true`, `"useDefineForClassFields": false` | `@property() name = "x";` |
+| Standard (TC39) decorators (TS 5.0+, Lit 3) | no `experimentalDecorators` | `@property() accessor name = "x";` |
+| No decorators (plain JS) | none | `static properties = { name: {} };` and initialize in constructor |
 
-## Architecture Patterns
+With experimental decorators, `useDefineForClassFields: false` is required, otherwise class fields shadow Lit's reactive accessors and updates silently stop.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Lit follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+## A First Component
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+```ts
+import { LitElement, css, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+@customElement("user-badge")
+export class UserBadge extends LitElement {
+  static styles = css`
+    :host { display: inline-flex; align-items: center; gap: 0.5rem; font: inherit; }
+    :host([compact]) img { width: 1.5rem; height: 1.5rem; }
+    img { width: 2.5rem; height: 2.5rem; border-radius: 50%; }
+    .name { font-weight: 600; color: var(--user-badge-color, inherit); }
+  `;
 
-## Implementation Guide
+  @property() name = "";
+  @property({ attribute: "avatar-url" }) avatarUrl = "";
+  @property({ type: Boolean, reflect: true }) compact = false;
+  @state() private expanded = false;
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+  render() {
+    return html`
+      <img src=${this.avatarUrl} alt="" />
+      <button class="name" aria-expanded=${this.expanded} @click=${this.toggle}>${this.name}</button>
+      ${this.expanded ? html`<slot name="details"></slot>` : null}
+    `;
+  }
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+  private toggle() {
+    this.expanded = !this.expanded;
+    this.dispatchEvent(new CustomEvent("badge-toggle", { detail: { expanded: this.expanded }, bubbles: true, composed: true }));
+  }
+}
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+declare global {
+  interface HTMLElementTagNameMap { "user-badge": UserBadge; }
+}
+```
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+```html
+<script type="module" src="/src/user-badge.ts"></script>
+<user-badge name="Ada" avatar-url="/ada.png" compact>
+  <span slot="details">Admin since 2021</span>
+</user-badge>
+```
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+## Template Binding Syntax
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+| Binding | Syntax | Sets |
+|---|---|---|
+| Child content | `<p>${value}</p>` | Text, templates, arrays, `nothing` |
+| Attribute | `<img alt=${text}>` | String attribute |
+| Boolean attribute | `<button ?disabled=${busy}>` | Adds/removes attribute |
+| Property | `<input .value=${val}>` | DOM property (objects, arrays, live values) |
+| Event listener | `<button @click=${this.onClick}>` | `addEventListener`; `this` bound to the component |
+| Element directive | `<input ${ref(this.inputRef)}>` | Element-level directives |
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+Rules:
+- Expressions only in attribute values, text positions and element positions; not in tag or attribute names.
+- Use `nothing` (from `lit`) to render nothing or remove an attribute: `alt=${desc ?? nothing}`.
+- Values are escaped; interpolated strings never become HTML. `unsafeHTML` exists for trusted HTML only; sanitize anything user-provided.
+- Lists: `items.map(i => html`...`)` for simple lists; `repeat(items, i => i.id, i => html`...`)` when items reorder and DOM state must follow keys.
 
-## Best Practices
+## Styling
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+| Technique | Use |
+|---|---|
+| `static styles = css`...`` | Scoped styles, shared across instances via constructable stylesheets |
+| `:host`, `:host([attr])`, `:host(:hover)` | Style the element itself |
+| CSS custom properties (`var(--x, default)`) | Theming hooks that pierce shadow DOM |
+| `::part(name)` with `part="name"` | Let consumers style specific internal elements |
+| `::slotted(selector)` | Style direct slotted children (limited) |
+| Shared style modules | Export `css` constants and include in `static styles = [base, css`...`]` |
+
+Do not interpolate untrusted values into `css` templates; use `unsafeCSS` only for trusted constants. For dynamic values use `styleMap` or custom properties.
+
+## Slots and Composition
+- Default `<slot>` receives unassigned children; named slots (`<slot name="footer">`) receive `slot="footer"` children.
+- Fallback content inside `<slot>` renders when nothing is slotted.
+- React to slot changes with `@slotchange` and `slot.assignedElements({ flatten: true })`.
+- Prefer slots for content customization and properties for data.
+
+## Accessibility Basics
+- Use native interactive elements inside the shadow root (`button`, `input`) rather than clickable `div`s.
+- Forward labels: shadow DOM breaks `for`/`id` association across boundaries; take a `label` property or slot, or use form-associated custom elements (`static formAssociated = true` with `attachInternals()`) for inputs.
+- Set `delegatesFocus` when the host should forward focus: `static shadowRootOptions = { ...LitElement.shadowRootOptions, delegatesFocus: true };`
+
+## Using Lit Components in Frameworks
+
+| Framework | Notes |
+|---|---|
+| Plain HTML / server templates | Import the module once; use tags |
+| React 19+ | Custom elements supported: properties and custom events work natively |
+| React 18 and earlier | Use `@lit/react` `createComponent` wrapper to map props and events |
+| Vue | Configure `compilerOptions.isCustomElement` for your tag prefix; use `.prop` modifier for objects |
+| Angular | Add `CUSTOM_ELEMENTS_SCHEMA`; bind properties with `[prop]` |
+| Svelte | Works directly; props set as properties when defined |
+
+```ts
+// React 18 wrapper
+import * as React from "react";
+import { createComponent } from "@lit/react";
+import { UserBadge } from "./user-badge.js";
+
+export const UserBadgeReact = createComponent({
+  tagName: "user-badge",
+  elementClass: UserBadge,
+  react: React,
+  events: { onBadgeToggle: "badge-toggle" },
+});
+```
+
+## Packaging Basics
+- Publish ES modules with type declarations; do not bundle `lit` into the library (peer/regular dependency so apps dedupe it).
+- Register each tag once; avoid side-effect conflicts by using a unique prefix (`acme-`).
+- Provide a Custom Elements Manifest (`@custom-elements-manifest/analyzer`) for IDEs and documentation tools.
 
 ## Common Pitfalls
+| Pitfall | Fix |
+|---|---|
+| `useDefineForClassFields: true` with experimental decorators | Set it to false, or use standard decorators with `accessor` |
+| Mutating arrays/objects in place | Assign a new value or call `this.requestUpdate()` |
+| Binding objects as attributes | Use property binding `.items=${list}` |
+| Events not crossing shadow boundary | `bubbles: true, composed: true` |
+| Using `unsafeHTML` with user input | Sanitize or render with templates |
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Lit concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+## Checklist
+- [ ] Decorator mode and tsconfig consistent
+- [ ] Tag names prefixed and declared in `HTMLElementTagNameMap`
+- [ ] Attribute vs. property bindings used correctly
+- [ ] Styles static, themable via custom properties and parts
+- [ ] Accessible native controls and focus delegation where needed
+- [ ] Framework interop verified (React wrapper for React 18)

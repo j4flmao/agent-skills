@@ -40,7 +40,7 @@ terraform {
     key            = "digitalocean/production/terraform.tfstate"
     region         = "us-east-1"
     encrypt        = true
-    dynamodb_table = "terraform-state-lock"
+    use_lockfile   = true   # S3-native locking (Terraform >= 1.10)
   }
 }
 ```
@@ -345,7 +345,7 @@ doctl spaces keys list
 
 ## Best Practices
 
-- Store Terraform state remotely with locking (S3 + DynamoDB)
+- Store Terraform state remotely with locking (S3 backend with `use_lockfile`, or DigitalOcean Spaces via the S3 backend)
 - Use Pulumi or Terraform for infrastructure-as-code — avoid click-ops
 - Tag all resources with project, environment, and owner tags
 - Use doctl with CI/CD pipelines (GitHub Actions, GitLab CI)

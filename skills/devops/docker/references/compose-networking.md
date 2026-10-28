@@ -7,8 +7,6 @@ Docker Compose defines multi-container applications using YAML. Docker networkin
 
 ### Basic Compose File
 ```yaml
-version: '3.8'
-
 services:
   web:
     image: nginx:alpine
@@ -45,8 +43,6 @@ volumes:
 
 ### Service Dependencies
 ```yaml
-version: '3.8'
-
 services:
   app:
     build: .
@@ -76,8 +72,6 @@ services:
 
 ### Bridge Network (Default)
 ```yaml
-version: '3.8'
-
 services:
   app:
     image: myapp:latest
@@ -108,8 +102,6 @@ networks:
 
 ### Host Network
 ```yaml
-version: '3.8'
-
 services:
   nginx:
     image: nginx:alpine
@@ -120,8 +112,6 @@ services:
 
 ### Custom Network Configuration
 ```yaml
-version: '3.8'
-
 services:
   app:
     networks:
@@ -143,8 +133,6 @@ networks:
 
 ### DNS Resolution
 ```yaml
-version: '3.8'
-
 services:
   api:
     image: myapi:latest
@@ -171,8 +159,6 @@ services:
 
 ### Port Configuration
 ```yaml
-version: '3.8'
-
 services:
   web:
     image: nginx:alpine
@@ -198,8 +184,6 @@ services:
 
 ### Named Volumes
 ```yaml
-version: '3.8'
-
 services:
   db:
     image: postgres:15
@@ -218,8 +202,6 @@ volumes:
 
 ### Configs and Secrets
 ```yaml
-version: '3.8'
-
 services:
   app:
     image: myapp:latest
@@ -246,7 +228,6 @@ secrets:
 ### Service Extends
 ```yaml
 # base.yml
-version: '3.8'
 services:
   web:
     image: nginx:alpine
@@ -254,7 +235,6 @@ services:
       - "80:80"
 
 # override.yml
-version: '3.8'
 services:
   web:
     extends:
@@ -266,8 +246,6 @@ services:
 
 ### Profiles
 ```yaml
-version: '3.8'
-
 services:
   app:
     image: myapp:latest
@@ -294,8 +272,6 @@ services:
 
 ### Resource Limits
 ```yaml
-version: '3.8'
-
 services:
   app:
     image: myapp:latest
@@ -317,8 +293,6 @@ services:
 
 ### Health Checks
 ```yaml
-version: '3.8'
-
 services:
   app:
     image: myapp:latest

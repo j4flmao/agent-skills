@@ -1,214 +1,206 @@
-# Nomad Advanced Topics
-
-## Introduction
-Advanced Nomad topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# Nomad Advanced: Placement Control, Dispatch Jobs, Variables, and Workload Identity
+
+Advanced Nomad job and cluster features: constraints, affinities, spread, priorities and preemption, parameterized (dispatch) jobs, Nomad Variables with templates, workload identity for Vault/Consul/cloud access, and Nomad Pack. Basic job structure and update stanzas are in `nomad-jobs.md`.
+
+## Placement Control
+
+| Stanza | Hard/soft | Use |
+|--------|-----------|-----|
+| `constraint` | Hard | Must run on nodes matching attributes (OS, kernel, node class, metadata) |
+| `affinity` | Soft (weighted) | Prefer nodes (e.g. with GPUs or SSDs) |
+| `spread` | Soft | Distribute allocations across a dimension (datacenter, rack, AZ) |
+| `node_pool` | Hard | Target a pool of clients (e.g. `gpu`, `batch`) |
+
+```hcl
+job "api" {
+  node_pool = "general"
+
+  constraint {
+    attribute = "${attr.kernel.name}"
+    value     = "linux"
+  }
+
+  spread {
+    attribute = "${node.datacenter}"
+    weight    = 100
+  }
+
+  group "api" {
+    count = 6
+
+    affinity {
+      attribute = "${meta.storage}"
+      value     = "nvme"
+      weight    = 50
+    }
+
+    constraint {
+      operator  = "distinct_hosts"
+      value     = "true"
+    }
+  }
+}
+```
+
+Node metadata comes from client config (`meta { storage = "nvme" }`) or `nomad node meta apply`.
+
+## Priority and Preemption
+
+- Job `priority` ranges 1–100 (default 50). Higher-priority evaluations are processed first.
+- Preemption lets higher-priority jobs evict lower-priority allocations when the cluster is full. It is enabled by default for `system` jobs; enable it for `service`/`batch` in the scheduler configuration:
+
+```bash
+nomad operator scheduler set-config -preempt-service-scheduler=true -preempt-batch-scheduler=true
+```
+
+- Reserve high priorities for critical services; use quotas (Enterprise) or namespace conventions to prevent priority inflation.
+
+## Parameterized (Dispatch) Jobs
+
+A parameterized job is a template; each `dispatch` creates a child batch job with its own payload and metadata.
+
+```hcl
+job "video-transcode" {
+  type = "batch"
+
+  parameterized {
+    payload       = "required"
+    meta_required = ["output_bucket"]
+    meta_optional = ["preset"]
+  }
+
+  group "work" {
+    task "transcode" {
+      driver = "docker"
+      config {
+        image = "ghcr.io/acme/transcoder:3.0.0"
+        args  = ["--input", "${NOMAD_TASK_DIR}/input.json",
+                 "--bucket", "${NOMAD_META_output_bucket}"]
+      }
+      dispatch_payload {
+        file = "input.json"
+      }
+      resources { cpu = 2000, memory = 2048 }
+    }
+  }
+}
+```
+
+```bash
+nomad job dispatch -meta output_bucket=s3://acme-out -meta preset=1080p video-transcode request.json
+```
+
+Use for queue-like workloads triggered by events (an API call or a small dispatcher service). Add `-idempotency-token` to avoid duplicate dispatches on retries.
+
+## Periodic Jobs
+
+```hcl
+periodic {
+  crons            = ["0 3 * * *"]
+  time_zone        = "Europe/Berlin"
+  prohibit_overlap = true
+}
+```
+
+`prohibit_overlap` prevents a new run while the previous one is still running.
+
+## Nomad Variables and Templates
+
+Nomad Variables (1.4+) store encrypted key-value data in Nomad itself, readable by tasks via workload identity, without needing Vault for simple secrets/config.
+
+```bash
+nomad var put nomad/jobs/api/app db_user=api db_password=@password.txt
+```
+
+```hcl
+task "app" {
+  template {
+    destination = "secrets/app.env"
+    env         = true
+    change_mode = "restart"
+    data        = <<EOT
+{{ with nomadVar "nomad/jobs/api/app" }}
+DB_USER={{ .db_user }}
+DB_PASSWORD={{ .db_password }}
+{{ end }}
+EOT
+  }
+}
+```
+
+- Tasks automatically have access to variables under `nomad/jobs/<job>[/<group>/<task>]`; broader access requires ACL policies.
+- `template` also renders Consul KV, Consul service addresses, and Vault secrets; `change_mode` (`restart`, `signal`, `script`, `noop`) controls what happens when data changes.
+- Write secrets into the `secrets/` directory, which is in-memory (tmpfs) on supported platforms and not accessible via `alloc fs`.
+
+## Workload Identity
+
+Since Nomad 1.7, tasks receive signed JWT workload identities. Vault and Consul integrations use them instead of long-lived tokens stored in Nomad server config.
+
+```hcl
+task "app" {
+  vault {
+    role = "api"                 # Vault JWT auth role bound to job/namespace claims
+  }
+
+  identity {
+    name = "aws"
+    aud  = ["sts.amazonaws.com"]
+    file = true                  # writes the JWT into the task's secrets dir
+    ttl  = "1h"
+  }
+}
+```
+
+- Configure Vault's JWT auth method with Nomad's JWKS URL, and bind roles to claims such as `nomad_namespace` and `nomad_job_id`.
+- Cloud providers can trust Nomad's OIDC discovery endpoint for federated access (e.g. AWS `AssumeRoleWithWebIdentity`), eliminating static cloud keys.
+- The legacy token-based Vault integration was deprecated in favour of workload identity; migrate before upgrading to versions that remove it.
+
+## Canary Deployments with Auto-Promotion
+
+```hcl
+update {
+  max_parallel      = 2
+  canary            = 2
+  min_healthy_time  = "30s"
+  healthy_deadline  = "5m"
+  progress_deadline = "10m"
+  auto_revert       = true
+  auto_promote      = false
+}
+```
+
+- With `auto_promote = false`, verify canaries (metrics, smoke tests) then `nomad deployment promote <id>`.
+- `auto_revert` reverts to the last stable version when the deployment fails.
+
+## Nomad Pack and Templating
+
+Nomad Pack renders parameterized job templates (similar to Helm charts):
+
+```bash
+nomad-pack registry add community github.com/hashicorp/nomad-pack-community-registry
+nomad-pack render traefik --var job_name=edge
+nomad-pack run traefik --var job_name=edge
+```
+
+Alternatively generate HCL from Terraform (`nomad_job` resource) or Levant-style variable files; HCL2 supports `variable` blocks and `-var-file` natively with `nomad job run`.
+
+## Autoscaling
+
+Nomad Autoscaler supports horizontal application scaling (`scaling` stanza with policies over Prometheus/Datadog metrics) and cluster scaling (cloud instance groups). See `nomad-operations.md` for operations.
+
+## Pitfalls
+
+- Hard `constraint` where an `affinity` was intended, leaving jobs unplaceable.
+- Preemption enabled without priority discipline, causing evictions of important work.
+- Dispatching without idempotency tokens from retrying clients.
+- Templates rendering secrets into `local/` (visible) instead of `secrets/`.
+- Long-lived Vault tokens in server config instead of workload identity.
+
+## Checklist
+
+- [ ] Constraints only for hard requirements; affinities/spread for preferences
+- [ ] Priority policy documented; preemption enabled deliberately
+- [ ] Parameterized jobs with idempotent dispatch
+- [ ] Secrets via Variables/Vault templates into `secrets/`
+- [ ] Workload identity for Vault, Consul, and cloud access
+- [ ] Canary + auto-revert for critical services

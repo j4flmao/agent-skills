@@ -389,6 +389,9 @@ spec:
       prune: true
       selfHeal: true
 ---
+# NOTE: the ingress-nginx project was retired in March 2026 (no further releases or security fixes).
+# For new clusters deploy a Gateway API implementation (e.g. Envoy Gateway, Istio, Cilium, NGINX Gateway Fabric)
+# with the same Application pattern; keep this only for existing installs being migrated.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -507,7 +510,7 @@ spec:
 
 ```yaml
 # Option A: External Secrets Operator (recommended)
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: SecretStore
 metadata:
   name: aws-secrets-manager
@@ -522,7 +525,7 @@ spec:
           serviceAccountRef:
             name: external-secrets-sa
 ---
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: app-secrets
@@ -848,11 +851,6 @@ Retry strategy:
 - references/gitops-secrets.md — Secrets in GitOps
 - references/multi-cluster-management.md — Multi-Cluster GitOps Management
 - references/sync-phases-hooks.md — Sync Phases, Waves, and Hooks
-- references/argocd-ha.md — ArgoCD High Availability Configuration
-- references/argocd-projects-rbac.md — ArgoCD Projects and RBAC
-- references/cluster-bootstrapping.md — Cluster Bootstrapping with GitOps
-- references/argocd-notifications.md — ArgoCD Notifications and Webhooks
-- references/config-management-plugins.md — ArgoCD Config Management Plugins
 
 ## Handoff
 Related skills: progressive-delivery (Argo Rollouts with GitOps), argo-cd (basic ArgoCD setup), gitops (GitOps fundamentals), kubernetes-patterns (K8s resources), policy-as-code (policy enforcement), crossplane (infrastructure composition), cluster-api (cluster provisioning).

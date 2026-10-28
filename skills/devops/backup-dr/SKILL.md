@@ -700,7 +700,6 @@ Backup automation scripts (Python/Bash), Terraform for backup infrastructure, ru
   - references/backup-strategies.md
   - references/disaster-recovery.md
   - references/dr-recovery.md
-  - references/ransomware-protection-guide.md
 
 ## Handoff
 After completing this skill:

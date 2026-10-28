@@ -1,10 +1,7 @@
 ---
 name: java
 description: >
-  Use this skill when the user asks about Java build tools, Maven, Gradle,
-  module system, records, streams, Optional, concurrency, testing, or
-  production deployment. Focus on tooling, modern Java features, and
-  ecosystem — not syntax.
+  Use this skill when the user says 'java', 'maven', 'gradle', 'records', 'sealed classes', 'virtual threads', 'streams', 'Optional', 'JUnit', 'JVM tuning'. Covers modern Java (17/21/25 LTS) language features, build tooling, concurrency, testing and JVM production settings. Do NOT use for: Spring Boot application architecture (use backend/spring-boot), Kotlin (use lang-kotlin), Android (use android).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -31,6 +28,17 @@ Keywords: `java build`, `maven`, `gradle`, `java module`, `record`, `stream`, `o
 - Java version
 - Framework (Spring Boot, Quarkus, Micronaut, Jakarta EE)
 - Deployment target
+
+### Output Artifact
+Code, build-file changes, or JVM flags. No file unless requested.
+
+### Response Format
+```
+Java: {release}  Build: {maven|gradle}
+Change: {what and why}
+Code: {snippet}
+Verify: {mvn verify | ./gradlew check}
+```
 
 ## Decision Trees
 
@@ -409,12 +417,12 @@ How to return errors to client?
 
 ### Performance Optimization (Expanded)
 
-- **`record` for DTOs**: Immutable, no boilerplate, value-based equality. 40% less bytecode than equivalent POJO.
-- **Stream API overhead**: For small collections (<100), traditional for-loop is 2-3x faster. Use streams for readability at scale.
+- **`record` for DTOs**: Immutable, no boilerplate, component-based `equals`/`hashCode`.
+- **Stream API overhead**: Streams add per-pipeline overhead; in measured hot loops a plain `for` loop can be faster. Default to readability, optimise with JMH evidence.
 - **`StringBuilder` in loops**: `a + b + c` compiles to `new StringBuilder().append(a).append(b).append(c)` — fine for 2-3 concats. Use explicit `StringBuilder` for loops.
 - **`ConcurrentHashMap.computeIfAbsent`**: Thread-safe memoization pattern. More efficient than `putIfAbsent` for expensive computations.
 - **Connection pooling**: HikariCP (default Spring Boot) — set `maximumPoolSize=10-20` for most apps. Benchmark to find optimal.
-- **`byte[]` vs `List<Byte>`**: Primitive arrays are 8x more memory efficient than boxed collections.
+- **`byte[]` vs `List<Byte>`**: Boxed collections store a reference plus object header per element; primitive arrays (or `IntStream`/primitive collections) avoid that overhead.
 - **`ThreadLocal` for non-thread-safe resources**: `SimpleDateFormat`, `Random`, `DateTimeFormatter` — reuse instances via ThreadLocal instead of creating per-call.
 - **`-XX:+UseZGC` for low latency**: Sub-millisecond GC pauses. Best for latency-sensitive services. Slightly more CPU than G1GC.
 - **`-XX:+AlwaysPreTouch`**: Pre-allocate and touch all heap pages at startup. Slower startup but consistent runtime performance.
@@ -427,7 +435,7 @@ How to return errors to client?
 - **Spring `@Transactional` on private methods**: Spring applies transaction via proxy — private methods bypass the proxy. Only public methods can be `@Transactional`.
 - **`Thread.sleep()` for async coordination**: Fragile, slow, flaky. Use `CountDownLatch`, `CompletableFuture`, or `Awaitility`.
 - **Handling `InterruptedException` poorly**: Swallowing or `Thread.currentThread().interrupt()` incorrectly. Restore interrupt flag: `Thread.currentThread().interrupt()` and re-throw or return.
-- **`instanceof` checks after pattern matching (Java 16+)**: Switch pattern matching and `if (x instanceof Foo f)` eliminate most `instanceof` chains. Use them.
+- **Cast-after-`instanceof` chains (pattern matching for `instanceof` is final since Java 16)**: Switch pattern matching and `if (x instanceof Foo f)` eliminate most `instanceof` chains. Use them.
 - **`java.util.Date` and `java.util.Calendar`**: Legacy, mutable, confusing. Use `java.time.*` API (Java 8+): `Instant`, `LocalDate`, `ZonedDateTime`, `Duration`.
 - **`@RequestMapping` on field instead of method**: Controller field-level mapping is confusing. Each method should have explicit `@GetMapping`/`@PostMapping`.
 - **Reading `InputStream` without closing**: Always use try-with-resources for `InputStream`, `Connection`, `Statement`, `ResultSet`.
@@ -548,13 +556,13 @@ public RetryTemplate retryTemplate() {
 | `Thread.sleep()` in tests | Flaky, slow. | `Awaitility.await().atMost(5, SECONDS).until(...)` |
 | Overusing `Optional.get()` | Still throws NoSuchElementException. | `orElseThrow()` with domain-specific exception |
 | Catch `Exception` broadly | Swallows critical errors like InterruptedException. | Catch specific exception types |
-| Mutable fields in `@Entity` | Hibernate dirty checking scans all fields. | Use `@Immutable` or DTO projections |
+| Returning entities from REST controllers | Lazy-loading exceptions, accidental data exposure. | Map to DTO records / interface projections |
 | Static methods calling Spring beans | Can't mock in unit tests. | Inject as bean dependency |
 
 ## Performance Optimization
 
-- Virtual threads for I/O: `Executors.newVirtualThreadPerTaskExecutor()` — 20x more throughput than platform threads.
-- Record classes for DTOs: 40% less bytecode than POJOs. Value-based equality.
+- Virtual threads (Java 21+) for blocking I/O: `Executors.newVirtualThreadPerTaskExecutor()` or `spring.threads.virtual.enabled=true`. They raise concurrency, not CPU speed; DB access is still bounded by the connection pool.
+- Records for DTOs: immutable, compact, generated `equals`/`hashCode`/`toString`.
 - `ConcurrentHashMap.computeIfAbsent(k, fn)` — atomic memoization. Avoids `putIfAbsent` race.
 - String pooling with `String.intern()` only for small, bounded sets of strings.
 - Jackson performance: use `ObjectMapper` as singleton. Register Kotlin/Java time modules once.

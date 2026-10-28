@@ -1,7 +1,7 @@
 ---
 name: frontend-design-system
 description: >
-  Use this skill when the user says 'design system', 'design tokens', 'component library', 'theme', 'colors', 'typography system', 'spacing system', 'component API design', 'variant system', or when creating or extending a frontend design system. This skill enforces: three-tier token hierarchy (primitive, semantic, component), CSS custom properties as the token layer, CVA for component variants, component API with max 10 props, and dark mode via semantic token swap. Works with React, Vue, Angular. Do NOT use for: backend API design, database schema, or individual component implementation.
+  Use this skill when building or extending a frontend design system: defining design tokens (primitive/semantic/component tiers), setting up a component library, designing component APIs with CVA variants, or implementing theme/dark-mode architecture. This skill enforces: three-tier token hierarchy (primitive → semantic → component), CSS custom properties as the token layer, CVA for component variants, component API with max 10 props, and dark mode via semantic token swap. Works with React, Vue, Angular. Do NOT use for: backend API design, database schema, or one-off component implementation.
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -21,7 +21,7 @@ Build a three-tier design token system with CVA-based component variants and the
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "design system", "design tokens", "component library", "theme", "colors", "typography system", "spacing system", "component API design", "variant system", "create a design system".
+Exact user phrases: "design system", "design tokens", "component library", "token architecture", "typography system", "spacing system", "component API design", "variant system", "create a design system", "dark mode theme".
 
 ### Input Context
 Before activating, verify:
@@ -29,7 +29,7 @@ Before activating, verify:
 - The styling approach is known (CSS modules, Tailwind, styled-components, etc.).
 
 ### Output Artifact
-No file output. Produces token definitions and component APIs as text.
+Token definitions, component APIs, and (when asked) starter files for tokens, CVA variants, and theme configuration.
 
 ### Response Format
 Token definitions:
@@ -46,7 +46,7 @@ Props: {list with types}
 Variants: {variant name -> options}
 ```
 
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output.
+No preamble or filler. Lead with tokens and component APIs. Keep prose tight but include the definitions the user needs.
 
 ### Completion Criteria
 - [ ] Three-tier token hierarchy defined (primitive, semantic, component).
@@ -57,7 +57,7 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 - [ ] No hardcoded values in component examples.
 
 ### Max Response Length
-Token definitions: 15 lines. Component API: 10 lines.
+Produce complete token definitions and component APIs. Prioritize correctness over brevity; omit only redundant prose.
 
 ## Component Architecture / Decision Trees
 
@@ -125,48 +125,71 @@ Component tokens (scoped):
 ```
 
 ### Step 2: Token Naming Convention
+Every semantic and component token references a primitive — no hardcoded values outside the primitive layer.
+
 ```css
 :root {
-  /* Primitives */
+  /* Primitives (raw values) */
   --color-gray-50: #f9fafb;
   --color-gray-100: #f3f4f6;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-700: #374151;
+  --color-gray-900: #111827;
   --color-blue-500: #3b82f6;
   --color-blue-600: #2563eb;
+  --color-white: #ffffff;
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
   --spacing-1: 0.25rem;
   --spacing-2: 0.5rem;
   --spacing-4: 1rem;
+  --radius-md: 0.375rem;
 
-  /* Semantic */
+  /* Semantic (reference primitives) */
   --color-bg-primary: var(--color-gray-50);
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
+  --color-text-primary: var(--color-gray-900);
+  --color-text-secondary: var(--color-gray-500);
   --color-border: var(--color-gray-100);
   --color-brand: var(--color-blue-600);
+  --color-on-brand: var(--color-white);
   --font-body: var(--font-size-md);
   --spacing-stack: var(--spacing-4);
+  --radius-control: var(--radius-md);
 
-  /* Component */
+  /* Component (reference semantic tokens, never primitives) */
   --button-bg: var(--color-brand);
-  --button-text: #ffffff;
+  --button-text: var(--color-on-brand);
   --button-padding: var(--spacing-2) var(--spacing-4);
-  --button-radius: 0.375rem;
+  --button-radius: var(--radius-control);
 }
 ```
 
 ### Step 3: Dark Mode via Semantic Token Swap
+Override semantic tokens under a dark theme. Support both an explicit `data-theme` attribute (user toggle) and the system `prefers-color-scheme` media query (default).
+
 ```css
+/* System preference — default when no explicit theme is set */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-primary: var(--color-gray-900);
+    --color-text-primary: var(--color-gray-50);
+    --color-text-secondary: var(--color-gray-400);
+    --color-border: var(--color-gray-700);
+  }
+}
+
+/* Explicit dark theme (user toggle wins over system) */
 :root[data-theme="dark"] {
-  --color-bg-primary: #111827;
-  --color-text-primary: #f9fafb;
-  --color-text-secondary: #9ca3af;
-  --color-border: #374151;
+  --color-bg-primary: var(--color-gray-900);
+  --color-text-primary: var(--color-gray-50);
+  --color-text-secondary: var(--color-gray-400);
+  --color-border: var(--color-gray-700);
   /* Component tokens inherit automatically via --button-bg: var(--color-brand) */
 }
 ```
 
-Components never reference dark-mode values directly. They reference semantic tokens which change under `[data-theme="dark"]`.
+Components never reference dark-mode values directly. They reference semantic tokens which change under `[data-theme="dark"]` or `prefers-color-scheme`.
 
 ### Step 4: Component API Design Rules
 ```typescript
@@ -192,6 +215,8 @@ interface ButtonProps {
 ```
 
 ### Step 5: CVA Variant Pattern
+CVA maps variants to class names. Colors must come from tokens (exposed to Tailwind — see Step 5b), never hardcoded hex values.
+
 ```typescript
 import { cva, type VariantProps } from 'class-variance-authority'
 
@@ -200,10 +225,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-blue-600 text-white hover:bg-blue-700',
-        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-        ghost: 'text-gray-700 hover:bg-gray-100',
-        danger: 'bg-red-600 text-white hover:bg-red-700',
+        primary: 'bg-brand text-on-brand hover:bg-brand-hover',
+        secondary: 'bg-surface text-text-primary hover:bg-surface-hover',
+        ghost: 'text-text-primary hover:bg-surface',
+        danger: 'bg-danger text-on-danger hover:bg-danger-hover',
       },
       size: {
         sm: 'h-8 px-3 text-sm',
@@ -215,6 +240,38 @@ const buttonVariants = cva(
   }
 )
 ```
+
+### Step 5b: Bridging CSS Tokens to Tailwind
+Tailwind cannot read CSS custom properties directly in class names — map them in `tailwind.config.js` so `bg-brand` resolves to `var(--color-brand)`. This keeps a single source of truth (CSS tokens) while letting CVA/Tailwind classes reference them.
+
+```javascript
+// tailwind.config.js
+export default {
+  theme: {
+    extend: {
+      colors: {
+        brand: 'rgb(var(--color-brand) / <alpha-value>)',
+        'on-brand': 'rgb(var(--color-on-brand) / <alpha-value>)',
+        'brand-hover': 'rgb(var(--color-brand-hover) / <alpha-value>)',
+        surface: 'rgb(var(--color-bg-secondary) / <alpha-value>)',
+        'text-primary': 'rgb(var(--color-text-primary) / <alpha-value>)',
+        danger: 'rgb(var(--color-danger) / <alpha-value>)',
+        'on-danger': 'rgb(var(--color-on-danger) / <alpha-value>)',
+      },
+      spacing: {
+        1: 'var(--spacing-1)',
+        2: 'var(--spacing-2)',
+        4: 'var(--spacing-4)',
+      },
+      borderRadius: {
+        md: 'var(--radius-md)',
+      },
+    },
+  },
+}
+```
+
+> For the `<alpha-value>` syntax to work, store color primitives as space-separated RGB channels, e.g. `--color-brand: 37 99 235;` so Tailwind can apply opacity. If you keep hex values, drop `/ <alpha-value>` and use `var(--color-brand)` directly.
 
 ### Step 6: Compound Component Pattern
 ```tsx
@@ -258,12 +315,15 @@ function Text({ as: Component = 'p', variant = 'body', children, className }) {
 ```
 
 ### Step 8: Testing Components
+Avoid asserting on implementation details like class names (`toContain('bg-blue-600')`). Refactoring styles breaks those tests. Assert on **computed style** or **observable behavior** instead.
+
 ```tsx
-it('renders with correct variant classes', () => {
+it('applies the primary background color', () => {
   const { container } = render(<Button variant="primary">Click</Button>);
   const button = container.querySelector('button');
-  expect(button.className).toContain('bg-blue-600');
-  expect(button.className).toContain('text-white');
+  // Assert on computed style, not class name
+  const bg = window.getComputedStyle(button).backgroundColor;
+  expect(bg).toBe('rgb(37, 99, 235)'); // --color-brand
 });
 
 it('applies disabled state', () => {
@@ -300,8 +360,8 @@ Every component in the design system must:
 - Support prefers-reduced-motion
 
 ```typescript
-// Base focus style mixin for all components
-const focusVisible = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+// Base focus style mixin for all components — uses token, not hardcoded color
+const focusVisible = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand'
 
 const buttonVariants = cva(
   `inline-flex items-center justify-center rounded-md font-medium transition-colors ${focusVisible}`,
@@ -362,12 +422,12 @@ Components should support responsive behavior at the container level, not just t
 
 ### CSS Custom Properties Performance
 CSS custom properties are resolved at computed-value time, not cascade time. This means:
-- Referencing `var(--color-brand)` has a small performance cost on first style resolution
-- Theme switching via CSS custom properties does NOT trigger style recalculation for all elements -- only for elements that use the changed property
-- Benchmark: swapping 100 custom properties affects ~1-2ms of style recalc per frame
+- Referencing `var(--color-brand)` has a small cost on first style resolution
+- Theme switching via CSS custom properties does NOT trigger a full recalc — only elements using the changed property recompute
+- In practice the cost is negligible for typical app sizes; profile before optimizing
 
 ### CVA Runtime Cost
-CVA is a function that returns a class string. It is negligible (< 0.01ms per call). The class string itself is fast because it is CSS -- no runtime style computation.
+CVA is a pure function returning a class string. Its cost is negligible per call. The class string itself is fast because it is CSS — no runtime style computation.
 
 ### Bundle Size Impact
 A well-designed design system component library should add:
@@ -419,144 +479,7 @@ A well-designed design system component library should add:
 - `references/design-system-component-library.md` -- Design System Component Library Architecture
 
 ## Handoff
-No artifact produced.
-Next skill: frontend-state-management -- state architecture for the design system.
+`frontend-state-management` for state architecture alongside the design system.
+`design-accessibility` for accessible component patterns.
+`quality-visual-testing` for component baseline snapshots.
 Carry forward: token definitions, component API rules, dark mode strategy.
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
-## Architecture Decision Trees
-
-### Component Architecture Decision Tree
-```
-Is the component presentational or behavioral?
-  ├── Presentational → Stateless, fully prop-driven, no internal state
-  └── Behavioral → Does it manage complex state?
-       ├── Yes → Split into container (state) + presentational (render)
-       └── No  → Single component with internal state
-            Does it need styling customization?
-            ├── Yes → CSS custom properties + className prop
-            └── No  → Fully scoped styles, no override API
-```
-
-### Design Token Strategy Decision Tree
-```
-Who defines the tokens?
-  ├── Design team → Token names match Figma variables (semantic)
-  ├── Engineering → Technology-agnostic naming with transform layer
-  └── Cross-functional → Design-engineering pair, token review committee
-       What output formats are needed?
-       ├── CSS only → CSS custom properties in a single file
-       └── Multi-format → Style Dictionary with transforms (CSS, JS, Swift, Kotlin)
-```

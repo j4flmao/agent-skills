@@ -47,8 +47,7 @@ pact:
 ## Pact Broker Setup
 
 ```yaml
-# docker-compose.yml for self-hosted Pact Broker
-version: '3'
+# compose.yaml for self-hosted Pact Broker
 services:
   postgres:
     image: postgres:16

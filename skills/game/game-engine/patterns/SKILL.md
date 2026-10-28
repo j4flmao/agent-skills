@@ -1,11 +1,38 @@
 ---
 name: game-engine-patterns
-description: Expert design patterns and architecture blueprints for game engines — game loop, component architecture, spatial partitioning, object pooling, command/state patterns, and rendering pipeline optimization.
+description: >
+  Use this skill when the user says 'game loop', 'fixed timestep', 'game programming patterns', 'object pooling', 'spatial partitioning', 'command pattern game', 'state machine game'. Canonical engine patterns: game loop and fixed timestep, component architecture, spatial partitioning, pooling, command/state patterns and render-pipeline organisation. Do NOT use for: ECS storage internals (use ecs-pattern), engine-specific APIs (use unity/unreal/godot).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, patterns, game-loop, architecture, engine]
 ---
 
 # Game Engine Design Patterns — Deep Engineering Guide
 
+## Purpose
 Game engines are the most demanding real-time software systems in common use. They combine graphics, physics, AI, networking, audio, and game logic, all under a hard 16.6 ms/frame budget. This skill covers the canonical design patterns proven across decades of engine work (Unreal, Unity, Doom, Halo, Quake, Minecraft, Godot, CryEngine) plus the newer data-oriented patterns.
+
+## Agent Protocol
+
+### Trigger
+"game loop", "fixed timestep", "game programming patterns", "object pooling", "spatial partitioning", "command pattern game", "state machine game".
+
+### Input Context
+- Engine or framework
+- Problem being solved (loop, spatial queries, pooling...)
+- Performance constraints
+
+### Output Artifact
+Pattern recommendation with code. No file unless requested.
+
+### Response Format
+```
+Pattern: {name}
+Why: {problem it solves here}
+Code: {snippet}
+Trade-off: {cost}
+```
 
 ## 1. The Game Loop
 

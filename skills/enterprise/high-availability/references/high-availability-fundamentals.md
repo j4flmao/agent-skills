@@ -1,213 +1,101 @@
 # High Availability Fundamentals
 
-## Overview
-High Availability is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+High availability (HA) means a system keeps serving users despite component failures. This reference covers availability math, redundancy patterns, failure domains, health checking and failover, RTO/RPO, and the design habits that remove single points of failure. Tier definitions are in `availability-tiers.md`; load balancing in `load-balancing.md`; replication topologies in `replica-topologies.md`.
 
-## Core Concepts
+## Availability Math
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for High Availability helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Availability | Downtime per year | Per 30 days |
+|--------------|-------------------|-------------|
+| 99% | about 3.65 days | about 7.2 hours |
+| 99.9% | about 8.76 hours | about 43 minutes |
+| 99.95% | about 4.38 hours | about 22 minutes |
+| 99.99% | about 52.6 minutes | about 4.3 minutes |
+| 99.999% | about 5.3 minutes | about 26 seconds |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing High Availability solutions. These principles help maintain code quality and reduce technical debt.
+Composition:
+- Serial dependencies multiply: `A_total = A1 x A2 x ... x An`. Three 99.9% services in series give about 99.7%.
+- Redundant (parallel) components with independent failures: `A = 1 - (1 - A1)(1 - A2)`. Two independent 99% instances give 99.99%, but only if failures are truly independent and failover works.
 
-### Concept 3: Data Management
-Proper data management is essential for High Availability. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+Implication: every synchronous dependency lowers your ceiling. A 99.99% target is not achievable on top of a single 99.9% dependency without redundancy or graceful degradation.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+## Key Terms
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+| Term | Meaning |
+|------|---------|
+| SLA | Contractual commitment, often with credits |
+| SLO | Internal target, stricter than the SLA |
+| MTBF | Mean time between failures |
+| MTTR | Mean time to recovery (detect + diagnose + repair) |
+| RTO | Maximum acceptable time to restore service |
+| RPO | Maximum acceptable data loss, measured in time |
+| Failure domain | Set of components that fail together (host, rack, AZ, region, provider, deploy) |
 
-## Architecture Patterns
+Availability improves by raising MTBF (fewer failures) or lowering MTTR (faster recovery). Lowering MTTR is usually cheaper: good detection, automated failover, fast rollback.
 
-### Pattern 1: Standard Architecture
-The standard architecture for High Availability follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+## Redundancy Patterns
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+| Pattern | Description | Failover time | Cost |
+|---------|-------------|---------------|------|
+| Active-active | All instances serve traffic | Near zero (LB removes failed node) | Higher; must handle state consistency |
+| Active-passive (hot standby) | Standby running and synchronized | Seconds to minutes | Standby capacity idle |
+| Warm standby | Scaled-down copy, data replicated | Minutes | Moderate |
+| Pilot light | Core data replicated, compute provisioned on failover | Tens of minutes to hours | Low |
+| Backup and restore | Restore from backups | Hours | Lowest |
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+## Failure Domains
 
-## Implementation Guide
+Spread redundant components across independent domains:
+- Instances across hosts (anti-affinity) and Availability Zones.
+- Databases with replicas in other AZs; consider regions for higher tiers.
+- Avoid shared hidden dependencies: one DNS provider, one identity provider, one config service, one deploy pipeline pushing to all regions at once.
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+N+1 / N+2 capacity: after losing one domain (an AZ), the remaining capacity must carry peak load. With three AZs, each must handle 50% of peak if one fails.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+## Stateless vs Stateful
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+- Stateless services: easy HA; run multiple replicas behind a load balancer, keep sessions in shared stores.
+- Stateful services (databases, queues): HA depends on replication and leader election. Choose synchronous replication for RPO near zero (higher latency), asynchronous for performance (possible data loss on failover).
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## Health Checks and Failover
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+| Check | Purpose |
+|-------|---------|
+| Liveness | Is the process stuck? Restart it. Must not depend on downstream services |
+| Readiness | Can it serve traffic now? Remove from LB if not |
+| Deep health | Dependencies reachable; use for dashboards, not for liveness |
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+Failover design:
+- Automated detection with thresholds that avoid flapping (several consecutive failures).
+- Fencing to prevent split brain: only one primary may accept writes (leases, quorum, STONITH in classic clusters).
+- Quorum-based consensus (Raft/Paxos) with odd member counts across three or more domains.
+- Test failover regularly; untested failover often fails when needed.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## Graceful Degradation
 
-## Best Practices
+When a dependency fails, keep the core working:
+- Serve cached or stale data with a notice.
+- Disable non-critical features via feature flags.
+- Queue writes for later processing.
+- Timeouts, circuit breakers (Resilience4j, Polly) and bulkheads to stop failures cascading.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+## Change Is the Top Cause of Outages
 
-## Common Pitfalls
+Many incidents start with deploys or configuration changes. HA practices therefore include:
+- Progressive rollouts (canary, one AZ/region at a time).
+- Fast, tested rollback.
+- Config changes through the same review and rollout process as code.
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+## Data Protection Is Separate from HA
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+Replication copies corruption and deletes instantly. Keep point-in-time backups, test restores, and protect backups from the same credentials that can delete production.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+## Checklist
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core High Availability concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- [ ] Availability target set per user journey with dependency math
+- [ ] RTO/RPO defined and mapped to redundancy pattern
+- [ ] No single point of failure across host, AZ and key shared services
+- [ ] N+1 capacity after losing a failure domain
+- [ ] Liveness/readiness checks separated; failover automated with fencing
+- [ ] Graceful degradation paths for non-critical dependencies
+- [ ] Progressive rollouts and rehearsed rollback
+- [ ] Backups independent of replication, restores tested

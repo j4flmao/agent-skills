@@ -1,11 +1,38 @@
 ---
 name: job-system
-description: Expert parallel job systems for game engines — task scheduler, work stealing, fiber/job primitives, dependency graphs, parallel-for and GPU/CPU pipelining under the frame budget.
+description: >
+  Use this skill when the user says 'job system', 'work stealing', 'task scheduler', 'fibers', 'parallel for', 'job graph', 'engine threading'. Designs engine job systems: work-stealing schedulers, job graphs and dependencies, parallel-for, fibers, determinism and profiling within the frame budget. Do NOT use for: general backend concurrency (use language skills), GPU async compute (use render-graph).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, jobs, multithreading, scheduler, engine]
 ---
 
 # Parallel Job Systems — Deep Engineering Guide
 
+## Purpose
 Modern CPUs give you 8–32 cores; a single-threaded `Update()` leaves them idle. The job system is the backbone that spreads simulation, animation, physics, and render-command generation across cores — transparently, deterministically, and within the frame budget.
+
+## Agent Protocol
+
+### Trigger
+"job system", "work stealing", "task scheduler", "fibers", "parallel for", "job graph", "engine threading".
+
+### Input Context
+- Language/runtime and core counts on targets
+- Workloads to parallelise and their dependencies
+- Determinism requirements
+
+### Output Artifact
+Scheduler design and C++ code. No file unless requested.
+
+### Response Format
+```
+Scheduler: {work-stealing | fixed queues | fibers}
+Graph: {jobs and edges}
+Code: {snippet}
+Verify: {profiler lanes, contention}
+```
 
 ## 1. Why a Job System
 
@@ -27,7 +54,7 @@ CPU threads:    [render thread] [audio thread] [gameplay thread] [worker × N]
 Job pool:       dependent jobs flushed to workers by the scheduler
 ```
 
-Never create a thread per request (`std::thread` per job → oversubscription + thread-creation cost ~10k cycles). The scheduler owns N workers = hardware threads − 1 (one for the main/render thread).
+Never create a thread per request (`std::thread` per job → oversubscription plus OS thread-creation cost, typically tens of microseconds each). The scheduler owns N workers = hardware threads − 1 (one for the main/render thread).
 
 ## 2. Job Primitives
 
@@ -79,9 +106,9 @@ public:
 };
 ```
 
-### 3.2 Work Stealing (Production — Unreal, Unity, Naughty Dog)
+### 3.2 Work Stealing (production schedulers, e.g. TBB, Rayon)
 
-Each worker owns a **deque** of jobs. When idle, it *steals* from a random peer's deque tail (LIFO → cache-locality; steal front → cache-cold).
+Each worker owns a **deque** of jobs. The owner pushes and pops at the bottom (LIFO → recently created, cache-hot work); an idle worker *steals* from the top of a random victim's deque (FIFO → oldest, usually largest chunks), e.g. a Chase-Lev deque.
 
 ```
 Worker A deque: [j1, j2, j3]        ← A pops j3 (LIFO, hot cache)
@@ -131,11 +158,11 @@ A "dependency counter" per job lets a scheduler run a job only when all inputs a
 
 ### 5.1 Why Fibers Appear
 
-GPU-async workloads (async compute, DXR ray tracing, decompression) want a *stack* per job, but stacks cost memory (64 KB each). Fibers (cooperative threads) share one stack via `SwitchToFiber` — a job suspends, the scheduler switches to another, resuming later.
+A job that must wait (on another job's counter, I/O, decompression) would otherwise block its worker thread. With fibers (cooperative user-mode threads, each with its own small stack — e.g. Win32 `SwitchToFiber`, `ucontext`/hand-written context switches elsewhere) the job yields, the worker switches to another fiber, and the waiting one resumes later. Naughty Dog's GDC 2015 talk "Parallelizing the Naughty Dog Engine Using Fibers" is the classic reference.
 
 ### 5.2 When Not to Use
 
-Fibers are complex (your whole call path must be fiber-safe; stack size finite). Modern engines (UE5 2024+, many) prefer **job + async/await** semantics without fibers, or GPU semaphore-based async, because fiber + lock-free + callbacks is a bug factory. Rule of thumb: introduce fibers last, or only in the narrow job-graph where blocking is genuinely long (I/O, decompression).
+Fibers are complex: thread-local storage and OS locks become unsafe once a fiber can resume on a different thread, debuggers/profilers need fiber awareness, and every fiber needs a stack. Many engines instead split work into continuation jobs (job A finishes by scheduling job B) so nothing ever waits. Rule of thumb: introduce fibers last, or only in the narrow job-graph where blocking is genuinely long (I/O, decompression).
 
 ## 6. Making It Deterministic
 
@@ -199,7 +226,7 @@ Key metrics:
 - **Bubble time** (waiting on dependencies); target < 10%.
 - **Steal count** / worker (cache-cold thefts; a few is fine).
 - **Frame join latency** — the one join at frame end is your pacing knob.
-- Profile with a per-job "thread time + queue wait" view (e.g., Renderdoc/Perfetto custom timers).
+- Profile with a per-job "thread time + queue wait" view (Tracy, Perfetto, Superluminal, Unreal Insights).
 
 ## 10. Design Checklist (Lead-Level)
 

@@ -529,3 +529,11 @@ alerts:
 ```
 
 ## References
+- `references/live-streaming.md`
+- `references/real-time-architecture.md`
+- `references/real-time-delivery.md`
+- `references/sse-vs-websocket.md`
+- `references/web-real-time-advanced.md`
+- `references/web-real-time-fundamentals.md`
+- `references/webrtc-architecture.md`
+- `references/websocket-optimization.md`

@@ -1,11 +1,38 @@
 ---
 name: physics-engine
-description: Expert physics engine internals - collision detection (broad/narrow phase), rigid body dynamics, constraint solvers, integration, character controllers, and scene queries.
+description: >
+  Use this skill when the user says 'physics engine', 'collision detection', 'broad phase', 'narrow phase', 'GJK', 'EPA', 'constraint solver', 'rigid body', 'character controller', 'CCD'. Explains and designs rigid-body physics: broad/narrow phase, contact generation, constraint solvers, integration, sleeping, CCD, character controllers and scene queries. Do NOT use for: engine-specific physics settings only (use unity/unreal/godot), cloth/fluids research.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, physics, collision, solver]
 ---
 
 # Physics Engine Internals — Deep Guide
 
+## Purpose
 A physics engine simulates rigid bodies through three pipelines every tick: **collision detection** (find contacts), **collision resolution** (apply impulses/constraints), and **integration** (advance positions/velocities). This guide gives a lead engineer's view of how real engines (PhysX, Jolt, Bullet, Box2D) work underneath.
+
+## Agent Protocol
+
+### Trigger
+"physics engine", "collision detection", "broad phase", "narrow phase", "GJK", "EPA", "constraint solver", "rigid body", "character controller", "CCD".
+
+### Input Context
+- Engine or library (custom, Jolt, PhysX, Box2D, Bullet)
+- Body counts and tick rate
+- Determinism requirements (netcode, replays)
+
+### Output Artifact
+Physics design or code with stability/performance reasoning. No file unless requested.
+
+### Response Format
+```
+Stage: {broad | narrow | solve | integrate}
+Approach: {algorithm}
+Code: {snippet}
+Stability: {iterations, substeps, tolerances}
+```
 
 ## 1. The Physics Step Pipeline
 
@@ -252,11 +279,11 @@ Rules:
 
 | Engine | Strengths | Weaknesses |
 |--------|-----------|-----------|
-| **PhysX** (Unity) | proven, fast, great docs; Unity built-in | closed-source dev; Unity's API hides internals |
-| **Jolt** (Godot option, Hotline Miami dev) | open source, high-perf, deterministic, excellent for immersion | smaller ecosystem |
-| **Bullet** | open source, cross-platform, legacy w/ known bugs | older code, less friendly API |
-| **Box2D** | best 2D solver; tiny, fast | 2D only |
-| Unity DOTS Physics | ECS-native, burst-friendly | complex, newer |
+| **PhysX** (NVIDIA, BSD-3 open source) | proven, fast, GPU features; Unity's built-in 3D physics | engine wrappers (Unity) hide most solver controls |
+| **Jolt** (MIT; by Jorrit Rouwe, used in Horizon Forbidden West; Godot's default 3D engine since 4.6) | multithreaded, fast, optional cross-platform determinism build | younger ecosystem than PhysX |
+| **Bullet** | open source (zlib), widely embedded | little active development; older API |
+| **Box2D** (v3: C API, multithreaded, SIMD) | de facto standard 2D solver; small, fast | 2D only |
+| Unity Physics / Havok Physics for Unity | ECS-native, Burst-compiled, stateless (Unity Physics) | requires the Entities stack |
 
 ## 13. References
 

@@ -1,6 +1,6 @@
 # j4flmao/agent-skills — Amp guidance
 
-105 skills across 8 phases. Each `skills/<area>/<name>/SKILL.md` defines trigger keywords, rules, and response format.
+641 skills across all phases. Each `skills/<area>/<name>/SKILL.md` defines trigger keywords, rules, and response format.
 
 ## Use
 

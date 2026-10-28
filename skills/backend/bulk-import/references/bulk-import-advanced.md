@@ -1,214 +1,139 @@
-# Bulk Import Advanced Topics
+# Bulk Import Advanced: High-Throughput Loading and Hard Cases
+
+Techniques for imports that are large (millions of rows), concurrent, or must be atomic: database bulk-load paths, staging tables with set-based merges, index and constraint handling, parallelism, Excel streaming, and multi-tenant fairness. Basics are in `bulk-import-fundamentals.md`.
+
+## 1. Load Path Options
+
+| Technique | Throughput | Notes |
+|---|---|---|
+| Row-by-row `INSERT` via ORM | Lowest | Fine for hundreds of rows |
+| Multi-row `INSERT ... VALUES (...), (...)` | Medium | Batch 500–5,000 rows; mind parameter limits (PostgreSQL wire protocol: 65,535 bind parameters per statement) |
+| `executemany` / driver batch APIs | Medium–high | psycopg 3 `executemany` pipelines; JDBC `addBatch` with `reWriteBatchedInserts=true` (PgJDBC) or `rewriteBatchedStatements=true` (MySQL Connector/J) |
+| PostgreSQL `COPY FROM STDIN` | Highest | Streams rows; no per-row SQL parsing |
+| MySQL `LOAD DATA [LOCAL] INFILE` | Highest | `LOCAL` must be enabled on client and server (`local_infile`) |
+| SQL Server `BULK INSERT` / `SqlBulkCopy` | Highest | Table lock hint (`TABLOCK`) enables minimal logging in some recovery models |
+
+## 2. Staging Table + Set-Based Merge (PostgreSQL)
+
+Gives atomic, fast imports and lets validation run in SQL.
+
+```python
+import psycopg
+
+def load_contacts(conn: psycopg.Connection, job_id: int, tenant_id: int, rows) -> int:
+    with conn.transaction():
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TEMP TABLE stage_contacts (
+                  row_number INT, email TEXT, name TEXT, phone TEXT
+                ) ON COMMIT DROP""")
+            with cur.copy("COPY stage_contacts (row_number, email, name, phone) FROM STDIN") as cp:
+                for r in rows:                              # streamed, already parsed
+                    cp.write_row((r.row_number, r.email, r.name, r.phone))
+
+            # set-based validation: duplicates inside the file
+            cur.execute("""
+                INSERT INTO import_errors (job_id, row_number, column_name, code, message)
+                SELECT %s, row_number, 'email', 'duplicate_in_file', 'email appears more than once'
+                FROM (SELECT row_number, count(*) OVER (PARTITION BY lower(email)) c
+                      FROM stage_contacts) d
+                WHERE c > 1""", (job_id,))
+            if cur.rowcount:
+                raise ImportValidationError(f"job {job_id}: {cur.rowcount} duplicate rows")
+
+            cur.execute("""
+                INSERT INTO contacts (tenant_id, email, name, phone)
+                SELECT %s, lower(email), name, phone FROM stage_contacts
+                ON CONFLICT (tenant_id, email)
+                DO UPDATE SET name = EXCLUDED.name, phone = EXCLUDED.phone, updated_at = now()
+                WHERE (contacts.name, contacts.phone) IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.phone)
+                """, (tenant_id,))
+            return cur.rowcount
+```
+
+- `ON COMMIT DROP` temp tables vanish with the transaction; for multi-transaction jobs use a permanent staging table keyed by `job_id` (optionally `UNLOGGED` for speed, accepting loss on crash since it can be rebuilt from the file).
+- The `WHERE ... IS DISTINCT FROM` clause skips no-op updates, reducing write amplification and triggers.
+- PostgreSQL 15+ `MERGE` is an alternative to `ON CONFLICT` when you need insert/update/delete in one statement; `ON CONFLICT` remains the race-safe choice for concurrent upserts.
+
+## 3. Indexes, Constraints, Triggers
+
+| Situation | Approach |
+|---|---|
+| Initial load into an empty table | Create secondary indexes and FKs after loading; load in primary-key order |
+| Incremental import into a live table | Keep indexes; batch size moderate; avoid long locks |
+| Expensive triggers per row | Replace with set-based post-processing for imports, if business rules allow |
+| FK checks against large parents | Validate references in staging with a join, report missing ones, then insert |
+
+Dropping indexes on a live table affects all other queries; only do it in maintenance windows or for new tables.
+
+## 4. Parallelism
+
+- Split by independent key ranges or file chunks; each worker writes its own batches.
+- Concurrent upserts on the same keys deadlock or serialize; partition work by key hash so a key is owned by one worker.
+- Limit concurrency per tenant and globally (database connection pool size is the real ceiling).
+- Order batches consistently (sort by key) to reduce deadlock risk.
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+
+def parallel_import(chunks_by_key_hash: dict[int, list], worker, max_workers: int = 4) -> None:
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = [pool.submit(worker, shard, rows) for shard, rows in chunks_by_key_hash.items()]
+        for f in futures:
+            f.result()            # propagate the first failure
+```
+
+## 5. Large Excel Files
+
+- `openpyxl.load_workbook(path, read_only=True, data_only=True)` streams rows with low memory; `data_only=True` returns cached formula results instead of formulas (cached values may be missing if the file was produced by a tool that does not compute them).
+- Dates may arrive as `datetime` or as numbers depending on cell formatting; normalize explicitly.
+- Reject macro-enabled formats (`.xlsm`) unless required; never execute macros.
+- Guard against decompression bombs: check total uncompressed size of the ZIP entries before parsing.
+
+```python
+import zipfile
+
+MAX_UNCOMPRESSED = 500 * 1024 * 1024
+
+def check_xlsx(path: str) -> None:
+    with zipfile.ZipFile(path) as z:
+        total = sum(i.file_size for i in z.infolist())
+        if total > MAX_UNCOMPRESSED:
+            raise ImportRejected(f"{path}: uncompressed size {total} exceeds limit")
+        if "xl/workbook.xml" not in z.namelist():
+            raise ImportRejected(f"{path}: not an XLSX workbook")
+```
 
-## Introduction
-Advanced Bulk Import topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+## 6. Multi-Tenant Fairness
 
-## Advanced Architecture Patterns
+- Queue per tenant or weighted fair scheduling so one tenant's 10M-row import does not block others.
+- Rate-limit rows/second per tenant in the commit stage.
+- Run heavy imports on a separate worker pool and, if needed, a read replica for validation lookups.
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+## 7. Resumability
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+- Persist the last committed batch number/byte offset on the job.
+- On restart, skip committed batches; upsert semantics make reprocessing the in-flight batch safe.
+- For staging-table imports, resuming means re-running the final merge, which is idempotent with upserts.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+## 8. Keeping the System Responsive
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+- Use `statement_timeout`/`lock_timeout` on import sessions so they fail rather than block OLTP traffic.
+- Throttle commits when replication lag or database CPU crosses thresholds.
+- Schedule very large imports off-peak or move them to a bulk-load window.
 
-## Performance Optimization
+## Pitfalls
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+- ORM row-by-row inserts for millions of rows.
+- Parallel workers upserting overlapping keys: deadlocks.
+- One giant transaction for a multi-hour import: lock retention, bloat, replication lag.
+- Trusting `data_only=True` Excel values without checking for missing cached results.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+## Checklist
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Bulk path chosen (COPY / LOAD DATA / bulk copy) for large imports.
+- [ ] Staging table with set-based validation and merge.
+- [ ] Index/constraint strategy matches table state (empty vs live).
+- [ ] Parallelism partitioned by key; concurrency capped.
+- [ ] Excel parsed in streaming mode with size guards.
+- [ ] Per-tenant fairness, timeouts, and resumable progress.

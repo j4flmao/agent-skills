@@ -1,214 +1,146 @@
 # Payment Processing Advanced Topics
 
-## Introduction
-Advanced Payment Processing topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+Production payment engineering beyond a single PSP integration: multi-provider orchestration and routing, Strong Customer Authentication and exemptions, network tokens and card lifecycle, reconciliation with a double-entry ledger, disputes, fraud controls, and resilience patterns. Basics are in `payment-processing-fundamentals.md`.
+
+## Payment Orchestration
+
+```text
+checkout ─► Payment Orchestrator ──► routing rules ──► PSP A (EU cards)
+                 │                                  ├─► PSP B (US cards, failover)
+                 │                                  └─► Local method provider (iDEAL, Pix, ...)
+                 ├─ vault / tokens (PSP-agnostic or network tokens)
+                 ├─ idempotency + state machine
+                 └─ ledger + reconciliation
+```
+
+Reasons to add a second PSP: availability failover, regional acquiring (higher approval rates with local acquirers), cost, and local payment methods. Costs: two integrations, token portability, split reporting and reconciliation.
+
+### Routing rules
+| Input | Example rule |
+|-------|--------------|
+| Card BIN / issuer country | Route EU-issued cards to EU acquirer |
+| Currency | Settle in the currency the acquirer supports without conversion |
+| Amount / risk score | High-risk to the PSP with stronger fraud tooling |
+| PSP health | Circuit-break a PSP with elevated errors/timeouts |
+| Cost | Cheapest eligible route when approval rates are equal |
+
+Measure per-route authorization rate, latency and cost; change routing based on data, and A/B test routing changes.
+
+### Cascading retries
+Retrying a soft decline on another PSP can recover approvals, but:
+- Only for soft declines and technical failures, never hard declines (stolen/lost card, do-not-honor policies).
+- Respect network rules on retry counts and timing for the same card.
+- Ensure the first attempt definitely failed (no unknown outcome) before trying elsewhere, or you risk double charges.
+
+## Strong Customer Authentication (PSD2) and 3DS2
+
+SCA requires two of knowledge, possession, inherence for many electronic payments in the EEA (and the UK under equivalent rules). 3-D Secure 2 is the card mechanism.
+
+| Concept | Notes |
+|---------|-------|
+| Frictionless flow | Issuer approves based on risk data without a challenge |
+| Challenge flow | Customer completes authentication in issuer UI |
+| Liability shift | Successful 3DS generally shifts fraud chargeback liability to the issuer |
+| Exemptions | Low-value, transaction risk analysis (TRA), trusted beneficiary, secure corporate payments; issuer may still demand SCA |
+| Out of scope | Merchant-initiated transactions (MIT) after an authenticated setup, one-leg-out transactions (non-EEA issuer/acquirer) |
+
+Practices:
+- Send rich data (billing/shipping address, device info, account age) to maximize frictionless approvals.
+- Set up off-session payments (subscriptions, delayed charges) with an authenticated customer-initiated setup and then flag later charges as MIT.
+- Handle `requires_action` states in every flow; mobile apps need SDK support for challenges.
+
+## Tokens and Card Lifecycle
+
+| Token type | Issued by | Portable across PSPs | Benefit |
+|------------|-----------|----------------------|---------|
+| PSP token | Your PSP | No (requires data migration via PSP-to-PSP PAN export) | Simple |
+| Network token (VTS, MDES) | Card network | Usable with PSPs supporting network tokens for your merchant ID | Auto-updated when cards are reissued, often higher approval rates |
+| Wallet token (DPAN) | Device wallet | Per device | Device-bound cryptograms |
+
+Use account updater / network token lifecycle updates to keep stored cards valid; expired-card declines are a major source of involuntary churn in subscriptions.
+
+PSP migration: request a PCI-compliant PAN export from the old PSP to the new one (vault-to-vault). Plan it months ahead; it is not self-service.
+
+## Reconciliation and Ledger
+
+Your system, the PSP, and the bank each hold a version of the truth. Reconcile all three.
+
+```text
+orders/payments DB  ⇄  PSP balance transactions report  ⇄  bank statement (payouts)
+```
+
+Double-entry ledger (every movement debits one account and credits another, sums to zero):
+
+| Event | Debit | Credit |
+|-------|-------|--------|
+| Payment captured | PSP receivable | Revenue / customer liability |
+| PSP fee | Fees expense | PSP receivable |
+| Payout to bank | Bank cash | PSP receivable |
+| Refund | Revenue / customer liability | PSP receivable |
+| Chargeback | Chargeback losses (and fee expense) | PSP receivable |
+
+```sql
+CREATE TABLE ledger_entries (
+  id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  journal_id   BIGINT NOT NULL,
+  account      TEXT NOT NULL,
+  amount_minor BIGINT NOT NULL,          -- positive debit, negative credit
+  currency     CHAR(3) NOT NULL,
+  source_ref   TEXT NOT NULL,            -- PSP balance transaction / payout id
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (source_ref, account)
+);
+-- enforce per journal: SUM(amount_minor) = 0 per currency (deferred constraint trigger or posting service)
+```
+
+Daily reconciliation job:
+1. Import PSP settlement/balance reports (API or files).
+2. Match each line to a payment/refund/dispute by PSP reference.
+3. Match payouts to bank statement lines.
+4. Report unmatched items with age; investigate within SLA.
+Entries are append-only; corrections are new reversing entries.
+
+## Disputes
+
+- Reason codes differ by network (fraud, product not received, not as described, duplicate, credit not processed).
+- Respond within network deadlines through the PSP with evidence: delivery proof, logs of 3DS authentication, customer communications, terms accepted, IP/device data.
+- Use pre-dispute programs (e.g. Visa/Mastercard alert and inquiry programs offered through PSPs or providers) to refund before a chargeback is filed when appropriate.
+- Track dispute rate per card network; excessive rates trigger network monitoring programs with fines.
+
+## Fraud Controls
+
+| Layer | Examples |
+|-------|----------|
+| Velocity rules | Attempts per card/IP/account per time window |
+| Card testing defenses | CAPTCHA/bot detection at checkout, rate limits, minimum amounts, blocking many small auths |
+| ML risk scoring | PSP tools (e.g. Stripe Radar, Adyen RevenueProtect) or third-party |
+| 3DS on risk | Request authentication for higher-risk transactions |
+| Manual review | Queue for borderline orders before fulfilment |
+| Account security | Protect stored-card accounts against takeover (MFA, anomaly detection) |
+
+Tune for total cost: fraud losses + chargeback fees + false-decline revenue loss + review cost.
+
+## Resilience
+
+- Timeouts on PSP calls with an "unknown" outcome state; resolve by querying the PSP or waiting for webhooks before retrying elsewhere.
+- Circuit breaker per PSP (Resilience4j, Polly, or equivalent) feeding the router.
+- Queue non-critical calls (receipts, ledger posting) off the checkout path.
+- Webhook ingestion highly available and replayable; PSPs retry deliveries but for limited periods.
+- Run reconciliation even when everything "worked": it catches silent failures.
+
+## Compliance Notes
+
+- PCI DSS v4.0.1 is the current standard; requirements that were future-dated became mandatory on 31 March 2025 (e.g. script integrity and change detection on payment pages under 6.4.3 and 11.6.1 for e-commerce).
+- Keep systems that touch card data minimal; prefer PSP-hosted fields and network tokens.
+- Data retention: keep transaction records per finance/tax rules, but no sensitive authentication data.
+
+## Checklist
+
+- [ ] Routing rules data-driven with per-route approval, latency and cost metrics
+- [ ] Cascading only on soft declines with certain prior outcome
+- [ ] SCA flows, exemptions and MIT flags implemented; `requires_action` handled everywhere
+- [ ] Network tokens/account updater for stored cards; PSP migration plan
+- [ ] Double-entry ledger and daily three-way reconciliation
+- [ ] Dispute evidence pipeline and dispute-rate monitoring
+- [ ] Layered fraud controls tuned on total cost
+- [ ] Unknown-outcome handling, circuit breakers, replayable webhooks

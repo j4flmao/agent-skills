@@ -21,12 +21,12 @@ Generate structured, human-readable changelogs and release notes from convention
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "generate changelog", "release notes", "conventional changelog", "CHANGELOG.md", "auto-changelog", "git-cliff", "standard-version", "release-please", "semantic-release", "generate release notes".
+Exact user phrases: "generate changelog", "release notes", "conventional changelog", "CHANGELOG.md", "auto-changelog", "git-cliff", "standard-version (deprecated)", "release-please", "semantic-release", "generate release notes".
 
 ### Input Context
 - Commit message convention (Conventional Commits, Angular convention, custom)
 - Output format (Keep a Changelog, custom Markdown, GitHub release, Slack message)
-- Tool preference (git-cliff, standard-version, release-please, semantic-release, auto-changelog)
+- Tool preference (git-cliff, changesets, release-please, semantic-release, auto-changelog)
 - Source of truth (git log, GitHub releases, JIRA)
 - Release cadence (continuous delivery, scheduled releases, hotfixes)
 - Versioning strategy (semver, calver, date-based, custom)
@@ -34,6 +34,15 @@ Exact user phrases: "generate changelog", "release notes", "conventional changel
 
 ### Output Artifact
 Generated CHANGELOG.md or release notes document with categorized, versioned entries.
+
+### Response Format
+```
+Tool: {git-cliff|release-please|semantic-release|changesets}
+Convention: {Conventional Commits types -> sections}
+Format: {Keep a Changelog sections}
+Versioning: {semver bump rules}
+Automation: {CI trigger, output file/release}
+```
 
 ### Completion Criteria
 - [ ] Tool selected and configured
@@ -59,8 +68,9 @@ What is the project setup?
 │   Configurable, TOML config, conventional commits
 ├── Monorepo (lerna, nx, turborepo) → release-please
 │   Per-package changelogs, GitHub releases, PR-based
-├── npm package, simple → standard-version
-│   npm-aware, version bump + changelog + tag
+├── npm package / monorepo with per-package versions → changesets
+│   Contributors add change files in PRs; versions + changelogs generated
+│   (standard-version is deprecated — migrate to release-please or changesets)
 ├── Full CI/CD pipeline → semantic-release
 │   Automated release from CI, npm/GitHub/GCR publish
 └── Custom needs → custom script with conventional-changelog
@@ -112,9 +122,6 @@ body = """
 {% endfor %}
 """
 trim = true
-postprocess = """
-sed -i 's/- \[**breaking**\]/⚠️ **BREAKING CHANGE:**/' CHANGELOG.md
-"""
 
 [git]
 conventional_commits = true
@@ -158,14 +165,17 @@ group = "Other"
 # git-cliff: generate from last tag to HEAD
 git cliff -o CHANGELOG.md
 
-# Generate for specific tag range
-git cliff --tag 1.0.0..HEAD -o CHANGELOG.md
+# Generate for a specific range (positional range argument)
+git cliff v1.0.0..HEAD -o CHANGELOG.md
+
+# Name the unreleased section as the upcoming tag
+git cliff --tag v1.1.0 -o CHANGELOG.md
 
 # Preview unreleased changes
 git cliff --unreleased -o CHANGELOG.md
 
-# Unreleased with specific date
-git cliff --unreleased --date-strategy "current"
+# Only the latest release (e.g. for GitHub release notes)
+git cliff --latest --strip header
 ```
 
 ### Step 3: Manual Changelog Structure (Keep a Changelog)
@@ -212,11 +222,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 name: Release
 on:
   push:
-    branches: [main]
+    tags: ["v*"]          # generate release notes when a version tag is pushed
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   release:
@@ -230,13 +239,14 @@ jobs:
         uses: orhun/git-cliff-action@v3
         with:
           config: cliff.toml
-          args: --latest --output CHANGELOG.md
+          args: --latest --strip header
+        env:
+          OUTPUT: RELEASE_NOTES.md
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          body_path: CHANGELOG.md
-          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
 ```
 
 ### Step 5: Monorepo Changelogs with release-please
@@ -255,12 +265,10 @@ jobs:
       - uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          release-type: node
-          monorepo-tags: true
-          packages:
-            packages/core: {}
-            packages/cli: {}
-            packages/ui: {}
+          # monorepo: packages are declared in release-please-config.json
+          # ({"packages": {"packages/core": {}, "packages/cli": {}}}) plus .release-please-manifest.json
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
 ```
 
 ### Step 6: Changelog with Custom Sections
@@ -268,7 +276,7 @@ jobs:
 ```typescript
 // scripts/generate-changelog.ts
 import conventionalChangelog from 'conventional-changelog';
-import { writeFileSync } from 'fs';
+import { createWriteStream } from 'node:fs';
 
 const config: conventionalChangelog.Options = {
   preset: {
@@ -289,10 +297,12 @@ const config: conventionalChangelog.Options = {
   lernaPackage: null,
 };
 
+// Pipe the whole stream to the file (writing per 'data' chunk would overwrite earlier chunks)
 conventionalChangelog(config)
-  .pipe(process.stdout)
-  .on('data', (chunk: Buffer) => {
-    writeFileSync('CHANGELOG.md', chunk.toString());
+  .pipe(createWriteStream('CHANGELOG.md'))
+  .on('error', (err: Error) => {
+    console.error(`Failed to write CHANGELOG.md: ${err.message}`);
+    process.exitCode = 1;
   });
 ```
 
@@ -370,8 +380,8 @@ conventionalChangelog(config)
 ## References
   - references/changelog-generator-advanced.md — Changelog Generator Advanced Topics
   - references/changelog-generator-fundamentals.md — Changelog Generator Fundamentals
-  - references/conventional-commits.md — Conventional Commits Reference
-  - references/release-workflow.md — Release Workflow Reference
+  - references/conventional-commits-guide.md — Conventional Commits Guide
+  - references/auto-changelog-tools.md — Changelog Automation Tools
 ## Handoff
 Hand off to `dev-loop-git-workflow` for version tagging strategy. Hand off to `dev-loop-code-review` for PR-based changelog entries.
 

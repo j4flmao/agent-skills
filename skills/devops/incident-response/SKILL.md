@@ -459,7 +459,7 @@ def track_weekly_metrics(incidents):
 - Scribe documents in real-time — memory is unreliable under pressure
 - Stop the bleed before finding root cause — mitigation first, investigation second
 - NO blame in incident response — focus on what happened and what we can improve
-- Postmortem must be scheduled before incident is closed — never "postmortem TBD"
+- Postmortem must be scheduled before incident is closed — never leave the date open
 - Communication cadence: SEV1 every 30min, SEV2 every 60min, SEV3 at major changes
 - All incident channels are public by default — transparency over secrecy
 - Runbooks tested quarterly via tabletop exercises

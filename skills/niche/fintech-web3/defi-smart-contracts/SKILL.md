@@ -1,4 +1,37 @@
+---
+name: defi-smart-contracts
+description: >
+  Use this skill when the user says 'AMM', 'automated market maker', 'constant product', 'x*y=k', 'Uniswap math', 'impermanent loss', 'liquidity pool math'. Explains AMM pricing mechanics and the reentrancy pitfalls of swap contracts. Do NOT use for: broad DeFi protocol design (use blockchain/blockchain-defi) or full contract-security audits (use blockchain/smart-contract-security).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [niche, fintech, defi, amm, solidity]
+---
+
 # DeFi: Automated Market Makers (AMM)
+
+## Purpose
+Explain the deterministic pricing math behind automated market makers (constant-product invariant, slippage, impermanent loss) and the security pitfalls - especially reentrancy - in swap/liquidity contracts.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "AMM math", "x*y=k", "impermanent loss", "liquidity pool pricing", "swap reentrancy".
+
+### Input Context
+- AMM type and fee tier.
+- Token decimals and oracle usage.
+
+### Output Artifact
+Formula/mechanics explanation with security notes.
+
+### Response Format
+```
+Mechanic: {invariant}
+Price impact: {slippage}
+Risk: {IL | reentrancy}
+```
+
 
 ## Core Mechanics
 

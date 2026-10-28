@@ -368,7 +368,7 @@ defect:
   root_cause_analysis: Email service not configured for international address format
 ```
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: Fintech — Test Automation Transformation
 A fintech company had manual-only testing with release cycles of 4 weeks. They implemented Playwright for E2E, Pytest for API testing, and integrated tests into the CI pipeline. Regression suite ran in 12 minutes. Release cycle reduced to weekly. Production defects dropped 60%. Key success factor: dedicated automation team for 3 months to build the initial framework.

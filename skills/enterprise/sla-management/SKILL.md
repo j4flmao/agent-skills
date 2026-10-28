@@ -416,7 +416,7 @@ Approved: {yes/no} — effective: {date}
 | {action} | {owner} | {date} |
 ```
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### E-Commerce SLA Tier Restructuring
 An e-commerce platform had a single SLA for all customers: 99.9% uptime. Enterprise customers complained that latency was too high during peak shopping periods (p99 latency of 800ms vs. a 200ms expectation). Support was overwhelmed with SLA breach claims from customers who were paying very different amounts.

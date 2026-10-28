@@ -345,7 +345,6 @@ secrets:
 
 ### Step 8: Docker Swarm Stack
 ```yaml
-version: '3.8'
 services:
   app:
     image: myapp:latest
@@ -568,7 +567,6 @@ ls -lah /var/lib/docker/containers/*/*-json.log  # Check log files
 - references/docker-fundamentals.md — Docker Fundamentals
 - references/docker-advanced.md — Docker Advanced Topics
 - references/compose-networking.md — Compose and Networking
-- references/security-best-practices.md — Security Best Practices
 
 ## Handoff
 Hand off to docker for containerization. Hand off to kubernetes-patterns if orchestration is needed. Hand off to cicd-pipeline for CI/CD integration.

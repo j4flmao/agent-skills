@@ -194,19 +194,20 @@ Start with mobile layout (no prefix). Layer on `sm:`, `md:`, `lg:`, `xl:`, `2xl:
 ```bash
 npm i -D @tailwindcss/forms @tailwindcss/typography @tailwindcss/container-queries
 ```
-Plugins add utility classes and resets: `forms` normalizes inputs, `typography` adds `.prose`, `container-queries` enables `@sm:`, `@md:`, etc.
+Plugins add utility classes and resets: `forms` normalizes inputs, `typography` adds `.prose`. In v4 register them in CSS with `@plugin "@tailwindcss/typography";`. Container queries (`@container`, `@sm:`, `@md:`) are built into v4; the `container-queries` plugin is only for v3.
 
 ### Step 7: Optimize for Production
-Confirm `content` paths scan all templates. Use `--minify` flag. Safelist dynamic classes:
+v3: confirm `content` paths scan all templates and safelist dynamic classes:
 
 ```js
 safelist: ['bg-red-500', 'bg-green-500', { pattern: /^bg-(red|green)-(100|200|500)$/ }],
 ```
+v4: sources are detected automatically; force-generate classes with `@source inline("bg-red-500 bg-green-500");` (v4.1+) and add extra paths with `@source "../node_modules/my-ui";`.
 
 ### Step 8: Validate Output
 ```bash
-npx tailwindcss -i src/input.css -o output.css --minify --verbose
-# Check output CSS size (< 50 KB for most apps)
+npx @tailwindcss/cli -i src/input.css -o output.css --minify   # v4 CLI (v3: npx tailwindcss ...)
+# Check output CSS size and track it as a budget in CI
 # Verify no missing classes by spot-checking known-used utilities
 ```
 
@@ -218,6 +219,11 @@ export default {
 }
 ```
 Use `dark:` variants for elements that change in dark mode. With `class` strategy, toggle dark mode by adding `dark` class to `<html>` element.
+
+v4 has no `darkMode` config key: `dark:` follows `prefers-color-scheme` by default; for class-based toggling add to your CSS:
+```css
+@custom-variant dark (&:where(.dark, .dark *));
+```
 
 ### Step 10: Manage Custom Plugins
 ```js
@@ -274,14 +280,15 @@ content: ['./node_modules/@my-lib/**/*.js']
 ### 3. Overusing @apply Instead of Component Abstraction
 `@apply` generates duplicate CSS if used in multiple places. For reusable patterns, use framework components instead. Reserve `@apply` for cases where you cannot use a component (CMS templates, legacy code).
 
-### 4. Using dark: Variants Without darkMode Config
+### 4. Class-Toggled Dark Mode Without Configuring the Variant
+`dark:` uses `prefers-color-scheme` by default, so toggling a `.dark` class does nothing until configured.
 ```js
-// This will NOT work:
-// tailwind.config.js without darkMode: 'class'
-// <div className="dark:bg-gray-800">
-
-// Fix:
-export default { darkMode: 'class' };
+// v3 fix: tailwind.config.js
+export default { darkMode: 'class' }; // 'selector' in v3.4+
+```
+```css
+/* v4 fix: in your main CSS */
+@custom-variant dark (&:where(.dark, .dark *));
 ```
 
 ### 5. Forgetting to Restore Default Scale
@@ -304,11 +311,12 @@ theme: { extend: { spacing: { 18: '4.5rem' } } }
 
 Arbitrary values should be reserved for truly one-off cases (e.g., a specific measurement from a design comp that does not match the spacing scale).
 
-### 7. Nested @apply with Responsive Variants
+### 7. Using @apply in Files That Can't See Your Theme (v4)
 ```css
-/* BAD -- responsive variants inside @apply */
-.btn { @apply text-sm lg:text-base; }
-/* The lg: variant won't work inside @apply */
+/* Vue/Svelte <style> blocks and CSS modules are processed separately in v4;
+   without a reference, theme tokens and custom utilities are unknown to @apply */
+@reference "../app.css";
+.btn { @apply text-sm lg:text-base; } /* variants inside @apply are supported */
 ```
 
 ## Compared With
@@ -325,10 +333,10 @@ Arbitrary values should be reserved for truly one-off cases (e.g., a specific me
 ## Performance Considerations
 
 ### Build Time Optimization
-- v4 is 2-5x faster than v3 due to Lightning CSS integration
-- Use `@tailwindcss/vite` for Vite projects -- it uses esbuild for pre-processing
-- Keep `content` paths narrow: `./src/**/*.{jsx,tsx}` instead of `./src/**/*`
-- Avoid regex in `safelist` patterns -- they are evaluated per class
+- v4 has a new engine (Rust parts + Lightning CSS) with much faster full and incremental builds than v3
+- Use the `@tailwindcss/vite` plugin for Vite projects (and `@tailwindcss/postcss` elsewhere)
+- v4 detects sources automatically (respecting `.gitignore`); add or exclude paths with `@source` / `@source not` instead of a `content` array
+- Keep v3 `safelist` regex patterns narrow -- broad patterns generate large numbers of unused classes
 
 ### CSS Output Size
 - A typical app with 500 unique utility classes: 8-15KB uncompressed, 3-5KB gzipped
@@ -356,7 +364,7 @@ Arbitrary values should be reserved for truly one-off cases (e.g., a specific me
 - `@tailwindcss/postcss` -- PostCSS plugin for v4
 - `@tailwindcss/forms` -- Form reset and style normalization
 - `@tailwindcss/typography` -- Prose styling for rich text
-- `@tailwindcss/container-queries` -- Container query support (`@sm:`, `@md:`, etc.)
+- `@tailwindcss/container-queries` -- v3 only; container queries are built into v4
 
 ### Design Tool Integration
 - Figma to Tailwind: Anima, Tailwind CSS Builder, Figma Tokens
@@ -370,7 +378,7 @@ Arbitrary values should be reserved for truly one-off cases (e.g., a specific me
 - Never remove or override Tailwind's default spacing/fontSize scales unless the design system explicitly requires it. Use `extend` or `@theme` instead
 - Keep `tailwind.config.*` flat -- avoid deeply nested plugin abstractions unless there are 5+ sites sharing the config
 - Always output `@theme` tokens with the `--` prefix in v4: `--color-brand-500: #3b82f6`
-- Never use `@apply` inside `@media` queries -- use responsive variants instead
+- Prefer responsive variants (`md:`) over hand-written `@media` blocks around `@apply`
 - Position container queries (`@sm:`, `@md:`) after viewport breakpoints in class order
 - Avoid `@apply` for responsive or dark variants -- use the utility directly on the element
 - Never use `@layer` in component library source -- it changes the cascade order
@@ -380,11 +388,11 @@ Arbitrary values should be reserved for truly one-off cases (e.g., a specific me
 - `references/component-patterns.md` -- Component Patterns Reference
 - `references/configuration.md` -- Tailwind Configuration Reference
 - `references/design-tokens.md` -- Design Tokens Reference
+- `references/error-handling.md` -- Ultimate Deep Dive: Error Handling in tailwind-css
 - `references/performance.md` -- Tailwind CSS Performance Reference
 - `references/responsive-patterns.md` -- Responsive Patterns Reference
-- `references/utility-first.md` -- Utility-First CSS Reference
-- `references/tailwind-design-system.md` -- Tailwind Design System Integration
 - `references/tailwind-performance-optimization.md` -- Tailwind Performance & Build Optimization
+- `references/utility-first.md` -- Utility-First CSS Reference
 
 ## Handoff
 No artifact produced unless requested.
@@ -516,5 +524,5 @@ What project type?
 
 ## Performance Optimization
 
-- **JIT compilation in production**: Tailwind v4 generates only used CSS. Average output 10-50KB gzipped. Enable `@source` for optimizing across multiple entry points.
+- **On-demand generation**: Tailwind (v3 JIT and v4) generates only classes it finds in your sources, so output size tracks actual usage; use `@source` to include or exclude paths in v4.
 - **CSS logical properties for RTL**: Use `ps` (padding-inline-start) instead of `pl`. Tailwind v4 supports logical properties natively. Single CSS bundle for both LTR and RTL.

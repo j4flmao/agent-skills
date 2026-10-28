@@ -120,7 +120,7 @@ spec:
 Incrementally shifts a percentage of traffic to the new version while monitoring metrics.
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: myapp
@@ -144,7 +144,7 @@ spec:
 Routes traffic based on request attributes (headers, cookies, geolocation).
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: myapp
@@ -171,7 +171,7 @@ spec:
 Sends a copy of live traffic to the new version without impacting responses.
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: myapp

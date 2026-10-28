@@ -1,213 +1,153 @@
 # Experiment Tracking Fundamentals
 
-## Overview
-Experiment Tracking is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+What to record for every ML training run, how tracking tools organize it, and the minimum workflow that makes results comparable and reproducible. Examples use MLflow (open source, self-hostable) and Weights & Biases; concepts carry over to Neptune, Comet, ClearML and Vertex AI Experiments.
+
+## What to Track
+
+| Category | Examples | Why |
+|----------|----------|-----|
+| Parameters | learning rate, batch size, model architecture, feature set version | Explain differences between runs |
+| Metrics | train/val loss per epoch, accuracy, F1, AUC, latency | Compare and select models |
+| Code version | Git commit SHA, dirty-tree flag | Reproduce training code |
+| Data version | Dataset path + hash/version (DVC, lakeFS, table snapshot ID) | Same code on different data gives different models |
+| Environment | Python and library versions, CUDA/driver, container image digest | Reproduce numerics |
+| Artifacts | Model weights, preprocessing objects, plots, confusion matrices, sample predictions | Inspect and deploy |
+| Context | Author, purpose/hypothesis, tags (`baseline`, `ablation`) | Find and interpret runs later |
+
+If a run cannot be traced to code + data + config, its metric is an anecdote.
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Experiment Tracking helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Concept | MLflow | W&B |
+|---------|--------|-----|
+| Grouping | Experiment | Project |
+| Single training execution | Run | Run |
+| Configuration | Params (immutable per run) | `config` |
+| Time series values | Metrics with `step` | `wandb.log({...}, step=...)` |
+| Files | Artifacts | Artifacts (versioned) |
+| Labels | Tags | Tags, groups, job types |
+| Model catalog | Model Registry with versions and aliases | Model Registry / registry collections |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Experiment Tracking solutions. These principles help maintain code quality and reduce technical debt.
+## MLflow Basics
 
-### Concept 3: Data Management
-Proper data management is essential for Experiment Tracking. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+```python
+import mlflow
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import f1_score, roc_auc_score
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+mlflow.set_tracking_uri("http://mlflow.internal:5000")   # or MLFLOW_TRACKING_URI env var
+mlflow.set_experiment("churn-model")
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+params = {"n_estimators": 300, "max_depth": 12, "min_samples_leaf": 5, "random_state": 42}
 
-## Architecture Patterns
+with mlflow.start_run(run_name="rf-baseline") as run:
+    mlflow.set_tags({"git_sha": git_sha(), "data_version": "churn_features@v14", "purpose": "baseline"})
+    mlflow.log_params(params)
 
-### Pattern 1: Standard Architecture
-The standard architecture for Experiment Tracking follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+    model = RandomForestClassifier(**params).fit(X_train, y_train)
+    proba = model.predict_proba(X_val)[:, 1]
+    mlflow.log_metrics({
+        "val_f1": f1_score(y_val, proba > 0.5),
+        "val_auc": roc_auc_score(y_val, proba),
+    })
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+    mlflow.sklearn.log_model(model, name="model", input_example=X_val.iloc[:5])
+```
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+- `input_example` lets MLflow infer and store a model signature (input/output schema).
+- `mlflow.autolog()` captures parameters, metrics and models for supported libraries (scikit-learn, PyTorch Lightning, XGBoost, LightGBM, Transformers and others); still add tags for data version and purpose.
+- MLflow 3 uses `name=` for `log_model`; older code passes `artifact_path=`, which is deprecated.
 
-## Implementation Guide
+## Weights & Biases Basics
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+```python
+import wandb
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+run = wandb.init(
+    project="churn-model",
+    config=params,
+    tags=["baseline"],
+    notes="RF baseline on churn_features v14",
+)
+for epoch in range(epochs):
+    train_loss, val_loss = train_one_epoch(...)
+    wandb.log({"train/loss": train_loss, "val/loss": val_loss}, step=epoch)
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+artifact = wandb.Artifact("churn-rf", type="model")
+artifact.add_file("model.joblib")
+run.log_artifact(artifact)
+run.finish()
+```
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+W&B captures Git state and system metrics (GPU utilization, memory) automatically when available.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+## Logging Metrics Well
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+- Log per step/epoch for learning curves, plus final summary metrics for comparison tables.
+- Use consistent names with prefixes (`train/loss`, `val/loss`, `test/f1`); never compare a metric named differently across runs.
+- Log the evaluation set identity with the metric; "val_auc" on a different split is a different metric.
+- Record the decision threshold if metrics depend on one.
+- Log uncertainty where possible (cross-validation mean and std, bootstrap confidence intervals).
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## Reproducibility Minimum
 
-## Best Practices
+```python
+import random, numpy as np, torch
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+def seed_everything(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
-## Common Pitfalls
+seed_everything(params["random_state"])
+mlflow.log_param("seed", params["random_state"])
+mlflow.log_artifact("requirements.lock")          # or uv.lock / conda env export
+```
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+Full GPU determinism may require `torch.use_deterministic_algorithms(True)` and costs speed; document whether runs are expected to be bit-reproducible or only statistically reproducible.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+## Organizing Experiments
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+| Practice | Example |
+|----------|---------|
+| One experiment/project per modelling problem | `churn-model`, not per person |
+| Run names describe the change | `rf-depth12-featv14` |
+| Tags for filtering | `baseline`, `ablation:no-tenure`, `candidate` |
+| Parent/child runs for sweeps | Parent = sweep, children = trials |
+| Notes record the hypothesis and conclusion | "Hypothesis: tenure buckets help. Result: +0.4 AUC, keep." |
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## Comparing Runs
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+- Compare in the UI (parallel coordinates, metric charts) or programmatically:
 
-## Tooling Ecosystem
+```python
+runs = mlflow.search_runs(
+    experiment_names=["churn-model"],
+    filter_string="tags.data_version = 'churn_features@v14' and metrics.val_auc > 0.8",
+    order_by=["metrics.val_auc DESC"],
+    max_results=10,
+)
+print(runs[["run_id", "params.max_depth", "metrics.val_auc", "metrics.val_f1"]])
+```
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+- Compare only runs evaluated on the same data and split.
+- Prefer differences larger than run-to-run noise (rerun the best config with different seeds).
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+## From Run to Registry
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+```python
+mv = mlflow.register_model(f"runs:/{run.info.run_id}/model", "churn-classifier")
+client = mlflow.MlflowClient()
+client.set_registered_model_alias("churn-classifier", "challenger", mv.version)
+```
 
-## Integration Patterns
+Registry aliases (`champion`, `challenger`) replaced the older fixed stages (Staging/Production), which are deprecated. Deployments load by alias: `models:/churn-classifier@champion`.
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
+## Checklist
 
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Experiment Tracking concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- [ ] Every run records params, metrics, Git SHA, data version, environment
+- [ ] Consistent metric names and evaluation sets
+- [ ] Seeds logged; reproducibility level documented
+- [ ] Experiments organized by problem with descriptive run names and tags
+- [ ] Models logged with signatures; promotion via registry aliases

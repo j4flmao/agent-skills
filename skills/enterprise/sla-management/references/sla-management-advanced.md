@@ -1,214 +1,142 @@
-# Sla Management Advanced Topics
+# SLA Management Advanced: Portfolios, Dependency Alignment, Credits, Regulation
 
-## Introduction
-Advanced Sla Management topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Managing SLAs across many services, customers, and suppliers: tiered SLA portfolios, aligning OLAs and underpinning contracts with customer commitments, automated credit calculation, breach governance, regulatory requirements, and experience-level agreements. Basics are in `sla-management-fundamentals.md`.
 
-## Advanced Architecture Patterns
+## 1. Tiered SLA Portfolio
+
+| Tier | Availability SLA | Support (Sev 1 response) | RPO / RTO | Price driver |
+|---|---|---|---|---|
+| Standard | 99.5% | Next business day | 24 h / 24 h | Single region, business-hours support |
+| Business | 99.9% | 1 h, 24×7 | 1 h / 4 h | Multi-AZ, 24×7 on-call |
+| Enterprise | 99.95% | 15 min, 24×7, named contacts | 15 min / 1 h | Multi-region, dedicated support |
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+Each tier maps to concrete architecture and staffing; a sales exception that promises Enterprise terms on Standard infrastructure is a risk to log and approve explicitly.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+Maintain an SLA catalogue (service, tier, metrics, exclusions, dependencies, owner, contract references) as the single source for sales, support, and engineering.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+## 2. Aligning the Dependency Chain
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+```
+Customer SLA 99.9%
+  └── Service SLO 99.95%
+        ├── OLA: platform team (Kubernetes) 99.97%
+        ├── OLA: database team 99.98%
+        ├── UC: cloud provider compute SLA (per provider terms)
+        └── UC: payment provider 99.95% + documented fallback
+```
 
-## Performance Optimization
+Rules:
+- Every critical dependency has an OLA or UC at least as strict as the share of error budget allocated to it.
+- Where a supplier's SLA is weaker than needed, add architecture mitigations (redundancy, fallback provider, queueing) rather than accepting the gap silently.
+- Supplier credits rarely cover your losses or your customer credits; treat supplier SLAs as signals of expected reliability, not insurance.
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+Error budget allocation example (99.95% service SLO = 21.6 min per 30 days):
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+| Source | Allocation |
+|---|---|
+| Own deployments and bugs | 40% |
+| Platform dependencies | 30% |
+| External providers | 20% |
+| Unallocated reserve | 10% |
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+## 3. Automated SLA Calculation and Credits
 
-## Security Hardening
+```python
+from __future__ import annotations
+from dataclasses import dataclass
+from decimal import Decimal
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+@dataclass(frozen=True, slots=True)
+class CreditTier:
+    below: Decimal      # availability strictly below this value
+    credit_pct: Decimal
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+TIERS = (CreditTier(Decimal("95.0"), Decimal("100")),
+         CreditTier(Decimal("99.0"), Decimal("25")),
+         CreditTier(Decimal("99.9"), Decimal("10")))
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+def monthly_availability(total_minutes: int, bad_minutes: int, excluded_minutes: int) -> Decimal:
+    eligible = total_minutes - excluded_minutes
+    if eligible <= 0:
+        raise ValueError(f"no eligible minutes: total={total_minutes} excluded={excluded_minutes}")
+    return (Decimal(eligible - bad_minutes) / Decimal(eligible) * 100).quantize(Decimal("0.001"))
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+def credit_percent(availability: Decimal) -> Decimal:
+    for tier in TIERS:                          # ordered from most severe
+        if availability < tier.below:
+            return tier.credit_pct
+    return Decimal("0")
 
-## Monitoring and Observability
+def credit_amount(fee: Decimal, availability: Decimal, cap_pct: Decimal = Decimal("100")) -> Decimal:
+    pct = min(credit_percent(availability), cap_pct)
+    return (fee * pct / 100).quantize(Decimal("0.01"))
+```
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+Unit tests must cover boundary values (exactly 99.9%, exactly 95.0%), zero eligible minutes, and full-month exclusions. Use `Decimal`, not floats, for contractual calculations.
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+Data pipeline: SLI measurements → per-customer, per-service minute/request ledgers → monthly availability → credit calculation → finance system. Keep the raw measurements for the contractual dispute period.
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+## 4. Proactive vs Claim-Based Credits
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+| Model | Pros | Cons |
+|---|---|---|
+| Customer must claim | Lower payout, standard in cloud contracts | Customer frustration; reputational cost |
+| Automatic credits | Trust, simpler support | Higher payout; requires accurate per-customer measurement |
 
-## Scalability and Reliability
+Enterprise contracts increasingly request automatic credits and reporting; price that in.
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+## 5. Breach Governance
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+1. Detect: SLO burn alerts fire well before SLA thresholds.
+2. Incident management with customer communication per the SLA's update cadence.
+3. Determine SLA impact per affected customer and tier.
+4. Post-incident review with corrective actions and owners.
+5. Credit processing and customer report.
+6. Track repeated breaches: many contracts give termination rights after N breaches in a period; flag accounts at risk to account management.
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+## 6. Contract Clauses to Watch
 
-## Integration and Interoperability
+| Clause | Risk |
+|---|---|
+| Uncapped credits or credits beyond the affected service | Financial exposure exceeding revenue |
+| Liquidated damages / penalties instead of credits | Larger, harder-to-predict liability |
+| Termination for chronic SLA failure | Revenue loss |
+| Customer-chosen measurement source | Disputes over data |
+| Maintenance exclusions without limits | Customer pushback; may be unenforceable as written |
+| RPO/RTO commitments | Require tested DR, not just backups |
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+Legal and engineering review together; engineers confirm the architecture can meet each number.
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+## 7. Regulatory Context
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+- Financial sector in the EU: the Digital Operational Resilience Act (DORA, applicable since January 2025) requires contractual provisions with ICT third-party providers, including service level descriptions with precise quantitative and qualitative performance targets, incident support, and exit strategies.
+- Outsourcing guidelines from financial regulators (e.g. EBA guidelines on outsourcing) require measurable service levels and monitoring for critical functions.
+- Healthcare, public sector, and telecom regulations may impose availability or incident-reporting obligations.
 
-## DevOps and Automation
+Map regulated customers' requirements into the SLA catalogue so commitments and evidence (reports, audit logs) exist.
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+## 8. Experience-Level Agreements (XLAs)
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+XLAs supplement technical SLAs with user-experience outcomes (task success, satisfaction, digital experience scores). Use them internally or with customers where uptime is met but users still suffer (slow pages, failed workflows). Measure via real-user monitoring and surveys, and keep definitions as precise as SLA metrics.
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+## 9. Reporting at Scale
 
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
+- Per-customer monthly reports generated from the same ledger used for credits.
+- Internal portfolio dashboard: SLA attainment by service/tier, breaches, credits paid, at-risk accounts.
+- Status page history linked to SLA reports for transparency.
 
-## Data Management
+## Pitfalls
 
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
+- Sales promising custom SLAs without engineering sign-off or a catalogue entry.
+- Credit calculation in spreadsheets with float arithmetic and no audit trail.
+- Supplier SLAs weaker than customer commitments with no mitigation.
+- Regulatory requirements discovered during an audit instead of at contract time.
 
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
+## Checklist
 
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Tiered SLA catalogue with architecture and staffing mapped to each tier.
+- [ ] OLAs/UCs aligned with allocated error budgets; gaps mitigated.
+- [ ] Automated, tested credit calculation from auditable measurements.
+- [ ] Breach governance and at-risk account tracking.
+- [ ] Contract clause review by legal and engineering.
+- [ ] Regulatory requirements (e.g. DORA) mapped per customer segment.

@@ -259,19 +259,26 @@ def x_learner(X, y, t):
 
 ### Step 7: Causal Forests
 ```python
-from econml.grf import CausalForest
+from econml.dml import CausalForestDML
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
 
 def causal_forest_ate(X, y, t):
-    cf = CausalForest(n_estimators=500, min_samples_leaf=10, max_depth=20)
-    cf.fit(X, t, y)
-    ate = cf.marginal_effect(X).mean()
-    te = cf.marginal_effect(X)
-    return {"ate": ate[0], "cate_stderr": te.std(), "model": cf}
+    cf = CausalForestDML(
+        model_y=GradientBoostingRegressor(),
+        model_t=GradientBoostingClassifier(),
+        discrete_treatment=True,
+        n_estimators=500,
+        min_samples_leaf=10,
+        random_state=42,
+    )
+    cf.fit(y, t, X=X)
+    te = cf.effect(X)                       # per-unit CATE estimates
+    lb, ub = cf.ate_interval(X, alpha=0.05)
+    return {"ate": cf.ate(X), "ate_ci_95": (lb, ub), "cate_sd": te.std(), "model": cf}
 
 def heterogeneous_effects(cf, X, feature_names=None):
-    te = cf.marginal_effect(X)
-    # Variable importance for heterogeneity
-    imp = cf.feature_importances_
+    te = cf.effect(X)
+    imp = cf.feature_importances_            # importance for effect heterogeneity
     return {"treatment_effects": te, "importance": dict(zip(feature_names or range(len(imp)), imp))}
 ```
 
@@ -357,19 +364,20 @@ def e_value(estimate, lower_ci=None, upper_ci=None):
     must have with BOTH treatment and outcome to explain away the effect.
     """
     def compute_eval(rr):
-        if rr <= 1:
-            return 1.0
+        if rr < 1:
+            rr = 1 / rr                       # protective effects: invert first
         return rr + np.sqrt(rr * (rr - 1))
     
     eval_est = compute_eval(estimate)
     eval_ci = None
     if lower_ci is not None and upper_ci is not None:
-        # Use CI closest to null
-        ci_closest = max(min(upper_ci, 1/upper_ci), lower_ci)
-        if ci_closest >= 1:
-            eval_ci = compute_eval(ci_closest)
+        # Use the CI limit closest to the null (RR = 1)
+        if lower_ci > 1:
+            eval_ci = compute_eval(lower_ci)
+        elif upper_ci < 1:
+            eval_ci = compute_eval(1 / upper_ci)
         else:
-            eval_ci = 1.0
+            eval_ci = 1.0                     # CI includes the null
     
     return {"e_value_estimate": eval_est, "e_value_ci": eval_ci}
 

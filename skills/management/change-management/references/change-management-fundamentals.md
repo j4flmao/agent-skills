@@ -1,213 +1,126 @@
 # Change Management Fundamentals
 
-## Overview
-Change Management is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+The people side of organizational change: why technically successful projects still fail to deliver value, the roles involved, the core activities (impact assessment, sponsorship, communication, training, resistance management, reinforcement), and how they map to a project timeline. Framework deep dives are in `adkar-model.md`, `kotter-8step.md` and `change-management-frameworks.md`.
 
-## Core Concepts
+## Why Change Management
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Change Management helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+A new system, process or structure creates value only when people adopt it and keep using it. Change management plans and supports that transition so that:
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Change Management solutions. These principles help maintain code quality and reduce technical debt.
+- adoption happens faster (speed of adoption),
+- more of the affected people adopt it (ultimate utilization),
+- they use it correctly (proficiency),
+- and the change sticks after the project team leaves.
 
-### Concept 3: Data Management
-Proper data management is essential for Change Management. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+Frequently quoted failure percentages for change programs have weak empirical backing; justify change management with the specific adoption risks of your change, not with generic statistics.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+## Project Management vs Change Management
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+| Project management | Change management |
+|--------------------|-------------------|
+| Delivers the solution (system, process, org design) | Prepares, equips and supports people to adopt it |
+| Scope, schedule, budget, quality | Awareness, readiness, capability, reinforcement |
+| Done at go-live | Done when adoption targets are met and sustained |
 
-## Architecture Patterns
+Run them as one integrated plan with shared milestones.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Change Management follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+## Roles
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+| Role | Responsibility |
+|------|----------------|
+| Executive sponsor | Authorizes and funds the change, communicates why, builds a sponsor coalition, removes obstacles, stays visible through go-live and after |
+| Change lead / practitioner | Designs the change strategy and plans, measures readiness and adoption, coaches leaders |
+| People managers | Most influential messengers for their teams; explain impact, coach, identify and address resistance |
+| Change agents / champions | Peers inside affected groups who give feedback, help colleagues, and model the change |
+| Project team | Builds the solution; incorporates adoption feedback |
+| Impacted employees | Adopt the change; provide input on workability |
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+Employees typically want to hear *why* from senior leaders and *what it means for me* from their direct manager. Equip managers before asking them to communicate.
 
-## Implementation Guide
+## Core Activities
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+### 1. Define the change
+- What changes (process, systems, tools, job roles, critical behaviours, mindset, reporting structure, performance measures, location)?
+- Why now, what happens if we do not change?
+- What does success look like in measurable adoption terms?
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+### 2. Change impact assessment
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+| Group | # people | Process | Systems | Role | Behaviour | Degree of impact (L/M/H) |
+|-------|----------|---------|---------|------|-----------|---------------------------|
+| Field sales | 120 | New quote approval | CRM fields | — | Log every opportunity | H |
+| Finance ops | 15 | Automated reconciliation | New ERP module | Analyst focus shifts | Exception-based review | M |
+| Customer support | 60 | — | Read-only quote view | — | — | L |
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+Use it to size communication and training per group, and to identify where resistance is likely.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+### 3. Readiness assessment
+Assess sponsor strength, organizational change history, change saturation (other concurrent changes), culture, and the capacity of managers. Low readiness calls for more sponsor activity and longer timelines.
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+### 4. Communication plan
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+| Audience | Message | Sender | Channel | Timing |
+|----------|---------|--------|---------|--------|
+| All staff | Why we are changing, timeline | Sponsor | Town hall + email | Kick-off |
+| Impacted teams | What changes for you, support available | Direct manager | Team meeting | 6 weeks before go-live |
+| Managers | Talking points, FAQ, escalation path | Change lead | Briefing session | Before team meetings |
+| Champions | Early demos, feedback loop | Project team | Workshop | Monthly |
 
-## Best Practices
+Principles: repeat key messages through several channels; give two-way channels (Q&A, feedback forms) and answer visibly; be honest about what is not yet decided.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+### 5. Training plan
+- Role-based, task-focused, close to go-live (just in time), with practice environments.
+- Job aids and in-app guidance for infrequent tasks.
+- Measure proficiency (task completion, error rates), not just attendance.
 
-## Common Pitfalls
+### 6. Resistance management
+Resistance is a normal response; treat it as information.
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+| Root cause | Response |
+|------------|----------|
+| Not aware of the reason | Sponsor communication of the why |
+| Loss of status, control or job security | Honest conversations, involvement in design, support options |
+| Lack of skills/time | Training, workload relief during transition |
+| Past failed changes | Visible quick wins, follow-through on commitments |
+| Disagreement with solution | Listen; feed valid concerns into the design |
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+Managers identify resistance; the change lead equips them with responses; escalate persistent resistance to sponsors.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+### 7. Reinforcement
+- Recognize and celebrate adoption; share success stories from peers.
+- Align performance measures and incentives with the new behaviours.
+- Remove old ways of working (decommission legacy systems, retire old forms).
+- Monitor adoption metrics after go-live and act on gaps.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## Timeline Integration
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Change Management concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+```text
+Project:   initiate ─ design ─ build ─ test ─ go-live ─ hypercare ─ close
+Change:    assess ─── plan ──── engage/communicate ── train ── support ── reinforce ── hand over
+           (impact,   (sponsor, (managers, champions)  (just   (floor-    (metrics,
+           readiness)  comms,                           in time) walkers)  recognition)
+                       training,
+                       resistance)
+```
+
+## Basic Metrics
+
+| Metric | Example |
+|--------|---------|
+| Awareness | % of impacted employees who can state why the change is happening (pulse survey) |
+| Readiness | Manager-reported readiness by team |
+| Training | Completion and proficiency assessment results |
+| Adoption | Active users of the new process/system vs target |
+| Proficiency | Error rates, rework, support tickets per user |
+| Outcome | Business KPI the change was meant to improve |
+
+See `adoption-metrics.md` for measurement design.
+
+## Checklist
+
+- [ ] Change defined with measurable adoption outcomes
+- [ ] Active, visible sponsor and sponsor coalition
+- [ ] Impact and readiness assessments completed per group
+- [ ] Communication plan with manager talking points and two-way channels
+- [ ] Role-based, just-in-time training with proficiency checks
+- [ ] Resistance tracked by root cause with owners
+- [ ] Reinforcement and adoption monitoring after go-live

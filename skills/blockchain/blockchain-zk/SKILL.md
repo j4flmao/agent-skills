@@ -432,9 +432,6 @@ Recommended hardware:
   - references/zk-patterns.md — ZK Application Patterns
   - references/zk-rollup-architecture.md — ZK Rollup Architecture
   - references/zkevm-types.md — zkEVM Types
-  - references/trusted-setup-ceremonies.md — Trusted Setup Ceremonies
-  - references/zk-deployment.md — ZK System Deployment
-  - references/circom-circuit-optimization.md — Circom Circuit Optimization
 
 ## Architecture Decision Trees
 

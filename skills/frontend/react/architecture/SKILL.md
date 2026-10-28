@@ -345,7 +345,7 @@ React re-renders components when state changes. Strategies to minimize:
 - `React Compiler` (automated memoization in React 19+)
 
 ### Bundle Size
-- React + react-dom: ~45KB gzipped
+- React + react-dom are the largest fixed cost (tens of KB gzipped); measure with a bundle analyzer
 - Feature-based structure aids tree-shaking
 - Code-split at route level with `React.lazy` + `Suspense`
 - Lazy load heavy libraries (chart, markdown, date picker)
@@ -357,7 +357,7 @@ Large lists (1000+ items) benefit from:
 - Avoiding inline functions in list item renders
 
 ### State Management Size
-| Library | Size (gzipped) |
+| Library | Approx. size (min+gzip, check bundlephobia for your version) |
 |---------|----------------|
 | useState/useReducer | 0KB (built-in) |
 | Context | 0KB (built-in) |
@@ -368,13 +368,7 @@ Large lists (1000+ items) benefit from:
 
 ### React Compiler (React 19+)
 
-```tsx
-// vite.config.ts
-import reactCompiler from 'vite-plugin-react-compiler'
-export default defineConfig({
-  plugins: [reactCompiler({ target: '19' }), react()],
-})
-```
+See Workflow Step 7 for setup (`babel-plugin-react-compiler` via `@vitejs/plugin-react`).
 The React Compiler automatically memoizes components and hooks, eliminating manual `useMemo`, `useCallback`, and `React.memo`.
 
 ## Build & Bundle Considerations
@@ -844,34 +838,21 @@ class ErrorBoundary extends React.Component<
 ```
 
 ### Step 6: Code Splitting
-```typescript
-const UsersPage = lazy(() => import('./features/users/pages/UsersPage'))
-const OrdersPage = lazy(() => import('./features/orders/pages/OrdersPage'))
-
-function App() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <Routes>
-        <Route path="/users" element={<UsersPage />} />
-        <Route path="/orders" element={<OrdersPage />} />
-      </Routes>
-    </Suspense>
-  )
-}
-```
+Split at route level exactly as in "Route-Level Code Splitting" above: one `lazy()` import per feature page, one `<Suspense>` boundary with a skeleton fallback around the routes, plus an error boundary for chunk-load failures.
 
 ### Step 7: React Compiler (React 19+)
 ```typescript
-// Install: npm install -D vite-plugin-react-compiler
-import reactCompiler from 'vite-plugin-react-compiler'
+// npm install -D babel-plugin-react-compiler   (React Compiler 1.0)
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [
-    reactCompiler({ target: '19' }),
-    react(),
+    react({ babel: { plugins: ['babel-plugin-react-compiler'] } }),
   ],
 })
 ```
+For React 17/18 also install `react-compiler-runtime` and set the plugin's `target` option. Next.js: `reactCompiler: true` in `next.config.ts`.
 The React Compiler automatically memoizes components and hooks, eliminating manual useMemo, useCallback, and React.memo.
 
 ## Rules

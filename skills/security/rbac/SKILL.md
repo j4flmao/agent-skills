@@ -109,14 +109,14 @@ Request -> Valid Token -> Role Admin -> Allow Action
 5. Regularly review role mappings
 
 ## Reference Guides
-1. [OIDC Auth Code Flow](references/oidc_flow_auth_code.md)
-2. [OIDC Implicit Flow](references/oidc_flow_implicit.md)
-3. [RBAC Core Logic](references/rbac_core_logic.md)
-4. [RBAC Decision Matrix](references/rbac_decision_matrix.md)
-5. [RBAC Policy Evaluation](references/rbac_policy_evaluation.md)
-6. [OIDC Token Validation](references/oidc_token_validation.md)
-7. [RBAC Audit Logging](references/rbac_audit_logging.md)
-8. [RBAC Integration Patterns](references/rbac_integration_patterns.md)
+1. [RBAC Fundamentals](references/rbac-fundamentals.md)
+2. [RBAC Advanced](references/rbac-advanced.md)
+3. [Role Engineering](references/role-engineering.md)
+4. [RBAC Migration](references/rbac-migration.md)
+5. [Framework Integration](references/framework-integration.md)
+6. [Enterprise Org Structure](references/enterprise-org-structure.md)
+7. [Admin & Break-Glass Access](references/admin-break-glass.md)
+8. [Temporary Delegation Workflows](references/temporary-delegation-workflows.md)
 
 ## Handoff
 Refer to auth skill.

@@ -34,6 +34,16 @@ Exact user phrases: "git workflow", "branching strategy", "git flow", "trunk-bas
 ### Output Artifact
 Git workflow specification with branching model, commit convention, merge strategy, and hook configuration.
 
+### Response Format
+```
+Branching: {trunk-based|GitHub Flow|GitFlow} — why
+Branch names: {pattern}
+Commits: {Conventional Commits + commitlint}
+Merge: {squash|rebase|merge commit}
+Protection: {required checks, reviews}
+Releases/hotfixes: {tagging, release branches}
+```
+
 ### Completion Criteria
 - [ ] Branching strategy selected (trunk-based, git-flow, GitHub Flow)
 - [ ] Branch naming convention defined
@@ -339,9 +349,9 @@ git push --force-with-lease
 
 ## References
   - references/git-workflow-advanced.md — Git Workflow Advanced Topics
-  - references/git-workflow-branching.md — Branching Strategy Reference
+  - references/branch-strategies.md — Branching Strategies
   - references/git-workflow-fundamentals.md — Git Workflow Fundamentals
-   - references/git-workflow-hooks.md — Git Hooks Reference
+   - references/git-advanced-workflows.md — Advanced Git Workflows and Hooks
 
 ## Implementation Patterns
 

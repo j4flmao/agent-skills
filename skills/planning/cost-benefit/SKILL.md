@@ -569,7 +569,6 @@ Threshold: > 4.0 — Proceed. 3.0-4.0 — Revise. < 3.0 — Reject.
   - references/project-valuation.md — Project Valuation
   - references/cost-benefit-advanced.md — Cost Benefit Advanced Topics
   - references/cost-benefit-fundamentals.md — Cost Benefit Fundamentals
-  - references/sensitivity-analysis.md — Sensitivity Analysis Guide
 ## Handoff
 `planning/create-pitch-deck` for business case presentation with ROI and NPV highlights
 `planning/create-adr` for recording the investment decision with rationale

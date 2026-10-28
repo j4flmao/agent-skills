@@ -1,364 +1,250 @@
-# COS and Databases
+# IBM Cloud Object Storage and Managed Databases
 
-## Cloud Object Storage (COS)
+Provisioning and operating IBM Cloud Object Storage (COS) buckets and IBM Cloud Databases (ICD) with Terraform and the CLI: bucket locations and classes, versioning, retention, lifecycle, replication, encryption, database deployments, users, allow-lists, backups and point-in-time recovery.
+
+## Cloud Object Storage
+
+### Instance and bucket locations
 
 ```hcl
-# Provision COS instance
 resource "ibm_resource_instance" "cos" {
-  name              = "production-cos"
+  name              = "prod-cos"
   service           = "cloud-object-storage"
   plan              = "standard"
   location          = "global"
-  resource_group_id = data.ibm_resource_group.default.id
+  resource_group_id = data.ibm_resource_group.prod.id
 }
+```
 
-# Cross-region bucket
-resource "ibm_cos_bucket" "backups" {
-  bucket_name          = "app-backups-prod"
+Each bucket sets exactly one location argument:
+
+| Argument | Values (examples) | Resiliency |
+|----------|-------------------|------------|
+| `cross_region_location` | `us`, `eu`, `ap` | Data spread across regions in a geography |
+| `region_location` | `us-south`, `us-east`, `eu-de`, `eu-gb`, `jp-tok`, `au-syd`, `ca-tor`, `jp-osa`, `br-sao` | Across zones in one region |
+| `single_site_location` | `ams03`, `che01`, `mil01`, `sjc04`, `tor01`, ... | One data center |
+
+Storage classes: `standard`, `vault`, `cold`, `smart` (Smart Tier prices by access pattern). The One Rate plan uses `onerate_active`. Values are lowercase.
+
+### Production bucket
+
+```hcl
+resource "ibm_cos_bucket" "app_data" {
+  bucket_name          = "acme-app-data-prod"
   resource_instance_id = ibm_resource_instance.cos.id
   region_location      = "us-south"
   storage_class        = "smart"
+  endpoint_type        = "private"               # Terraform talks to COS over the private endpoint
+  kms_key_crn          = ibm_kms_key.cos_root.crn # customer-managed key (Key Protect / HPCS)
 
-  tags = ["production", "backup"]
+  object_versioning {
+    enable = true
+  }
+
+  activity_tracking {
+    read_data_events   = true
+    write_data_events  = true
+    management_events  = true
+  }
+
+  metrics_monitoring {
+    usage_metrics_enabled   = true
+    request_metrics_enabled = true
+  }
 }
+```
 
-# Regional bucket
-resource "ibm_cos_bucket" "regional" {
-  bucket_name          = "app-regional-data"
+- Versioning can be suspended but not disabled once enabled.
+- Using a KMS key requires an IAM authorization from COS to Key Protect/HPCS (`ibm_iam_authorization_policy` with source `cloud-object-storage`, target `kms`, role `Reader`).
+
+### Lifecycle
+
+Lifecycle rules can be set inline on `ibm_cos_bucket` or with the separate `ibm_cos_bucket_lifecycle_configuration` resource, which the provider recommends for new code. Use one approach per bucket; mixing them causes drift. Inline form:
+
+```hcl
+resource "ibm_cos_bucket" "logs" {
+  bucket_name          = "acme-logs-prod"
   resource_instance_id = ibm_resource_instance.cos.id
   region_location      = "us-south"
   storage_class        = "standard"
-}
 
-# Single-site bucket (lowest cost)
-resource "ibm_cos_bucket" "temp" {
-  bucket_name          = "app-temp-files"
-  resource_instance_id = ibm_resource_instance.cos.id
-  single_site_location = "us-west"
-  storage_class        = "vault"
-}
+  object_versioning {
+    enable = true
+  }
 
-# Bucket with retention
-resource "ibm_cos_bucket" "compliance" {
-  bucket_name          = "app-compliance-logs"
-  resource_instance_id = ibm_resource_instance.cos.id
-  region_location      = "us-south"
-  storage_class        = "standard"
-
-  retention_enabled = true
-  retention_default = 365
-  retention_minimum = 90
-  retention_maximum = 2555
-}
-
-# Bucket with versioning and lifecycle
-resource "ibm_cos_bucket" "versioned" {
-  bucket_name          = "app-versioned-data"
-  resource_instance_id = ibm_resource_instance.cos.id
-  region_location      = "us-south"
-  storage_class        = "standard"
-}
-
-resource "ibm_cos_bucket_lifecycle_configuration" "versioned" {
-  bucket_crn         = ibm_cos_bucket.versioned.crn
-  resource_instance_id = ibm_resource_instance.cos.id
-  lifecycle_rule {
-    rule_id = "expire-old-versions"
+  expire_rule {
+    rule_id = "expire-tmp"
     enable  = true
-    expiration {
-      days = 90
-    }
-    noncurrent_version_expiration {
-      noncurrent_days = 30
-    }
+    days    = 7
+    prefix  = "tmp/"
   }
-}
 
-# Bucket with CORS
-resource "ibm_cos_bucket_cors_configuration" "app" {
-  bucket_crn           = ibm_cos_bucket.versioned.crn
-  resource_instance_id = ibm_resource_instance.cos.id
-  cors_rule {
-    allowed_headers = ["*"]
-    allowed_methods = ["GET", "HEAD", "PUT"]
-    allowed_origins = ["https://app.example.com"]
-    expose_headers  = ["ETag"]
-    max_age_seconds = 3600
+  noncurrent_version_expiration {
+    rule_id         = "expire-noncurrent"
+    enable          = true
+    noncurrent_days = 30
+  }
+
+  abort_incomplete_multipart_upload_days {
+    rule_id               = "abort-mpu"
+    enable                = true
+    days_after_initiation = 3
   }
 }
 ```
 
-### COS CLI
+`archive_rule { days, enable, type }` moves objects to archive (`type` `Glacier` or `Accelerated`); archived objects must be restored before reading.
+
+### Immutability
+
+| Feature | Use | Notes |
+|---------|-----|-------|
+| Retention policy (`retention_rule { default, minimum, maximum, permanent }`) | WORM retention for compliance | Cannot combine with versioning; `permanent = true` is irreversible |
+| Object Lock (`object_lock = true` + `ibm_cos_bucket_object_lock_configuration`) | S3-compatible lock per object/default retention | Requires versioning |
+
+Pick one model per bucket, and test retention settings on a non-production bucket first: they cannot be loosened.
+
+### Replication
+
+```hcl
+resource "ibm_cos_bucket_replication_rule" "dr" {
+  depends_on      = [ibm_iam_authorization_policy.cos_replication]
+  bucket_crn      = ibm_cos_bucket.app_data.crn
+  bucket_location = ibm_cos_bucket.app_data.region_location
+
+  replication_rule {
+    rule_id                         = "to-dr"
+    enable                          = true
+    prefix                          = ""
+    priority                        = 1
+    deletemarker_replication_status = false
+    destination_bucket_crn          = ibm_cos_bucket.app_data_dr.crn
+  }
+}
+```
+
+Both buckets need versioning enabled, and COS needs an IAM authorization (`Writer` on the target bucket) to replicate. Cross-region buckets already store data across regions; replication adds an independent copy (different account, key or geography).
+
+### CLI
 
 ```bash
-# List buckets
+ibmcloud plugin install cloud-object-storage
+ibmcloud cos config crn --crn "$COS_CRN"
+ibmcloud cos config region --region us-south
+
 ibmcloud cos buckets
-
-# Create bucket
-ibmcloud cos bucket-create \
-  --bucket app-backups-prod \
-  --region us-south
-
-# Upload object
-ibmcloud cos object-put \
-  --bucket app-backups-prod \
-  --key backup.tar.gz \
-  --body ./backup.tar.gz
-
-# Download object
-ibmcloud cos object-get \
-  --bucket app-backups-prod \
-  --key backup.tar.gz \
-  --outfile ./restored.tar.gz
-
-# List objects
-ibmcloud cos objects --bucket app-backups-prod
-
-# Set lifecycle policy
-ibmcloud cos bucket-lifecycle-configuration-put \
-  --bucket app-backups-prod \
-  --lifecycle-configuration '{
-    "rules": [{
-      "id": "expire-old",
-      "status": "Enabled",
-      "filter": {"prefix": ""},
-      "expiration": {"days": 90}
-    }]
-  }'
+ibmcloud cos object-put --bucket acme-app-data-prod --key reports/2026-10.csv --body ./2026-10.csv
+ibmcloud cos object-get --bucket acme-app-data-prod --key reports/2026-10.csv ./2026-10.csv
+ibmcloud cos objects --bucket acme-app-data-prod --prefix reports/
 ```
 
-## IBM Db2
+COS is S3-compatible: AWS SDKs and tools work with the regional endpoint (e.g. `s3.us-south.cloud-object-storage.appdomain.cloud`, private `s3.private.us-south...`) using HMAC credentials (`{"HMAC": true}` on the service key) or IAM tokens.
+
+## IBM Cloud Databases (ICD)
+
+Managed services: `databases-for-postgresql`, `databases-for-mysql`, `databases-for-mongodb`, `databases-for-redis`, `databases-for-valkey`, `databases-for-elasticsearch`, `databases-for-etcd`, `databases-for-enterprisedb`, `messages-for-rabbitmq`.
+
+IBM Compose (`compose-for-*`) services are retired; use ICD instead.
+
+### Deployment
 
 ```hcl
-resource "ibm_resource_instance" "db2" {
-  name              = "production-db2"
-  service           = "dashdb-for-transactions"
-  plan              = "standard"
-  location          = "us-south"
-  resource_group_id = data.ibm_resource_group.default.id
-
-  parameters = {
-    members = 4
-    storage_gb_per_member = 500
-  }
-}
-
-# Db2 Warehouse
-resource "ibm_resource_instance" "db2_warehouse" {
-  name              = "analytics-db2"
-  service           = "dashdb-for-analytics"
-  plan              = "performance"
-  location          = "us-south"
-  resource_group_id = data.ibm_resource_group.default.id
-}
-```
-
-### Db2 CLI
-
-```bash
-# Create Db2 instance
-ibmcloud resource service-instance-create production-db2 \
-  dashdb-for-transactions standard us-south
-
-# Get connection credentials
-ibmcloud resource service-key-create db2-creds Manager \
-  --instance-name production-db2
-
-# Connect via CLI
-db2 "connect to <dbname> user <user> using <password>"
-
-# Create table
-db2 "CREATE TABLE users (
-  id INT GENERATED ALWAYS AS IDENTITY,
-  email VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)"
-
-# Backup
-db2 "BACKUP DATABASE <dbname> TO /backup"
-```
-
-## PostgreSQL (IBM Cloud Databases)
-
-```hcl
-resource "ibm_resource_instance" "pg" {
-  name              = "production-postgres"
+resource "ibm_database" "pg" {
+  name              = "orders-pg-prod"
   service           = "databases-for-postgresql"
   plan              = "standard"
   location          = "us-south"
-  resource_group_id = data.ibm_resource_group.default.id
+  resource_group_id = data.ibm_resource_group.prod.id
+  version           = "16"
+  service_endpoints = "private"
+  key_protect_key   = ibm_kms_key.db_root.crn
+  adminpassword     = var.pg_admin_password      # from a secret store, never committed
 
-  parameters = {
-    members         = 3
-    member_host_flavor = "multitenant"
-    member_memory_mb  = 4096
-    member_disk_mb    = 10240
-    member_cpu_count  = 4
+  group {
+    group_id = "member"
+    memory { allocation_mb = 8192 }
+    disk   { allocation_mb = 102400 }
+    cpu    { allocation_count = 4 }
+    host_flavor { id = "multitenant" }
   }
 
-  service_endpoints = "private"
+  users {
+    name     = "orders_app"
+    password = var.pg_app_password
+    type     = "database"
+  }
+
+  allowlist {
+    address     = "10.240.0.0/18"
+    description = "prod VPC subnets"
+  }
+
+  timeouts {
+    create = "120m"
+    update = "120m"
+  }
 }
 
-# Get connection string
 data "ibm_database_connection" "pg" {
-  deployment_id = ibm_resource_instance.pg.guid
-  user_id       = "admin"
+  deployment_id = ibm_database.pg.id
+  user_type     = "database"
+  user_id       = "orders_app"
   endpoint_type = "private"
 }
-
-# Create database
-resource "ibm_database" "pg_db" {
-  deployment_id = ibm_resource_instance.pg.guid
-  name          = "appdb"
-}
-
-# Create user
-resource "ibm_database_user" "app" {
-  deployment_id = ibm_resource_instance.pg.guid
-  username      = "appuser"
-  password      = random_password.pg.result
-}
-
-# Create allowlist
-resource "ibm_database_allowlist" "vpc" {
-  deployment_id = ibm_resource_instance.pg.guid
-  ip_address    = "10.0.0.0/8"
-  note          = "VPC IP range"
-}
-
-# Point-in-time recovery configuration
-resource "ibm_resource_instance" "pg_pitr" {
-  name              = "pg-clone"
-  service           = "databases-for-postgresql"
-  plan              = "standard"
-  location          = "us-south"
-
-  parameters = {
-    deployment_id = ibm_resource_instance.pg.guid
-    point_in_time_recovery = {
-      recovery_time = "2026-01-15T03:00:00Z"
-    }
-  }
-}
 ```
 
-## Compose Databases
+- Gen2 plans (`standard-gen2`, ...) use dedicated host flavors and reject some Classic arguments (memory/cpu allocations, backup key, PITR fields); check the provider docs for the plan you use.
+- `service_endpoints = "private"` keeps traffic on the IBM private network; reach it from VPC via Virtual Private Endpoints.
+- `version` upgrades in place on Classic; plan for a maintenance window and test on a restored copy.
 
-```hcl
-resource "ibm_resource_instance" "compose_redis" {
-  name              = "cache-redis"
-  service           = "compose-for-redis"
-  plan              = "standard"
-  location          = "us-south"
-  resource_group_id = data.ibm_resource_group.default.id
-}
-
-resource "ibm_resource_instance" "compose_elastic" {
-  name              = "logs-elasticsearch"
-  service           = "compose-for-elasticsearch"
-  plan              = "standard"
-  location          = "us-south"
-  resource_group_id = data.ibm_resource_group.default.id
-}
-
-resource "ibm_resource_instance" "compose_etcd" {
-  name              = "kv-store"
-  service           = "compose-for-etcd"
-  plan              = "standard"
-  location          = "us-south"
-  resource_group_id = data.ibm_resource_group.default.id
-}
-```
-
-## Backup and DR
-
-### COS Cross-Region Replication
-
-```hcl
-# Cross-region bucket (built-in replication)
-resource "ibm_cos_bucket" "cross_region" {
-  bucket_name          = "app-dr-data"
-  resource_instance_id = ibm_resource_instance.cos.id
-  cross_region_location = "us"  # us, eu, ap
-  storage_class        = "standard"
-}
-
-# or replicate between buckets using rules
-resource "ibm_cos_bucket_replication_rule" "dr" {
-  bucket_crn         = ibm_cos_bucket.backups.crn
-  resource_instance_id = ibm_resource_instance.cos.id
-  rule_name          = "cross-region-replication"
-  enable             = true
-  priority           = 1
-  destination_bucket_crn = ibm_cos_bucket.dr_target.crn
-}
-```
-
-### Database Backup
+### Connecting
 
 ```bash
-# Create PostgreSQL backup
-ibmcloud cdb deployment-backups-list <deployment-id>
-ibmcloud cdb deployment-backup-create <deployment-id> --type on_demand
-
-# Restore from backup
-ibmcloud resource service-instance-create pg-restored \
-  databases-for-postgresql standard us-south \
-  -p '{"deployment_id":"<orig-id>","point_in_time_recovery":{"recovery_time":"2026-01-15T03:00:00Z"}}'
-
-# COS backup using CLI
-ibmcloud cos object-copy \
-  --bucket app-backups-prod \
-  --key db-backup.sql.gz \
-  --copy-source app-backups-dr \
-  --copy-source-key db-backup.sql.gz
+ibmcloud plugin install cloud-databases
+ibmcloud cdb deployment-connections orders-pg-prod -u orders_app --endpoint-type private
+ibmcloud cdb deployment-cacert orders-pg-prod > ca.pem
+psql "host=$PG_HOST port=$PG_PORT dbname=ibmclouddb user=orders_app sslmode=verify-full sslrootcert=ca.pem"
 ```
 
-### Automated Backup Strategy
+Always connect with TLS verification against the deployment CA.
+
+### Backups and PITR
+
+- ICD takes automatic daily backups (retention per service; see the service docs). On-demand backups are available from the console/CLI.
+- PostgreSQL and other services that support it can restore to a point in time within the retention window, into a new deployment.
+
+```hcl
+resource "ibm_database" "pg_restore" {
+  name                                 = "orders-pg-restore-test"
+  service                              = "databases-for-postgresql"
+  plan                                 = "standard"
+  location                             = "us-south"
+  point_in_time_recovery_deployment_id = ibm_database.pg.id
+  point_in_time_recovery_time          = "2026-10-20T03:00:00Z"
+}
+```
 
 ```bash
-#!/bin/bash
-# Automated database backup to COS
-
-DB_NAME="appdb"
-DB_USER="admin"
-BACKUP_BUCKET="app-backups-prod"
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-BACKUP_FILE="${DB_NAME}-${TIMESTAMP}.sql.gz"
-
-# Dump database
-pg_dump -h $DB_HOST -U $DB_USER $DB_NAME | gzip > /tmp/$BACKUP_FILE
-
-# Upload to COS
-ibmcloud cos object-put \
-  --bucket $BACKUP_BUCKET \
-  --key "daily/${BACKUP_FILE}" \
-  --body /tmp/$BACKUP_FILE
-
-# Cleanup local
-rm /tmp/$BACKUP_FILE
-
-# Retention: remove backups older than 30 days
-ibmcloud cos objects --bucket $BACKUP_BUCKET --prefix daily/ | \
-  grep -E "^daily/" | while read obj; do
-    date_obj=$(echo $obj | sed 's/.*-\([0-9]\{8\}\)-.*/\1/')
-    if [[ $date_obj < $(date -d '30 days ago' +%Y%m%d) ]]; then
-      ibmcloud cos object-delete --bucket $BACKUP_BUCKET --key "$obj"
-    fi
-  done
+ibmcloud cdb deployment-backups-list orders-pg-prod
 ```
 
-## Best Practices
+Restores always create a new deployment; cut over by updating connection configuration. Test restores regularly and measure the time it takes (your real RTO).
 
-- Use cross-region COS buckets for DR across geographic areas
-- Enable object versioning and lifecycle policies on all COS buckets
-- Use private service endpoints for database connections (never public)
-- Set retention policies on compliance-related COS buckets
-- Use point-in-time recovery for PostgreSQL to recover to any point within retention window
-- Enable automated daily backups for all production databases
-- Test restore procedures quarterly
-- Use multi-zone region deployments for database HA (3 members)
-- Encrypt all data at rest with KMS customer-managed keys
-- Restrict database access with allowlists to VPC CIDR ranges only
-- Use COS Cross-Region Replication or CRR for automated data replication
-- Tag all COS buckets and database instances with environment and cost center
+Logical exports (`pg_dump`) to COS add an independent copy for long retention or cross-account recovery; encrypt them and give the uploading identity write-only access to the backup bucket.
+
+## Security Baseline
+
+- Private endpoints for COS and ICD; public endpoints disabled where possible.
+- Customer-managed keys (Key Protect or Hyper Protect Crypto Services) with authorization policies.
+- Context-based restrictions to limit COS/ICD access to specific networks (VPCs, IP ranges).
+- Least-privilege IAM: service IDs with bucket-scoped `Object Writer`/`Object Reader` roles for apps.
+- Activity tracking events enabled on buckets; route events with Activity Tracker Event Routing.
+
+## Checklist
+
+- [ ] Bucket location/class chosen per resiliency and cost
+- [ ] Versioning or retention/Object Lock deliberately chosen; one lifecycle mechanism per bucket
+- [ ] Replication with IAM authorization for DR copies
+- [ ] ICD on private endpoints with allow-lists and customer-managed keys
+- [ ] Secrets from a secret store; TLS verify-full connections
+- [ ] PITR restore tested on a schedule

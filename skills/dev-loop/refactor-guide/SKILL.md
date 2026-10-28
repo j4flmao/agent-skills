@@ -34,6 +34,16 @@ Exact user phrases: "refactor", "code smell", "technical debt", "improve code", 
 ### Output Artifact
 Refactoring plan with prioritized code smells, technique application, and verification strategy.
 
+### Response Format
+```
+Target: {module/files}
+Smells: {smell -> location}
+Safety net: {existing tests | characterization tests to add}
+Steps (each behavior-preserving, committed separately): {technique -> change}
+Verification: {tests/commands}
+Risk: {low|med|high} — rollback {plan}
+```
+
 ### Completion Criteria
 - [ ] Code smells identified and cataloged
 - [ ] Refactoring techniques selected for each smell
@@ -353,11 +363,6 @@ describe('processOrder', () => {
 | Document the motivation | Why this refactoring, what problem it solves |
 | Involve the team | Shared understanding of code quality standards |
 
-## References
-  - references/refactor-guide-advanced.md — Refactoring Advanced Topics
-  - references/refactor-guide-code-smells.md — Code Smells Reference
-  - references/refactor-guide-fundamentals.md — Refactoring Fundamentals
-  - references/refactor-guide-techniques.md — Refactoring Techniques Reference
 ## Implementation Patterns
 
 ### Code Smell Detector
@@ -509,6 +514,7 @@ class PythonSmellDetector:
 ```python
 from typing import Dict, Any, Callable, Optional
 import re
+import zlib
 
 class StranglerFigRouter:
     """
@@ -537,7 +543,7 @@ class StranglerFigRouter:
             self.routes[pattern]["migration_pct"] = pct
             self.routes[pattern]["active"] = pct > 0
 
-    def route(self, request_path: str, context: Dict[str, Any] = None) -> Any:
+    def route(self, request_path: str, context: Optional[Dict[str, Any]] = None) -> Any:
         for pattern, route in self.routes.items():
             if re.match(pattern, request_path):
                 if self._should_route_to_new(route, context):
@@ -545,15 +551,18 @@ class StranglerFigRouter:
                 return route["legacy"](context)
         raise ValueError(f"No route for {request_path}")
 
-    def _should_route_to_new(self, route: Dict, context: Dict = None) -> bool:
+    def _should_route_to_new(self, route: Dict, context: Optional[Dict[str, Any]] = None) -> bool:
         if route["migration_pct"] >= 100:
             return True
         if route["migration_pct"] <= 0:
             return False
-        # Use request ID or user ID for deterministic routing
-        identifier = str(context.get("request_id", context.get("user_id", "")))
-        hash_val = sum(ord(c) for c in identifier)
-        return (hash_val % 100) < route["migration_pct"]
+        # Stable bucketing by user (or request) ID so a user consistently sees one implementation
+        context = context or {}
+        identifier = str(context.get("user_id") or context.get("request_id") or "")
+        if not identifier:
+            raise ValueError("Strangler routing needs a user_id or request_id in context for stable bucketing")
+        bucket = zlib.crc32(identifier.encode("utf-8")) % 100  # non-cryptographic, stable across processes
+        return bucket < route["migration_pct"]
 
     def get_migration_status(self) -> Dict[str, float]:
         return {
@@ -615,9 +624,9 @@ What's the goal and risk level?
 
 ## References
   - references/refactor-guide-advanced.md — Refactoring Advanced Topics
-  - references/refactor-guide-code-smells.md — Code Smells Reference
+  - references/refactoring-patterns.md — Refactoring Patterns and Code Smells
   - references/refactor-guide-fundamentals.md — Refactoring Fundamentals
-  - references/refactor-guide-techniques.md — Refactoring Techniques Reference
+  - references/refactoring-techniques.md — Refactoring Techniques
 
 ## Handoff
 Hand off to `dev-loop-code-review` for refactoring PR review. Hand off to `dev-loop-tech-debt-tracker` for debt tracking.

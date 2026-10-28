@@ -1,214 +1,108 @@
-# Storage Infrastructure Advanced Topics
+# Storage Infrastructure Advanced: Durability, Failure Domains, Tiering, Multi-Site
 
-## Introduction
-Advanced Storage Infrastructure topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Design topics for large or critical storage platforms: failure-domain design, replication vs erasure coding trade-offs, data integrity, tiering and caching, NVMe-oF fabrics, multi-site replication, and operating storage for Kubernetes at scale. Fundamentals are in `storage-infrastructure-fundamentals.md`.
 
-## Advanced Architecture Patterns
+## 1. Failure Domains
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+Data placement must survive the failures you expect:
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+| Level | Failure examples | Placement rule |
+|---|---|---|
+| Disk | Drive failure, latent sector errors | Redundancy within or across hosts |
+| Host | Motherboard, PSU, kernel panic | Copies/chunks on different hosts |
+| Rack | Top-of-rack switch, PDU | Copies/chunks on different racks |
+| Room / AZ | Power, cooling, fire | Copies across AZs (latency budget permitting) |
+| Region / site | Disaster, regional outage | Asynchronous replication or backups off-site |
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+Ceph expresses this with CRUSH rules (`step chooseleaf firstn 0 type rack`); Kubernetes storage with topology labels (`topology.kubernetes.io/zone`). Uneven failure domains (one rack much larger) concentrate data and limit usable capacity.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+## 2. Replication vs Erasure Coding
 
-## Performance Optimization
+| | 3× replication | Erasure coding (e.g. 4+2, 8+3) |
+|---|---|---|
+| Raw overhead | 200% | 50% (4+2), 37.5% (8+3) |
+| Small random writes | Efficient | Read-modify-write; higher latency |
+| Rebuild | Copy from a surviving replica | Read k chunks to rebuild one; more network/CPU |
+| Minimum failure domains | 3 | k+m (6 for 4+2) |
+| Fit | Block volumes, databases, metadata | Object storage, backups, archives, large sequential files |
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+Common pattern: replicated pools for block/metadata, erasure-coded pools for object data.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+## 3. Data Integrity
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+- End-to-end checksums detect corruption (ZFS, Btrfs, Ceph BlueStore checksums every block).
+- Scrubbing reads data in the background and repairs from redundancy: schedule regular light and periodic deep scrubs (Ceph `osd_deep_scrub_interval` defaults to one week); ZFS `zpool scrub` monthly or more often.
+- Monitor SMART/NVMe health (`smartctl -a`, `nvme smart-log`): reallocated sectors, media errors, percentage used.
+- Use ECC memory on storage servers; memory errors corrupt data before checksums are computed.
 
-## Security Hardening
+## 4. Rebuild Behaviour
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+Rebuild windows are when data is most at risk.
+- Larger drives mean longer rebuilds; prefer double-parity or 3× replication with large HDDs.
+- Distributed systems rebuild in parallel from many peers; keep enough free capacity (at least one failure domain's worth) to re-protect data.
+- Throttle recovery so client I/O stays acceptable (Ceph mClock profiles such as `high_client_ops`/`high_recovery_ops`), but not so much that the risk window grows excessively.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+## 5. Tiering and Caching
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+| Technique | Description | Watch for |
+|---|---|---|
+| All-flash primary + HDD/object archive | Lifecycle policies move cold data | Retrieval cost/latency for archived data |
+| Object lifecycle (S3 Standard → IA → Glacier classes) | Automatic transitions by age | Minimum storage durations and retrieval fees |
+| ZFS special vdev / L2ARC / SLOG | Metadata on SSD, read cache, sync-write log | SLOG must be power-loss-protected; special vdev loss loses the pool, so mirror it |
+| Ceph device classes | Separate pools on `ssd`/`hdd`/`nvme` classes via CRUSH | Ceph cache tiering is deprecated; use device-class pools |
+| bcache / dm-cache / LVM cache | Block-level SSD cache for HDD | Write-back mode risks data on cache failure |
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+## 6. NVMe over Fabrics
 
-## Monitoring and Observability
+- NVMe/TCP: runs on standard Ethernet, simplest to deploy, latency close to local NVMe for many workloads.
+- NVMe/RoCE: lower latency, requires lossless Ethernet configuration (PFC/ECN) and RDMA NICs.
+- NVMe/FC: on existing Fibre Channel fabrics.
+- Use native NVMe multipath (ANA) on Linux (`nvme list-subsys`), dedicated networks or VLANs, jumbo frames where supported end-to-end.
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+## 7. Multi-Site Replication
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+| Mode | RPO | Latency impact | Use |
+|---|---|---|---|
+| Synchronous | 0 | Every write waits for remote ack; limited by distance | Metro distances, critical data |
+| Asynchronous | Seconds to minutes | None on writes | Regional DR |
+| Snapshot shipping | Snapshot interval | None | Simple DR, backups |
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+Examples: ZFS `zfs send -i` incremental replication; Ceph RBD mirroring (journal- or snapshot-based) and RGW multisite; array-native replication; object storage cross-region replication.
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+Always test failover and failback, including application consistency (databases need their own replication or quiesced snapshots).
 
-## Scalability and Reliability
+## 8. Kubernetes Storage at Scale
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+- Separate StorageClasses per tier (latency, durability, cost) with clear names.
+- Use volume snapshots and backup tools (Velero with CSI snapshots or data movers, Kasten, vendor tools) with schedules and retention.
+- Set ResourceQuotas on `requests.storage` and per-StorageClass usage per namespace.
+- Monitor kubelet volume stats (`kubelet_volume_stats_used_bytes`, `kubelet_volume_stats_capacity_bytes`) and alert before PVCs fill.
+- Plan for node drains: replicated storage needs drains coordinated with rebuild state (see Longhorn/Rook drain policies).
+- Stateful workloads that replicate themselves (Kafka, Cassandra, Elasticsearch) can use local NVMe PVs instead of replicated storage, avoiding double replication.
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+## 9. Operations
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+| Practice | Detail |
+|---|---|
+| Firmware management | Track drive/controller firmware; stage updates |
+| Spare strategy | Hot spares or replacement SLA; distributed systems use free capacity instead |
+| Capacity forecasting | Linear and seasonal growth; order hardware ahead of lead times |
+| Change control | Pool/rule changes trigger rebalancing; schedule and throttle |
+| Disaster drills | Restore from backups and replicas regularly |
 
-## Integration and Interoperability
+## Pitfalls
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+- Erasure-coded pools for small-block random-write databases.
+- Replicas placed only across hosts in one rack.
+- Write-back caches without power-loss protection.
+- Never-tested DR replication.
+- Running distributed storage near full, leaving no space to recover from a failure.
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+## Checklist
+
+- [ ] Failure domains defined and encoded in placement rules.
+- [ ] Replication vs EC chosen per pool by workload.
+- [ ] Checksums, scrubs, and drive-health monitoring active.
+- [ ] Free-capacity reserve to re-protect after a failure-domain loss.
+- [ ] Multi-site replication mode matches RPO; failover tested.
+- [ ] Kubernetes storage quotas, snapshots, backups, and PVC fill alerts.

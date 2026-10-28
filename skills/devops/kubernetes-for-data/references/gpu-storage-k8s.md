@@ -86,27 +86,32 @@ helm install karpenter karpenter/karpenter \
   --create-namespace
 ```
 
-### Provisioner Configuration
+### NodePool Configuration (Karpenter v1; the v1alpha5 Provisioner API was removed)
 
 ```yaml
-apiVersion: karpenter.sh/v1alpha5
-kind: Provisioner
+apiVersion: karpenter.sh/v1
+kind: NodePool
 metadata:
   name: data-workloads
 spec:
-  requirements:
-    - key: karpenter.sh/capacity-type
-      operator: In
-      values: ["spot", "on-demand"]
-    - key: node.kubernetes.io/instance-type
-      operator: In
-      values: ["c5.4xlarge", "c5.8xlarge", "r5.4xlarge"]
+  template:
+    spec:
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["c5.4xlarge", "c5.8xlarge", "r5.4xlarge"]
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
   limits:
-    resources:
-      cpu: 1000
-  consolidation:
-    enabled: true
-  ttlSecondsAfterEmpty: 30
+    cpu: 1000
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 30s
 ```
 
 ## Storage for Data Workloads

@@ -1,1209 +1,168 @@
-# State Management in .NET 8
+# State Management in ASP.NET Core: Caching, Sessions and Distributed State
 
-## Purpose
-This document outlines state management strategies for .NET 8 applications, including distributed caching, session state, and stateless architectures.
+ASP.NET Core services should be stateless across requests so any instance can serve any request. State that must survive between requests lives in a database, a distributed cache, or the client. This reference covers in-memory and distributed caching (including `HybridCache`), cache invalidation, session state, concurrency control and where each kind of state belongs.
 
-## Distributed Caching with Redis
-In cloud-native applications, distributed caching is preferred over in-memory caching to ensure consistency across multiple instances.
+## Where State Belongs
 
-### Implementation with IDistributedCache
+| State | Store | Notes |
+|-------|-------|-------|
+| Business data (orders, accounts) | Database | Source of truth; transactions and constraints |
+| Derived/expensive-to-compute data | Cache (memory, Redis) | Rebuildable; tolerate eviction |
+| User authentication | Token (JWT) or auth cookie | Validate per request; avoid server-side session for auth when possible |
+| Short-lived workflow state (wizard steps) | Database row with expiry, or client | Session state only for small, non-critical data |
+| Cross-instance coordination | Database (row locks, unique constraints), Redis with care, or a lock service | Prefer database constraints over distributed locks |
+| Per-request data | `HttpContext.Items`, scoped services | Gone after the request |
 
-```csharp
-// Redis Cache Service 0
-public class CacheService_0
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
+Do not keep mutable state in static fields or singletons unless it is a cache that tolerates per-instance divergence.
 
-    public CacheService_0(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
+## In-Memory Cache
 
 ```csharp
-// Redis Cache Service 1
-public class CacheService_1
+builder.Services.AddMemoryCache(o => o.SizeLimit = 10_000);
+
+public sealed class CountryCatalog(IMemoryCache cache, CatalogDbContext db)
 {
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_1(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
+    public Task<IReadOnlyList<Country>> GetAllAsync(CancellationToken ct) =>
+        cache.GetOrCreateAsync("countries:all", async entry =>
         {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
+            entry.Size = 1;
+            return (IReadOnlyList<Country>)await db.Countries.AsNoTracking().ToListAsync(ct);
+        })!;
 }
 ```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
+
+- Per instance: each pod caches separately and may serve slightly different data after updates.
+- With `SizeLimit` set, every entry must declare `Size`.
+- `GetOrCreateAsync` on `IMemoryCache` does not prevent concurrent factory execution (cache stampede); `HybridCache` does.
+
+## HybridCache (.NET 9+)
+
+`HybridCache` (package `Microsoft.Extensions.Caching.Hybrid`, usable from .NET 8 as well) combines an in-process L1 cache with an optional distributed L2 (`IDistributedCache`, for example Redis), with stampede protection and tag-based invalidation.
 
 ```csharp
-// Redis Cache Service 2
-public class CacheService_2
+builder.Services.AddStackExchangeRedisCache(o =>
+    o.Configuration = builder.Configuration.GetConnectionString("Redis"));
+
+builder.Services.AddHybridCache(o =>
 {
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_2(IDistributedCache cache)
+    o.DefaultEntryOptions = new HybridCacheEntryOptions
     {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
+        Expiration = TimeSpan.FromMinutes(10),        // L2 (distributed)
+        LocalCacheExpiration = TimeSpan.FromMinutes(1) // L1 (in-process)
+    };
+});
 
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
+public sealed class ProductService(HybridCache cache, CatalogDbContext db)
+{
+    public ValueTask<ProductDto?> GetAsync(Guid id, CancellationToken ct) =>
+        cache.GetOrCreateAsync(
+            $"product:{id}",
+            async token => await db.Products.AsNoTracking()
+                .Where(p => p.Id == id)
+                .Select(p => new ProductDto(p.Id, p.Name, p.Price))
+                .FirstOrDefaultAsync(token),
+            tags: ["products"],
+            cancellationToken: ct);
 
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
+    public ValueTask InvalidateAsync(Guid id, CancellationToken ct) =>
+        cache.RemoveAsync($"product:{id}", ct);
 }
 ```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
+
+Keep `LocalCacheExpiration` short when other instances may update data: L1 entries on other instances are not invalidated by `RemoveAsync` on one instance unless you add a backplane-style notification.
+
+## IDistributedCache Directly
+
+For simple shared key-value needs:
 
 ```csharp
-// Redis Cache Service 3
-public class CacheService_3
+await cache.SetStringAsync($"rate:{userId}", json, new DistributedCacheEntryOptions
 {
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_3(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
+    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+}, ct);
 ```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
+
+Implementations: Redis (`Microsoft.Extensions.Caching.StackExchangeRedis`), SQL Server, PostgreSQL (community), and in-memory for tests. Serialization is your responsibility with the raw interface.
+
+## Cache Invalidation Strategies
+
+| Strategy | How | Trade-off |
+|----------|-----|-----------|
+| Time-based expiry | Absolute or sliding expiration | Simple; stale up to TTL |
+| Explicit removal on write | Remove key after successful DB commit | Fresh; must cover every write path |
+| Tag-based | `HybridCache.RemoveByTagAsync("products")` | Bulk invalidation of related entries |
+| Versioned keys | Include a version or `rowversion` in the key | No delete needed; old keys expire |
+| Event-driven | Publish change events; subscribers evict | Cross-service invalidation; eventual |
+
+Remove from cache **after** the database commit succeeds; removing before commit lets a concurrent reader repopulate stale data.
+
+## Session State
 
 ```csharp
-// Redis Cache Service 4
-public class CacheService_4
+builder.Services.AddDistributedMemoryCache();      // replace with Redis in production
+builder.Services.AddSession(o =>
 {
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_4(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
+    o.IdleTimeout = TimeSpan.FromMinutes(20);
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.Cookie.SameSite = SameSiteMode.Lax;
+    o.Cookie.IsEssential = true;
+});
+app.UseSession();
 ```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
+
+- Session is backed by `IDistributedCache`; with the in-memory implementation it is lost on restart and not shared across instances.
+- Session access is not concurrency-safe across simultaneous requests from the same user (last write wins).
+- Keep session small; store IDs, not object graphs. For APIs, prefer explicit resources with IDs over session state.
+
+## Optimistic Concurrency
+
+Prevent lost updates when two requests modify the same row:
 
 ```csharp
-// Redis Cache Service 5
-public class CacheService_5
+public class Order
 {
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_5(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
+    public Guid Id { get; set; }
+    public OrderStatus Status { get; set; }
+    [Timestamp] public byte[] RowVersion { get; set; } = [];   // SQL Server rowversion
 }
 ```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
+
+For PostgreSQL use the `xmin` system column (`builder.Property<uint>("xmin").IsRowVersion()` with Npgsql) or a manual version column. EF Core includes the version in the `WHERE` clause and throws `DbUpdateConcurrencyException` when zero rows are affected; map it to 409 Conflict, or to 412 when the client sent an `If-Match` ETag.
 
 ```csharp
-// Redis Cache Service 6
-public class CacheService_6
+app.MapPut("/orders/{id:guid}", async (Guid id, UpdateOrder req, OrdersDbContext db, CancellationToken ct) =>
 {
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_6(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
+    var order = await db.Orders.FindAsync([id], ct);
+    if (order is null) return Results.NotFound();
+    db.Entry(order).Property(o => o.RowVersion).OriginalValue = Convert.FromBase64String(req.Version);
+    order.Status = req.Status;
+    await db.SaveChangesAsync(ct);    // concurrency exception handled globally -> 409
+    return Results.NoContent();
+});
 ```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
 
-```csharp
-// Redis Cache Service 7
-public class CacheService_7
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
+## Idempotency for State-Changing Requests
 
-    public CacheService_7(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
+For POST endpoints that clients may retry, accept an `Idempotency-Key` header, store the key with the result in the same transaction as the side effect, and return the stored result on repeats. A unique index on (client ID, idempotency key) makes this race-free.
 
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
+## Background and Long-Running State
 
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
+- Work started by a request but completed later (exports, imports) should be persisted as a job record with status, processed by a background worker or queue consumer, and polled or notified.
+- `IHostedService` instances run per pod; do not assume a single instance unless you use leader election or a scheduler that guarantees it.
 
-```csharp
-// Redis Cache Service 8
-public class CacheService_8
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
+## Blazor and SignalR Notes
 
-    public CacheService_8(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
+- Blazor Server keeps per-circuit state in server memory; scale-out requires sticky sessions (Azure SignalR Service handles this) and state is lost if the circuit is lost unless persisted.
+- SignalR across multiple instances needs a backplane (Redis or Azure SignalR Service).
 
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
+## Checklist
 
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 9
-public class CacheService_9
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_9(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 10
-public class CacheService_10
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_10(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 11
-public class CacheService_11
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_11(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 12
-public class CacheService_12
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_12(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 13
-public class CacheService_13
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_13(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 14
-public class CacheService_14
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_14(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 15
-public class CacheService_15
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_15(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 16
-public class CacheService_16
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_16(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 17
-public class CacheService_17
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_17(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 18
-public class CacheService_18
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_18(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 19
-public class CacheService_19
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_19(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 20
-public class CacheService_20
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_20(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 21
-public class CacheService_21
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_21(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 22
-public class CacheService_22
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_22(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 23
-public class CacheService_23
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_23(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 24
-public class CacheService_24
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_24(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 25
-public class CacheService_25
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_25(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 26
-public class CacheService_26
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_26(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 27
-public class CacheService_27
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_27(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 28
-public class CacheService_28
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_28(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 29
-public class CacheService_29
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_29(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 30
-public class CacheService_30
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_30(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 31
-public class CacheService_31
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_31(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 32
-public class CacheService_32
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_32(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 33
-public class CacheService_33
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_33(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 34
-public class CacheService_34
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_34(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 35
-public class CacheService_35
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_35(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 36
-public class CacheService_36
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_36(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 37
-public class CacheService_37
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_37(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 38
-public class CacheService_38
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_38(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
-
-```csharp
-// Redis Cache Service 39
-public class CacheService_39
-{
-    private readonly IDistributedCache _cache;
-    private readonly DistributedCacheEntryOptions _options;
-
-    public CacheService_39(IDistributedCache cache)
-    {
-        _cache = cache;
-        _options = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-            SlidingExpiration = TimeSpan.FromMinutes(2)
-        };
-    }
-
-    public async Task SetStateAsync(string key, string value, CancellationToken ct = default)
-    {
-        await _cache.SetStringAsync(key, value, _options, ct);
-    }
-
-    public async Task<string?> GetStateAsync(string key, CancellationToken ct = default)
-    {
-        return await _cache.GetStringAsync(key, ct);
-    }
-}
-```
-State management is critical for scalability. By keeping the API stateless and offloading state to a distributed cache like Redis, we ensure that horizontal scaling does not introduce state inconsistency.
+- [ ] No business state in static fields or singletons
+- [ ] HybridCache (or memory + distributed) with explicit TTLs
+- [ ] Cache invalidated after successful commits; stampede protected
+- [ ] Session only for small, non-critical data, backed by a distributed store
+- [ ] Optimistic concurrency tokens on contended entities; conflicts mapped to 409/412
+- [ ] Idempotency keys for retried POSTs
+- [ ] Long-running work persisted as jobs, not held in memory

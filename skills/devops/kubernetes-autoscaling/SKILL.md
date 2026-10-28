@@ -319,9 +319,9 @@ data:
     max-node-provision-time: 15m
 ```
 
-### Step 10: Karpenter Provisioner for Data Workloads
+### Step 10: Karpenter NodePool for Data Workloads (karpenter.sh/v1)
 ```yaml
-apiVersion: karpenter.sh/v1beta1
+apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: data-worker
@@ -339,7 +339,10 @@ spec:
         operator: In
         values: ["m5.2xlarge", "m5.4xlarge", "c5.2xlarge"]
       nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
         name: data-ec2
+      expireAfter: 720h
       taints:
       - key: workload-type
         value: data
@@ -347,19 +350,22 @@ spec:
   limits:
     cpu: 1000
   disruption:
-    consolidationPolicy: WhenUnderutilized
-    expireAfter: 720h
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 1m
 ---
-apiVersion: karpenter.k8s.aws/v1beta1
+apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
   name: data-ec2
 spec:
-  amiFamily: Bottlerocket
-  subnetSelector:
-    karpenter.sh/discovery: my-cluster
-  securityGroupSelector:
-    karpenter.sh/discovery: my-cluster
+  amiSelectorTerms:
+    - alias: bottlerocket@latest   # pin a version in production
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
   role: KarpenterNodeRole
   tags:
     Environment: production

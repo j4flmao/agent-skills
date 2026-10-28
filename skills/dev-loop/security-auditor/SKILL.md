@@ -36,6 +36,16 @@ Exact user phrases: "security audit", "vulnerability scan", "security review", "
 ### Output Artifact
 Security audit report with identified vulnerabilities by severity, remediation steps, and priority.
 
+### Response Format
+```
+Scope: {repo/service, commit}
+Findings: [{severity}] {title} — {file:line} — {CWE/OWASP ref}
+  Impact: {what an attacker gains}
+  Fix: {concrete change}
+Tools run: {SAST/SCA/secrets scan + versions}
+Not covered: {areas out of scope}
+```
+
 ### Completion Criteria
 - [ ] Dependency vulnerability scan completed
 - [ ] SAST scan completed and findings reviewed
@@ -262,12 +272,12 @@ jobs:
 
   sast:
     runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep   # semgrep-action is deprecated; run the CLI in the official image
     steps:
       - uses: actions/checkout@v4
       - name: Semgrep SAST
-        uses: semgrep/semgrep-action@v1
-        with:
-          config: p/default
+        run: semgrep scan --config p/default --error
 
   secrets-scan:
     runs-on: ubuntu-latest
@@ -284,7 +294,7 @@ jobs:
 ### Step 6: Remediation Prioritization
 
 ```yaml
-# CVSS v3 severity levels
+# CVSS qualitative severity ranges (same bands in v3.1 and v4.0)
 severity:
   critical: "9.0-10.0 — Fix within 24 hours"
   high: "7.0-8.9 — Fix within 7 days"
@@ -336,10 +346,10 @@ priority_matrix:
 
 ## References
   - references/security-auditor-advanced.md — Security Auditor Advanced Topics
-  - references/security-auditor-api.md — API Security Testing Reference
+  - references/owasp-top10.md — OWASP Top 10
   - references/security-auditor-fundamentals.md — Security Auditor Fundamentals
-  - references/security-auditor-remediation.md — Security Remediation Reference
-   - references/security-auditor-tools.md — Security Tools Reference
+  - references/remediation-guide.md — Remediation Guide
+   - references/security-audit-automation.md — Security Audit Automation
 
 ## Implementation Patterns
 

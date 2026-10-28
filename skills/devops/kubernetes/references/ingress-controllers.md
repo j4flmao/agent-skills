@@ -310,7 +310,6 @@ kind: Ingress
 metadata:
   name: alb-ingress
   annotations:
-    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
@@ -318,6 +317,9 @@ metadata:
     alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
     alb.ingress.kubernetes.io/healthcheck-path: /health
     alb.ingress.kubernetes.io/success-codes: "200-399"
+spec:
+  ingressClassName: alb   # replaces the deprecated kubernetes.io/ingress.class annotation
+  # rules: ... as above
 
 ---
 # GKE Ingress

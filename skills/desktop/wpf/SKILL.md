@@ -1,7 +1,7 @@
 ---
 name: desktop-wpf
 description: >
-  Use when the user asks about WPF (.NET Framework or .NET Core/5+/6+), XAML desktop apps, MVVM with WPF, XAML data binding, or WPF custom controls. Do NOT use for: WinForms (desktop-winforms), WinUI 3 (desktop-winui3), or UWP (desktop-uwp).
+  Use when the user asks about WPF (.NET Framework or .NET Core/5+/6+), XAML desktop apps, MVVM with WPF, XAML data binding, or WPF custom controls. Do NOT use for: WinForms (desktop-winforms), WinUI 3, or UWP (desktop-uwp).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -24,7 +24,7 @@ Build Windows desktop applications using Windows Presentation Foundation (WPF) �
 Exact user phrases: "WPF", "WPF app", "XAML", "MVVM WPF", "WPF data binding", "WPF custom control", "WPF styles", "WPF template", "WPF binding", "ICommand", "INotifyPropertyChanged", "WPF UserControl".
 
 ### Input Context
-- .NET target (.NET 6+ preferred, .NET Framework 4.8.x for legacy)
+- .NET target (current LTS such as .NET 8/10 for new work; .NET Framework 4.8.x for legacy)
 - Architecture (MVVM, MVC, code-behind)
 - UI patterns (master-detail, wizard, dashboard, document MDI)
 - Data access (Entity Framework, NHibernate, Dapper, ADO.NET)
@@ -34,11 +34,20 @@ Exact user phrases: "WPF", "WPF app", "XAML", "MVVM WPF", "WPF data binding", "W
 ### Output Artifact
 WPF application architecture with XAML view tree, ViewModel layer, data access, and styling strategy.
 
+### Response Format
+```
+Target: {.NET version}  Pattern: MVVM ({CommunityToolkit.Mvvm|custom})
+Views -> ViewModels: {mapping}
+Commands: {RelayCommand/AsyncRelayCommand list}
+Styling: {ResourceDictionaries, theme}
+Code: {XAML + C# files}
+```
+
 ### Completion Criteria
 - [ ] Application class configured (App.xaml, startup, resources)
 - [ ] Main window with layout (Grid, DockPanel, or custom shell)
 - [ ] MVVM pattern with ViewModels and ICommand/RelayCommand
-- [ ] Data binding across views (x: Bind for .NET 6+, or Binding with converters)
+- [ ] Data binding across views (`{Binding}` with INotifyPropertyChanged, converters; `x:Bind` does not exist in WPF — it is UWP/WinUI only)
 - [ ] Styles and resources defined (global, theme-aware)
 - [ ] Data templates for list/detail views
 - [ ] Custom controls or UserControls (if needed)
@@ -450,7 +459,7 @@ public class WatermarkTextBox : TextBox
 | Attached behaviors for complex interactions | Reusable, declarative interaction patterns |
 | Prism for modular enterprise apps | Region navigation, modularity, DI integration |
 | WPF Performance Suite for profiling | Identify rendering, layout, binding bottlenecks |
-| .NET 6+ for new WPF projects | .NET 6+, not .NET Framework |
+| Modern .NET (LTS) for new WPF projects | .NET 8/10 LTS, not .NET Framework (.NET 6/7 are out of support) |
 
 ## Architecture Patterns
 
@@ -493,9 +502,10 @@ public class Mediator
 
 ## References
   - references/wpf-advanced.md — WPF Advanced Topics
+  - references/wpf-architecture.md — WPF Architecture Reference
+  - references/wpf-best-practices.md — WPF Best Practices
   - references/wpf-fundamentals.md — WPF Fundamentals
   - references/wpf-mvvm-patterns.md — WPF MVVM Patterns Reference
   - references/wpf-performance.md — WPF Performance Reference
-  - references/wpf-styling.md — WPF Styling and Theming Reference
 ## Handoff
-Hand off to `desktop-winui3` for Windows App SDK migration. Hand off to `design-accessibility` for UIA accessibility testing.
+For Windows App SDK / WinUI 3 migration see `../winui3/references/` (no dedicated skill yet). Hand off to `design-accessibility` for UIA accessibility testing.

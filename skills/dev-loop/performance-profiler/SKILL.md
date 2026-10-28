@@ -21,7 +21,7 @@ Identify, analyze, and resolve performance bottlenecks in applications — CPU p
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "performance profiling", "profiling", "slow application", "performance bottleneck", "CPU profiler", "memory leak", "heap dump", "database slow query", "performance optimization", "flame graph", "page speed", "LCP", "FID", "CLS".
+Exact user phrases: "performance profiling", "profiling", "slow application", "performance bottleneck", "CPU profiler", "memory leak", "heap dump", "database slow query", "performance optimization", "flame graph", "page speed", "LCP", "INP", "CLS".
 
 ### Input Context
 - Performance symptom (slow response, high CPU, memory growth, network latency, UI jank)
@@ -33,6 +33,16 @@ Exact user phrases: "performance profiling", "profiling", "slow application", "p
 
 ### Output Artifact
 Performance analysis report with measured metrics, bottleneck identification, and optimized code.
+
+### Response Format
+```
+Symptom + baseline: {metric, value, environment}
+Tool: {profiler/APM/DevTools}
+Hot spots: {function/query/resource -> % time or bytes}
+Root cause: {explanation}
+Fix: {change}
+Result: {before -> after, same workload}
+```
 
 ### Completion Criteria
 - [ ] Baseline performance metrics established
@@ -333,8 +343,8 @@ optimizations:
 
 ## References
    - references/performance-profiler-advanced.md — Performance Profiler Advanced Topics
-   - references/performance-profiler-database.md — Database Profiling Reference
-   - references/performance-profiler-frontend.md — Frontend Profiling Reference
+   - references/bottleneck-analysis.md — Bottleneck Analysis
+   - references/profiling-tools.md — Profiling Tools
    - references/performance-profiler-fundamentals.md — Performance Profiler Fundamentals
 
 ## Implementation Patterns

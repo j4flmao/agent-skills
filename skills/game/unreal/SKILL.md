@@ -1,11 +1,38 @@
 ---
 name: unreal
-description: Expert game development with Unreal Engine - architecture, C++/Blueprint, rendering (RenderGraph/Nanite/Lumen), physics (Chaos), animation, AI, multiplayer, and performance.
+description: >
+  Use this skill when the user says 'unreal', 'unreal engine 5', 'UE5', 'blueprint', 'UObject', 'gameplay ability system', 'nanite', 'lumen', 'unreal replication'. Guides Unreal Engine 5 projects: UObject/Actor framework, C++ vs Blueprint, rendering (Nanite/Lumen), Chaos physics, animation, AI, replication and profiling. Do NOT use for: Unity or Godot, custom engine rendering (use render-graph/vulkan).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, unreal, cpp, engine]
 ---
 
 # Unreal Engine Deep Engineering Guide
 
+## Purpose
 Unreal Engine is a C++ game engine with a powerful actor-component framework (UObject/AActor), Blueprint visual scripting, the Chaos physics system, and the modern rendering stack built on RenderGraph, Nanite virtualized geometry, and Lumen GI.
+
+## Agent Protocol
+
+### Trigger
+"unreal", "unreal engine 5", "UE5", "blueprint", "UObject", "gameplay ability system", "nanite", "lumen", "unreal replication".
+
+### Input Context
+- UE version (5.x)
+- C++ / Blueprint split
+- Target platforms and performance targets
+
+### Output Artifact
+C++/Blueprint guidance, config or a profiling plan. No file unless requested.
+
+### Response Format
+```
+UE: {5.x}
+Change: {what and why}
+Code: {snippet}
+Verify: {Unreal Insights / stat commands}
+```
 
 ## 1. Engine Architecture
 
@@ -83,17 +110,17 @@ SceneColorInit -> BasePass (GBuffer) -> LightCulling -> DeferredShading
                -> Reflection capture -> Sky -> Translucency -> PostProcess -> Present
 ```
 
-Resources auto-lifecycled (scopes), driver-managed. You can author custom passes via `FRenderingCompositePass` or `FSceneRenderer`.
+Resources are transient and lifetime-tracked by the Render Dependency Graph (RDG). Custom passes are added with `FRDGBuilder::AddPass` from a plugin, usually hooked in through a `FSceneViewExtensionBase` subclass (no engine fork needed).
 
 ### 3.2 Nanite
 
-- Virtualized geometry: clusters, hierarchical LOD (HLOD), custom datastreams.
-- Efficient for high-poly static meshes; NOT for skinned/animated meshes (fallback classic LODs).
-- Enable on large static scenes; avoid vertex-modifying effects.
+- Virtualized geometry: meshes split into clusters with a cluster LOD hierarchy, streamed and culled on the GPU.
+- Best for high-poly opaque static meshes; masked materials and World Position Offset (foliage) are supported since 5.1 at extra cost; skinned-mesh support is experimental in recent 5.x releases — check your version.
+- Keep translucent and heavily deforming content on classic LODs.
 
 ### 3.3 Lumen
 
-- Global illumination (GI) via radiance cache (software ray tracing), optionally hardware RT.
+- Dynamic GI and reflections. Software ray tracing traces mesh distance fields against a surface cache; hardware ray tracing is used when enabled and supported.
 - GPU-heavy; disable on low-end; control with `Lumen.` console vars.
 - For stylized/flat art, skip Lumen; use precomputed lightmaps.
 
@@ -105,23 +132,23 @@ Resources auto-lifecycled (scopes), driver-managed. You can author custom passes
 ## 4. Physics — Chaos
 
 - Chaos replaced PhysX in UE5.
-- `FPhysicsSolver` fixed substep at `PhysicsSubstep` (default 0.0083s).
-- `USceneComponent::SetSimulatePhysics(true)` to enable RigidBody.
+- By default Chaos steps with the game frame; enable substepping or Async Physics (Project Settings > Physics > Tick Async Physics) for a fixed physics step.
+- `UPrimitiveComponent::SetSimulatePhysics(true)` to simulate a body.
 - Contact: `OnComponentHit` / `OnComponentBeginOverlap` delegates.
-- Destruction: `AChaosDestructible` with geometry collections.
+- Destruction: Geometry Collection assets (`UGeometryCollectionComponent`, fractured in the Fracture editor mode).
 
 ### 4.1 Tunneling & CCD
 
-Fast small projectiles: enable `bCCDEnablePhysics` on the body; or use sweep `UKismetSystemLibrary::LineTraceSingle` per tick.
+Fast small projectiles: enable CCD on the body (`BodyInstance.bUseCCD = true`), or skip physics bodies and sweep each tick with `GetWorld()->SweepSingleByChannel` (hitscan: `LineTraceSingleByChannel`).
 
 ### 4.2 Level Streaming
 
-`UWorld::StreamLevel` async; `RegisterActor`/`UnregisterActor` for hot unload.
+Open worlds use World Partition (grid cells streamed around streaming sources, data layers, HLODs). Classic sublevels stream with `UGameplayStatics::LoadStreamLevel` / `UnloadStreamLevel` or Level Streaming Volumes.
 
 ## 5. Animation
 
 - Animation Blueprint (AnimGraph): blend spaces, aim offset, state machine, layered blend per bone.
-- Controls Rig (IK) via `UAnimationBlueprintLibrary`.
+- Control Rig for procedural animation/IK in the AnimGraph; IK Rig + IK Retargeter for retargeting between skeletons.
 - Cached Pose / reduce `FAnimNode_*` graph cost.
 - Root motion drives movement; `bUseControllerRotationYaw=false` for root-motion characters.
 
@@ -152,7 +179,7 @@ Fast small projectiles: enable `bCCDEnablePhysics` on the body; or use sweep `UK
 - `Dormancy`: actors freeze replication when unchanged (`DORM_DormantAll`).
 - `NetUpdateFrequency`: throttle per-actor replication (default 100Hz, reduce for background actors).
 - Property conditions: `COND_OwnerOnly`, `COND_InitialOnly`.
-- Push model (UE5): `MARK_PROPERTY_DIRTY` + `NET_SERIALIZATION`.
+- Push model: enable push-model replication, declare properties with `FDoRepLifetimeParams{.bIsPushBased = true}` and call `MARK_PROPERTY_DIRTY_FROM_NAME` when they change. Iris is the newer replication system (opt-in in 5.x).
 
 ## 8. UI (UMG)
 
@@ -164,9 +191,9 @@ Fast small projectiles: enable `bCCDEnablePhysics` on the body; or use sweep `UK
 ## 9. Asset Pipeline
 
 - Content Browser assets (.uasset) are binary, versioned, auto-serialized.
-- Cook + Stage: `Cook.bat` + `Stage.bat` per platform.
+- Cook + stage + package per platform: `RunUAT BuildCookRun -project=... -platform=... -cook -stage -pak -package`.
 - Asset Manager: async loading, soft references (`TSoftObjectPtr`, `TSoftClassPtr`).
-- Hot-loaded assets via `AsyncLoadAsset` / `StreamableManager`.
+- Async loading via `FStreamableManager::RequestAsyncLoad` or `UAssetManager::LoadPrimaryAsset`.
 
 ## 10. Performance Rules (Lead Level)
 
@@ -175,7 +202,7 @@ Fast small projectiles: enable `bCCDEnablePhysics` on the body; or use sweep `UK
 3. Avoid `GetAllActorsOfClass` in tick; maintain manager lists.
 4. Object pools for frequently spawned/destroyed actors.
 5. GC: minimize UObject allocation in hot paths; use native allocators for transient data.
-6. Shader complexity: keep material instruction count <200 for mobile, <500 for PC.
+6. Shader complexity: check the Shader Complexity view mode and material stats; set per-platform instruction budgets with your art team and enforce them in review.
 7. LODs mandatory for foliage, large scenes.
 
 ### 10.1 Frame Budget Template

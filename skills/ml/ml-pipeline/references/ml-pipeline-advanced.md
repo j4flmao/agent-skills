@@ -1,214 +1,132 @@
-# Ml Pipeline Advanced Topics
+# ML Pipeline Advanced Patterns
+
+Patterns for mature ML pipelines: training/serving consistency, data validation gates, step caching and incremental runs, champion/challenger promotion, automated retraining, lineage, distributed training steps, and cost control. Fundamentals are in `ml-pipeline-fundamentals.md`.
 
-## Introduction
-Advanced Ml Pipeline topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+## 1. Training/Serving Skew
+
+| Source of skew | Prevention |
+|---|---|
+| Different feature code in training and serving | Single feature definitions (feature store such as Feast, Tecton, Databricks/Vertex feature stores) or shared library |
+| Point-in-time leakage in training features | Point-in-time joins (`as of` event timestamp) when building training sets |
+| Different preprocessing versions | Package preprocessing with the model artifact |
+| Online data freshness differs from training assumptions | Log served features; compare distributions to training |
 
-## Advanced Architecture Patterns
+Log the exact feature vector used for every online prediction (or a sample) to enable skew analysis and future training.
+
+## 2. Data Validation Gates
+
+```python
+import pandera.pandas as pa      # pandera >= 0.24; older versions: import pandera as pa
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+schema = pa.DataFrameSchema({
+    "tenure_days": pa.Column(int, pa.Check.ge(0)),
+    "monthly_spend": pa.Column(float, pa.Check.in_range(0, 100_000), nullable=False),
+    "plan": pa.Column(str, pa.Check.isin(["free", "pro", "enterprise"])),
+    "churned": pa.Column(int, pa.Check.isin([0, 1])),
+}, strict=True)
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+def gate(df):
+    schema.validate(df, lazy=True)          # raises SchemaErrors listing all failures
+    rate = df["churned"].mean()
+    if not 0.01 <= rate <= 0.30:
+        raise ValueError(f"label rate {rate:.3f} outside expected range; check upstream data")
+```
+
+Also compare the new snapshot with the previous one (row-count change, per-feature PSI/KS) and fail or warn on large shifts. Tools: pandera, Great Expectations, TFDV, Evidently.
+
+## 3. Caching and Incremental Execution
+
+- Make each step a pure function of its inputs (data version, code version, config). Cache outputs keyed by a hash of those inputs; skip unchanged steps.
+- Orchestrators support this natively (Kubeflow/Vertex step caching, Dagster asset materialization with code versions, Metaflow resume).
+- Expensive feature backfills run incrementally by partition; training reads a declared window.
+
+```python
+import hashlib, json
+
+def step_key(step: str, data_version: str, code_sha: str, config: dict) -> str:
+    payload = json.dumps({"step": step, "data": data_version, "code": code_sha, "config": config},
+                         sort_keys=True)
+    return hashlib.sha256(payload.encode()).hexdigest()
+```
+
+## 4. Champion/Challenger Promotion
+
+```python
+def promote_if_better(client, name: str, challenger_version: str, eval_fn, *,
+                      min_gain: float = 0.005) -> bool:
+    champion = client.get_model_version_by_alias(name, "champion")
+    c_metrics = eval_fn(f"models:/{name}/{champion.version}")
+    n_metrics = eval_fn(f"models:/{name}/{challenger_version}")
+    if n_metrics["pr_auc"] < c_metrics["pr_auc"] + min_gain:
+        return False
+    for slice_name, value in n_metrics["slices"].items():       # no regressions on key segments
+        if value < c_metrics["slices"][slice_name] - 0.01:
+            return False
+    client.set_registered_model_alias(name, "champion", challenger_version)
+    return True
+```
+
+- Evaluate both models on the same, current holdout set.
+- Check slices (segments, regions, protected attributes where relevant) and operational metrics (latency, size).
+- For high-impact models, follow offline promotion with an online A/B test or shadow deployment before full rollout.
+
+## 5. Automated Retraining Triggers
+
+| Trigger | Notes |
+|---|---|
+| Schedule (weekly/monthly) | Simple; may retrain unnecessarily |
+| Data volume (N new labelled rows) | Ties retraining to new information |
+| Drift detected (features or predictions) | Investigate root cause; drift may be a data bug |
+| Performance drop (once labels arrive) | Most meaningful; labels may be delayed |
+
+Retraining runs the full pipeline including validation and champion comparison; it never auto-promotes without gates.
+
+## 6. Lineage and Governance
+
+Record for each model version:
+- Training data versions and feature definitions.
+- Code commit, container image digest, pipeline run ID.
+- Hyperparameters, metrics, evaluation report, approval record.
+- Intended use, limitations, and owners (model card).
+
+Regulated domains (credit, insurance, healthcare; EU AI Act high-risk systems) require documentation, human oversight, and logging; design the pipeline to produce these artifacts automatically.
+
+## 7. Distributed and GPU Steps
+
+- Keep data preparation on CPU clusters (Spark, Ray Data) and run training on GPU nodes only for the training step.
+- Use PyTorch DDP/FSDP or framework launchers (`torchrun`, Ray Train, Kubeflow Training Operator) for multi-GPU training.
+- Checkpoint regularly to object storage so preemptible/spot GPUs can resume.
+- Mixed precision with `torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16)` on supported GPUs reduces memory and time.
+
+## 8. Pipeline Testing
+
+| Test | Scope |
+|---|---|
+| Unit tests | Feature functions, preprocessing, metric code |
+| Pipeline smoke test | Full pipeline on a small fixture dataset in CI |
+| Data contract tests | Upstream schemas match expectations |
+| Model behaviour tests | Invariance (irrelevant changes do not flip predictions), directional expectations, minimum performance on curated cases |
+| Serving tests | Load model artifact in the serving image; predict on input example |
+
+## 9. Cost Control
+
+- Cache and skip unchanged steps.
+- Right-size compute per step; autoscale clusters to zero between runs.
+- Sample data for hyperparameter search; train the final model on full data.
+- Track cost per pipeline run and per model version.
+
+## Pitfalls
+
+- Feature store adopted for online serving while training still uses separate SQL: skew persists.
+- Auto-promotion on a single aggregate metric, hiding slice regressions.
+- Retraining on drifted data caused by an upstream bug.
+- Missing lineage, making audits and rollbacks guesswork.
+
+## Checklist
+
+- [ ] Shared feature definitions with point-in-time correct training sets.
+- [ ] Validation gates on schema, ranges, label rate, and distribution shift.
+- [ ] Step caching keyed by data, code, and config versions.
+- [ ] Champion/challenger with slice checks; online validation for high-impact models.
+- [ ] Retraining triggers with full gates; no ungated promotion.
+- [ ] Lineage and model cards produced automatically.

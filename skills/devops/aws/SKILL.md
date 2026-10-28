@@ -86,7 +86,7 @@ Direct file write. No response text.
 | Use Case | Recommended | Performance | Max Size |
 |---|---|---|---|
 | Object storage, static files | S3 | 3500 PUT/5500 GET per prefix per sec | Unlimited |
-| Block storage for EC2 | EBS (gp3/io2) | 16000 IOPS per volume (io2) | 64TiB |
+| Block storage for EC2 | EBS (gp3/io2) | gp3 up to 80,000 IOPS / 2,000 MiB/s (since Sep 2025); io2 Block Express up to 256,000 IOPS | 64 TiB |
 | Shared file system (NFS) | EFS | 10GB/s burst | Unlimited |
 | Windows file server | FSx for Windows | SMB protocol | 64TiB |
 | Lustre HPC | FSx for Lustre | 100s GB/s throughput | Unlimited |
@@ -437,16 +437,16 @@ resource "aws_ecs_service" "app" {
 }
 ```
 
-## Tool Comparison: AWS Compute Services Pricing (us-east-1, 2025)
+## Tool Comparison: AWS Compute Services Pricing (us-east-1 list prices, approximate — verify with the AWS Pricing Calculator)
 
 | Service | Unit | Price | Best For |
 |---|---|---|---|
 | EC2 t3.medium (2 vCPU, 4GB) | On-Demand/hour | $0.0416 | Steady-state apps |
 | EC2 t3.medium (1yr reserved) | /hour | $0.0250 | Predictable workloads |
-| Lambda 1GB, 128ms | Per 1M invocations | $0.26 | Low-volume, bursty |
-| ECS Fargate 0.5 vCPU, 1GB | Per hour | $0.056 | Container apps |
+| Lambda x86, 1 GB, 128 ms avg | Per 1M invocations | ≈ $2.33 ($0.20 requests + 128,000 GB-s × $0.0000166667) | Low-volume, bursty |
+| ECS Fargate Linux/x86 0.5 vCPU, 1 GB | Per hour | ≈ $0.025 | Container apps |
 | EKS cluster (control plane) | Per hour | $0.10 | K8s workloads |
-| App Runner (1 vCPU, 2GB) | Per hour | $0.102 | Simple web apps |
+| App Runner (1 vCPU, 2 GB, active) | Per hour | ≈ $0.078 | Simple web apps |
 
 ## Anti-Patterns
 
@@ -530,7 +530,6 @@ Terraform HCL, CloudFormation YAML, AWS CLI commands, or IAM policy JSON.
   - references/lambda-triggers.md
   - references/networking.md
   - references/well-architected.md
-  - references/service-comparison-guide.md
 
 ## Handoff
 After completing this skill:

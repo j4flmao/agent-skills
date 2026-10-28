@@ -356,7 +356,7 @@ Visit → Signup → Onboard → Activate → Subscribe → Refer
 {per stage lever and expected impact}
 ```
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### SaaS Activation Rate Transformation
 A B2B project management tool had 28% activation rate (users who created a project with a teammate within 7 days). TTV analysis showed that users who completed their first project with a teammate had 89% 30-day retention vs. 34% for solo users. The Aha moment was clear: collaboration within a project.

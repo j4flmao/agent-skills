@@ -364,7 +364,7 @@ Yellow cluster status (unassigned shards) degrades read capacity. Red cluster st
 ## Compared With
 
 ### Elasticsearch vs OpenSearch
-OpenSearch is a fork of Elasticsearch 7.10 with built-in security, k-NN vector search, PPL, and alerting. Elasticsearch 8.x has more advanced features (ELSER, vector search with HNSW, better performance). Choose OpenSearch for open-source commitment and built-in security. Choose Elasticsearch for the latest search and AI features.
+OpenSearch is a fork of Elasticsearch 7.10 with built-in security, k-NN vector search, PPL, and alerting. Elasticsearch (8.x/9.x) offers ELSER sparse retrieval, HNSW vector search with quantization, and Elastic-only features; since 2024 it is also available under AGPLv3 alongside SSPL/Elastic License. OpenSearch (Apache 2.0, governed by the OpenSearch Software Foundation under the Linux Foundation) includes security, k-NN, and alerting. Choose based on licensing needs, managed-service options, and required features; compare current versions rather than the 2021 fork point.
 
 ### Elasticsearch vs Meilisearch
 Elasticsearch is a full-featured search and analytics engine for datasets from GB to PB. Meilisearch is lightweight (Rust, single-node, sub-50ms) for datasets up to 10M docs. Choose Elasticsearch for complex querying, aggregations, and large-scale analytics. Choose Meilisearch for simple, fast site search.

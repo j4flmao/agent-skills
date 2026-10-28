@@ -1,213 +1,117 @@
-# Serverless Fundamentals
+# Serverless Fundamentals: Models, Trade-offs, and Design Rules
 
-## Overview
-Serverless is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Platform-neutral fundamentals of serverless computing: what "serverless" covers, execution models across providers, when it fits, and the design rules every function must follow. AWS Lambda specifics are in `lambda-basics.md`; triggers in `event-sources.md`; tuning in `function-optimization.md`.
 
-## Core Concepts
+## What Counts as Serverless
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Serverless helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Category | Examples | Unit of deployment |
+|----------|----------|--------------------|
+| Functions (FaaS) | AWS Lambda, Azure Functions, Google Cloud Run functions | Function handler |
+| Serverless containers | Google Cloud Run, AWS Fargate (with ECS), Azure Container Apps | Container image |
+| Edge functions | Cloudflare Workers, Fastly Compute, Lambda@Edge / CloudFront Functions | Script/Wasm at edge locations |
+| Managed backends | DynamoDB, Aurora Serverless v2, S3, SQS, Pub/Sub, EventBridge, Step Functions | Configuration |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Serverless solutions. These principles help maintain code quality and reduce technical debt.
+Common properties: no server management, scale with demand (often to zero), pay per use, and the provider owns availability of the runtime.
 
-### Concept 3: Data Management
-Proper data management is essential for Serverless. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Execution Model (FaaS)
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+```
+Event ─► Router/trigger ─► Execution environment (sandbox)
+                               ├─ Init phase: runtime start, your global/static init (cold start)
+                               ├─ Invoke phase: handler(event, context)  ← reused for later invocations (warm)
+                               └─ Shutdown: environment frozen/reclaimed at provider's discretion
+```
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+- **Cold start**: first invocation in a new environment pays init time; warm invocations reuse the environment and global state (connections, caches).
+- **Concurrency**: on Lambda, one environment handles one request at a time; scaling adds environments. Cloud Run and Azure Functions (depending on plan) can handle multiple concurrent requests per instance.
+- **Statelessness**: local memory and disk may persist between warm invocations but can vanish at any time; never rely on it for correctness.
 
-## Architecture Patterns
+## When Serverless Fits
 
-### Pattern 1: Standard Architecture
-The standard architecture for Serverless follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+| Good fit | Poor fit |
+|----------|----------|
+| Spiky or unpredictable traffic | Steady high utilization 24/7 (often cheaper on containers/VMs) |
+| Event-driven glue (queues, files, webhooks, schedules) | Long-running jobs beyond platform timeouts |
+| Small teams wanting minimal ops | Workloads needing GPUs, special kernels, or persistent connections at scale (varies by platform) |
+| APIs with moderate latency requirements | Ultra-low, consistent latency where cold starts are unacceptable without provisioned capacity |
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+Model cost with expected request volume, duration, and memory before committing; per-request pricing that is cheap at low volume can exceed container costs at sustained high volume.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+## Provider Comparison (Conceptual)
 
-## Implementation Guide
+| Aspect | AWS Lambda | Azure Functions | Cloud Run (incl. functions) | Cloudflare Workers |
+|--------|-----------|-----------------|-----------------------------|--------------------|
+| Packaging | Zip or container image | Code or container (plan-dependent) | Container image (functions built from source) | JS/TS/Wasm scripts |
+| Concurrency per instance | 1 | Multiple (plan/runtime-dependent) | Configurable, default many | Isolates, many per process |
+| Scale to zero | Yes | Yes (Consumption / Flex Consumption) | Yes | Yes |
+| Max duration | 15 minutes | Plan-dependent | Request timeout up to 60 minutes for services; jobs for longer work | CPU-time limits per request |
+| Warm capacity | Provisioned concurrency, SnapStart | Always-ready instances (Flex/Premium) | Minimum instances | No cold starts in the traditional sense (isolates) |
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+Limits change; confirm current quotas in provider documentation before designing around them.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+## Design Rules
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+1. **Idempotent handlers**: triggers deliver at least once (queues, streams, async invokes, retries). Deduplicate with an idempotency key stored atomically (conditional write).
+2. **Stateless compute, state in managed services**: databases, object storage, caches.
+3. **Initialize once**: create SDK clients and connection pools outside the handler.
+4. **Bounded work per invocation**: fit within timeouts with margin; split large work into steps (queues, workflow engines).
+5. **Explicit timeouts on every outbound call**, shorter than the function timeout.
+6. **Least-privilege identity per function**.
+7. **Structured logs with correlation IDs**; tracing across async hops.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+```python
+import os, boto3
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+table = boto3.resource("dynamodb").Table(os.environ["TABLE"])   # init once per environment
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+def handler(event, context):
+    for record in event["Records"]:
+        process(record)        # must tolerate duplicates
+```
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## Connection Management
 
-## Best Practices
+- Relational databases have limited connections; thousands of concurrent function instances can exhaust them. Use a proxy (RDS Proxy, PgBouncer), HTTP-based data APIs, or serverless-native databases.
+- Reuse HTTP clients with keep-alive across invocations.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+## Event-Driven Architecture Basics
 
-## Common Pitfalls
+| Pattern | Services |
+|---------|---------|
+| Queue-based load leveling | SQS / Service Bus / Pub/Sub between API and workers |
+| Fan-out | SNS / EventBridge / Pub/Sub topics to multiple consumers |
+| Event routing | EventBridge rules, Event Grid |
+| Orchestration | Step Functions, Durable Functions, Workflows |
+| Stream processing | Kinesis / Kafka / Event Hubs with batch triggers |
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+Prefer asynchronous boundaries between services so spikes are absorbed by queues rather than synchronous chains of functions (which multiply latency, cost, and failure modes).
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+## Security Basics
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+- One role per function, scoped to exact resources.
+- Secrets from a secret manager or parameter store, cached in memory with TTL, not in plaintext environment variables in source control.
+- Validate all event input; events from public sources (API, S3 uploads) are untrusted.
+- Keep dependencies minimal and scanned; pin runtimes to supported versions and upgrade before deprecation dates.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## Local Development and Testing
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+- Unit test handlers as plain functions with fake events (provider sample events).
+- Integration test against real cloud resources in an ephemeral stage; emulators (SAM CLI, Functions Core Tools, LocalStack) help but differ from real services.
+- Infrastructure as code (SAM, CDK, Serverless Framework, Terraform) for every resource.
 
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Serverless concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+## Anti-Patterns
+
+- Function calling function synchronously in long chains.
+- Monolithic "lambdalith" routers can be fine for APIs, but huge packages hurt cold starts; measure.
+- Recursive triggers (function writes to the bucket that triggers it) without guards.
+- Ignoring concurrency limits and starving downstream systems.
+
+## Checklist
+
+- [ ] Workload profile and cost model justify serverless
+- [ ] Handlers idempotent; duplicates tested
+- [ ] Clients initialized outside handlers; DB connections pooled or proxied
+- [ ] Timeouts on outbound calls below function timeout
+- [ ] Least-privilege role and secret manager per function
+- [ ] Async boundaries (queues/events) between services
+- [ ] IaC and ephemeral test stages

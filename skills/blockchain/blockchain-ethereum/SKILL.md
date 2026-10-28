@@ -427,9 +427,6 @@ func (api *EthAPI) Call(args TransactionArgs, blockNrOrHash *rpc.BlockNumberOrHa
   - references/layer2-scaling.md — Layer-2 Scaling
   - references/pbs-mev-boost.md — Proposer-Builder Separation & MEV-Boost
   - references/staking-and-validator.md — Staking and Validators
-  - references/ethereum-light-clients.md — Ethereum Light Clients
-  - references/blob-transactions-4844.md — Blob Transactions (EIP-4844)
-  - references/optimistic-vs-zk-rollups.md — Optimistic vs ZK Rollup Comparison
 
 ## Architecture Decision Trees
 

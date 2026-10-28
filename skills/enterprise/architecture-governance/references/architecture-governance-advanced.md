@@ -1,214 +1,139 @@
-# Architecture Governance Advanced Topics
+# Architecture Governance: Advanced Topics
 
-## Introduction
-Advanced Architecture Governance topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced practices for scaling architecture governance across large or regulated organisations: federated governance, governance as code, technology lifecycle management, portfolio rationalisation, risk-based review, regulatory alignment, AI/ML system governance, and measuring governance effectiveness. Builds on `architecture-governance-fundamentals.md`.
 
-## Advanced Architecture Patterns
+## Federated Governance
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+Central boards do not scale beyond a few dozen teams. Federate:
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+| Level | Owns | Mechanism |
+|-------|------|-----------|
+| Enterprise | Principles, mandatory standards, cross-domain decisions, technology lifecycle | Architecture board, tech radar |
+| Domain | Domain models, integration contracts, domain-specific standards | Domain architecture forums |
+| Team | Service design within guardrails | ADRs, fitness functions |
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+Rules for federation:
+- Enterprise sets **outcomes and guardrails**; domains choose **how**.
+- Escalation path defined for cross-domain conflicts.
+- Domain decisions published to a shared index so others can reuse them.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+This mirrors federated computational governance in data mesh: global policies enforced automatically, local autonomy elsewhere.
 
-## Performance Optimization
+## Governance as Code
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+Turn standards into executable checks and run them where engineers work:
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+| Standard | Executable form |
+|----------|-----------------|
+| "Services expose health endpoints and SLOs" | Portal scorecard check against catalog metadata |
+| "APIs follow the style guide" | Spectral ruleset in CI on OpenAPI/AsyncAPI files |
+| "Only approved data stores" | OPA/Conftest policy on Terraform plans |
+| "No cross-domain database access" | Network policies + IAM policies + dependency checks |
+| "Layered architecture inside services" | ArchUnit / dependency-cruiser rules |
+| "Container images from approved bases" | Admission policy (Kyverno/Gatekeeper) |
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+Example Spectral rule:
 
-## Security Hardening
+```yaml
+# .spectral.yaml
+extends: ["spectral:oas"]
+rules:
+  operation-must-have-owner:
+    description: Every operation declares an owning team
+    given: $.paths[*][*]
+    severity: error
+    then:
+      field: x-owner
+      function: truthy
+```
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+Version the policies, test them, roll them out in warn mode first, and publish violations dashboards per team.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+## Technology Lifecycle Management
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+| Stage | Meaning | Governance action |
+|-------|---------|-------------------|
+| Assess | Exploring | Time-boxed spikes, no production |
+| Trial | Limited production use | Named pilot teams, success criteria |
+| Adopt | Default choice | Golden paths, support model |
+| Hold / Contain | No new usage | New use needs exception |
+| Retire | Remove by date | Migration plan, funding, tracking |
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+Track every technology with owner, stage, support/end-of-life dates (vendor and open-source), and number of systems using it. Lifecycle dates for runtimes, frameworks and databases drive migration roadmaps.
 
-## Monitoring and Observability
+## Portfolio Rationalisation
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+- Build an application inventory with business capability mapping, owners, cost, technical health and risk.
+- Classify with a TIME model (Tolerate, Invest, Migrate, Eliminate) or Gartner-style rationalisation.
+- Identify duplicate capabilities (three CRM systems, five workflow engines) and choose target platforms.
+- Fund migrations explicitly; governance without funding produces exceptions, not change.
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+## Risk-Based Reviews
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+Instead of reviewing by project size, score risk:
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+| Factor | Examples |
+|--------|----------|
+| Data sensitivity | Personal, financial, health, regulated data |
+| Exposure | Internet-facing, partner integration |
+| Criticality | Revenue impact, safety, regulatory reporting |
+| Novelty | New technology, new vendor, new pattern |
+| Reversibility | One-way door decisions (data model, vendor lock-in) |
 
-## Scalability and Reliability
+Map score to review depth: low scores self-certify; high scores get threat modelling, resilience review and board decision. Revisit the scoring after incidents.
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+## Regulatory Alignment
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+| Regulation/framework (examples) | Architecture implications |
+|---------------------------------|---------------------------|
+| DORA (EU financial sector) | ICT risk management, resilience testing, third-party register, incident reporting |
+| NIS2 (EU essential/important entities) | Security risk management, supply-chain security, reporting |
+| GDPR | Data minimisation, residency, processing records, privacy by design |
+| EU AI Act | Risk classification of AI systems, documentation, logging, human oversight for high-risk systems |
+| SOC 2 / ISO 27001 | Control evidence: change management, access control, logging |
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+Governance records (ADRs, review outcomes, exceptions, inventories) double as audit evidence; design them to be queryable. Confirm applicability and obligations with legal/compliance.
 
-## Integration and Interoperability
+## Governing AI/LLM Systems
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- Inventory AI use cases with risk classification, data sources, model providers and owners.
+- Standards for: approved model providers and data handling terms, evaluation before release, human-in-the-loop for consequential actions, prompt-injection defences, logging of decisions (see agent observability guidance).
+- Lifecycle: model/version changes treated as changes requiring evaluation evidence.
+
+## Architecture Debt Management
+
+- Record architecture debt items with impact, cost of delay and owner, separate from code-level tech debt.
+- Allocate capacity (e.g. a fixed share of roadmap) to reduce debt aligned with target architecture.
+- Track progress toward target state per domain (transition architectures).
+
+## Measuring Effectiveness
+
+| Dimension | Indicators |
+|-----------|-----------|
+| Flow | Median decision time, review queue length, share auto-approved |
+| Alignment | % systems on adopt-stage technologies, duplicate capabilities reduced |
+| Risk | Open exceptions by severity and age, audit findings, incidents tied to standards gaps |
+| Value | Teams' perception surveys, reuse of platforms/patterns, cost savings from rationalisation |
+
+Review metrics quarterly with engineering leadership; change the governance process itself based on data.
+
+## Common Failure Modes
+
+| Failure | Remedy |
+|---------|--------|
+| Ivory-tower standards | Co-create with guilds; require reference implementations |
+| Board as bottleneck | Tiering, delegation, async reviews, published SLAs |
+| Paper compliance | Automate checks; sample-based deep reviews |
+| Exceptions never expire | Expiry dates enforced; escalate overdue |
+| Governance ignored by product leadership | Tie to business risks and costs; report in business terms |
+
+## Checklist
+
+- [ ] Federated model with clear escalation paths
+- [ ] Key standards enforced as code, rolled out warn-then-enforce
+- [ ] Technology lifecycle register with end-of-life tracking
+- [ ] Application portfolio inventory and rationalisation plan
+- [ ] Risk-based review depth
+- [ ] Governance artefacts queryable as audit evidence
+- [ ] AI systems inventoried and governed
+- [ ] Effectiveness metrics reviewed and acted on

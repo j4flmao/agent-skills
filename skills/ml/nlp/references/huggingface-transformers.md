@@ -1,144 +1,191 @@
-# HuggingFace Transformers
+# Hugging Face Transformers: Practical API Reference
 
-## Pipeline API
+Current-practice usage of the `transformers` library: pipelines, Auto classes, tokenizers, chat templates, generation, device/dtype handling, and fine-tuning with `Trainer`. Parameter names follow recent releases (`dtype` instead of `torch_dtype`, `eval_strategy` instead of `evaluation_strategy`); check your installed version.
+
+## Install
+
+```bash
+uv add transformers accelerate datasets evaluate
+uv add torch            # choose the build matching your CUDA/ROCm/CPU platform
 ```
+
+## Pipelines
+
+```python
 from transformers import pipeline
 
-# Sentiment
-classifier = pipeline("sentiment-analysis",
-    model="distilbert-base-uncased-finetuned-sst-2-english")
-classifier("I love this product!")  # [{"label": "POSITIVE", "score": 0.999}]
+clf = pipeline("text-classification", model="distilbert/distilbert-base-uncased-finetuned-sst-2-english")
+clf(["I love this product!", "Terrible support."])
+# [{'label': 'POSITIVE', 'score': ...}, {'label': 'NEGATIVE', 'score': ...}]
 
-# NER
-ner = pipeline("ner", model="dslim/bert-base-NER", aggregation_strategy="simple")
-ner("Apple is looking at buying U.K. startup for $1 billion")
-
-# QA
-qa = pipeline("question-answering",
-    model="distilbert-base-cased-distilled-squad")
-qa(question="What is the capital of France?",
-   context="Paris is the capital of France.")
-
-# Summarization
-summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
-summarizer(long_text, max_length=130, min_length=30)
-
-# Translation
-translator = pipeline("translation", model="Helsinki-NLP/opus-mt-en-es")
-translator("Hello, how are you?")
+ner = pipeline("token-classification", model="dslim/bert-base-NER", aggregation_strategy="simple")
+qa = pipeline("question-answering", model="distilbert/distilbert-base-cased-distilled-squad")
+zs = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+zs("The invoice is overdue", candidate_labels=["billing", "shipping", "technical"])
+summ = pipeline("summarization", model="facebook/bart-large-cnn")
 ```
 
-| Pipeline | Typical Model | Output |
-|----------|--------------|--------|
-| sentiment-analysis | DistilBERT, RoBERTa | Label + score |
-| text-classification | BERT, DeBERTa | Label + score |
-| token-classification (NER) | BERT, RoBERTa | Entities with positions |
-| question-answering | BERT, RoBERTa | Answer span |
-| summarization | BART, T5, Pegasus | Generated summary |
-| translation | MarianMT, NLLB, mT5 | Translated text |
-| text-generation | GPT-2, Llama, Mistral | Generated tokens |
-| fill-mask | BERT, RoBERTa | Masked predictions |
-| zero-shot-classification | BART, DeBERTa | Label scores |
+| Task string | Typical models | Output |
+|-------------|----------------|--------|
+| `text-classification` | BERT, RoBERTa, DeBERTa fine-tunes | label + score |
+| `token-classification` | BERT-NER | entities with spans |
+| `question-answering` | SQuAD fine-tunes | answer span |
+| `zero-shot-classification` | NLI models (BART-MNLI, DeBERTa-NLI) | label scores |
+| `summarization` / `translation` | BART, T5, Marian, NLLB | text |
+| `text-generation` | Decoder LLMs | generated text |
+| `fill-mask` | BERT, RoBERTa | token predictions |
+| `feature-extraction` | Encoders | hidden states |
+
+Pipelines accept `device` (`"cuda"`, `"mps"`, `0`) or `device_map="auto"`, and batch with `batch_size=`.
+
+## Auto Classes
+
+```python
+import torch
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+
+model_id = "microsoft/deberta-v3-base"
+tok = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForSequenceClassification.from_pretrained(model_id, num_labels=3)
+
+device = (
+    torch.device("cuda") if torch.cuda.is_available()
+    else torch.device("mps") if torch.backends.mps.is_available()
+    else torch.device("cpu")
+)
+model.to(device).eval()
+
+batch = tok(["first text", "second, longer text"], padding=True, truncation=True, max_length=256, return_tensors="pt").to(device)
+with torch.inference_mode():
+    probs = model(**batch).logits.softmax(dim=-1)
+```
+
+Head classes: `AutoModelForSequenceClassification`, `...ForTokenClassification`, `...ForQuestionAnswering`, `...ForCausalLM`, `...ForSeq2SeqLM`, `...ForMaskedLM`, `AutoModel` (no head).
 
 ## Tokenizers
-```
-from transformers import AutoTokenizer
 
-tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-tokens = tokenizer("Hello, world!", padding=True, truncation=True,
-                   max_length=128, return_tensors="pt")
-
-# Batch
-batch = tokenizer(["First.", "Second longer."], padding=True,
-                   truncation=True, max_length=128, return_tensors="pt")
-
-# Special tokens
-print(tokenizer.cls_token_id, tokenizer.sep_token_id, tokenizer.pad_token_id)
-decoded = tokenizer.decode(tokens.input_ids[0], skip_special_tokens=True)
+```python
+enc = tok("Hello, world!", return_offsets_mapping=True)
+enc.input_ids, enc.attention_mask, enc["offset_mapping"]
+tok.convert_ids_to_tokens(enc.input_ids)
+tok.decode(enc.input_ids, skip_special_tokens=True)
 ```
 
-WordPiece (BERT), BPE (GPT/RoBERTa), SentencePiece (T5/ALBERT). Always set max_length and truncation=True.
+- Use "fast" (Rust) tokenizers, the default when available; they provide offsets for span tasks.
+- Always use the tokenizer that matches the model checkpoint.
+- Decoder-only batch generation: set `tok.padding_side = "left"` and ensure `pad_token` is defined (often `tok.pad_token = tok.eos_token`).
 
-## Models
+## Loading LLMs: dtype and Memory
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+model_id = "Qwen/Qwen2.5-7B-Instruct"
+tok = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForCausalLM.from_pretrained(
+    model_id,
+    dtype=torch.bfloat16,       # never default fp32 for large models
+    device_map="auto",          # requires accelerate
+)
+
+# 4-bit if VRAM is insufficient
+q = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16)
+model_4bit = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=q, device_map="auto")
 ```
-from transformers import AutoModelForSequenceClassification
 
-model = AutoModelForSequenceClassification.from_pretrained(
-    "bert-base-uncased", num_labels=2,
-    id2label={0:"NEGATIVE",1:"POSITIVE"},
-    label2id={"NEGATIVE":0, "POSITIVE":1})
+Weights memory is roughly params x bytes per param (7B in bf16 is about 14 GB) plus KV cache. Some models require `trust_remote_code=True`; only enable it for repositories you have reviewed.
+
+## Chat Templates and Generation
+
+```python
+messages = [
+    {"role": "system", "content": "You are a concise assistant."},
+    {"role": "user", "content": "Summarize: transformers use self-attention."},
+]
+inputs = tok.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt", return_dict=True).to(model.device)
+with torch.inference_mode():
+    out = model.generate(**inputs, max_new_tokens=128, do_sample=True, temperature=0.7, top_p=0.9)
+print(tok.decode(out[0, inputs["input_ids"].shape[-1]:], skip_special_tokens=True))
 ```
 
-BERT (encoder, 110M), RoBERTa (125M), DistilBERT (66M, 60% speed, 95% quality), DeBERTa (SOTA), GPT-2 (decoder, 124M-1.5B), T5 (encoder-decoder, 220M-11B), BART (encoder-decoder, 140M-400M).
+| Parameter | Effect |
+|-----------|--------|
+| `max_new_tokens` | Cap on generated tokens (prefer over `max_length`) |
+| `do_sample=False` | Greedy decoding (deterministic) |
+| `temperature`, `top_p`, `top_k` | Sampling controls |
+| `num_beams` | Beam search for seq2seq tasks |
+| `repetition_penalty` | Discourage loops |
+| `stop_strings` (with `tokenizer=`) | Stop on strings |
 
-## Trainer API
-```
-from transformers import (AutoTokenizer, AutoModelForSequenceClassification,
-    TrainingArguments, Trainer, DataCollatorWithPadding)
-from datasets import Dataset
+For production serving use vLLM, SGLang, TGI or TensorRT-LLM instead of `generate()` in a web handler.
 
-train_ds = Dataset.from_dict({"text": texts, "label": labels})
-tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-train_ds = train_ds.map(lambda x: tokenizer(x["text"], padding=False,
-    truncation=True, max_length=128), batched=True)
+## Fine-Tuning with Trainer
+
+```python
+from datasets import load_dataset
+from transformers import TrainingArguments, Trainer, DataCollatorWithPadding
+import evaluate, numpy as np
+
+ds = load_dataset("imdb")
+def tokenize(b): return tok(b["text"], truncation=True, max_length=512)
+ds = ds.map(tokenize, batched=True)
+
+acc = evaluate.load("accuracy")
+def compute_metrics(p):
+    preds = np.argmax(p.predictions, axis=-1)
+    return acc.compute(predictions=preds, references=p.label_ids)
 
 args = TrainingArguments(
-    output_dir="./results", learning_rate=2e-5,
-    per_device_train_batch_size=16, num_train_epochs=3,
-    weight_decay=0.01, evaluation_strategy="epoch",
-    save_strategy="epoch", fp16=True, warmup_ratio=0.1,
-    lr_scheduler_type="cosine", load_best_model_at_end=True)
-
-trainer = Trainer(model=model, args=args, train_dataset=train_ds,
-    eval_dataset=eval_ds, tokenizer=tokenizer,
-    data_collator=DataCollatorWithPadding(tokenizer))
+    output_dir="out/imdb-deberta",
+    eval_strategy="epoch",
+    save_strategy="epoch",
+    learning_rate=2e-5,
+    per_device_train_batch_size=16,
+    per_device_eval_batch_size=32,
+    num_train_epochs=3,
+    weight_decay=0.01,
+    warmup_ratio=0.06,
+    bf16=True,
+    load_best_model_at_end=True,
+    metric_for_best_model="accuracy",
+    report_to="none",
+)
+trainer = Trainer(
+    model=model, args=args,
+    train_dataset=ds["train"], eval_dataset=ds["test"],
+    processing_class=tok,                      # replaces deprecated tokenizer= argument
+    data_collator=DataCollatorWithPadding(tok),
+    compute_metrics=compute_metrics,
+)
 trainer.train()
 ```
 
-## PEFT / LoRA
-```
-from peft import LoraConfig, get_peft_model, TaskType
+For LLM supervised fine-tuning and preference tuning, use TRL (`SFTTrainer`, `DPOTrainer`) with PEFT LoRA adapters.
 
-model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-hf", load_in_4bit=True)
-lora_config = LoraConfig(task_type=TaskType.CAUSAL_LM, r=8,
-    lora_alpha=32, lora_dropout=0.1, target_modules=["q_proj","v_proj"])
-model = get_peft_model(model, lora_config)
-trainer.train()
-model = model.merge_and_unload()
+## Saving and Sharing
+
+```python
+model.save_pretrained("artifacts/model", safe_serialization=True)  # safetensors
+tok.save_pretrained("artifacts/model")
+# model.push_to_hub("org/model-name", private=True)
 ```
 
-LoRA rank r=8-16 (most tasks), r=64 (more capacity). QLoRA: 4-bit + LoRA, train 7B on single 24GB GPU. target_modules: q_proj+v_proj for GPT, query+value for T5.
+Prefer safetensors over pickle-based `.bin` files; loading untrusted pickles can execute code.
 
-## Inference Optimization
-```
-from transformers import pipeline
-import torch
+## Pitfalls
 
-model = AutoModelForSequenceClassification.from_pretrained("model",
-    torch_dtype=torch.float16).to("cuda")
-classifier = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer, device=0)
-results = classifier(batch_texts, batch_size=32)
+- Loading LLMs in fp32 by default and running out of memory.
+- Forgetting `model.eval()` and `torch.inference_mode()` at inference.
+- Right-padding decoder-only models for batched generation.
+- Mismatched tokenizer and model checkpoints.
+- Truncating silently: long documents need chunking or long-context models.
+- Hard-coding `cuda:0`.
 
-# ONNX
-from optimum.onnxruntime import ORTModelForSequenceClassification
-ort_model = ORTModelForSequenceClassification.from_pretrained("model", export=True)
-```
+## Checklist
 
-## Model Selection Guide
-| Task | Budget | Model | Params |
-|------|--------|-------|--------|
-| Classification | Low | DistilBERT | 66M |
-| Classification | High | DeBERTa-v3-large | 435M |
-| NER | Any | BERT-base | 110M |
-| Summarization | Medium | BART-large | 400M |
-| Translation | Medium | MarianMT | 80-300M |
-| QA | Medium | RoBERTa-base | 125M |
-| Generation | Low | GPT-2 medium | 355M |
-
-## Best Practices
-- Always set max_length and truncation=True.
-- Use DataCollatorWithPadding for dynamic batching.
-- fp16/bf16 gives ~2x speedup with minimal quality loss.
-- Warmup ratio 10% prevents early instability.
-- Use gradient checkpointing for models >1B parameters.
-- DeepSpeed ZeRO-2 or 3 for multi-GPU training.
+- [ ] Explicit `dtype` and `device_map` for large models
+- [ ] Device selected dynamically
+- [ ] Chat template used for instruct models
+- [ ] Current argument names (`dtype`, `eval_strategy`, `processing_class`)
+- [ ] Safetensors for saved weights; `trust_remote_code` only after review
+- [ ] Serving via an inference engine, not raw `generate()` per request

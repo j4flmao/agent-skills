@@ -1,7 +1,7 @@
 ---
 name: elysia-architecture
 description: >
-  Use this skill when structuring Elysia.js applications — Bun-native web framework, plugin system, lifecycle hooks, type-safe routing with Eden Treaty. This skill enforces: plugin-based architecture, Elysia lifecycle (state/derive/resolve/onRequest/afterHandle), TypeScript strict mode, Eden Treaty client generation. Requires Bun (bun create elysia). Do NOT use for: Express.js projects, Node.js apps, or non-Elysia Bun projects.
+  Use this skill when the user says 'elysia app structure', 'elysia project layout', 'elysia plugin', 'elysia lifecycle', 'elysia architecture', 'eden treaty', 'elysia folder structure'. Structures Elysia (Bun) applications: plugin/module layout, lifecycle hook order, TypeBox schemas, auth macros, error handling, environment validation and Eden Treaty clients. Do NOT use for: individual Elysia recipes such as rate limiting or WebSockets (elysia-patterns), plain Bun.serve apps (bun), Express/Node.js projects.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -38,9 +38,9 @@ Produce artifact directly. No preamble, no postamble, no explanations. No filler
 ### Completion Criteria
 - Plugin-based architecture with clear separation
 - Lifecycle hooks in correct order
-- Type-safe schema with Elysia t.policy
-- Eden Treaty client generated for frontend
-- Environment config with Elysia config plugin
+- Type-safe schemas with Elysia `t` (TypeBox) for body, query, params and response
+- Eden Treaty client typed from the exported `App` type
+- Environment validated at startup
 
 ### Max Response Length
 4096 tokens
@@ -61,18 +61,20 @@ Decision: Multi-feature app or shared modules → Plugin Architecture. Simple CR
 
 ### Lifecycle Hook Strategy
 
-| Hook | Purpose | Use Case |
+| Hook / API | Runs | Use Case |
 |------|---------|----------|
-| `state` | Initialize app state | DB connections, config |
-| `derive` | Compute derived state | Request-local cache |
-| `resolve` | Resolve dependencies | Auth user from token |
-| `onRequest` | Pre-handler | Logging, CORS, rate limit |
-| `beforeHandle` | Pre-validation | Auth check, permissions |
-| `afterHandle` | Post-handler | Transform response, caching |
-| `onError` | Error handler | Global error mapping |
-| `onResponse` | After response sent | Metrics, cleanup |
+| `state` / `decorate` | Once at setup (not per request) | DB clients, config, singletons |
+| `onRequest` | First, before routing | Request ID, rate limiting, CORS preflight |
+| `onParse` | Body parsing | Custom content types |
+| `onTransform` / `derive` | Before validation | Add context values from headers (derive runs in the transform phase) |
+| (validation) | Schema check of body/query/params/headers | TypeBox schemas |
+| `resolve` | After validation, before `beforeHandle` | Values that need validated input, e.g. load user from verified token |
+| `beforeHandle` | Before handler; returning a value short-circuits | Auth guards, permission checks |
+| `afterHandle` / `mapResponse` | After handler | Transform or wrap response |
+| `onError` | On any thrown error | Global error mapping |
+| `onAfterResponse` | After response is sent (named `onResponse` before 1.1) | Metrics, logging |
 
-Order matters: `state → derive → resolve → onRequest → beforeHandle → handler → afterHandle → onError/onResponse`.
+Order: `onRequest → onParse → onTransform/derive → validation → resolve → beforeHandle → handler → afterHandle → mapResponse → onAfterResponse` (`onError` whenever something throws). Hooks apply only to routes registered after them.
 
 ## Workflow
 
@@ -114,7 +116,7 @@ src/
 // src/app.ts
 import { Elysia } from 'elysia'
 import { cors } from '@elysiajs/cors'
-import { swagger } from '@elysiajs/swagger'
+import { swagger } from '@elysiajs/swagger' // newer projects: @elysiajs/openapi
 import { authPlugin } from './plugins/auth'
 import { errorHandlerPlugin } from './plugins/error-handler'
 import { userModule } from './modules/users'
@@ -128,6 +130,8 @@ export const createApp = () => new Elysia()
   .use(userModule)
   .use(orderModule)
   .get('/health', () => ({ status: 'ok', uptime: process.uptime() }))
+
+export type App = ReturnType<typeof createApp> // consumed by Eden Treaty
 
 // src/index.ts
 import { createApp } from './app'
@@ -210,21 +214,27 @@ export const userRoutes = new Elysia({ prefix: '/users' })
   }, {
     query: t.Object({ page: t.Optional(t.Numeric()), limit: t.Optional(t.Numeric()) }),
   })
-  .get('/:id', async ({ params }) => {
+  .get('/:id', async ({ params, set }) => {
     const user = await userService.findById(params.id)
-    if (!user) return { error: 'Not found', status: 404 }
+    if (!user) {
+      set.status = 404
+      return { error: 'Not found' }
+    }
     return { data: user }
   }, {
     params: UserParamsSchema,
-    response: t.Object({ data: UserResponseSchema }),
+    response: {
+      200: t.Object({ data: UserResponseSchema }),
+      404: t.Object({ error: t.String() }),
+    },
   })
-  .post('/', async ({ body }) => {
+  .post('/', async ({ body, set }) => {
     const user = await userService.create(body)
+    set.status = 201
     return { data: user }
   }, {
     body: CreateUserSchema,
-    response: t.Object({ data: UserResponseSchema }),
-    status: 201,
+    response: { 201: t.Object({ data: UserResponseSchema }) },
   })
 
 // src/modules/users/index.ts
@@ -266,6 +276,7 @@ export const errorHandlerPlugin = new Elysia({ name: 'error-handler' })
 ```typescript
 // src/config/env.ts
 import { t } from 'elysia'
+import { Value } from '@sinclair/typebox/value'
 
 export const envSchema = t.Object({
   PORT: t.Optional(t.String()),
@@ -278,26 +289,28 @@ export const envSchema = t.Object({
 
 export type Env = typeof envSchema.static
 
-// Validate on startup
-const envCheck = envSchema.safeParse(Bun.env)
-if (!envCheck.success) {
-  console.error('Invalid environment:', envCheck.error)
-  process.exit(1)
+// Validate on startup (TypeBox has no safeParse; use Value.Check / Value.Errors)
+if (!Value.Check(envSchema, Bun.env)) {
+  const problems = [...Value.Errors(envSchema, Bun.env)].map((e) => `${e.path}: ${e.message}`)
+  throw new Error(`Invalid environment configuration: ${problems.join('; ')}`)
 }
+export const env = Bun.env as unknown as Env
 ```
 
 ### Step 7: Eden Treaty Client
 
 ```typescript
 // client/eden.ts (separate frontend package)
-import { edenTreaty } from '@elysiajs/eden'
+import { treaty } from '@elysiajs/eden' // Eden Treaty 2
 import type { App } from '../server/src/app'
 
-export const client = edenTreaty<App>('http://localhost:3000')
+export const client = treaty<App>('localhost:3000')
 
-// Usage
-const { data, error } = await client.users({ headers: { authorization: `Bearer ${token}` }}).get()
-if (error) console.error(error)
+// Usage: path segments become properties, dynamic params become calls
+const { data, error } = await client.users({ id: '42' }).get({
+  headers: { authorization: `Bearer ${token}` },
+})
+if (error) console.error(error.status, error.value)
 else console.log(data)
 ```
 
@@ -307,13 +320,14 @@ else console.log(data)
 
 ```typescript
 const app = new Elysia()
-  .state('db', dbConnection)
-  .derive({ as: 'scoped' }, ({ request }) => ({
-    requestId: crypto.randomUUID(),
+  .state('db', dbConnection)                 // app-wide, set once
+  .derive(({ headers }) => ({                // per request, before validation
+    requestId: headers['x-request-id'] ?? crypto.randomUUID(),
   }))
-  .onRequest(({ request, store, requestId }) => {
-    console.log(`[${requestId}] ${request.method} ${request.url}`)
+  .onAfterResponse(({ request, requestId, set }) => {
+    console.log(`[${requestId}] ${request.method} ${new URL(request.url).pathname} ${set.status}`)
   })
+// onRequest runs before derive, so it cannot read requestId
 ```
 
 ### Pattern: Type-Safe Response
@@ -344,8 +358,8 @@ const app = new Elysia()
 ### Performance
 - Elysia uses Bun's HTTP server (native, fast) — no `node:http` overhead
 - Keep handlers async to leverage Bun's I/O multiplexing
-- Use `t.Object` validation — compile-time schemas, zero runtime overhead
-- Avoid `resolve` for every request — prefer `derive` for per-request data
+- `t` schemas are validated at runtime by TypeBox's compiled validators (fast, not free); keep response schemas on hot routes lean
+- Use `derive` for values from raw headers; use `resolve` only when you need validated input
 - Static files via `@elysiajs/static` plugin (Bun.file for custom serving)
 
 ### CORS Configuration
@@ -359,20 +373,7 @@ app.use(cors({
 ```
 
 ### Rate Limiting
-```typescript
-// Manual rate limiter as derive
-app.derive({ as: 'scoped' }, ({ headers, set }) => {
-  const ip = headers['x-forwarded-for'] || 'unknown'
-  const key = `rate:${ip}`
-  const count = parseInt(Bun.env[key] || '0')
-  if (count > 100) {
-    set.status = 429
-    return { rateLimited: true }
-  }
-  Bun.env[key] = String(count + 1)
-  return { rateLimited: false }
-})
-```
+Use a maintained plugin (e.g. `elysia-rate-limit`) for single-instance limits, or a Redis-backed limiter in `onRequest` for multi-instance deployments (see `skills/backend/universal/rate-limiting/SKILL.md`). Never keep counters in `process.env`/`Bun.env` or unbounded in-memory maps.
 
 ## Anti-Patterns
 
@@ -382,7 +383,7 @@ app.derive({ as: 'scoped' }, ({ headers, set }) => {
 | Inline schema everywhere | Duplication, hard to maintain | Shared schema files per module |
 | Missing `onError` handler | Raw stack traces to client | Global error handler plugin |
 | Direct `Bun.env` access | Untyped, missing defaults | Validated env config on startup |
-| No `as: 'scoped'` on derive | State leaks between requests | Always scope per-request data |
+| Wrong hook scope in plugins | Plugin hooks default to `local`, so a plugin's `derive`/guards do not apply to the parent app | Use `{ as: 'scoped' }` (parent) or `{ as: 'global' }` deliberately |
 | Heavy logic in guards | Routes hard to test | Extract to service layer |
 
 ## Security Considerations
@@ -452,65 +453,3 @@ test('GET /users/:id returns 404', async () => {
   - references/elysia-type-safety-patterns.md — Type Safety with Eden
 ## Handoff
 Hand off to `backend/elysia/patterns/SKILL.md` for Elysia-specific patterns or `backend/universal/api-response/SKILL.md` for API response formatting.
-## Implementation Patterns
-
-### Factory Pattern for Module Creation
-`
-function createModule<T>(config: ModuleConfig): T {
-  const dependencies = initializeDependencies(config);
-  const module = new Module(dependencies);
-  module.hooks.onInit();
-  return module as T;
-}
-`
-
-### Builder Pattern for Complex Configuration
-`
-class ConfigBuilder {
-  private config: AppConfig = new AppConfig();
-  withDatabase(url: string): ConfigBuilder { ... }
-  withCache(ttl: number): ConfigBuilder { ... }
-  withLogging(level: string): ConfigBuilder { ... }
-  build(): AppConfig { return this.config; }
-}
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Production build with optimizations enabled
-- [ ] Environment variables configured per environment
-- [ ] Health check endpoint responds correctly
-- [ ] Error tracking and monitoring integrated
-- [ ] Logging level configured (not debug in production)
-- [ ] Resource limits configured
-- [ ] Database migrations applied
-- [ ] Static assets built and served from CDN or cache
-- [ ] Feature flags toggled appropriately
-- [ ] Rollback plan documented and tested
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% | Critical | Rollback or fix |
-| p95 latency | > 500ms | Warning | Profile and optimize |
-| Uptime | < 99.9% | Critical | Investigate infrastructure |
-| Memory usage | > 80% | Warning | Check for leaks |
-| CPU usage | > 80% | Warning | Scale up or optimize |
-
-## Rules
-- Prefer composition over inheritance
-- Favor immutable data structures
-- Use dependency injection for testability
-- Keep functions pure when possible — no side effects
-- Fail fast with clear error messages
-- Don't repeat yourself (DRY) — extract shared logic
-- Keep it simple (KISS) — avoid unnecessary complexity
-- You aren't gonna need it (YAGNI) — build what's required
-- Separate concerns — single responsibility per module
-- Code to interfaces, not implementations
-- Write self-documenting code — clear names over comments
-- Prefer standard library over third-party dependencies
-- Handle errors explicitly — no silent failures
-- Validate inputs at boundaries
-- Log at appropriate levels (debug, info, warn, error)

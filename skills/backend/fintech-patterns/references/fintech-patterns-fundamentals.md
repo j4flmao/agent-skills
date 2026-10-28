@@ -1,213 +1,126 @@
-# Fintech Patterns Fundamentals
+# Fintech Engineering Fundamentals
 
-## Overview
-Fintech Patterns is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Foundational patterns every system that moves or records money needs: representing money, idempotent operations, explicit state machines, auditability, consistency rules and the regulatory baseline. Deep dives live in siblings: `double-entry-ledger.md`, `transaction-processing.md`, `reconciliation.md`, `payment-orchestration.md`, `kyc-aml.md`, `fraud-detection.md`.
 
-## Core Concepts
+## 1. Representing Money
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Fintech Patterns helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Rule | Why |
+|------|-----|
+| Never use binary floating point (`float`, `double`, JS `number` for arithmetic) | 0.1 + 0.2 != 0.3; rounding drift |
+| Store integer **minor units** (cents) with an ISO 4217 currency code, or a fixed-precision decimal | Exactness |
+| Currency is part of the value | Prevent adding EUR to USD |
+| Know each currency's exponent | JPY has 0 decimals, BHD/KWD 3, most 2 |
+| Round explicitly with a named mode | Banker's rounding (half-even) vs half-up are business decisions |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Fintech Patterns solutions. These principles help maintain code quality and reduce technical debt.
+```python
+from dataclasses import dataclass
+from decimal import Decimal, ROUND_HALF_EVEN
 
-### Concept 3: Data Management
-Proper data management is essential for Fintech Patterns. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+EXPONENT = {"USD": 2, "EUR": 2, "JPY": 0, "KWD": 3}
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+@dataclass(frozen=True, slots=True)
+class Money:
+    minor: int
+    currency: str
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+    def __add__(self, other: "Money") -> "Money":
+        if other.currency != self.currency:
+            raise ValueError(f"currency mismatch: {self.currency} vs {other.currency}")
+        return Money(self.minor + other.minor, self.currency)
 
-## Architecture Patterns
+    @staticmethod
+    def from_decimal(amount: Decimal, currency: str) -> "Money":
+        exp = EXPONENT[currency]
+        q = amount.quantize(Decimal(1).scaleb(-exp), rounding=ROUND_HALF_EVEN)
+        return Money(int(q.scaleb(exp)), currency)
+```
 
-### Pattern 1: Standard Architecture
-The standard architecture for Fintech Patterns follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+Allocation (splitting 100.00 three ways) must distribute remainders deterministically so parts sum to the whole (e.g. 33.34, 33.33, 33.33).
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+Databases: `BIGINT` minor units or `NUMERIC(19,4)`-style decimals; never `FLOAT`/`REAL`. JSON APIs: send amounts as integers in minor units or as decimal strings.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+## 2. Idempotency
 
-## Implementation Guide
+Every money-moving API must be safe to retry.
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+```http
+POST /v1/payments
+Idempotency-Key: 6f1c2e0a-7b44-4c1e-9f0d-3c7a9b2e1d55
+```
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+Server behaviour:
+1. Look up the key (scoped per client/merchant). If a completed result exists and the request fingerprint matches, return the stored response.
+2. If the key exists with a different payload, reject with 422/409.
+3. If in progress, return 409 or wait; never execute twice.
+4. Store key, request hash, response and status **in the same transaction** as the side effect, or use a unique constraint on the operation.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+Keys expire after a retention window (e.g. 24 hours to several days), longer than any client retry horizon.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## 3. Explicit State Machines
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+```
+payment: created -> requires_action -> authorized -> captured -> settled
+                         |                |              \-> refunded (partial/full)
+                         v                v
+                       failed          voided / expired
+```
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+- Persist the state and allowed transitions; reject invalid transitions in code and with database checks.
+- Transitions are triggered by commands (API) or events (processor webhooks) and recorded as events with timestamps and actor.
+- Webhooks arrive out of order and more than once: apply transitions only if they move forward; store processed event IDs.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## 4. Double-Entry Accounting Basics
 
-## Best Practices
+- Every movement is a balanced journal entry: sum of debits = sum of credits, per currency.
+- Balances are derived from entries (or maintained with entries in the same transaction); entries are append-only, corrections are reversing entries.
+- Separate accounts for customer funds, fees, pending/settling amounts, and processor receivables so reconciliation is possible.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+Full patterns in `double-entry-ledger.md`.
 
-## Common Pitfalls
+## 5. Consistency and Concurrency
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+- Strong consistency for balances: use database transactions with row locks (`SELECT ... FOR UPDATE`) or optimistic concurrency (version columns) to prevent double spending.
+- Enforce invariants in the database: `CHECK (available_minor >= 0)` for accounts that cannot go negative, unique constraints on external references.
+- Cross-service workflows use sagas with compensations and the transactional outbox for events; never dual-write to a database and a broker.
+- Time: store timestamps in UTC; business dates (value date, settlement date, cut-off) are separate fields in the relevant time zone and calendar.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+## 6. Auditability
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+- Immutable event history for every financial object (who, what, when, from which channel, previous and new state).
+- Correlate with request IDs and external references (processor IDs, bank references, end-to-end IDs).
+- Retention periods are set by regulation and contracts (often years); plan storage tiers accordingly.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## 7. External Integrations
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+- Treat processors and banks as unreliable: timeouts, retries with idempotency keys, circuit breakers, and **unknown outcomes**.
+- On timeout, the payment state is "unknown", not "failed": query the processor or wait for the webhook before retrying with a new attempt.
+- Verify webhook signatures (HMAC or asymmetric), check timestamps to prevent replay, and process asynchronously after acknowledging.
+- Daily reconciliation against settlement reports catches what real-time flows miss.
 
-## Tooling Ecosystem
+## 8. Regulatory and Security Baseline
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Fintech Patterns concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+| Area | Baseline |
+|------|----------|
+| Card data | PCI DSS v4.0.1; minimise scope with hosted fields/tokenization so raw PANs never touch your servers |
+| Strong customer authentication | PSD2 SCA in the EEA/UK (3-D Secure 2 for cards), with exemptions managed by the acquirer |
+| AML/KYC | Customer due diligence, sanctions screening, transaction monitoring, record keeping (see `kyc-aml.md`) |
+| Data protection | GDPR/CCPA; encryption in transit and at rest; field-level encryption or tokenization for sensitive identifiers |
+| Operational resilience | DORA (EU financial entities), incident reporting obligations, third-party risk management |
+
+Requirements depend on jurisdiction and licence type (EMI, payment institution, bank partner program); confirm with compliance.
+
+## 9. Testing Money Code
+
+- Property tests: allocation sums to total; conversions round-trip within tolerance; ledger entries always balance.
+- Concurrency tests: parallel withdrawals never overdraw.
+- Contract tests against processor sandboxes; replay real webhook samples, including duplicates and out-of-order delivery.
+
+## Checklist
+
+- [ ] Integer minor units or fixed decimals with currency everywhere
+- [ ] Idempotency keys on all mutating endpoints, stored atomically with effects
+- [ ] Explicit state machines with forward-only transitions
+- [ ] Double-entry ledger with append-only entries
+- [ ] DB constraints enforce balance and uniqueness invariants
+- [ ] Unknown outcomes handled; webhooks verified and deduplicated
+- [ ] PCI scope minimised; regulatory obligations mapped per market

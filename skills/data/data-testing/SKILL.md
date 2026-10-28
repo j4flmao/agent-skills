@@ -253,43 +253,37 @@ checks for customers:
 
 ### Expectation Suite
 ```python
-# suites/orders_suite.py
-import great_expectations as ge
+# suites/orders_suite.py  (GX Core 1.x API)
+import os
 
-def build_orders_suite():
-    context = ge.get_context()
-    datasource = context.sources.add_snowflake("orders_ds", ...)
-    batch = datasource.add_table_asset("orders_table")
+import great_expectations as gx
 
-    suite = context.add_expectation_suite("orders_quality")
+STATUSES = ["pending", "completed", "refunded", "cancelled"]
 
-    # Column presence
-    batch.expect_table_columns_to_match_set([
-        "order_id", "customer_id", "amount", "status", "order_date"
-    ])
-
-    # Column types
-    batch.expect_column_values_to_be_of_type("order_id", "INTEGER")
-    batch.expect_column_values_to_be_of_type("amount", "FLOAT")
-
-    # Value constraints
-    batch.expect_column_values_to_not_be_null("order_id")
-    batch.expect_column_values_to_be_unique("order_id")
-    batch.expect_column_values_to_be_between("amount", 0, 1000000)
-    batch.expect_column_values_to_be_in_set("status", [
-        "pending", "completed", "refunded", "cancelled"
-    ])
-
-    # Distribution
-    batch.expect_column_pair_values_to_be_equal(
-        "customer_id", "customer_id"
+def build_orders_validation() -> gx.ValidationDefinition:
+    context = gx.get_context(mode="file")
+    source = context.data_sources.add_snowflake(
+        name="orders_ds", connection_string=os.environ["SNOWFLAKE_CONNECTION_STRING"]
     )
-    batch.expect_column_distinct_values_to_be_in_set(
-        "status",
-        ["pending", "completed", "refunded", "cancelled"]
-    )
+    asset = source.add_table_asset(name="orders_table", table_name="ORDERS")
+    batch_def = asset.add_batch_definition_whole_table("orders_full")
 
-    suite.save()
+    suite = context.suites.add(gx.ExpectationSuite(name="orders_quality"))
+    for exp in [
+        gx.expectations.ExpectTableColumnsToMatchSet(
+            column_set=["order_id", "customer_id", "amount", "status", "order_date"]
+        ),
+        gx.expectations.ExpectColumnValuesToNotBeNull(column="order_id"),
+        gx.expectations.ExpectColumnValuesToBeUnique(column="order_id"),
+        gx.expectations.ExpectColumnValuesToBeBetween(column="amount", min_value=0, max_value=1_000_000),
+        gx.expectations.ExpectColumnValuesToBeInSet(column="status", value_set=STATUSES),
+        gx.expectations.ExpectColumnDistinctValuesToBeInSet(column="status", value_set=STATUSES),
+    ]:
+        suite.add_expectation(exp)
+
+    return context.validation_definitions.add(
+        gx.ValidationDefinition(name="orders_validation", data=batch_def, suite=suite)
+    )
 ```
 
 ## CI/CD Integration

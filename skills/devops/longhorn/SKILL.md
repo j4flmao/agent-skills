@@ -73,12 +73,12 @@ helm install longhorn longhorn/longhorn \
 
 | Requirement | Minimum | Recommended |
 |---|---|---|
-| **Kubernetes** | 1.21+ | 1.28+ |
+| **Kubernetes** | Per Longhorn release support matrix (recent 1.9/1.10 releases need ≥ 1.25) | A currently supported Kubernetes minor |
 | **Nodes** | 3 (for HA) | 3+ |
 | **CPU per node** | 1 core | 4 cores |
 | **RAM per node** | 2 GB | 8 GB |
 | **Disk per node** | 40 GB (SSD) | 200 GB (NVMe) |
-| **Open ports** | 9500-9504 (instance manager) | Same |
+| **Network** | Node-to-node traffic for longhorn-manager (9500) and replica/engine data ports | See Longhorn networking docs |
 | **iscsiadm** | Required | -- |
 | **open-iscsi** | Required | -- |
 | **nfs-client** | Required (for backup) | -- |

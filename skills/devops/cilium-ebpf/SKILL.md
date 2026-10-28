@@ -26,6 +26,26 @@ tags: [devops, cilium, ebpf, kubernetes, networking, phase-5]
 ## Purpose
 Implement Cilium-based Kubernetes networking with eBPF for high-performance networking, security policies, observability, and multi-cluster connectivity.
 
+## Agent Protocol
+
+### Trigger
+"Cilium", "eBPF networking", "Hubble", "network policy", "cluster mesh", "kube-proxy replacement", "CiliumNetworkPolicy".
+
+### Input Context
+Kernel versions, cluster size, cloud/bare metal, existing CNI, policy and encryption requirements.
+
+### Output Artifact
+Helm values, policies, and verification commands. No file unless requested.
+
+### Response Format
+```
+Mode: {kube-proxy replacement on/off, routing: tunnel|native}
+Policy: {CiliumNetworkPolicy L3/L4/L7 snippet}
+Observability: {Hubble flows/metrics}
+Encryption: {none|WireGuard|IPsec}
+Helm values: {snippet}
+```
+
 ## Architecture Decision Trees
 
 ### Cilium vs Other CNIs
@@ -69,10 +89,10 @@ Implement Cilium-based Kubernetes networking with eBPF for high-performance netw
 
 ### CiliumInstallation Decision
 ```
-Kernel version >= 5.10?
-├── Yes → kube-proxy replacement mode (better performance, more features)
-└── No → Standard iptables mode (fallback, fewer features)
-    └── Consider upgrading kernel to 5.10+ for full eBPF benefits
+Kernel version >= 5.10? (minimum for current Cilium releases; check the system requirements page of your Cilium version)
+├── Yes → kube-proxy replacement mode is available (keep kube-proxy only if a feature you need is unsupported)
+│   └── Kernel >= 6.8 → netkit device mode possible (Cilium 1.16+)
+└── No → Upgrade the node OS/kernel first; older kernels are only supported by end-of-life Cilium versions
 
 Need encryption between nodes?
 ├── Yes → WireGuard (simpler, better perf) or IPsec (legacy compat)
@@ -85,11 +105,10 @@ Need multi-cluster communication?
 
 ### Encryption Mode Decision
 ```
-Kernel supports WireGuard?
-├── Yes → WireGuard (better performance, simpler config)
-│   ├── Kernel module available → encryption.type=wireguard
-│   └── No kernel module → encryption.wireguard.userspaceFallback=true
-└── No → IPsec (broader kernel compatibility, higher overhead)
+Need FIPS-validated crypto or existing IPsec key management?
+├── No → WireGuard: encryption.enabled=true, encryption.type=wireguard
+│        (in mainline kernels since 5.6, so available on every kernel Cilium supports; simplest key handling)
+└── Yes → IPsec: encryption.type=ipsec with a cilium-ipsec-keys Secret (manual key rotation)
 ```
 
 ## Quick Start
@@ -305,8 +324,8 @@ spec:
 ### Step 8: Encryption with WireGuard
 ```yaml
 # Set during install:
+# --set encryption.enabled=true
 # --set encryption.type=wireguard
-# --set encryption.wireguard.userspaceFallback=true
 
 # Verify encryption
 cilium encrypt status
@@ -453,9 +472,8 @@ bpf:
 ipam:
   mode: kubernetes
 encryption:
+  enabled: true
   type: wireguard
-  wireguard:
-    userspaceFallback: true
 l7Proxy: true
 policyEnforcementMode: always
 hubble:
@@ -528,7 +546,7 @@ resources:
 ## Anti-Patterns
 
 ### Anti-Pattern 1: Running on Old Kernels
-Cilium's eBPF features require kernel >= 5.10 (ideally 6.x). On older kernels, Cilium falls back to iptables, losing most performance and feature benefits.
+Current Cilium releases require Linux kernel >= 5.10 (6.x recommended for features such as netkit, BIG TCP for IPv4, and tcx). Cilium does not "fall back to iptables" on unsupported kernels; upgrade the kernel or stay on an older, unsupported Cilium release.
 
 ### Anti-Pattern 2: No Network Policies
 Installing Cilium but using default allow-all policy. Cilium's primary value is its policy engine — enable with `--set policyEnforcementMode=always`.
@@ -567,7 +585,6 @@ Disabling Hubble thinking it adds overhead. Hubble's eBPF-based observability ha
   - references/ebpf-deep-dive.md
   - references/network-policies.md
   - references/observability-hubble.md
-  - references/cilium-service-mesh-guide.md
 
 ## Handoff
 Next: **service-mesh** — Istio/Linkerd service mesh integration with Cilium.

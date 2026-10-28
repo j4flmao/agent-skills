@@ -365,11 +365,11 @@ Document stores: flexible schema, rich queries, medium scale. Wide-column: rigid
 - DynamoDB: One write consumes 1 WCU (1KB). Items > 1KB cost proportionally more.
 - DynamoDB: Query returns max 1MB. Pagination required for larger results. Use LastEvaluatedKey.
 - DynamoDB: GSI writes are eventually consistent. Writes to main table propagate asynchronously.
-- Cassandra: Write throughput scales linearly with node count. 10K writes/sec per node typical.
-- Cassandra: Read repair chance: default 10%. Increase for read-heavy, decrease for write-heavy.
+- Cassandra: Write throughput scales roughly linearly with node count; measure per-node capacity with `cassandra-stress` on your hardware and schema.
+- Cassandra: `read_repair_chance`/`dclocal_read_repair_chance` were removed in 4.0; rely on blocking read repair at QUORUM and scheduled anti-entropy repair (`nodetool repair` / Reaper, or incremental repair).
 - Cassandra: Hinted handoff stores writes for downed nodes up to 3 hours by default.
 - Latency targets: DynamoDB single-digit ms, Cassandra 1-5ms per node, MongoDB 1-10ms indexed.
-- Throughput: DynamoDB on-demand 4K write/sec/partition, read 8K/sec/partition. Cassandra 10K/sec/node.
+- Throughput: DynamoDB limits each partition to 1,000 WCU and 3,000 RCU (1 KB writes / 4 KB strongly consistent reads per unit) in both capacity modes; spread hot keys. Cassandra per-node throughput depends on hardware and data model; benchmark it.
 
 ### NoSQL Use Case Decision Tree
 

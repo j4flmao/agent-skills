@@ -33,7 +33,7 @@ Exact user phrases: "ArgoCD", "Argo CD", "GitOps", "ApplicationSet", "Sync Polic
 
 ### Input Context
 Before activating, verify:
-- Argo CD version (2.4+ for ApplicationSets, 2.8+ for complex features).
+- Argo CD version (ApplicationSet controller is bundled since 2.3; current releases are the 3.x line, which changed defaults such as annotation-based resource tracking).
 - Number of clusters (single vs multi-cluster management).
 - Git provider (GitHub, GitLab, Bitbucket — affects webhook config).
 - Authentication method (local admin, SSO with OIDC, Dex).
@@ -623,7 +623,6 @@ Argo CD Application/ApplicationSet YAML, Project YAML, RBAC config, notification
   - references/argocd-operations.md
   - references/argocd-patterns.md
   - references/argocd-setup.md
-  - references/argocd-rollouts-guide.md
 
 ## Handoff
 After completing this skill:

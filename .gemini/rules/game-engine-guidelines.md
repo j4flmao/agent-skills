@@ -17,7 +17,7 @@ AI/Cursor MUST follow these rules when writing game engine, renderer, or gamepla
 
 ## 2. Data-Oriented & Cache Design
 
-- **Rule**: Model CPU cache: elements in hot systems are contiguous, 32-64 byte stride structs; split hot/cold component data into separate arrays.
+- **Rule**: Model the CPU cache: hot-system data is contiguous and tightly packed (cache lines are 64 bytes on x86 and most ARM cores, 128 bytes on Apple silicon); split hot/cold component data into separate arrays and avoid false sharing between threads.
 - **Rule**: Prefer `std::vector<T>` + index handles over object pointers in entity systems.
 - **Rule**: Object-oriented hierarchies (`Actor` base class with virtual `Tick()`) are allowed only for gameplay-throttled, low-frequency logic; never per-entity per-frame.
 - **Rule**: SIMD is required where a uniform operation runs over many elements (transforms, particle sim). Write scalar reference first, then vectorize.
@@ -47,16 +47,16 @@ AI/Cursor MUST follow these rules when writing game engine, renderer, or gamepla
 
 ## 6. Physics
 
-- **Rule**: Use a fixed timestep for physics with a small acceleration (`substeps`) when needed for high-speed objects (tunneling).
+- **Rule**: Use a fixed timestep for physics, with substepping when needed for high-speed objects (tunneling) or stiff constraints.
 - **Rule**: Broad-phase first (BVH/grid), narrow-phase second; never brute-force all pairs outside debug.
 - **Rule**: Sleeping bodies are promoted/demoted deterministically in the same order.
-- **Rule**: High-speed bullets use continuous collision detection against static geometry only; never CCD on everything.
-- **Rule**: Kinematic bodies never push dynamic bodies with infinite impulses; clamp solver iterations (e.g., 4-10).
+- **Rule**: Enable continuous collision detection selectively for small, fast bodies (projectiles, fast characters); never turn CCD on globally. Hitscan weapons use raycasts, not physics bodies.
+- **Rule**: Kinematic bodies have effectively infinite mass and will shove dynamic bodies; cap kinematic velocities (or use a character controller) and keep solver iteration counts bounded and explicit (e.g., 4-10).
 
 ## 7. Netcode
 
-- **Rule**: Logical connection on its own thread; input is sampled at a fixed rate and transmitted with sequence numbers.
-- **Rule**: Prediction + reconciliation: client simulates locally, server-authoritative correction ≤ 100ms horizon, snapshot interpolation for rendering.
+- **Rule**: Socket I/O never runs on the simulation/render thread; input is sampled at the fixed sim rate and transmitted with sequence numbers (redundantly, to survive packet loss).
+- **Rule**: Prediction + reconciliation: client simulates locally; on a server correction it rewinds to the acknowledged state and replays unacknowledged inputs; remote entities render via snapshot interpolation. Server lag compensation uses a capped, configurable rewind window.
 - **Rule**: All transmissions are delta-compressed against the last ack'd snapshot; never resend the full game state every packet.
 - **Rule**: Replays are recorded from deterministic inputs (input stream), not screen captures.
 

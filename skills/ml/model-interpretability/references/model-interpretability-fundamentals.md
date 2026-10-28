@@ -1,213 +1,111 @@
 # Model Interpretability Fundamentals
 
-## Overview
-Model Interpretability is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
-
-## Core Concepts
-
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Model Interpretability helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
-
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Model Interpretability solutions. These principles help maintain code quality and reduce technical debt.
-
-### Concept 3: Data Management
-Proper data management is essential for Model Interpretability. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
-
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Model Interpretability follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
-
-## Implementation Guide
-
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
-
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Model Interpretability concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+Interpretability is the degree to which humans can understand why a model makes its predictions. This reference covers why it matters, the taxonomy of methods, inherently interpretable models, choosing a method for a question, and the limits and pitfalls of explanations. Specific techniques (SHAP, LIME, PDP/ICE, global and local methods, fairness auditing, visualization) are detailed in sibling references.
+
+## Why Interpretability
+
+| Goal | Example question |
+|---|---|
+| Debugging | Is the model relying on a leaked feature or a spurious artifact? |
+| Trust and adoption | Can a loan officer understand the main drivers of a score? |
+| Regulation and rights | Can we give adverse-action reasons (credit) or meaningful information about automated decisions (GDPR)? |
+| Fairness | Does a protected attribute or its proxy drive outcomes? |
+| Scientific insight | Which variables are associated with the outcome? |
+| Monitoring | Have feature contributions shifted since training? |
+
+## Taxonomy
+
+| Axis | Options | Meaning |
+|---|---|---|
+| Source | Intrinsic (glass-box) vs. post-hoc | Model is understandable by design vs. explained after training |
+| Scope | Global vs. local | Whole-model behavior vs. one prediction |
+| Applicability | Model-specific vs. model-agnostic | Uses internals (tree paths, gradients) vs. only inputs/outputs |
+| Output | Feature attribution, feature effect, example-based, rules, counterfactuals, concepts | Form of the explanation |
+
+### Method map
+| Question | Method family |
+|---|---|
+| Which features matter overall? | Permutation importance, mean absolute SHAP |
+| How does prediction change as a feature varies? | PDP, ICE, ALE (ALE is preferred with correlated features) |
+| Why this prediction? | SHAP values, LIME, Integrated Gradients (deep nets) |
+| What minimal change flips the outcome? | Counterfactual explanations |
+| Which training examples are similar/influential? | Nearest neighbors in embedding space, prototypes, influence functions |
+| What rule approximates the model? | Surrogate decision trees, anchors |
+
+## Inherently Interpretable Models
+
+| Model | Interpretability | Notes |
+|---|---|---|
+| Linear/logistic regression | Coefficients (on standardized features) | Interactions must be engineered; check multicollinearity |
+| Sparse linear models (Lasso) | Few active features | Stability of selection varies |
+| Decision trees (shallow) | Readable rules | Unstable; deep trees are not interpretable |
+| Rule lists / scorecards | Points per condition | Common in credit scoring |
+| Generalized additive models (GAMs), Explainable Boosting Machines (EBM, `interpret` package) | Per-feature shape functions plus selected pairwise interactions | Often accuracy close to gradient boosting on tabular data |
+
+```python
+from interpret.glassbox import ExplainableBoostingClassifier
+
+ebm = ExplainableBoostingClassifier(interactions=10, random_state=0)
+ebm.fit(X_train, y_train)
+global_exp = ebm.explain_global()          # shape function per feature
+local_exp = ebm.explain_local(X_test[:5], y_test[:5])
+```
+For high-stakes tabular decisions, try a glass-box model first; use a black box only if it is meaningfully better on your metrics.
+
+## Post-hoc Methods in One Example
+
+```python
+import shap
+from sklearn.inspection import permutation_importance
+
+# Global: permutation importance on held-out data (model-agnostic)
+pi = permutation_importance(model, X_valid, y_valid, n_repeats=10, random_state=0, scoring="roc_auc")
+
+# Local + global: SHAP for tree ensembles
+explainer = shap.TreeExplainer(model)
+sv = explainer(X_valid)               # shap.Explanation
+shap.plots.beeswarm(sv)               # global summary
+shap.plots.waterfall(sv[0])           # one prediction
+```
+Compute importance on validation/test data, not training data, to reflect generalization.
+
+## Choosing a Method
+
+```
+Audience?            regulator/customer -> simple, stable reasons (reason codes, scorecards, counterfactuals)
+                     data scientist     -> SHAP, PDP/ALE, error analysis
+Model type?          tree ensemble      -> TreeSHAP (exact, fast)
+                     deep net (images/text) -> gradient-based attributions (Integrated Gradients, Grad-CAM)
+                     any                -> permutation importance, KernelSHAP, LIME (slower, approximate)
+Correlated features? yes -> ALE, grouped permutation, conditional approaches; be cautious with PDP and marginal SHAP
+```
+
+## Key Caveats
+- **Explanations are not causal.** Attributions describe the model, not the world. "Feature X increases risk" means the model uses X, not that changing X changes reality.
+- **Correlated features** split or shift credit unpredictably; group them or explain at the group level.
+- **Different methods disagree.** Agreement across methods increases confidence; disagreement is a signal to investigate.
+- **Baseline choice** (SHAP background data, IG baseline) changes attributions; document it.
+- **Instability**: small input or retraining changes can alter explanations; check stability across seeds and bootstraps.
+- **Manipulability**: post-hoc explanations can be gamed; do not use them as the sole fairness or safety evidence.
+- **Faithfulness vs. plausibility**: an explanation that looks reasonable may not reflect the model's actual computation; test faithfulness (e.g. deletion/insertion tests).
+
+## Communicating Explanations
+- Translate features into domain language; group engineered features back to source concepts.
+- Show the direction and size of effects with uncertainty, not just rankings.
+- For individuals: top 3–5 reasons plus actionable counterfactuals where appropriate.
+- Document methods, data used for explanations, and known limitations in the model card.
+
+## Regulatory Context (orientation)
+- Credit decisions in the US require specific adverse-action reasons (ECOA/Regulation B); regulators have stated that complex models do not exempt lenders from this.
+- GDPR gives individuals rights regarding solely automated decisions with legal or similarly significant effects, including meaningful information about the logic involved.
+- The EU AI Act requires transparency, documentation and human oversight for high-risk AI systems.
+Consult legal counsel for obligations in your context.
+
+## Checklist
+- [ ] Explanation goal and audience defined
+- [ ] Glass-box model evaluated as a baseline for tabular high-stakes tasks
+- [ ] Importances computed on held-out data
+- [ ] Method chosen for model type and feature correlations
+- [ ] Baselines/background data documented
+- [ ] Stability and cross-method agreement checked
+- [ ] Non-causal nature of explanations communicated

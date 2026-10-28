@@ -1,11 +1,38 @@
 ---
 name: godot
-description: Expert game development with Godot Engine - nodes and scenes, GDScript/C#/GDExtension, the renderer (Forward+/Mobile/Compatibility), physics (GodotPhysics/Jolt), animation, UI (Control), and performance.
+description: >
+  Use this skill when the user says 'godot', 'godot 4', 'gdscript project', 'godot scenes', 'godot export', 'godot c#', 'gdextension'. Guides Godot 4 projects: scenes and nodes, GDScript/C#/GDExtension, renderers, physics (GodotPhysics/Jolt), animation, UI, exports and performance. Do NOT use for: deep server-level GDScript optimisation (use godot-gdscript), Unity/Unreal.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, godot, gdscript, engine]
 ---
 
 # Godot Deep Engineering Guide
 
+## Purpose
 Godot is a free, open-source game engine built around a scene-tree of Nodes, a first-class editor, and a friendly scripting language (GDScript) plus optional C#, C++, and Rust via GDExtension. Its modular renderer supports Forward+, Mobile, and Compatibility backends.
+
+## Agent Protocol
+
+### Trigger
+"godot", "godot 4", "gdscript project", "godot scenes", "godot export", "godot c#", "gdextension".
+
+### Input Context
+- Godot version (4.x minor)
+- Language (GDScript, C#, GDExtension)
+- Target platforms and renderer
+
+### Output Artifact
+GDScript/C# code, scene structure or project settings. No file unless requested.
+
+### Response Format
+```
+Godot: {4.x}  Renderer: {Forward+ | Mobile | Compatibility}
+Change: {what and why}
+Code: {snippet}
+Verify: {profiler / monitors}
+```
 
 ## 1. Engine Architecture
 
@@ -33,7 +60,7 @@ func _unhandled_input(event): pass # input not consumed by UI
 ```
 
 Rules:
-- Node movement in `_physics_process` if using physics bodies; interpolate the visual `Spatial`/`Node2D` in `_process`.
+- Move physics bodies in `_physics_process`. For smooth visuals at high refresh rates enable physics interpolation (`physics/common/physics_interpolation`, 2D since 4.3, 3D since 4.4) instead of hand-interpolating in `_process`.
 - Set `process_mode = PROCESS_MODE_DISABLED` for nodes that don't act per-frame.
 
 ### 1.2 Autoload (Singletons)
@@ -42,7 +69,7 @@ Rules:
 
 ## 2. The Scene System
 
-- A **scene** is a reusable node subtree, instantiated via `preload`/`load`/`instance()`.
+- A **scene** is a reusable node subtree, loaded with `preload`/`load` as a `PackedScene` and created with `instantiate()` (Godot 3's `instance()` no longer exists).
 - Composition over inheritance: parent/child node relationships + exported signals.
 - `@export var speed: float = 10.0` exposes editable properties to the inspector.
 
@@ -53,8 +80,8 @@ const Bullet = preload("res://scenes/bullet.tscn")
 func fire():
     var b = Bullet.instantiate()
     b.position = muzzle.global_position
-    get_tree().get_root().add_child(b)
-    b.velocity = Vector2(speed, 0)
+    b.velocity = Vector2(speed, 0)  # bullet.gd declares `var velocity: Vector2`
+    get_tree().current_scene.add_child(b)
 ```
 
 ### 2.2 Scene Organization
@@ -85,16 +112,16 @@ func fire():
 
 | Backend | Use |
 |---------|-----|
-| **Forward+** | Desktop/console default; clustered lights, SSAO, SSR, volumetrics only in 4.3+ |
-| **Mobile** | Mobile; limited lights/volumetrics |
-| **Compatibility** | OpenGL 3.3; broadest device support (web, old hardware) |
+| **Forward+** | Desktop default (Vulkan, D3D12 on Windows, Metal on Apple); clustered lighting, SSAO, SSR, SDFGI, volumetric fog |
+| **Mobile** | Mobile and low-end desktop (Vulkan/Metal/D3D12); per-mesh light limits, no SDFGI/volumetric fog |
+| **Compatibility** | OpenGL 3.3 / OpenGL ES 3.0 / WebGL 2; required for web exports and old hardware |
 
 ### 4.2 2D Rendering
 
 - CanvasItems with textures; use `Texture2D`, `AtlasTexture`, `AnimatedSprite2D`.
-- `y_sorted = true` for top-down sorting.
+- `y_sort_enabled = true` (CanvasItem) for top-down sorting.
 - Use `Parallax2D` and `TileMapLayer` for levels.
-- 2D lights are optional per-renderer; provable cheap with `unshaded` materials.
+- 2D lights cost per lit item; use `CanvasItemMaterial` with `light_mode = LIGHT_MODE_UNSHADED` on items that should ignore them.
 
 ### 4.3 3D Rendering
 
@@ -108,19 +135,21 @@ func fire():
 ```glsl
 shader_type spatial;
 uniform vec4 tint : source_color = vec4(1.0);
+// Godot 4: SCREEN_TEXTURE was removed; declare a sampler with a hint instead.
+uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap;
 void fragment() {
-    ALBEDO = texture(SCREEN_TEXTURE, SCREEN_UV).rgb * tint.rgb;
+    ALBEDO = texture(screen_tex, SCREEN_UV).rgb * tint.rgb;
 }
 ```
 
-- Run on GPU; for per-object control use uniforms + `MaterialOverride`.
+- Per-object variation without new materials: `instance uniform` + `GeometryInstance3D.set_instance_shader_parameter()`; otherwise `material_override`.
 - Keep fragment cost low; use `hint_range` uniforms to let artists clamp.
 - `shader_type canvas_item` for 2D.
 
 ## 5. Physics
 
-- **GodotPhysics3D/2D**: built-in, stable default.
-- **Jolt Physics** (Godot 4.4+): optional external, more realistic + fast.
+- **GodotPhysics2D**: the 2D engine.
+- **Jolt Physics (3D)**: built into the engine since 4.4 (experimental there); the default 3D engine for new projects since 4.6. Existing projects keep their setting (`physics/3d/physics_engine`); behaviour differs slightly from GodotPhysics3D, so retest when switching.
 - Nodes: `CharacterBody3D`, `RigidBody3D`, `StaticBody3D`, `Area3D`, plus sensors.
 - Character movement via `move_and_slide()` / `move_and_collide()`.
 - Area3D triggers: `body_entered`/`body_exited` for pickup/trigger zones.
@@ -134,8 +163,7 @@ void fragment() {
 
 - `AnimationPlayer` + `Animation` resources: animate any `Property` (position, color, shader).
 - `AnimationTree`: blend trees, state machines.
-- Tween API for simple tweens: `tween_property(node, "position", Vector2(...), 0.5)`.
-- Match with `create_tween().tween_interval(duration)`.
+- Tweens for simple one-shot motion: `create_tween().tween_property(node, "position", Vector2(100, 0), 0.5)`; chain `.tween_interval(t)` / `.tween_callback(f)` for sequences.
 
 ## 7. UI (Control Nodes)
 
@@ -146,14 +174,14 @@ void fragment() {
 
 ## 8. Multiplayer
 
-- High-level API (`SceneMultiplayer`) with `spawn(_path)` and `rpc()` calls for data sync.
-- `MultiplayerSynchronizer` / `MultiplayerSpawner` to sync properties per peer.
-- `Server` authoritative pattern; `Authority` via `set_multiplayer_authority`.
-- `rpc_id(id, "func", args)` for targeted messages; `rpc` broadcasts.
+- High-level API (`SceneMultiplayer` over `ENetMultiplayerPeer` / `WebSocketMultiplayerPeer` / `WebRTCMultiplayerPeer`).
+- `MultiplayerSpawner` replicates node creation; `MultiplayerSynchronizer` replicates properties.
+- Server-authoritative by default (peer 1); hand ownership to a client with `set_multiplayer_authority(peer_id)`.
+- RPCs: annotate `@rpc("any_peer", "call_local", "reliable")`, call `my_func.rpc(args)` (broadcast) or `my_func.rpc_id(peer_id, args)`; validate `multiplayer.get_remote_sender_id()` on the server.
 
 ### 8.1 Prediction/Reconciliation
 
-Godot high-level API is simple but not prediction-ready; implement manual `RigidBody3D` + `MultiplayerSynchronizer` interpolation on clients for smooth netcode.
+The high-level API has no built-in client prediction or lag compensation. For action games implement input buffering + prediction/reconciliation yourself (usually on `CharacterBody3D`, not `RigidBody3D`) or use a community addon such as netfox.
 
 ## 9. Asset Pipeline & Tooling
 
@@ -169,8 +197,8 @@ Godot high-level API is simple but not prediction-ready; implement manual `Rigid
 - Pool bullets/enemies (no instantiate/free per shot).
 - Pre-load large scenes once; `duplicate()` cached resources.
 - Trap: `get_node("./long/path")` every frame → cache in `@onready`.
-- Light count: keep 3D dynamic lights < 8 (mobile) / < 32 (desktop).
-- Use `limiting draw` culling: `camera cull_mask`, `visibility_notifier` (VisibilityNotifier3D).
+- Lights: the Mobile renderer shades at most 8 OmniLight3D + 8 SpotLight3D per mesh; bake static lights (LightmapGI) and keep dynamic shadows few.
+- Culling: `Camera3D.cull_mask`, visibility ranges (HLOD) on `GeometryInstance3D`, `VisibleOnScreenEnabler3D/2D` to pause off-screen nodes, occlusion culling (`OccluderInstance3D`).
 
 ### 10.1 Node Count Toggle
 
@@ -182,10 +210,10 @@ For thousands of simple nodes prefer a single `_draw()`-heavy `Control`/`CanvasI
 |--------------|-------------|-----|
 | GetNode per frame | String path lookups | @onready cache |
 | Untyped variables in loops | Slow | typed loops |
-| Instantiate/free each shot | GC/alloc spikes | object pool |
+| Instantiate/free each shot | Scene-instancing and tree-insertion cost | object pool |
 | All nodes `_process` ticking | CPU | disable unused |
 | Many dynamic lights | mobile GPU melt | baked lightmap + clip |
-| Async without `await` | deadlock/race | `await` signal |
+| Coroutine fired without `await` | Caller continues before the work finishes | `await` the function or the signal |
 
 ## 12. When to NOT Use Godot
 

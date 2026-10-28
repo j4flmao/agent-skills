@@ -1,213 +1,138 @@
-# Bulk Import Fundamentals
-
-## Overview
-Bulk Import is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
-
-## Core Concepts
-
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Bulk Import helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
-
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Bulk Import solutions. These principles help maintain code quality and reduce technical debt.
-
-### Concept 3: Data Management
-Proper data management is essential for Bulk Import. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
-
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Bulk Import follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
-
-## Implementation Guide
-
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
-
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Bulk Import concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+# Bulk Import Fundamentals: End-to-End Design
+
+The core design of a file-based bulk import feature: the stages from upload to committed data, the API and data model that support them, and the decisions every import must make (sync vs async, all-or-nothing vs partial, insert vs upsert). Sibling references go deeper: `csv-parsing.md`, `validation-pipeline.md`, `import-workflow.md`, `rollback-recovery.md`, `import-monitoring.md`, and `bulk-import-advanced.md` for high-throughput loading.
+
+## 1. Stages
+
+```
+1. Upload        client → object storage (pre-signed URL) or API; size/type checks
+2. Register      create import job (status=uploaded), store file reference + checksum
+3. Parse         stream rows; detect encoding/dialect; map columns to fields
+4. Validate      per-row and cross-row checks; collect errors with row numbers
+5. Preview       show counts, sample rows, errors; user confirms or fixes the file
+6. Commit        batched writes in a background worker; progress updates
+7. Report        final counts, downloadable error file, audit record
+```
+
+Small imports (hundreds of rows) can run stages 3–6 synchronously; anything larger runs in a background job with progress polling or push updates.
+
+## 2. Key Decisions
+
+| Decision | Options | Guidance |
+|---|---|---|
+| Processing mode | Synchronous / background job | Background above a few thousand rows or seconds of work |
+| Failure semantics | All-or-nothing / skip invalid rows / stop at first error | All-or-nothing for financial or relational data; skip-invalid with error report for contact lists |
+| Write semantics | Insert only / upsert by natural key / replace set | Upsert needs a stable key column (email, SKU, external ID) |
+| Duplicate handling | Within file and against existing data | Decide per key: first wins, last wins, or error |
+| Column mapping | Fixed template / user mapping UI / header auto-match | Template plus header auto-match with manual override |
+| Limits | Max file size, max rows, rate per tenant | Enforce at upload and at parse |
+
+## 3. Data Model
+
+```sql
+CREATE TABLE import_jobs (
+  id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  public_id       UUID NOT NULL UNIQUE,
+  tenant_id       BIGINT NOT NULL,
+  entity_type     TEXT NOT NULL,                     -- 'contacts', 'products'
+  status          TEXT NOT NULL CHECK (status IN
+                    ('uploaded','parsing','validated','failed_validation','confirmed',
+                     'importing','completed','completed_with_errors','failed','cancelled')),
+  mode            TEXT NOT NULL CHECK (mode IN ('insert','upsert')),
+  failure_policy  TEXT NOT NULL CHECK (failure_policy IN ('all_or_nothing','skip_invalid')),
+  file_key        TEXT NOT NULL,
+  file_sha256     TEXT NOT NULL,
+  column_mapping  JSONB,
+  total_rows      INT,
+  valid_rows      INT,
+  processed_rows  INT NOT NULL DEFAULT 0,
+  error_rows      INT NOT NULL DEFAULT 0,
+  created_by      BIGINT NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at    TIMESTAMPTZ
+);
+CREATE INDEX ON import_jobs (tenant_id, created_at DESC);
+
+CREATE TABLE import_errors (
+  job_id      BIGINT NOT NULL REFERENCES import_jobs(id) ON DELETE CASCADE,
+  row_number  INT NOT NULL,
+  column_name TEXT,
+  code        TEXT NOT NULL,
+  message     TEXT NOT NULL,
+  raw_value   TEXT
+);
+CREATE INDEX ON import_errors (job_id, row_number);
+```
+
+`file_sha256` lets you detect re-uploads of the same file and warn before importing twice.
+
+## 4. API Shape
+
+```
+POST /imports                         → {id, upload_url}   (pre-signed PUT URL)
+POST /imports/{id}/parse              → 202; job status moves to parsing → validated
+GET  /imports/{id}                    → status, counts, progress, column mapping
+GET  /imports/{id}/preview?limit=20   → sample mapped rows
+GET  /imports/{id}/errors?cursor=…    → paginated errors
+GET  /imports/{id}/errors.csv         → downloadable error report
+POST /imports/{id}/confirm            → 202; starts commit job (idempotent)
+POST /imports/{id}/cancel             → stops before/while importing
+```
+
+`confirm` must be idempotent: calling it twice does not start two commit jobs (check status transition atomically: `UPDATE ... SET status='confirmed' WHERE id=$1 AND status='validated'`).
+
+## 5. Upload Handling
+
+- Direct-to-storage uploads (S3/GCS/Azure pre-signed URLs) keep large files off application servers.
+- Check size limits in the pre-signed policy (S3 POST policy `content-length-range`) and again server-side.
+- Validate type by content, not extension: CSV must decode as text; XLSX is a ZIP with expected entries.
+- Scan for malware if files are later served to other users.
+
+## 6. Batched Commit
+
+```python
+def commit(job, rows, repo, batch_size: int = 1000) -> None:
+    batch = []
+    for row in rows:                       # streamed validated rows
+        batch.append(row)
+        if len(batch) == batch_size:
+            repo.upsert_batch(job.tenant_id, batch)    # one transaction per batch
+            repo.increment_progress(job.id, len(batch))
+            batch.clear()
+    if batch:
+        repo.upsert_batch(job.tenant_id, batch)
+        repo.increment_progress(job.id, len(batch))
+```
+
+- Batches of hundreds to a few thousand rows balance round trips and transaction size.
+- For all-or-nothing on large files, load into a staging table and swap/merge in one final transaction (`bulk-import-advanced.md`).
+- Make batches idempotent (upsert by key, or record processed batch numbers) so a restarted worker can continue.
+
+## 7. Error Reporting
+
+Users need to fix and re-upload, so errors must be:
+- Located: row number (as in the user's file, counting the header), column name.
+- Specific: "Invalid email 'bob@'", not "validation failed".
+- Exportable: original row values plus an error column, in the same format as the upload.
+
+## 8. Security Basics
+
+- Authorize the import per tenant and entity type; never trust tenant IDs inside the file.
+- Formula injection: values starting with `=`, `+`, `-`, `@`, tab, or carriage return can execute in spreadsheet apps when error reports or exports are opened. Prefix such values with a single quote when writing CSV/XLSX output.
+- Limit decompressed size for XLSX/ZIP inputs (zip bombs).
+
+## Pitfalls
+
+- Loading the whole file into memory.
+- Running imports in the request thread; timeouts leave partial data.
+- Row numbers that do not match what the user sees in Excel.
+- Non-idempotent confirm or batch processing causing duplicate rows on retry.
+
+## Checklist
+
+- [ ] Stages and statuses defined; large imports run in background jobs.
+- [ ] Failure and write semantics chosen per entity.
+- [ ] Direct-to-storage upload with size/type checks.
+- [ ] Preview and error report with exact row/column locations.
+- [ ] Idempotent confirm and batch commits.
+- [ ] Formula-injection protection on exported files.

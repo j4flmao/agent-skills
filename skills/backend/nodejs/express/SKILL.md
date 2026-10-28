@@ -513,7 +513,5 @@ Use `testcontainers` for DB integration. Mock HTTP with `nock`. Use `jest` with 
   - references/express-error-handling.md — Express Error Handling Reference
   - references/express-security.md — Express Security Reference
   - references/middleware-patterns.md — Middleware Patterns
-  - references/performance-optimization.md — Express Performance Optimization
-  - references/testing-strategies.md — Express Testing Strategies
 ## Handoff
 Hand off to `backend/nodejs/prisma/SKILL.md` for database integration or `backend/nodejs/patterns/SKILL.md` for advanced Express patterns.

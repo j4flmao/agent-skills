@@ -119,7 +119,7 @@ class OrderService(
         validator.validate(request)
         val order = Order.create(
             customerId = request.customerId,
-            items = request.items.map { it.toDomain() },
+            items = request.items.map { it.asDomain() },
             couponCode = request.couponCode
         )
         val saved = repo.save(order)
@@ -274,13 +274,13 @@ fun OrderItem.toResponse(): OrderItemResponse = OrderItemResponse(
     unitPrice = unitPrice
 )
 
-fun CreateOrderRequest.toDomain(): Order = Order.create(
+fun CreateOrderRequest.asDomain(): Order = Order.create(
     customerId = customerId,
-    items = items.map { it.toDomain() },
+    items = items.map { it.asDomain() },
     couponCode = couponCode
 )
 
-fun OrderItemDto.toDomain(): OrderItem = OrderItem(
+fun OrderItemDto.asDomain(): OrderItem = OrderItem(
     productId = productId,
     quantity = quantity,
     unitPrice = unitPrice
@@ -556,7 +556,7 @@ Need Kotlin multiplatform support?
 
 ## Performance
 
-- kotlinx.serialization benchmarks 2-3x faster than Jackson for JSON serialization.
+- kotlinx.serialization generates serializers at compile time (no reflection), which helps startup and native images; measure throughput against Jackson for your payloads before switching.
 - Exposed DSL queries compile to SQL with minimal overhead vs raw JDBC.
 - Coroutine overhead is negligible — use structured concurrency for thousands of concurrent operations.
 - Connection pooling with HikariCP: 10-20 connections per service instance.

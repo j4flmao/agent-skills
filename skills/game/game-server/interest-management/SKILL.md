@@ -1,11 +1,38 @@
 ---
 name: interest-management
-description: Expert network interest management — visibility graphs, observer sets, replicated-state throttling, event queues and scope control for scalable multiplayer servers.
+description: >
+  Use this skill when the user says 'interest management', 'area of interest', 'relevancy', 'network culling', 'replication priority', 'observer set'. Designs interest management: spatial visibility, observer sets, priority/rate budgeting, network LOD and event vs state replication. Do NOT use for: rendering culling (use render-graph), matchmaking (use matchmaking-lobby).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, networking, interest-management, server]
 ---
 
 # Interest Management — Deep Engineering Guide
 
+## Purpose
 Nobody needs everything. A 100-player battle server could broadcast 6 MB/s to everyone — unviable. Interest management (IM) decides **who gets what**, at what rate, with the least CPU — turning O(players²) broadcast into near-O(visible) traffic.
+
+## Agent Protocol
+
+### Trigger
+"interest management", "area of interest", "relevancy", "network culling", "replication priority", "observer set".
+
+### Input Context
+- Player and entity counts, world size
+- Bandwidth budget per client
+- Existing replication system
+
+### Output Artifact
+Interest/priority design and code. No file unless requested.
+
+### Response Format
+```
+Relevancy: {grid | radius | PVS}
+Budget: {bytes/s per client}
+Priority: {formula}
+Code: {snippet}
+```
 
 ## 1. The Two Sides of the Problem
 
@@ -74,7 +101,7 @@ Server per-observer maintains:
 - `dirtyIds` (entities changed since last send to that observer).
 - `replicated` map (entityId → last sent tick or channel version).
 
-Send loop per observer (draw FPS cost):
+Send loop per observer:
 ```
 for id in valueSet(interestedIntersection dirty):
     send delta bytes for changed channels (quantized)
@@ -94,7 +121,7 @@ Never put rare-events on the lossy channel (missed "you won" = rage). Events go 
 
 If a snapshot would exceed the per-observer byte budget:
 - Drop lowest-priority channels first (emote → items → HP).
-- Coarsen quantization (sposition → 8-bit).
+- Coarsen quantization for distant entities (e.g. fewer position bits).
 - Never drop movement below minimum playable (lag fairness).
 
 ## 9. Interest vs Server Tick Cost Model

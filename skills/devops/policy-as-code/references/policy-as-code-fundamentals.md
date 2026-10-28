@@ -1,213 +1,143 @@
-# Policy As Code Fundamentals
+# Policy as Code Fundamentals
 
-## Overview
-Policy As Code is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Policy as code (PaC) expresses organizational rules (security, compliance, cost, reliability) as machine-readable policies stored in version control, tested like software, and enforced automatically at defined points. This reference covers concepts, enforcement points, the main engines and how to choose between them, and the policy lifecycle. Engine-specific deep dives (Rego, Gatekeeper, Kyverno, Terraform, CI, testing) are in sibling references.
+
+## Why Policy as Code
+| Manual policy | Policy as code |
+|---|---|
+| Wiki pages and review checklists | Executable rules |
+| Inconsistent enforcement by reviewers | Same decision every time |
+| Found late (audits, incidents) | Found early (PR, admission) |
+| Hard to prove compliance | Decision logs and reports as evidence |
 
 ## Core Concepts
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Policy As Code helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Concept | Meaning |
+|---|---|
+| Policy | Rule over structured input (JSON/YAML/HCL plan) returning allow/deny/warnings |
+| Input | The object being evaluated: Kubernetes resource, Terraform plan JSON, API request, cloud resource config |
+| Data/context | External facts used by the policy: allowed registries, team ownership, exceptions |
+| Decision | Allow, deny, warn, or mutate, plus messages |
+| Enforcement point | Where the decision is applied (CI, admission, runtime, API gateway, cloud control plane) |
+| Mode | Audit/dry-run (report only), warn, enforce (block) |
+| Exception | Approved, time-bound deviation tracked in code |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Policy As Code solutions. These principles help maintain code quality and reduce technical debt.
+## Enforcement Points (shift left and guard right)
 
-### Concept 3: Data Management
-Proper data management is essential for Policy As Code. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+```
+IDE / pre-commit -> CI (PR checks on code, IaC plans, manifests) -> deploy-time admission (Kubernetes)
+   -> cloud control plane guardrails (SCPs, Azure Policy, Org Policy) -> runtime/continuous audit
+```
+| Point | Example tools | Catches |
+|---|---|---|
+| CI | Conftest (OPA), Checkov, Trivy config, KICS, tfsec rules in Trivy, Kyverno CLI | Misconfigurations before merge |
+| Kubernetes admission | OPA Gatekeeper, Kyverno, ValidatingAdmissionPolicy (CEL, built-in GA since Kubernetes 1.30) | Anything applied to the cluster, including manual `kubectl` |
+| Cloud control plane | AWS SCPs/RCPs and Config rules, Azure Policy, Google Cloud Organization Policy | Actions through console/API/CLI |
+| Terraform platforms | HCP Terraform/Terraform Enterprise Sentinel or OPA policy sets, Spacelift/env0 OPA policies | Plans before apply |
+| Application authorization | OPA, Cedar (Amazon Verified Permissions), OpenFGA | Per-request access decisions |
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+Use more than one layer: CI gives fast feedback; admission/control-plane enforcement cannot be bypassed by skipping CI.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+## Engines Compared
 
-## Architecture Patterns
+| Engine | Language | Strengths | Considerations |
+|---|---|---|---|
+| OPA | Rego | General purpose; any JSON input; huge ecosystem (Gatekeeper, Conftest) | Rego learning curve |
+| Gatekeeper | Rego in ConstraintTemplates | Kubernetes-native CRDs, audit of existing resources, mutation | Kubernetes only |
+| Kyverno | YAML (with CEL support) | Kubernetes-native, validate/mutate/generate/verifyImages, no new language | Kubernetes focused (CLI can test manifests in CI) |
+| ValidatingAdmissionPolicy | CEL | Built into the API server, no webhook to operate | Validation only (mutation via MutatingAdmissionPolicy is newer), simpler rules |
+| Sentinel | Sentinel | Tight HashiCorp integration | Commercial HashiCorp products |
+| Cedar | Cedar | Fast, analyzable authorization policies | Application authz, not infra config |
+| Cloud-native | JSON policy definitions | No extra infrastructure | Provider-specific |
 
-### Pattern 1: Standard Architecture
-The standard architecture for Policy As Code follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+## A First Policy (three engines, same rule: no `:latest` images)
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+Rego (Conftest / Gatekeeper style input):
+```rego
+package kubernetes.images
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+import rego.v1
 
-## Implementation Guide
+deny contains msg if {
+  some c in input.spec.template.spec.containers
+  endswith(c.image, ":latest")
+  msg := sprintf("container %s uses a :latest image tag", [c.name])
+}
+```
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+Kyverno:
+```yaml
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+spec:
+  rules:
+    - name: require-pinned-tag
+      match:
+        any:
+          - resources: { kinds: [Pod] }
+      validate:
+        failureAction: Audit           # rule-level since Kyverno 1.13; switch to Enforce after review
+        message: "Images must not use the :latest tag."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest"
+```
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+ValidatingAdmissionPolicy (CEL):
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: disallow-latest-tag
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["deployments"]
+  validations:
+    - expression: "object.spec.template.spec.containers.all(c, !c.image.endsWith(':latest'))"
+      message: "Images must not use the :latest tag."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: disallow-latest-tag
+spec:
+  policyName: disallow-latest-tag
+  validationActions: ["Warn", "Audit"]       # add "Deny" when ready
+```
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+## Policy Lifecycle
+1. **Author** in git with an owner and rationale (link to the control/standard it implements).
+2. **Test** with unit tests (allowed and denied fixtures) in CI.
+3. **Release** versioned bundles/manifests.
+4. **Roll out** in audit mode, review violations, fix or grant exceptions.
+5. **Enforce** (deny) once violations are resolved.
+6. **Monitor** decision logs and policy reports; track exceptions to expiry.
+7. **Retire** obsolete policies.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## Common Starter Policies
+| Domain | Policy |
+|---|---|
+| Kubernetes | No privileged containers, run as non-root, resource requests/limits, allowed registries, signed images, required labels |
+| IaC | Encryption at rest, no public buckets, no `0.0.0.0/0` on admin ports, required tags, approved regions/instance types |
+| Cloud org | Deny disabling audit logging, restrict regions, deny root user actions |
+| CI/CD | Required reviewers, pinned actions by SHA, no plaintext secrets |
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+## Good Policy Messages
+State what failed, where, why it matters, and how to fix:
+"Deployment payments/api container `app` runs as root. Set `securityContext.runAsNonRoot: true` (CIS 5.2.6). Exception process: PLAT-123."
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Policy As Code concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+## Checklist
+- [ ] Policies in git with owners and linked controls
+- [ ] At least two enforcement layers (CI + admission/control plane)
+- [ ] Unit tests for allow and deny cases
+- [ ] Audit-before-enforce rollout
+- [ ] Exceptions explicit, approved and time-bound
+- [ ] Decision logs/reports collected as compliance evidence

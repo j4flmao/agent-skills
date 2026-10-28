@@ -37,7 +37,7 @@ No file output unless requested.
 ### Response Format
 1. Output stories in CSF 3.x `.stories.tsx`/`.stories.ts` format (default export with `meta`, named exports for stories)
 2. Include `import` statements and `meta` object with `component`, `title`, `tags`, `argTypes`
-3. For interactive stories, use `play` function from `@storybook/test`
+3. For interactive stories, use `play` function from `storybook/test` (`@storybook/test` in v8)
 4. When suggesting addon config, output the full addon registration snippet
 5. When configuring Chromatic, output the full CI workflow YAML
 6. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
@@ -79,7 +79,7 @@ How many components?
 What states does the component have?
   |-- Default / empty state -->
   |     STORY REQUIRED: shows component with no data
-  |     Example: empty list, empty card, placeholder text
+  |     Example: empty list, empty card, skeleton state
   |
   |-- Loading state -->
   |     STORY REQUIRED: skeleton or spinner
@@ -114,8 +114,9 @@ Check `.storybook/main.ts` for required addons:
 
 | Addon | Package | Purpose |
 |-------|---------|---------|
-| Essentials | `@storybook/addon-essentials` | Docs, Controls, Actions, Viewport, Backgrounds |
-| Interactions | `@storybook/addon-interactions` | Play function testing |
+| Core (built in since Storybook 9) | `storybook` | Controls, Actions, Viewport, Backgrounds, interactions/`play` testing — `addon-essentials` and `addon-interactions` are no longer installed separately |
+| Docs | `@storybook/addon-docs` | Autodocs and MDX |
+| Vitest | `@storybook/addon-vitest` | Runs stories as Vitest browser tests (successor to the test-runner for Vite projects) |
 | Accessibility | `@storybook/addon-a11y` | aXe-based accessibility audits |
 | Themes | `@storybook/addon-themes` | Theme switching toolbar |
 | Designs | `@storybook/addon-designs` | Figma design embeds |
@@ -156,7 +157,7 @@ export const Loading: Story = { args: { ...Primary.args, loading: true } };
 
 ### Step 4: Add Interaction Tests
 ```tsx
-import { userEvent, within, expect, fn } from '@storybook/test';
+import { userEvent, within, expect, fn } from 'storybook/test'; // Storybook 8: '@storybook/test'
 
 export const Interactive: Story = {
   args: { onClick: fn() },
@@ -186,11 +187,11 @@ npx test-storybook --coverage
 Fix violations: missing ARIA labels, insufficient color contrast, missing focus indicators.
 
 ### Step 7: Documentation Mode
-Enable `autodocs: 'tag'` in `main.ts`. Add `tags: ['autodocs']` to each meta. For custom docs:
+Add `tags: ['autodocs']` to each meta (or to `preview.ts` to enable globally; the old `docs.autodocs` option in `main.ts` was removed). For custom docs:
 
 ```tsx
 // Button.docs.mdx
-import { Meta, Story, Canvas, Controls } from '@storybook/blocks';
+import { Meta, Story, Canvas, Controls } from '@storybook/addon-docs/blocks'; // Storybook 8: '@storybook/blocks'
 <Meta of={ButtonStories} />
 <Canvas><Story of={ButtonStories.Primary} /></Canvas>
 <Controls of={ButtonStories.Primary} />
@@ -236,7 +237,7 @@ export const Empty: Story = {
 ## Common Pitfalls
 
 1. **CSF 2.x `storiesOf` API**: Always use CSF 3.x. Never use `storiesOf` — removed in Storybook 8.
-2. **Direct addon imports in stories**: Use `parameters` or `decorators` in meta — never `import from '@storybook/addon-*'`.
+2. **Addon imports in story files**: Configure addons via `parameters`/`decorators` in meta or `.storybook/preview.ts` (importing addon helpers such as `withThemeFromJSXProvider` in `preview.ts` is fine).
 3. **Missing `autodocs` tag**: Without `tags: ['autodocs']` or global enable, docs tab won't generate.
 4. **Real API calls in stories**: Always mock data/services. Use MSW or static fixtures.
 5. **`any` type for props**: Derive from component's props type. Use `StoryObj<typeof meta>`.
@@ -315,8 +316,6 @@ export const WithForm: Story = {
 ```tsx
 // Theming with design tokens
 // .storybook/preview.ts
-import { globalTypes } from '@storybook/addons';
-
 export const globalTypes = {
   theme: {
     name: 'Theme',
@@ -396,6 +395,7 @@ export const decorators = [
 ```typescript
 // .storybook/test-runner.ts
 // Custom test runner for a11y and interaction testing
+// For Vite-based projects on Storybook 9+, prefer @storybook/addon-vitest, which runs a11y checks per story
 import { getStoryContext, type TestRunnerConfig } from '@storybook/test-runner';
 import { checkA11y, injectAxe } from 'axe-playwright';
 
@@ -409,12 +409,11 @@ const config: TestRunnerConfig = {
     // Skip a11y tests for stories that opt out
     if (storyContext.parameters?.a11y?.disable) return;
 
-    // Run aXe and fail on critical violations
-    const results = await checkA11y(page, 'storybook-root', {
-      detailedReport: false,
+    // checkA11y throws (failing the test) when violations of these impacts are found
+    await checkA11y(page, '#storybook-root', {
+      detailedReport: true,
       includedImpacts: ['critical', 'serious'],
     });
-    expect(results).toHaveNoViolations();
   },
 };
 
@@ -423,13 +422,13 @@ export default config;
 
 ## Performance Considerations
 
-- Storybook dev server can be slow for large component libraries (500+ stories). Use `storyStoreV7: true` for lazy compilation
+- Storybook dev server can be slow for large component libraries; prefer the Vite builder and keep `stories` globs narrow
 - Chromatic snapshots run on CI — limit to changed stories per PR to reduce snapshot time
 - MSW handlers intercept API calls in stories — no real network requests during testing
 - Bundle size of Storybook itself is irrelevant to production (dev-only tool)
-- `@storybook/test` package is small (~3KB) and only used in story files
-- Lazy compilation: `storyStoreV7: true` reduces dev startup time by 60% for large libraries
-- Chromatic `onlyChanged: true` reduces snapshot time by 80%+ on typical PRs
+- `storybook/test` (`@storybook/test` in v8) is only used in story files and never ships to production
+- On-demand story loading is the default since Storybook 7 (the old `storyStoreV7` flag is gone); with the Vite builder only visited stories are compiled
+- Chromatic TurboSnap (`onlyChanged: true`) snapshots only stories affected by the changed files
 
 ## Accessibility Considerations
 
@@ -471,7 +470,7 @@ export const A11yViolations: Story = {
 
 ## Rules
 - Always use CSF 3.x syntax — never CSF 2.x `storiesOf` API
-- Never import from `@storybook/addon-*` directly in story files — use `parameters` or `decorators` in the meta export
+- Configure addons in `.storybook/preview.ts` or via `parameters`/`decorators`, not ad-hoc imports in each story file
 - Always set `tags: ['autodocs']` in meta to generate documentation automatically
 - Always mock external data/service calls in stories — never hit real APIs
 - Never use `any` type for story props — derive from the component's props type
@@ -493,120 +492,6 @@ export const A11yViolations: Story = {
 No artifact produced unless requested.
 Next skill: `frontend-pwa` (if the component needs offline support or a service worker)
 Carry forward: Component prop types, existing story examples, addon list from config
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
 ## Architecture Decision Trees
 
 ### Documentation Strategy Decision Tree

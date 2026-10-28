@@ -88,14 +88,12 @@ Free tier                        │ No (self-host OSS)| $0.40/secret/mo| $0.06/
 ### Deployment Models
 
 ```
-Self-managed (OSS):
-├── Binary deployment on VMs or containers
-├── Storage backends: Consul, Raft (integrated), DynamoDB, etcd
-├── Single cluster or multi-datacenter replication
-├── High availability: active/standby with automatic failover
-├── Scaling: add standby nodes for read scaling
-├── Performance: 2-5x slower than cloud managed (self-host overhead)
-└── Cost: infrastructure only (OSS is free), but operational cost is high
+Self-managed (Community edition, BSL 1.1 since Vault 1.15; OpenBao is the MPL-2.0 fork):
+├── Binary deployment on VMs or containers (official Helm chart for Kubernetes)
+├── Storage: integrated Raft is the recommended backend; Consul also supported
+├── High availability: one active node, standbys forward requests and take over on failure
+├── No cross-cluster replication and no read-scaling standbys (Enterprise features)
+└── Cost: no license fee; operational cost (unseal, upgrades, backups, on-call) is significant
 
 Self-managed (Enterprise):
 ├── All OSS features + Enterprise features
@@ -109,7 +107,7 @@ Self-managed (Enterprise):
 
 HCP Vault (HashiCorp Cloud Platform):
 ├── Fully managed by HashiCorp
-├── Deployed in AWS, Azure, or GCP
+├── HCP Vault Dedicated runs on AWS or Azure
 ├── Automatic upgrades, backups, scaling
 ├── High availability built-in
 ├── Performance replication included
@@ -159,39 +157,6 @@ JWT/OIDC         │ Any JWT issuer                    │ Strong
 Okta             │ Okta SSO integration              │ Strong
 RADIUS           │ RADIUS network auth               │ Moderate
 SAML             │ Enterprise SSO                    │ Strong (MFA capable)
-```
-
-### Performance Specifications
-
-```
-Single active node:
-├── Read throughput: ~10,000 reads/sec
-├── Write throughput: ~500 writes/sec
-├── Latency P50: 1-5ms (local storage), 5-15ms (cloud storage)
-├── Latency P99: 10-30ms (local), 50-150ms (cloud)
-├── Concurrent connections: ~1,000-5,000 (depends on resources)
-└── Node specs: 2-4 CPU, 8-16GB RAM (typical)
-
-Performance replication (Enterprise):
-├── Scale: near-linear read scaling with more standby nodes
-├── Local read: 10K/sec per node, 5 nodes = 50K/sec
-├── Replication lag: <500ms within region, <2s cross-region
-├── Writes: primary node only, ~500/sec
-└── Topology: hub-and-spoke or mesh
-
-Storage backend comparison:
-├── Raft (integrated): 500-1000 writes/sec, simple ops, 3-5 nodes min
-├── Consul: 1000-2000 writes/sec, requires separate Consul cluster
-├── DynamoDB: 500-1000 writes/sec, AWS-only, serverless
-├── etcd: 2000+ writes/sec, requires separate etcd cluster
-└── File (dev only): single node, no HA, no production use
-
-Vault Agent caching:
-├── Cache mode: in-memory, local file, or both
-├── TTL: configurable per secret path (default 10min)
-├── Cache hit ratio: 80-95% (typical production workload)
-├── Cache miss penalty: 1 vault read (10-50ms)
-└── Force refresh: SIGHUP or agent API call
 ```
 
 ### Operational Considerations
@@ -600,7 +565,7 @@ resource "vault_database_secret_backend_role" "app" {
 }
 
 # External Secrets syncs from both
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: app-secrets
@@ -728,41 +693,6 @@ Scenario D: Enterprise with dynamic secrets (Vault + cloud SM)
 
 Note: Azure KV pricing does not scale with secret count, only with API call volume.
 This makes it dramatically cheaper for large secret counts with low access frequency.
-```
-
-### Latency Comparison
-
-```
-Secret retrieval latency (P50):
-
-Same region:
-├── AWS Secrets Manager: 15-25ms
-├── GCP Secret Manager: 10-20ms
-├── Azure Key Vault: 10-20ms
-├── Vault (local, Raft): 1-5ms
-├── Vault Agent cache: <1ms
-└── Vault (cloud storage backend): 10-30ms
-
-Cross-region:
-├── AWS Secrets Manager (replica): 30-60ms
-├── GCP Secret Manager (multi-region): 30-50ms
-├── Azure Key Vault (geo-replicated): 40-80ms
-├── Vault (performance replication): 5-15ms (local node)
-└── Vault (DR replication, active-passive): depends on DR state
-
-Cold start (first access):
-├── AWS Secrets Manager: 30-50ms (includes KMS decrypt)
-├── GCP Secret Manager: 20-40ms
-├── Azure Key Vault: 20-40ms
-├── Vault: 10-30ms (includes seal decrypt)
-└── Vault Agent cache miss: 10-30ms + cache update
-
-Recommendations for latency-sensitive apps:
-├── Vault Agent sidecar (in-memory cache): <1ms after warmup
-├── Application-level cache: configurable TTL, <1ms
-├── Direct Vault SDK with connection pool: 1-5ms
-├── Cloud SM: acceptable for most use cases (10-25ms)
-└── Avoid: per-request cloud SM calls for latency-sensitive paths
 ```
 
 ## Compliance and Certification

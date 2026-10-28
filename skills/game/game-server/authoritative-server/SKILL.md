@@ -1,11 +1,38 @@
 ---
 name: authoritative-server
-description: Expert authoritative game server architecture — tick loop, world state, client input authority, rollback, lag compensation and connection handling for online games.
+description: >
+  Use this skill when the user says 'authoritative server', 'server tick loop', 'server reconciliation', 'lag compensation', 'dedicated server', 'input authority'. Designs authoritative game servers: tick loop, world state and snapshots, input authority, reconciliation/rollback, lag compensation and session handling. Do NOT use for: client-side prediction details (use multiplayer-netcode), fleet scaling (use scaling-architecture).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, server, authoritative, netcode]
 ---
 
 # Authoritative Server — Deep Engineering Guide
 
+## Purpose
 The server is the single source of truth. Clients only *intend*; the server *decides*. This skill covers the server tick loop, world-state serialization, input authority, reconciliation/rollback, lag compensation and session/connection management that make online games correct, cheat-resistant and smooth under real network loss.
+
+## Agent Protocol
+
+### Trigger
+"authoritative server", "server tick loop", "server reconciliation", "lag compensation", "dedicated server", "input authority".
+
+### Input Context
+- Genre, player count, tick rate target
+- Engine/language of server
+- Hosting model
+
+### Output Artifact
+Server loop design and code. No file unless requested.
+
+### Response Format
+```
+Tick: {Hz}
+Loop: {receive -> simulate -> snapshot -> send}
+Authority: {what server validates}
+Code: {snippet}
+```
 
 ## 1. Why Authoritative
 
@@ -34,7 +61,7 @@ Pick: **full authoritative** (server runs everything; client is dumb viewer) vs 
 ### 2.1 Fixed Timestep
 
 - **Server tick**: fixed 30–64 Hz (30 for strategy, 60 for aimful shooters; 128 for esports aimers).
-- Do NOT `sleep(frame)`: use `deltaTime` accumulation (see `game-loop-and-timestep`). Server ticks at exact fixed dt regardless of wall clock.
+- Derive the tick count from an accumulator over a monotonic clock (see `game-loop-and-timestep`), then sleep until the next tick deadline instead of spinning; never scale gameplay by the measured frame time.
 
 ```cpp
 // server main loop:
@@ -66,14 +93,14 @@ server: collect per-tick input, run queued commands, apply at tick boundary, opt
 ```
 
 Key properties:
-- **Attack later**: authoritative server processes input *at the tick it was generated* (with a `commandTick`), not when it arrives.
+- **Tick-stamped commands**: each command carries the client tick it was generated for; the server buffers a small amount (a jitter buffer of 1-3 ticks) and applies it at that tick, dropping commands that arrive too late.
 - **Input history buffer** on server: replay recent inputs if a rolled-back tick needs them.
 - **Client command throttling**: cap commands/second; server drops excess (anti-abuse).
 
 ### 3.1 Client Prediction ↔ Server Reconciliation
 
 - Client predicts its own motion (renders its projection).
-- Server reconciles the actual authoritative value each tick; client "rubber-bands" only if mismatch > tolerance (e.g., > 100 ms of error).
+- Server reconciles the actual authoritative value each tick; client corrects only if the mismatch exceeds a tolerance (e.g. a few cm of position error), and smooths small corrections over several frames.
 - Tolerance + extrapolation clipping prevent wild rubber-banding (see `rollback-and-reconciliation.md`).
 
 ## 4. World-State Snapshot Serialization
@@ -82,16 +109,16 @@ Server serializes **deltas**, not full state:
 
 | Approach | Cost | Use |
 |----------|------|-----|
-| Full state | bloom | lobbies/tiny |
+| Full state | large | lobbies, tiny games, keyframes |
 | Delta (since last ack) | efficient | standard |
 | Interest-gated masks | minimal | open world (see interest-management skill) |
 
 Snapshot minimal components:
 - `matchId`, `tick`, `seq`, per-entity: `{entityId, flags, bits...}`.
-- Compressed position: quantized int16 (glm-style fixed Q for flakeless determinism), deltas rather than absolute.
+- Compressed position: quantized to a fixed grid (e.g. int16/int32 at 1 cm), sent as deltas against the acked baseline.
 - Entities unchanged since last snapshot: omitted (per-entity dirty flags).
 
-Standard formats: UE replicas, OSSNet Snapshot = "columns of bytes" per entity with `networked` mask; netcode in game-engine/multiplayer skill.
+See `game-engine-multiplayer-netcode` for engine-level replication formats.
 
 ## 5. Reconciliation, Rollback & Lag Compensation
 
@@ -110,8 +137,8 @@ if history[1000] exists → re-run 1000..now with that input
 
 Server can't "aim at where client renders" — it rewinds to the client's requested timestamp to check the shot hit:
 
-- Store per-tick entity transforms for the last ~100 ms.
-- On shot incoming, `rewind to (arrivalTime - ping/2)`, run raycast vs stored poses.
+- Store per-tick hitbox poses for the maximum rewind window (commonly 200-300 ms, capped and configurable).
+- The shot command names the tick (plus interpolation fraction) the shooter was rendering; the server rewinds other players to that time — clamped to the window — and raycasts against the stored poses.
 - Crosshair hits what the shooter saw = fair for the shooter, deterministic to server.
 
 ### 5.3 The "Client is Right?" Test
@@ -134,10 +161,10 @@ UNRESPONSIVE → HANDSHAKE (challenge/response) → ESTABLISHED
 ### 6.2 The "Replay Value" Problem
 
 If a client drops in a rank/match, on return server either:
-1. **Fast-recovery**: restore to last ack'd snapshot + client resyncs from ticklet (simple, standard).
+1. **Fast-recovery**: client reconnects with its session token and receives a full keyframe snapshot, then deltas (simple, standard).
 2. **Late-join backfill**: watch a spectator cam until slot opens (complex; for dedicated shows).
 
-Pick 1 for most titles; 2 only for spectator/require.
+Pick 1 for most titles; 2 only when the design requires drop-in spectators.
 
 ## 7. Exploit & Cheat Resistance (Server Facts)
 
@@ -155,12 +182,11 @@ Combined with validation hooks in `anti-cheat-server`.
 
 | Per-player server budget | Target |
 |--------------------------|--------|
-| CPU / tick | < 0.1 ms |
 | Bandwidth out | ≤ ~60 kB/s (deltas) |
 | Memory | ≤ 2 MB (state) |
 | Tick compute | ~50–200 us/player typical |
 
-Under load: more than 60 players/tick ● split world (zones/chunks) or shard (interest-management). If a tick > budget, drop non-crucial systems (network simulation throttle — not gameplay).
+When a single process cannot hold the tick budget, split the world (zones) or reduce per-player cost (interest management) — never split one match's simulation across processes. If a tick > budget, drop non-crucial systems (network simulation throttle — not gameplay).
 
 ## 9. Testing the Server
 

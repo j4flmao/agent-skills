@@ -469,7 +469,7 @@ function BreadcrumbJsonLd({ path }: { path: { name: string; slug: string }[] }) 
 
 ## Performance Considerations
 
-- SSR improves LCP by 40-60% compared to CSR for content pages
+- SSR/SSG usually improves LCP versus client-side rendering for content pages, because the content is in the initial HTML
 - JSON-LD in `<head>` adds ~1-5KB to HTML size
 - Sitemap generation: static at build time preferred over dynamic generation
 - Preconnect to CDN for OG images reduces LCP font/hero image delay

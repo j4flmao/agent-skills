@@ -8,11 +8,11 @@ Pulumi tracks resource state to map infrastructure to your code. Multiple state 
 
 | Feature | Pulumi Cloud | S3 (AWS) | Azure Blob | GCS | Self-Managed |
 |---------|-------------|----------|------------|-----|--------------|
-| State Locking | Built-in | DynamoDB required | Lease-based | Object hold | Manual |
+| State Locking | Built-in | Lock files in bucket | Lock files in container | Lock files in bucket | Lock files (local) |
 | Team Collaboration | Native | Manual/CI | Manual/CI | Manual/CI | Manual |
 | Secrets | Built-in | KMS | Azure Key Vault | Cloud KMS | KMS |
 | History | Full timeline | Via CI | Via CI | Via CI | None |
-| Cost | Per-user free tier | S3 + DynamoDB | Blob storage | GCS storage | Free |
+| Cost | Per-user free tier | S3 storage | Blob storage | GCS storage | Free |
 | Audit Logs | Yes | CloudTrail | Monitor | Cloud Audit | Custom |
 | Policy Enforcement | Crossguard | Manual | Manual | Manual | Manual |
 
@@ -80,18 +80,13 @@ aws s3api put-bucket-encryption \
     "Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]
   }'
 
-# Create DynamoDB table for state locking
-aws dynamodb create-table \
-  --table-name pulumi-state-lock \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST
+# No lock table needed: Pulumi DIY backends write lock files under .pulumi/locks/ in the bucket
 ```
 
 ### Login
 ```bash
 # Login with default AWS credentials
-pulumui login s3://my-pulumi-state
+pulumi login s3://my-pulumi-state
 
 # With specific profile
 AWS_PROFILE=infra-admin pulumi login s3://my-pulumi-state
@@ -300,7 +295,7 @@ pulumi stack --stack dev
 
 ### Backend Selection by Team Size
 - **Solo developers**: Self-managed (local) or Pulumi Cloud free tier
-- **Small team (2-10)**: Pulumi Cloud or S3 with DynamoDB locking
+- **Small team (2-10)**: Pulumi Cloud or an S3/GCS/Azure Blob DIY backend (built-in lock files)
 - **Growing team (10-50)**: Pulumi Cloud (team tier) for audit trail
 - **Enterprise (50+)**: Pulumi Cloud Enterprise for RBAC, SAML/SSO, policy
 

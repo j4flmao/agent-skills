@@ -1,214 +1,111 @@
-# Recommender Advanced Topics
+# Recommender Systems: Advanced Topics
 
-## Introduction
-Advanced Recommender topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Production techniques beyond basic collaborative filtering: embedding-based retrieval with approximate nearest neighbour search, multi-objective ranking, sequential and generative recommendation, bias correction with logged impressions, exploration, diversity and re-ranking, real-time features, and feedback loops. Builds on `recommender-fundamentals.md`; architecture details in `recommender-architecture.md`.
 
-## Advanced Architecture Patterns
+## Embedding Retrieval (Two-Tower)
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+```
+user tower: user id embedding + recent history + context features  -> u (d-dim)
+item tower: item id embedding + content features                   -> v (d-dim)
+score = u · v      (or cosine)
+```
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+Training:
+- In-batch negatives with sampled softmax; apply **logQ correction** (subtract log of item sampling probability) so popular items are not over-penalized as negatives.
+- Mix in hard negatives (items shown but not clicked, or nearest neighbours) carefully; too many hard negatives destabilize training.
+- Temperature-scaled softmax on normalized embeddings is common.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+Serving:
+- Precompute item vectors; index with ANN (FAISS IVF/HNSW, ScaNN, HNSW in vector databases).
+- Compute the user vector online from fresh features and query top-K.
+- Track ANN recall against exact search on a sample; tune index parameters (efSearch, nprobe) for the latency budget.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+## Multi-Source Candidate Generation
 
-## Performance Optimization
+Combine retrieval sources (two-tower, item-item CF, trending, follow graph, content similarity, editorial) with per-source quotas, then deduplicate. Log the source of each candidate to measure contribution and avoid starving new sources.
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+## Ranking Models
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+| Model | Notes |
+|-------|-------|
+| GBDT (LightGBM/XGBoost) with LambdaMART objectives | Strong with engineered features; fast to iterate |
+| Deep rankers (DCN-v2, DLRM-style) | Learn feature crosses; handle large sparse IDs |
+| Multi-task models (shared bottom, MMoE, PLE) | Predict several outcomes (click, purchase, dwell, dislike) jointly |
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+### Multi-Objective Scoring
 
-## Security Hardening
+```
+final_score = w1 * P(click) + w2 * P(purchase) * value + w3 * E[watch_time] - w4 * P(dislike)
+```
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+- Calibrate each prediction (isotonic/Platt) before combining.
+- Tune weights with online experiments; document trade-offs (engagement vs revenue vs satisfaction).
+- Include negative feedback (hides, skips, unsubscribes) explicitly.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+## Sequential and Generative Recommendation
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+- Transformer-based sequence models (SASRec, BERT4Rec) predict the next item from recent interactions; strong for session-heavy products.
+- Generative retrieval represents items with semantic IDs (quantized content embeddings) and decodes IDs autoregressively, improving cold-start generalization.
+- LLMs help with item understanding (generating attributes, descriptions, embeddings) and conversational recommendation; cost and latency usually confine them to offline enrichment or re-ranking small candidate sets.
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+## Bias in Logged Data
 
-## Monitoring and Observability
+| Bias | Cause | Correction |
+|------|-------|-----------|
+| Position bias | Top positions get more clicks regardless of relevance | Position as a training feature (set to a constant at inference), or inverse propensity weighting with estimated examination probabilities |
+| Exposure/selection bias | Only shown items get feedback | IPS with logged propensities, randomized exploration traffic |
+| Popularity bias | Popular items dominate training | logQ correction, re-ranking for coverage, calibrated recommendations |
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+Counterfactual (off-policy) evaluation: with logged propensities, estimate a new policy's value using IPS, self-normalized IPS or doubly robust estimators before an A/B test. Requires that the logging policy gave non-zero probability to actions the new policy takes.
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+## Exploration
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+- Epsilon-greedy slots, Thompson sampling or UCB-style bandits for new items and uncertain candidates.
+- Boost new items for a limited impression budget (cold-start exploration), then let learned scores take over.
+- Log propensities for every exploratory decision so data stays usable for off-policy learning.
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+## Diversity and Re-Ranking
 
-## Scalability and Reliability
+```python
+def mmr(candidates, scores, sim, k, lam=0.7):
+    """Maximal Marginal Relevance: balance relevance and novelty vs already selected."""
+    selected = []
+    pool = list(candidates)
+    while pool and len(selected) < k:
+        best = max(pool, key=lambda i: lam * scores[i] - (1 - lam) * max((sim(i, j) for j in selected), default=0.0))
+        selected.append(best)
+        pool.remove(best)
+    return selected
+```
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+- Alternatives: determinantal point processes, category caps per page, calibration to the user's historical interest distribution.
+- Supplier/creator fairness constraints may be required by business or regulation (e.g. the EU Digital Services Act requires very large platforms to explain main parameters of recommender systems and offer at least one option not based on profiling).
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+## Real-Time Signals
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+- Session features (items viewed in the last minutes), real-time counters (item CTR in last hour), and inventory/price updates via streaming pipelines.
+- Online feature store for low-latency reads; consistent definitions with training (see the feature-engineering and feature-store skills).
+- Latency budget split across retrieval, feature fetch and ranking; cache user embeddings per session where acceptable.
 
-## Integration and Interoperability
+## Feedback Loops and Long-Term Effects
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+- Recommenders shape the data they learn from; without exploration, the catalogue narrows and new items starve.
+- Monitor coverage, concentration (Gini of impressions), and new-item exposure over time.
+- Optimize proxies of long-term value (retention, satisfaction surveys) and run long-duration holdouts to detect slow harms.
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+## Experimentation
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+- A/B tests with guardrail metrics (latency, complaints, diversity, revenue).
+- Interleaving (team-draft) for sensitive ranker comparisons with less traffic.
+- Watch novelty effects; run long enough to observe stabilized behaviour.
 
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+## Checklist
+
+- [ ] Two-tower retrieval trained with logQ-corrected sampled softmax; ANN recall monitored
+- [ ] Candidate sources logged and evaluated
+- [ ] Multi-task ranker with calibrated outputs and explicit negative feedback
+- [ ] Position and exposure bias addressed; propensities logged
+- [ ] Exploration budget for new and uncertain items
+- [ ] Diversity/calibration re-ranking with measurable constraints
+- [ ] Real-time features consistent between training and serving
+- [ ] Long-term holdouts and ecosystem metrics monitored

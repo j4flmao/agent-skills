@@ -89,7 +89,7 @@ helm install external-secrets external-secrets/external-secrets -n external-secr
 
 ### SecretStore Configuration
 ```yaml
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: SecretStore
 metadata:
   name: aws-secrets-manager
@@ -99,7 +99,7 @@ spec:
       service: SecretsManager
       region: us-east-1
 ---
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: db-credentials
@@ -116,7 +116,7 @@ spec:
 ```
 
 ### Sync Behavior
-Poll interval: 1 hour (default). Push: trigger sync via `external-secrets.io/refresh` annotation. Deletion policy: Delete (remove K8s secret when ExternalSecret deleted), Retain (keep on deletion), Merge (combine with existing). Supports: AWS, GCP, Azure, Vault, and 20+ providers.
+Poll interval: 1 hour (default). Force an immediate sync: `kubectl annotate externalsecret <name> force-sync=$(date +%s) --overwrite`. Deletion policy: Delete (remove K8s secret when ExternalSecret deleted), Retain (keep on deletion), Merge (combine with existing). Supports: AWS, GCP, Azure, Vault, and 20+ providers.
 
 ## Rotation Patterns
 

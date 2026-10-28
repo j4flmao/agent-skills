@@ -1,12 +1,16 @@
 ---
 name: sandbox-execution
 description: >
-  Comprehensive skill for designing, implementing, and operating durable execution
+  Use this skill when the user says 'sandbox agent code', 'run untrusted code',
+  'gVisor', 'Firecracker', 'microVM', 'durable execution', 'sandbox snapshot'.
+  Designs, implements, and operates durable execution
   environments with microVM isolation, snapshotting, forking, and secure agent
   runtime sandboxes. Covers the sandbox-as-a-tool pattern, Temporal/durable
   execution frameworks, gVisor/Kata Containers/Firecracker isolation, workspace
   management, state persistence across sessions, filesystem sandboxing, network
   isolation, and resource quota enforcement for production agent systems.
+  Do NOT use for: general container image hardening (security/container-security)
+  or Kubernetes admission policy (devops/policy-as-code).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -58,7 +62,8 @@ composable tool that agents can invoke, configure, and tear down programmaticall
 
 3. **Durability over Ephemerality**: Agent work products must survive sandbox restarts,
    host reboots, and infrastructure failures. Durable execution frameworks (Temporal,
-   Restate) provide exactly-once semantics and automatic workflow recovery.
+   Restate) persist workflow progress and replay it after a crash; side-effecting steps
+   (activities) are retried at-least-once, so they must be idempotent.
 
 4. **Snapshot-Fork-Merge Execution**: Complex reasoning tasks benefit from
    checkpoint-and-branch execution models. Snapshots capture full sandbox state;
@@ -104,7 +109,7 @@ composable tool that agents can invoke, configure, and tear down programmaticall
     "max_wall_clock_s": 300
   },
   "network_policy": "egress-allow-list",
-  "allowed_egress": ["api.openai.com:443", "pypi.org:443"],
+  "allowed_egress": ["pypi.org:443", "files.pythonhosted.org:443"],
   "filesystem_mounts": [
     {"host": "/data/workspace/agent-7", "guest": "/workspace", "mode": "rw"},
     {"host": "/data/shared/models", "guest": "/models", "mode": "ro"}
@@ -136,8 +141,8 @@ START: Agent requests execution environment
 │  │        └─ No network → Apply deny-all network policy
 │  │
 │  └─ NO → Is execution latency-critical (<100ms boot)?
-│     ├─ YES → Use gVisor (runsc) with KVM platform
-│     │        └─ Apply strict seccomp + read-only rootfs
+│     ├─ YES → Use gVisor (runsc); systrap platform by default, KVM on bare metal
+│     │        └─ Apply read-only rootfs + dropped capabilities
 │     │
 │     └─ NO → Is maximum isolation required?
 │        ├─ YES → Use Firecracker microVM
@@ -176,7 +181,7 @@ START: Agent requests execution environment
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │              SANDBOX LIFECYCLE CONTROLLER                 │   │
 │  │  ┌─────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │   │
-│  │  │ Provison │→ │ Execute  │→ │ Snapshot │→ │ Teardown │  │   │
+│  │  │ Provision│→ │ Execute  │→ │ Snapshot │→ │ Teardown │  │   │
 │  │  └─────────┘  └──────────┘  └──────────┘  └──────────┘  │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │         │                │                        │              │
@@ -201,7 +206,7 @@ START: Agent requests execution environment
 │                     RESOURCE ENFORCEMENT                         │
 │  ┌─────────────┐  ┌──────────────┐  ┌───────────────────────┐  │
 │  │ CPU Quota    │  │ Memory Limit │  │ Disk I/O Throttle     │  │
-│  │ (CFS/BW)    │  │ (hard OOM)   │  │ (blkio cgroup)        │  │
+│  │ (cpu.max)   │  │ (memory.max) │  │ (io.max, cgroup v2)   │  │
 │  └─────────────┘  └──────────────┘  └───────────────────────┘  │
 │  ┌─────────────┐  ┌──────────────┐  ┌───────────────────────┐  │
 │  │ Network BW   │  │ PID Limit    │  │ Wall-Clock Timeout    │  │
@@ -295,10 +300,10 @@ Agent Request: "Execute Python data analysis with network access to S3"
 ┌─────────────────────────────────────────────────────────────┐
 │ 3. PROVISION SANDBOX                                         │
 │    Create cgroup: /sys/fs/cgroup/sandbox-sbx-a1b2c3d4        │
-│    Set cpu.max=200000/100000 (2 cores)                       │
+│    Set cpu.max="200000 100000" (2 cores)                    │
 │    Set memory.max=2147483648 (2GB)                           │
 │    Mount /workspace as rw overlay                            │
-│    Apply iptables egress rule for *.amazonaws.com:443        │
+│    Route egress via allow-list proxy: *.amazonaws.com:443    │
 └─────────────────────┬───────────────────────────────────────┘
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -362,131 +367,124 @@ Agent Request: "Execute Python data analysis with network access to S3"
 
 ### Sandbox Manager
 
+Command denylists (`"rm -rf" in command`) are trivially bypassed and are not a security
+control; isolation comes from the runtime boundary. The manager below drives a real
+container runtime (Docker with gVisor's `runsc` runtime registered) and enforces limits
+through runtime flags plus an external wall-clock timeout.
+
 ```python
-from typing import Dict, List, Optional, Callable
-from dataclasses import dataclass, field
-from datetime import datetime
+from __future__ import annotations
+
 import asyncio
-import uuid
-import time
+import logging
+import secrets
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
-@dataclass
+log = logging.getLogger("sandbox")
+
+
+@dataclass(frozen=True, slots=True)
 class SandboxConfig:
-    max_cpu_cores: float = 1.0
-    max_memory_mb: int = 512
-    max_disk_mb: int = 1024
-    max_wallclock_seconds: int = 300
-    allowed_egress_domains: List[str] = field(default_factory=lambda: ["api.openai.com"])
-    blocked_commands: List[str] = field(default_factory=lambda: ["rm -rf", "shutdown", "reboot"])
-    snapshot_enabled: bool = True
-    network_enabled: bool = True
-    read_only_filesystem: bool = False
+    image: str = "python:3.12-slim"
+    runtime: str = "runsc"            # gVisor; use "runc" only for trusted code
+    cpus: float = 1.0
+    memory_mb: int = 512
+    pids_limit: int = 256
+    max_wallclock_s: int = 300
+    network: str = "none"             # deny-all; attach an egress-proxy network explicitly
+    read_only_rootfs: bool = True
 
-@dataclass
+
+@dataclass(slots=True)
 class SandboxInstance:
     id: str
     config: SandboxConfig
-    status: str = "provisioning"
-    created_at: datetime = field(default_factory=datetime.now)
-    expires_at: Optional[datetime] = None
-    last_activity: datetime = field(default_factory=datetime.now)
-    cpu_usage: float = 0.0
-    memory_usage_mb: int = 0
-    snapshot_id: Optional[str] = None
+    expires_at: datetime
+    status: str = "running"
+
+
+class SandboxError(RuntimeError):
+    pass
+
+
+async def _run(*argv: str, timeout_s: float) -> tuple[int, str, str]:
+    proc = await asyncio.create_subprocess_exec(
+        *argv, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    try:
+        out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
+    except asyncio.TimeoutError:
+        proc.kill()
+        await proc.wait()
+        raise SandboxError(f"command timed out after {timeout_s}s: {argv[:4]}")
+    return proc.returncode or 0, out.decode(errors="replace"), err.decode(errors="replace")
+
 
 class SandboxManager:
-    def __init__(self):
-        self.sandboxes: Dict[str, SandboxInstance] = {}
-        self.max_concurrent = 10
-        self._watchdog_task = None
+    def __init__(self, max_concurrent: int = 10) -> None:
+        self.max_concurrent = max_concurrent
+        self.sandboxes: dict[str, SandboxInstance] = {}
 
-    async def create_sandbox(self, config: Optional[SandboxConfig] = None) -> SandboxInstance:
+    async def create(self, config: SandboxConfig | None = None) -> SandboxInstance:
+        cfg = config or SandboxConfig()
         if len(self.sandboxes) >= self.max_concurrent:
-            raise RuntimeError(f"Max concurrent sandboxes ({self.max_concurrent}) reached")
+            raise SandboxError(f"max concurrent sandboxes ({self.max_concurrent}) reached")
+        sid = f"sbx-{secrets.token_hex(4)}"
+        argv = [
+            "docker", "run", "-d", "--name", sid, f"--runtime={cfg.runtime}",
+            f"--cpus={cfg.cpus}", f"--memory={cfg.memory_mb}m", f"--pids-limit={cfg.pids_limit}",
+            f"--network={cfg.network}", "--cap-drop=ALL", "--security-opt=no-new-privileges",
+            "--tmpfs", "/workspace:rw,size=256m", "-w", "/workspace",
+        ]
+        if cfg.read_only_rootfs:
+            argv.append("--read-only")
+        argv += [cfg.image, "sleep", str(cfg.max_wallclock_s)]
+        code, _, err = await _run(*argv, timeout_s=60)
+        if code != 0:
+            raise SandboxError(f"failed to start sandbox {sid}: {err.strip()}")
+        expires = datetime.now(timezone.utc) + timedelta(seconds=cfg.max_wallclock_s)
+        inst = SandboxInstance(sid, cfg, expires)
+        self.sandboxes[sid] = inst
+        log.info("sandbox created id=%s runtime=%s", sid, cfg.runtime)
+        return inst
 
-        instance = SandboxInstance(
-            id=str(uuid.uuid4())[:8],
-            config=config or SandboxConfig(),
-        )
-        instance.expires_at = datetime.fromtimestamp(
-            time.time() + instance.config.max_wallclock_seconds
-        )
-        instance.status = "running"
-        self.sandboxes[instance.id] = instance
-        return instance
+    async def execute(self, sandbox_id: str, argv: list[str], timeout_s: float = 60) -> dict[str, object]:
+        inst = self.sandboxes.get(sandbox_id)
+        if inst is None or inst.status != "running":
+            raise SandboxError(f"sandbox {sandbox_id} not found or not running")
+        remaining = (inst.expires_at - datetime.now(timezone.utc)).total_seconds()
+        if remaining <= 0:
+            await self.destroy(sandbox_id)
+            raise SandboxError(f"sandbox {sandbox_id} exceeded wall-clock limit")
+        started = datetime.now(timezone.utc)
+        code, out, err = await _run("docker", "exec", sandbox_id, *argv, timeout_s=min(timeout_s, remaining))
+        elapsed_ms = (datetime.now(timezone.utc) - started).total_seconds() * 1000
+        # Truncate output so a chatty process cannot flood the agent context.
+        return {"exit_code": code, "stdout": out[-20_000:], "stderr": err[-20_000:], "duration_ms": elapsed_ms}
 
-    async def execute(self, sandbox_id: str, command: str) -> Dict:
-        sandbox = self.sandboxes.get(sandbox_id)
-        if not sandbox or sandbox.status != "running":
-            return {"error": "Sandbox not found or not running"}
+    async def destroy(self, sandbox_id: str) -> None:
+        inst = self.sandboxes.pop(sandbox_id, None)
+        if inst is None:
+            return
+        code, _, err = await _run("docker", "rm", "-f", sandbox_id, timeout_s=30)
+        if code != 0:
+            log.error("failed to remove sandbox id=%s err=%s", sandbox_id, err.strip())
+            raise SandboxError(f"failed to remove sandbox {sandbox_id}")
 
-        # Check for blocked commands
-        for blocked in sandbox.config.blocked_commands:
-            if blocked in command:
-                return {"error": f"Command blocked: {blocked}"}
-
-        # Check expiration
-        if datetime.now() > sandbox.expires_at:
-            sandbox.status = "expired"
-            return {"error": "Sandbox has expired"}
-
-        sandbox.last_activity = datetime.now()
-        # Simulate execution
-        return {
-            "stdout": f"[sandbox-{sandbox_id}] Executed: {command[:100]}",
-            "stderr": "",
-            "exit_code": 0,
-            "duration_ms": 150,
-        }
-
-    async def create_snapshot(self, sandbox_id: str) -> Optional[str]:
-        sandbox = self.sandboxes.get(sandbox_id)
-        if not sandbox or not sandbox.config.snapshot_enabled:
-            return None
-        snapshot_id = f"snap-{uuid.uuid4()[:8]}"
-        sandbox.snapshot_id = snapshot_id
-        return snapshot_id
-
-    async def restore_snapshot(self, snapshot_id: str) -> Optional[SandboxInstance]:
-        for sandbox in self.sandboxes.values():
-            if sandbox.snapshot_id == snapshot_id:
-                new_config = SandboxConfig(
-                    **{k: v for k, v in sandbox.config.__dict__.items() if not k.startswith("_")}
-                )
-                return await self.create_sandbox(new_config)
-        return None
-
-    async def destroy_sandbox(self, sandbox_id: str):
-        sandbox = self.sandboxes.pop(sandbox_id, None)
-        if sandbox:
-            sandbox.status = "destroyed"
-
-    async def get_metrics(self) -> Dict:
-        total = len(self.sandboxes)
-        running = sum(1 for s in self.sandboxes.values() if s.status == "running")
-        avg_cpu = sum(s.cpu_usage for s in self.sandboxes.values()) / max(total, 1)
-        avg_mem = sum(s.memory_usage_mb for s in self.sandboxes.values()) / max(total, 1)
-        return {
-            "total_sandboxes": total,
-            "running": running,
-            "available": self.max_concurrent - total,
-            "avg_cpu_percent": round(avg_cpu * 100, 1),
-            "avg_memory_mb": round(avg_mem, 1),
-        }
-
-    async def start_watchdog(self):
-        async def watchdog_loop():
-            while True:
-                await asyncio.sleep(10)
-                now = datetime.now()
-                to_destroy = [
-                    sid for sid, s in self.sandboxes.items()
-                    if s.expires_at and now > s.expires_at
-                ]
-                for sid in to_destroy:
-                    await self.destroy_sandbox(sid)
-        self._watchdog_task = asyncio.create_task(watchdog_loop())
+    async def reap_expired(self) -> list[str]:
+        """Call from an external scheduler/watchdog, never from inside the sandbox."""
+        now = datetime.now(timezone.utc)
+        expired = [sid for sid, s in self.sandboxes.items() if now >= s.expires_at]
+        for sid in expired:
+            await self.destroy(sid)
+        return expired
 ```
+
+Snapshots are runtime-specific (Firecracker snapshot API, `runsc checkpoint`/`restore`,
+CRIU-based `docker checkpoint` on an experimental daemon, or ZFS/btrfs snapshots of the
+workspace volume). Keep them behind their own interface rather than pretending one call
+works for every runtime.
 
 ### Resource Quota Enforcer
 
@@ -545,11 +543,11 @@ What's the trust level of the code being executed?
 │       └── Memory/CPU limits via Docker
 │
 ├── Untrusted code (user-submitted, AI-generated)
-│   └── MicroVM sandbox (Firecracker, gVisor)
-│       ├── Hardware-level isolation
-│       ├── No escape from VM boundary
-│       ├── Snapshot/fork for fast startup
-│       └── Kernel-level security
+│   └── gVisor (user-space kernel) or microVM (Firecracker, Kata)
+│       ├── gVisor: syscalls served by the Sentry, small host-kernel surface
+│       ├── MicroVM: hardware virtualization boundary with its own guest kernel
+│       ├── Snapshot/restore for fast startup (Firecracker)
+│       └── Escapes remain possible: patch hosts, keep defense in depth
 │
 └── Highly sensitive (PII processing, payments)
     └── Air-gapped sandbox

@@ -37,6 +37,16 @@ Design shopping cart and checkout systems: cart management, order lifecycle, dis
 - Order state machine
 - Integration patterns for payments, tax, shipping
 
+### Response Format
+```
+Cart storage: {client|server|hybrid} + persistence key
+Pricing: {server-side recalculation points}
+Inventory: {reservation strategy + TTL}
+Checkout steps: {list}
+Order creation: {idempotency key, state machine}
+Payment handoff: {PSP + confirmation via webhook}
+```
+
 ### Completion Criteria
 - [ ] Cart data model defined with all edge cases (merge, expiry, concurrent access)
 - [ ] Order state machine with all transitions and validations

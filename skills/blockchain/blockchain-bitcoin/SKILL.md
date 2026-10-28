@@ -549,13 +549,8 @@ def estimate_fee(target_blocks, mempool_entries):
   - references/bitcoin-script-and-taproot.md — Bitcoin Script & Taproot
   - references/blockchain-bitcoin-advanced.md — Blockchain Bitcoin Advanced Topics
   - references/blockchain-bitcoin-fundamentals.md — Blockchain Bitcoin Fundamentals
-  - references/lightning-network.md — Lightning Network
   - references/mining-pow.md — Mining & Proof of Work
   - references/ordinals-runes.md — Ordinals, BRC-20 & Runes
-  - references/bitcoin-security.md — Bitcoin Security Model
-  - references/bitcoin-core-contributing.md — Contributing to Bitcoin Core
-  - references/bitcoin-fee-estimation.md — Bitcoin Fee Estimation
-  - references/bitcoin-staking-l2.md — Bitcoin Staking & L2 Infrastructure
 
 ## Phase
 blockchain → blockchain-bitcoin

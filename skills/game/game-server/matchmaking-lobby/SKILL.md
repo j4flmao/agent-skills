@@ -1,11 +1,38 @@
 ---
 name: matchmaking-lobby
-description: Expert matchmaking and lobby engineering — skill rating, match formation, queue fairness, region/ping routing, party state and lobby session sync.
+description: >
+  Use this skill when the user says 'matchmaking', 'lobby', 'skill rating', 'elo', 'glicko', 'trueskill', 'party system', 'queue times'. Designs matchmaking and lobbies: skill rating, match formation, queue relaxation, region/ping routing, party state and server hand-off. Do NOT use for: in-match netcode (use multiplayer-netcode), server fleet autoscaling (use scaling-architecture).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, matchmaking, lobby, rating, server]
 ---
 
 # Matchmaking & Lobby — Deep Engineering Guide
 
+## Purpose
 Matchmaking turns "players waiting" into "a fair game started fast." The lobby keeps a group of players synced until the match host is assigned. This skill covers skill rating, match formation, queue design, region/ping routing, party/lobby state and the mechanics that make wait times feel fair.
+
+## Agent Protocol
+
+### Trigger
+"matchmaking", "lobby", "skill rating", "elo", "glicko", "trueskill", "party system", "queue times".
+
+### Input Context
+- Game mode, team sizes, population per region
+- Rating system in use
+- Latency requirements
+
+### Output Artifact
+Matchmaking algorithm and service design. No file unless requested.
+
+### Response Format
+```
+Rating: {system}
+Formation: {algorithm, constraints}
+Relaxation: {rule over wait time}
+Hand-off: {allocation flow}
+```
 
 ## 1. The Two Problems
 
@@ -19,10 +46,10 @@ They're separate services with separate state, but one UX.
 | System | Model | Notes |
 |--------|-------|-------|
 | Elo | points, k-factor | simple, moody on big deltas |
-| Glicko-2 | `(mu, phi, sigma)` | uncertainty-aware → used by most modern |
-| TrueSkill | Gaussian per player | popular, parametrized |
+| Glicko-2 | rating, deviation (RD/phi), volatility (sigma) | uncertainty-aware; 1v1 by design |
+| TrueSkill / TrueSkill 2 (Microsoft) | Gaussian (mu, sigma) per player | built for teams and free-for-all; patented/licensed — check terms; OpenSkill is an open alternative |
 
-Pick based on *match structure* (1v1 vs team). Key trick: **uncertainty (phi)** — new players search wider; established pros narrow. Do NOT shrink phi to 0 (a swinger's streak becomes untrustworthy).
+Pick based on *match structure* (1v1 vs team). Key trick: **uncertainty (phi)** — new players search wider; established pros narrow. Keep a floor on uncertainty (and let it grow with inactivity) so established ratings can still move.
 
 ### 2.1 Rating Updates
 
@@ -56,7 +83,7 @@ A match quality score (m) combined from: skill variance, party-fulfillment, regi
 
 - **Queue as a service**: a queueing stream (Redis/Kafka-style) beats DB polling. Push model: server announces "you're being matched" via push (websocket) when a match forms.
 - **Queue priority**: solos vs parties (a solo shouldn't wait longer for a small party's sake — policy by title).
-- **Leave/jank**: matched but didn't accept → back to queue with cooldown.
+- **Decline / no-show**: matched but did not accept → others re-queue with priority; the decliner gets a cooldown.
 
 ### 4.1 The Join Race
 
@@ -65,7 +92,7 @@ Many players join at once → avoid stampede by *offering* the match slot (accep
 ## 5. Region & Ping Routing
 
 - The matchmaker must place players into a **region** (east, west, eu, ...) early: ping to candidate regions measured at queue-time; punish cross-region placement (high ping) in the score.
-- Prefer colo-multihost: players in the same region; a player far from all → mercy.
+- Prefer matches where every player has acceptable ping to the chosen region; a player far from all regions eventually gets the best available region after the wait-time relaxation.
 
 ## 6. Party & Lobby States
 
@@ -99,7 +126,7 @@ Atomicity: the token single-use prevents double-join. If a member never arrives,
 | Queue-dodge | cooldown + MMR loss after N dodges |
 | Smurf (new account) | uncertainty phi catches outliers |
 | Stack-smurf (4 pros with 1 new) | average-teaming guard + region/ping still apply |
-| Long-wait exploit | merciless auto-start out of mercy |
+| Long-wait exploit (queueing at odd hours to get weak opponents) | cap how far skill windows relax for ranked modes |
 | Fake region (VPN) | ping measured, not claimed |
 
 ## 9. Observability

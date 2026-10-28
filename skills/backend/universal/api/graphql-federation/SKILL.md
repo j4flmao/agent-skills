@@ -1,8 +1,8 @@
 ---
 name: api-graphql-federation
 description: >
-  Use when the user asks about GraphQL Federation, Apollo Federation, federated schema, subgraphs, supergraph, schema composition, @key/@requires/@external directives, or distributed GraphQL architecture. Do NOT use for: basic GraphQL schema design (backend-graphql-patterns), or single-service GraphQL APIs.
-version: "2.0.0"
+  Use this skill when the user says 'graphql federation', 'apollo federation', 'supergraph', 'subgraph', 'schema composition', '@key directive', '@requires', '@shareable', 'apollo router', 'rover compose', 'federate graphql across teams'. Designs and implements Apollo Federation 2 supergraphs: subgraph boundaries, entity keys and resolution, composition and schema checks in CI, and router configuration for security, limits and telemetry. Do NOT use for: single-service GraphQL schema design (backend-graphql-patterns), resolver N+1 and query-cost tuning inside one server (backend-graphql-optimization), REST API gateways (backend api-gateway skills).
+version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
 type: skill
@@ -11,752 +11,290 @@ compatibility:
   cursor: true
   codex: true
   windsurf: true
-tags: [api, graphql-federation, phase-3]
+tags: [api, graphql, federation, apollo-router, supergraph]
 ---
 
 # GraphQL Federation
 
 ## Purpose
-Design and implement GraphQL Federation: compose multiple subgraphs into a unified supergraph, manage distributed GraphQL architecture, and scale GraphQL across teams. Make informed build-vs-buy decisions between Apollo Federation and alternative distributed graph strategies.
+Compose multiple team-owned GraphQL services (subgraphs) into one supergraph served by a router, so each team ships its part of the graph independently. The skill covers where to draw subgraph boundaries, how entities are shared and resolved, how composition is validated, and how to configure the router safely.
 
-## Workflow
+## Agent Protocol
 
-### Federation Architecture
+### Trigger
+Exact user phrases: "graphql federation", "apollo federation", "supergraph", "subgraph", "schema composition", "@key directive", "@requires", "@shareable", "apollo router", "rover compose", "federate graphql across teams".
+
+### Input Context
+- Domains/teams and which data each owns.
+- Existing GraphQL servers and libraries (Apollo Server + `@apollo/subgraph`, GraphQL Yoga, Strawberry, gqlgen, DGS, Hot Chocolate).
+- Managed (GraphOS) or self-hosted composition; router choice (Apollo Router, or alternatives such as Hive Gateway / Cosmo Router).
+- Auth model and latency budget.
+
+### Output Artifact
+Subgraph schemas with federation directives, entity resolvers, `supergraph.yaml`, CI check commands, and `router.yaml`. No files unless requested.
+
+### Response Format
 ```
-Supergraph (Apollo Router / Gateway)
-  ├── Subgraph A (Users service) — @key(fields: "id")
-  ├── Subgraph B (Orders service) — @key(fields: "id") @extends User
-  ├── Subgraph C (Reviews service) — @key(fields: "id") @extends User
-  └── Subgraph D (Inventory service) — standalone
+Subgraphs: {name -> owner team, owned types}
+Entities: {Type @key(fields) -> origin subgraph, contributing subgraphs}
+Cross-subgraph fields: {field @requires/@provides}
+Composition: {rover supergraph compose | GraphOS managed} + check in CI
+Router: auth {jwt}, limits {depth/aliases}, demand control {mode}, timeouts {per subgraph}
 ```
 
-### Apollo Federation vs. GraphQL Mesh Decision Tree
+## When Federation Fits
 
-Use this decision framework when choosing between Apollo Federation and GraphQL Mesh:
+| Situation | Recommendation |
+|---|---|
+| One team, one service | Single GraphQL server; federation adds a router hop and composition overhead |
+| Several teams, distinct domains, all GraphQL-capable | Federation |
+| Mostly REST/gRPC backends owned by others | Wrap them (GraphQL Mesh, Apollo Connectors, or a BFF subgraph) and compose |
+| Strong need for cross-domain transactions in one mutation | Fix domain boundaries first; federation does not provide transactions |
 
-| Criterion | Apollo Federation | GraphQL Mesh |
-|-----------|-----------------|--------------|
-| Schema ownership | Each subgraph owns its schema | Sources are existing APIs (REST, gRPC, SOAP, etc.) |
-| Team topology | Multiple teams own separate subgraphs | Single team integrating existing backends |
-| Source types | Native GraphQL only | Any source (REST, OpenAPI, gRPC, SQL, SOAP, etc.) |
-| Composition model | Static composition via Rover CLI | Runtime schema stitching |
-| Gateway | Apollo Router (Rust) or Gateway (Node.js) | Envelop, Yoga, or custom |
-| Federation directives | @key, @extends, @requires, @provides, @shareable | Transformers, handlers, mesh config |
-| Entity resolution | Built-in via __resolveReference | Manual stitching resolvers |
-| Query planning | Automatic query planner | Manual or custom merge config |
-| Performance | Optimized Rust router, plan caching | Depends on underlying gateway |
-| Ecosystem maturity | Mature (Apollo GraphOS, Studio) | Growing (The Guild ecosystem) |
-| When to choose | Greenfield GraphQL with multiple teams | Wrapping legacy/heterogeneous backends |
+Boundary rule: a subgraph per bounded context/team, not per database table. Many tiny subgraphs multiply query-plan fetches.
 
-**Decision flow**:
-1. Are all your sources already GraphQL? → Apollo Federation
-2. Do you need to wrap REST/gRPC/SQL backends? → GraphQL Mesh
-3. Do you have 3+ teams owning separate domains? → Apollo Federation
-4. Is your primary goal API unification of legacy systems? → GraphQL Mesh
-5. Hybrid approach: Use Mesh to convert REST → GraphQL, then compose those as subgraphs via Federation
+## Subgraph Schemas (Federation 2)
 
-### Federation Directives (Federation v2)
-| Directive | Purpose | Example |
-|-----------|---------|---------|
-| @key | Primary key for entity | `@key(fields: "id")` |
-| @extends | Extend type from another subgraph (implied in v2) | `type User @key(fields: "id")` |
-| @external | Field defined in another subgraph (implied in v2) | `id: ID!` |
-| @requires | Field requires data from another subgraph | `@requires(fields: "shippingZip")` |
-| @provides | Field provides data to other subgraphs | `@provides(fields: "name")` |
-| @shareable | Field can be resolved by multiple subgraphs | `@shareable` |
-| @override | Migrate field resolution between subgraphs | `@override(from: "inventory")` |
-| @inaccessible | Hide field from supergraph | `@inaccessible` |
-| @composeDirective | Propagate directive to supergraph | `@composeDirective(name: "@authorized")` |
-| @interfaceObject | Expose interface fields on entity | `@interfaceObject` |
+Every Federation 2 subgraph opts in with `@link` and imports the directives it uses.
 
-### Subgraph Schema Example (Federation v2)
 ```graphql
-# Users subgraph
+# accounts subgraph (origin of User)
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.7", import: ["@key", "@shareable"])
+
 type User @key(fields: "id") {
-    id: ID!
-    name: String!
-    email: String!
+  id: ID!
+  name: String!
+  email: String!
 }
 
-# Orders subgraph (extends User — no @extends needed in v2)
+type Query {
+  me: User
+}
+```
+
+```graphql
+# orders subgraph contributes User.orders
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.7", import: ["@key"])
+
 type User @key(fields: "id") {
-    id: ID!
-    orders: [Order!]!
+  id: ID!
+  orders(first: Int = 20): [Order!]!
 }
 
 type Order @key(fields: "id") {
-    id: ID!
-    userId: ID!
-    total: Float!
-    status: OrderStatus!
+  id: ID!
+  totalCents: Int!
+  status: OrderStatus!
 }
+
+enum OrderStatus { PENDING PAID SHIPPED CANCELLED }
 ```
 
-### Entity Resolution Deep Dive
+In Federation 2, `extend type` / `@extends` is not needed to contribute fields to an entity; key fields are shareable automatically. Non-key fields defined in more than one subgraph must be marked `@shareable` (or one definition `@external`).
 
-Each subgraph that extends an entity must implement `__resolveReference`:
+## Directives
 
-```typescript
-// Users subgraph — entity origin
-const resolvers = {
-  User: {
-    __resolveReference(ref, context) {
-      return context.dataSources.users.findById(ref.id);
-    },
-  },
-};
+| Directive | Meaning |
+|---|---|
+| `@key(fields: "id")` | Declares an entity and the fields the router uses to reference it. Multiple keys allowed; `resolvable: false` for reference-only stubs |
+| `@shareable` | Field (or type) may be resolved by more than one subgraph |
+| `@external` | Field is defined elsewhere; used together with `@requires` or `@provides` |
+| `@requires(fields: "weight")` | This field needs other subgraphs' fields; the router fetches them first and passes them in the representation |
+| `@provides(fields: "name")` | On a field returning an entity: this subgraph can return those (`@external`) fields at this path, saving a fetch |
+| `@override(from: "old")` | Moves a field's ownership to this subgraph (incremental migration; progressive `label` supported) |
+| `@inaccessible` | Hides a field/type from the public API schema while still usable for composition |
+| `@interfaceObject` | Lets a subgraph add fields to all implementations of an entity interface |
+| `@composeDirective` | Preserves a custom directive in the supergraph |
 
-// Orders subgraph — entity extension
-const resolvers = {
-  User: {
-    __resolveReference(ref, context) {
-      // Return just enough to resolve orders
-      return { id: ref.id };
-    },
-    orders(parent, _, context) {
-      return context.dataSources.orders.findByUserId(parent.id);
-    },
-  },
-};
-```
+`@requires` example:
 
-**Resolution flow**:
-1. Router receives query spanning multiple subgraphs
-2. Router sends `_entities` query to Orders subgraph with representations `[{"__typename": "User", "id": "1"}]`
-3. Subgraph calls `__resolveReference` with each representation
-4. Subgraph returns the entity with only the fields requested from it
-5. Router merges fields from all subgraph responses into a unified result
-
-### @requires Resolution Flow
 ```graphql
-# Shipping subgraph needs weight from another subgraph
+# shipping subgraph
+extend schema
+  @link(url: "https://specs.apollo.dev/federation/v2.7", import: ["@key", "@external", "@requires"])
+
 type Product @key(fields: "id") {
   id: ID!
-  weight: Int @external
-  shippingCost: Float @requires(fields: "weight")
+  weightGrams: Int @external
+  shippingCostCents: Int @requires(fields: "weightGrams")
 }
 ```
 
-1. Router fetches `weight` from the subgraph that owns it
-2. Router includes `weight` in the representation sent to Shipping subgraph
-3. Shipping subgraph receives `{"__typename": "Product", "id": "1", "weight": 10}`
-4. Computes `shippingCost` using the pre-fetched `weight`
+## Entity Resolution
 
-### Supergraph Composition Pipeline
+The router asks a subgraph for entities through the `_entities(representations: [_Any!]!)` field. Each representation contains `__typename`, the key fields, and any `@requires` fields. The subgraph resolves them in `__resolveReference`; batch with DataLoader because one `_entities` call can carry many representations.
 
+```ts
+import { ApolloServer } from '@apollo/server';
+import { startStandaloneServer } from '@apollo/server/standalone';
+import { buildSubgraphSchema } from '@apollo/subgraph';
+import DataLoader from 'dataloader';
+import { parse } from 'graphql';
+import { readFileSync } from 'node:fs';
+import { usersRepo, type User } from './users-repo';
+
+const typeDefs = parse(readFileSync('./accounts.graphql', 'utf8'));
+
+type Ctx = { userById: DataLoader<string, User | null> };
+
+const resolvers = {
+  Query: {
+    me: (_: unknown, __: unknown, ctx: Ctx & { userId?: string }) =>
+      ctx.userId ? ctx.userById.load(ctx.userId) : null,
+  },
+  User: {
+    __resolveReference: (ref: { id: string }, ctx: Ctx) => ctx.userById.load(ref.id),
+  },
+};
+
+const server = new ApolloServer({ schema: buildSubgraphSchema({ typeDefs, resolvers }) });
+
+await startStandaloneServer(server, {
+  listen: { port: 4001 },
+  context: async ({ req }) => ({
+    userId: req.headers['x-user-id'] as string | undefined, // set only by trusted router
+    userById: new DataLoader<string, User | null>(async (ids) => {
+      const rows = await usersRepo.findByIds([...ids]);
+      const byId = new Map(rows.map((u) => [u.id, u]));
+      return ids.map((id) => byId.get(id) ?? null);
+    }),
+  }),
+});
 ```
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│ Subgraph A   │    │ Subgraph B   │    │ Subgraph C   │
-│ Schema       │    │ Schema       │    │ Schema       │
-└──────┬───────┘    └──────┬───────┘    └──────┬───────┘
-       │                   │                   │
-       └───────────────────┼───────────────────┘
-                           ▼
-                   ┌───────────────┐
-                   │  Composition  │  rover supergraph compose
-                   │    Engine     │
-                   └───────┬───────┘
-                           ▼
-                   ┌───────────────┐
-                   │   Supergraph  │  unified schema sent to router
-                   │    Schema     │
-                   └───────────────┘
-```
+
+## Composition and Schema Checks
 
 ```yaml
-# supergraph.yaml
-federation_version: 2
+# supergraph.yaml (local composition with Rover)
+federation_version: =2.7.0
 subgraphs:
   accounts:
     routing_url: http://accounts:4001/graphql
     schema:
       file: ./schemas/accounts.graphql
-  products:
-    routing_url: http://products:4002/graphql
-    schema:
-      file: ./schemas/products.graphql
   orders:
-    routing_url: http://orders:4003/graphql
+    routing_url: http://orders:4002/graphql
     schema:
       file: ./schemas/orders.graphql
 ```
 
 ```bash
-rover supergraph compose --config ./supergraph.yaml > supergraph.graphql
+rover supergraph compose --config ./supergraph.yaml --output supergraph.graphql
+
+# With GraphOS: check against real client traffic before merge, publish after deploy
+rover subgraph check  my-graph@prod --name accounts --schema ./schemas/accounts.graphql
+rover subgraph publish my-graph@prod --name accounts --schema ./schemas/accounts.graphql \
+  --routing-url http://accounts:4001/graphql
 ```
 
-### Schema Evolution & Breaking Change Detection
-```bash
-# Check backward compatibility before deploying
-rover subgraph check my-graph@current \
-    --schema ./updated-accounts.graphql \
-    --name accounts
+Without GraphOS, run composition in CI on every subgraph PR and use a schema-diff tool (e.g. GraphQL Inspector) for breaking-change detection.
 
-# If check passes, publish the new schema
-rover subgraph publish my-graph@current \
-    --schema ./updated-accounts.graphql \
-    --name accounts \
-    --routing-url http://accounts:4001/graphql
-```
+Common composition failures: a non-key field defined in two subgraphs without `@shareable`; `@requires`/`@provides` referencing fields not marked `@external`; inconsistent enum or field types across subgraphs; `@key` fields that do not exist on the type.
 
-**What rover subgraph check validates**:
-- Field/type removals
-- Argument changes
-- @key directive changes
-- Value type to entity conversion
-- Enum value additions/removals
+## Router Configuration (Apollo Router)
 
-### Federated Tracing & Observability
-
-#### OpenTelemetry in Apollo Router
-```yaml
-# router.yaml — federated tracing
-telemetry:
-  tracing:
-    otlp:
-      endpoint: http://otel-collector:4318
-      protocol: http
-    propagation:
-      context: cloudtrace
-      # Forward trace context to subgraphs
-      forward:
-        - "traceparent"
-        - "x-cloud-trace-context"
-    sampling:
-      default: 0.1
-      subgraphs:
-        accounts: 1.0       # Trace all accounts requests
-        reviews: 0.01       # Sample reviews at 1%
-```
-
-**What federated tracing reveals**:
-- **Query plan generation** — time spent planning the multi-subgraph fetch
-- **Per-subgraph latency** — which subgraph is the bottleneck
-- **Fetch boundary count** — number of subgraph hops per query
-- **Entity resolution** — time spent in `__resolveReference`
-- **Representation passing** — overhead of data transfer between services
-
-#### Apollo Studio Integration
 ```yaml
 # router.yaml
-telemetry:
-  apollo:
-    graphs:
-      - graph_ref: my-graph@current
-        key: ${APOLLO_KEY}
-    field_usage: true        # Track field-level usage stats
-    operation_counts: true   # Track operation frequency
-```
+supergraph:
+  listen: 0.0.0.0:4000
+  introspection: false
 
-Studio provides:
-- **Field usage heatmaps** — which fields are most requested
-- **Operation traces** — waterfall view across subgraphs
-- **Schema checks** — breaking change detection in CI
-- **Cost analysis** — query complexity scoring
+health_check:
+  listen: 0.0.0.0:8088
+  enabled: true            # GET /health
 
-### Security in Federated Architecture
-
-#### Layered Security Model
-```
-Client → Router (authN + rate limit) → Subgraph (authZ + validation)
-```
-
-#### Router-Level Authentication (JWT)
-```yaml
-# router.yaml
 authentication:
-  jwt:
-    jwks_urls:
-      - https://auth.example.com/.well-known/jwks.json
-    issuer: https://auth.example.com/
-    audiences:
-      - my-api
+  router:
+    jwt:
+      jwks:
+        - url: https://auth.example.com/.well-known/jwks.json
 
 headers:
   all:
     request:
       - propagate:
-          matching: .*
-      - insert:
-          name: "x-user-id"
-          value: "{{ authentication.jwt.sub }}"
-      - insert:
-          name: "x-user-roles"
-          value: "{{ authentication.jwt.claims.roles }}"
-```
+          named: authorization   # subgraphs re-verify or trust the router network
 
-#### Subgraph-Level Authorization
-```typescript
-// Each subgraph independently validates permissions
-const resolvers = {
-  Query: {
-    userOrders: async (_, { userId }, { userId: authUserId, roles }) => {
-      if (authUserId !== userId && !roles.includes('admin')) {
-        throw new GraphQLError('Forbidden', {
-          extensions: { code: 'FORBIDDEN' },
-        });
-      }
-      return db.orders.findByUserId(userId);
-    },
-  },
-  User: {
-    __resolveReference(ref, { userId, roles }) {
-      // Guard entity resolution — don't leak existence
-      if (!userId) return null;
-      return db.users.findById(ref.id);
-    },
-  },
-};
-```
+limits:
+  max_depth: 15
+  max_aliases: 30
+  max_root_fields: 20
 
-#### Protecting Against GraphQL-Specific Attacks
-
-| Attack | Mitigation | Config |
-|--------|-----------|--------|
-| Deeply nested queries | Depth limiting | `max_depth: 10` |
-| Query aliasing abuse | Alias limiting | `max_aliases: 15` |
-| Entity list bombing | Max entities per request | `max_entities_per_request: 100` |
-| Introspection scraping | Disable in production | `introspection: false` |
-| Costly queries | Cost analysis | `demand_control.strategy: cost_bound` |
-
-```yaml
-# router.yaml — demand control
 demand_control:
-  strategy: cost_bound
-  list_cost: 1
-  object_cost: 2
-  scoring:
-    max_cost: 1000
-    max_depth: 10
-  reject_on_limit_exceeded: true
+  enabled: true
+  mode: measure              # observe costs first, then switch to enforce
+  strategy:
+    static_estimated:
+      list_size: 50
+      max: 5000
 
-rate_limiting:
-  global:
-    capacity: 1000
-    time_window: 60s
-  per_user:
-    capacity: 100
-    time_window: 60s
-```
-
-### Production Considerations
-
-#### Traffic Shaping Per Subgraph
-```yaml
 traffic_shaping:
+  router:
+    global_rate_limit:
+      capacity: 1000
+      interval: 1s
   all:
-    timeout: 30s
-    compression: true
-    http2:
-      keepalive_interval: 30s
-      keepalive_timeout: 10s
+    timeout: 10s
   subgraphs:
     accounts:
-      timeout: 5s
-      retry:
-        max_retries: 3
-        base_interval: 100ms
-    reviews:
       timeout: 3s
-      circuit_breaker:
-        error_threshold: 0.5
-        request_volume_threshold: 20
-        sleep_window: 30s
-        half_open_requests: 5
-    inventory:
-      timeout: 10s
-      retry:
-        max_retries: 2
+
+telemetry:
+  exporters:
+    tracing:
+      common:
+        sampler: 0.1
+      otlp:
+        enabled: true
+        endpoint: http://otel-collector:4317
+        protocol: grpc
 ```
 
-#### Query Plan Caching
-```yaml
-query_planning:
-  cache:
-    enabled: true
-    size: 10000
-    ttl: 3600s
-  experimental_plans: false
-  incremental_delivery:
-    enable_single_entity: true
-```
+Notes:
+- Supply the supergraph with `--supergraph supergraph.graphql` and `--hot-reload` (self-hosted), or via `APOLLO_KEY` + `APOLLO_GRAPH_REF` for managed federation, which delivers new supergraphs without restarts.
+- Some features (e.g. `@authenticated`/`@requiresScopes` authorization directives, demand control, some telemetry) require a GraphOS plan; confirm licensing before relying on them.
+- Subgraphs must not be reachable directly from the internet: `_entities` lets callers fetch any entity by key, bypassing router-level checks.
 
-Warm the cache on deploy:
-```typescript
-// Pre-warm common query plans
-const commonQueries = [
-  `query { me { id name } }`,
-  `query { products(first: 10) { id name price } }`,
-  `query { order(id: "hot") { id status total } }`,
-];
-await Promise.all(commonQueries.map(q => router.execute(q)));
-```
+## Performance
+- Minimize sequential fetches: each entity hop in the query plan adds a round trip. Look at query plans for hot operations.
+- Batch `__resolveReference` with DataLoader.
+- Use `@provides` when a subgraph already has denormalized data for a nested entity.
+- Set per-subgraph timeouts below the router timeout; return partial data with errors for non-critical subgraphs (nullable fields help).
 
-#### Blue-Green Supergraph Deployment
-```bash
-# 1. Compose new supergraph
-rover supergraph compose --config ./supergraph.v2.yaml --output supergraph.v2.graphql
+## Anti-Patterns
 
-# 2. Deploy to staging router
-cp supergraph.v2.graphql /etc/apollo/supergraph.staging.graphql
+| Anti-pattern | Fix |
+|---|---|
+| Subgraph per table/microservice with chatty entity hops | Subgraph per domain/team |
+| Exposing subgraphs publicly | Network policy: router-only access |
+| Trusting `x-user-id` headers from any caller | Router injects, subgraphs only reachable from router, or verify JWT in subgraphs |
+| Breaking changes merged without composition/check | Compose + check in CI as a required status |
+| Shared "common" subgraph that every team edits | Clear ownership; use `@shareable` value types sparingly |
 
-# 3. Health check staging router
-curl -f http://localhost:4001/.well-known/apollo/server-health
-
-# 4. Promote to production
-cp supergraph.v2.graphql /etc/apollo/supergraph.graphql
-
-# 5. Reload production router
-kill -HUP $(cat /var/run/apollo-router.pid)
-```
-
-### Performance Budgets
-```yaml
-performance_budget:
-  max_fetch_count: 5        # Max subgraph hops per query
-  max_query_depth: 8        # Max nesting depth
-  max_latency_p99_ms: 500   # P99 latency across all subgraphs
-  max_cost_per_query: 100   # Cost analysis limit
-```
-
-#### Reducing Fetch Boundaries with @provides
-```graphql
-# Products subgraph: users browsing products don't hit accounts
-type Query {
-  topProducts: [Product!]!
-}
-
-extend type Product @key(fields: "id") {
-  id: ID! @external
-  name: String! @external @provides(fields: "name")
-  price: Float! @provides(fields: "currency")
-}
-```
-
-### DataLoader Across Subgraphs
-```typescript
-// Batch-load entities to avoid N+1 resolution calls
-class UserLoader {
-  private batch = new Map<string, Promise<User>>();
-
-  load(id: string): Promise<User> {
-    if (!this.batch.has(id)) {
-      this.batch.set(id, this.fetchBatch());
-    }
-    return this.batch.get(id)!;
-  }
-
-  private async fetchBatch(): Promise<void> {
-    const ids = [...this.batch.keys()];
-    const users = await db.users.findByIds(ids);
-    for (const user of users) {
-      this.batch.set(user.id, Promise.resolve(user));
-    }
-  }
-}
-```
-
-### Testing Federated Graphs
-
-#### Unit Test: Subgraph Entity Resolution
-```typescript
-describe('Accounts Subgraph', () => {
-  it('resolves User entity by key', async () => {
-    const result = await subgraph.executeQuery(`
-      query ($representations: [_Any!]!) {
-        _entities(representations: $representations) {
-          ... on User { id name email }
-        }
-      }
-    `, {
-      representations: [{ __typename: 'User', id: '1' }],
-    });
-
-    expect(result.data._entities[0].name).toBe('Alice');
-  });
-});
-```
-
-#### Integration Test: Cross-Subgraph Query
-```typescript
-describe('Supergraph: User with Orders', () => {
-  it('resolves fields across subgraphs', async () => {
-    const query = `
-      query { user(id: "1") { name orders { total status } } }
-    `;
-    const result = await gateway.execute(query);
-    expect(result.data.user.name).toBe('Alice');
-    expect(result.data.user.orders).toHaveLength(3);
-  });
-});
-```
-
-#### Contract Testing Between Subgraphs
-```typescript
-// Each subgraph publishes its schema contract
-// CI validates that contracts remain compatible
-describe('Contracts', () => {
-  it('accounts subgraph schema is valid', async () => {
-    const schema = fs.readFileSync('./schemas/accounts.graphql', 'utf8');
-    const errors = await validateSchema(schema);
-    expect(errors).toHaveLength(0);
-  });
-
-  it('orders extension of User is compatible', () => {
-    // Verify @key fields match across subgraphs
-    const userKey = extractKey(accountsSchema, 'User');
-    const orderUserKey = extractKey(ordersSchema, 'User');
-    expect(userKey).toEqual(orderUserKey);
-  });
-});
-```
-
-### Common Composition Errors
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `ENUM_MISMATCH` | Enum values differ between subgraphs | Align enum definitions |
-| `TYPE_MISMATCH` | Same name used for type vs interface | Unify type kind |
-| `EXTERNAL_MISSING` | Referenced field not @external | Mark field as external |
-| `KEY_MISSING` | Type extended but no @key in origin | Add @key to origin |
-| `REQUIRES_MISSING` | @requires field unavailable | Ensure field is resolvable |
-| `DUPLICATE_FIELD` | Field defined in multiple subgraphs without @shareable | Add @shareable |
-
-### Migration Guide: Federation 1 → Federation 2
-
-| Federation 1 | Federation 2 |
-|-------------|-------------|
-| `@extends` | Unnecessary (all type extensions are implicit) |
-| `@external` | Unnecessary (fields owned elsewhere assumed external) |
-| `gateway.js` | `@apollo/gateway` v2+ handles automatically |
-| Composition | `rover supergraph compose` with `federation_version: 2` |
-
-**Steps**:
-1. Update `federation_version` to `2` in supergraph config
-2. Remove all `@extends` and `@external` directives from subgraph schemas
-3. Update to `@apollo/gateway@^2.0` or deploy Apollo Router
-4. Run rover supergraph compose to validate
-5. Deploy new supergraph
-
-### Key Metrics Dashboard
-
-| Metric | Source | What It Reveals |
-|--------|--------|----------------|
-| `apollo_router_query_planning_duration_ms` | Router | Plan cache hit/miss |
-| `apollo_router_subgraph_request_duration_ms` | Router | Per-subgraph health |
-| `apollo_router_fetch_count` | Router | Schema design efficiency |
-| `apollo_router_cache_hit_ratio` | Router | Cache tuning needed |
-| `apollo_router_error_rate` | Router | Subgraph failures |
-| `apollo_router_entities_per_request` | Router | Entity list bombing |
-| Subgraph P99 latency | Subgraph metrics | Data-level bottlenecks |
-
-## Team Topology Patterns
-
-### Subgraph Ownership Models
-| Model | Description | Team Structure | When to Use |
-|-------|-------------|---------------|-------------|
-| Domain-aligned | One subgraph per bounded context | Each domain team owns 1 subgraph | Clear domain boundaries, DDD org |
-| Split by volatility | Seperate read vs write subgraphs | Platform + domain teams | High read/write asymmetry |
-| API gateway pattern | Subgraph wraps existing REST/gRPC | Integration team owns gateway | Legacy system integration |
-| Shared subgraph | Cross-cutting concerns (auth, audit) | Platform team | truly shared capabilities |
-
-### Team API Contract
-```yaml
-team_contract:
-  subgraph_owners:
-    accounts: team-identity
-    orders: team-commerce
-    catalog: team-product
-    reviews: team-engagement
-    inventory: team-fulfillment
-
-  communication:
-    - Subgraph schema changes communicated 2 weeks in advance
-    - Breaking changes require API council approval
-    - Monthly cross-team schema sync meeting
-    - Shared Slack channel for federation alerts
-
-  dependencies:
-    - Teams maintain their subgraph's @key definitions
-    - Extension subgraphs coordinate with origin subgraph owners
-    - Schema registry (Apollo GraphOS) tracks all published schemas
-```
-
-## Schema Lifecycle Management
-
-### Subgraph Schema Version Flow
-```
-Development → PR Review → Contract Tests → Staging → Canary → Production
-                                                                   ↓
-                                                            Apollo GraphOS
-                                                          Schema Registry
-                                                                   ↓
-                                                         Supergraph Compose
-                                                                   ↓
-                                                         Router Deploy
-```
-
-### Schema Change Notification
-```yaml
-schema_change_process:
-  additive: # New fields, types, endpoints
-    notification: optional (Slack channel)
-    review: none required
-    deploy: any time
-
-  breaking: # Field removal, type change, @key change
-    notification: required (2 weeks minimum)
-    review: API council approval
-    approval_period: 2 weeks
-    deploy: coordinated rollout with all affected teams
-    rollback: pre-approved rollback plan required
-```
-
-### Schema Tagging Strategy
-```yaml
-schema_tags:
-  - tag: current
-    description: Currently deployed supergraph schema
-    updated_on: each successful deployment
-
-  - tag: candidate
-    description: Next schema to be deployed (canary)
-    updated_on: after composition validation
-
-  - tag: previous
-    description: Previously deployed schema (for rollback)
-    updated_on: each deployment (rotate: keep last 3)
-
-  - tag: stable-{date}
-    description: Snapshot of stable schemas
-    updated_on: monthly
-```
-
-## Incident Management for Federated Graphs
-
-### Incident Classification
-| Severity | Definition | Response Time | Example |
-|----------|-----------|---------------|---------|
-| P0 | Complete supergraph outage | < 5 min | Router crash, composition failure |
-| P1 | Subgraph degradation | < 15 min | High latency in Orders subgraph |
-| P2 | Isolated field errors | < 1 hour | Specific resolver returns errors |
-| P3 | Non-critical anomalies | < 1 day | Suboptimal query plan |
-
-### Incident Response Playbook
-```yaml
-playbook:
-  p0_outage:
-    detection:
-      - Error rate > 5% spike (Prometheus alert)
-      - Health check failure
-      - PagerDuty escalation
-    immediate:
-      - Check router health: curl -f http://router:8088/health
-      - Check last supergraph deployment: git log --oneline -1
-      - Rollback to previous supergraph:
-          cp /etc/apollo/supergraph.previous.graphql /etc/apollo/supergraph.graphql
-          kill -HUP $(cat /var/run/apollo-router.pid)
-      - Verify recovery: curl -f http://router:4000/.well-known/apollo/server-health
-    investigation:
-      - Check router logs for composition errors
-      - Check Apollo Studio for failed operations
-      - Check subgraph health endpoints individually
-    resolution:
-      - Isolate failing subgraph or schema change
-      - Deploy hotfix or revert change
-      - Post-mortem within 24 hours
-
-  p1_subgraph_degradation:
-    detection:
-      - Subgraph P99 > 500ms (Grafana alert)
-      - Subgraph error rate > 2%
-    immediate:
-      - Enable circuit breaker for degraded subgraph
-      - Reduce timeout for affected subgraph
-      - Scale subgraph horizontally if possible
-    investigation:
-      - Review subgraph deployment timeline
-      - Check DB connection pool saturation
-      - Review recent code changes to subgraph
-    resolution:
-      - Apply subgraph-level fix
-      - Monitor for 1 hour post-fix
-      - Restore normal traffic_shaping config
-```
-
-## Advanced Tracing with Custom Spans
-
-### Router Rhai Telemetry Script
-```rust
-// router.rhai — custom span injection
-fn supergraph_service(service) {
-    service.map_request(|request| {
-        // Tag requests by client type
-        let user_agent = request.router_request.headers["user-agent"];
-        if user_agent contains "MobileApp" {
-            request.context.client_type = "mobile";
-        } else if user_agent contains "WebKit" {
-            request.context.client_type = "web";
-        } else {
-            request.context.client_type = "api";
-        }
-        request
-    });
-
-    service.map_response(|response| {
-        // Log slow queries
-        if response.context.duration > 1000 {
-            log_warning(`Slow query detected: ${response.context.operation_name}`);
-        }
-        response
-    });
-}
-```
-
-### Custom Subgraph Span Attributes
-```typescript
-const resolvers = {
-  Query: {
-    users: async (_, __, { tracer }) => {
-      return tracer.startActiveSpan('users.query', (span) => {
-        span.setAttribute('db.system', 'postgresql');
-        span.setAttribute('db.table', 'users');
-        span.setAttribute('query.plan', 'index_scan');
-        return db.users.findAll();
-      });
-    },
-  },
-  User: {
-    __resolveReference: async (ref, { tracer }) => {
-      return tracer.startActiveSpan('entity_resolution', (span) => {
-        span.setAttribute('entity.type', 'User');
-        span.setAttribute('entity.id', ref.id);
-        span.setAttribute('resolver', 'primary');
-        return db.users.findById(ref.id);
-      });
-    },
-  },
-};
-```
+## Checklist
+- [ ] Subgraph ownership and entity origins documented.
+- [ ] All subgraphs on Federation 2 `@link` with explicit imports.
+- [ ] Entity resolvers batched; `_entities` not publicly reachable.
+- [ ] Composition and breaking-change checks block merges.
+- [ ] Router: JWT auth, introspection off in prod, depth/alias limits, demand control measured then enforced, per-subgraph timeouts.
+- [ ] Tracing across router and subgraphs with W3C trace context.
 
 ## References
-- [GraphQL Federation Fundamentals](references/graphql-federation-fundamentals.md) — Federation v2 core concepts, directives, entity types, subgraph design
-- [GraphQL Federation Advanced](references/graphql-federation-advanced.md) — Advanced topics: cost analysis, contract testing, migration strategies, multi-region
-- [Entity Resolution](references/entity-resolution.md) — Entity resolution patterns, __resolveReference, @requires, @provides flow
-- [Federation Architecture](references/federation-architecture.md) — Subgraph design principles, Fed 1 vs Fed 2 comparison
-- [Federation Deployment](references/federation-deployment.md) — Production deployment, CI/CD, rollback procedures
-- [Federation Performance](references/federation-performance.md) — Query planning, caching, DataLoader, performance budgets
-- [Federation Security](references/federation-security.md) — AuthN at router, authZ at subgraph, rate limiting, DoS protection
-- [Federation Testing](references/federation-testing.md) — Unit, integration, contract testing patterns
-- [Supergraph Composition](references/supergraph-composition.md) — Composition pipeline, directives, CI/CD
-- [Supergraph Config](references/supergraph-config.md) — Router configuration, traffic shaping, query plans
-- [Federation vs Mesh](references/federation-vs-mesh.md) — Apollo Federation vs GraphQL Mesh comparison
-- [Federated Tracing](references/federated-tracing.md) — OpenTelemetry, Studio integration, distributed tracing
-- [Federation Migration Monolith](references/federation-migration-monolith.md) — Migrating from monolithic GraphQL to federation (Strangler Fig)
-- [Federation Cost Management](references/federation-cost-management.md) — Cost analysis, demand control, entity resolution cost optimization
+- [Federation fundamentals](references/graphql-federation-fundamentals.md)
+- [Federation architecture](references/federation-architecture.md)
+- [Entity resolution](references/entity-resolution.md)
+- [Supergraph composition](references/supergraph-composition.md)
+- [Supergraph/router config](references/supergraph-config.md)
+- [Federation security](references/federation-security.md)
+- [Federation performance](references/federation-performance.md)
+- [Federation cost management](references/federation-cost-management.md)
+- [Federated tracing](references/federated-tracing.md)
+- [Federation testing](references/federation-testing.md)
+- [Federation deployment](references/federation-deployment.md)
+- [Federation vs Mesh](references/federation-vs-mesh.md)
+- [Migrating a monolith to federation](references/federation-migration-monolith.md)
+- [Federation advanced](references/graphql-federation-advanced.md)
 
-<!-- COMPRESSION FOOTER -->
-<!--
-Compression Level: 5 (Comprehensive architectural references & code details preserved)
-Strict compliance with Apollo Federation v2 directives, supergraph schema compositions, query planning, and entity resolution patterns.
--->
+Note: reference files may contain router configuration from older Router versions; verify keys against the current Apollo Router configuration reference.

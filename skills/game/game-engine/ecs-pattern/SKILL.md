@@ -1,11 +1,38 @@
 ---
 name: ecs-pattern
-description: Expert Entity Component System (ECS) architecture for high-performance game engines — data-oriented design, archetype storage, system scheduling, cache-coherent iteration, and production tuning.
+description: >
+  Use this skill when the user says 'ecs pattern', 'archetype storage', 'chunk iteration', 'ecs scheduling', 'bevy ecs', 'entt', 'flecs', 'unity dots architecture'. Deep production ECS engineering: archetype/chunk storage, queries, structural changes, command buffers, scheduling and tuning across EnTT, flecs, Bevy and Unity Entities. Do NOT use for: choosing whether to use ECS at all (use ecs-architecture), Unity-specific C# API details (use unity-csharp).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, ecs, archetype, data-oriented, engine]
 ---
 
 # Entity Component System (ECS) — Deep Engineering Guide
 
-ECS is the dominant data-oriented architecture for modern game engines (Unity DOTS, Bevy, Unreal Mass, Frostbite, Overwatch's ECS, Minecraft, Soldank, EnTT). It replaces scattered OOP objects with contiguous arrays of plain data so tens of thousands of entities update at 60 FPS on cache-limited CPUs.
+## Purpose
+ECS is the dominant data-oriented architecture for modern game engines (Unity Entities/DOTS, Bevy, Unreal Mass, Overwatch's engine, flecs, EnTT — used in Minecraft Bedrock). It replaces scattered OOP objects with contiguous arrays of plain data so tens of thousands of entities update at 60 FPS on cache-limited CPUs.
+
+## Agent Protocol
+
+### Trigger
+"ecs pattern", "archetype storage", "chunk iteration", "ecs scheduling", "bevy ecs", "entt", "flecs", "unity dots architecture".
+
+### Input Context
+- ECS library/engine and version
+- Entity counts, component churn, thread count
+- Profiler data if tuning
+
+### Output Artifact
+ECS design or code with memory-layout reasoning. No file unless requested.
+
+### Response Format
+```
+Library: {EnTT | flecs | Bevy | Unity Entities | custom}
+Layout: {archetypes / chunk size}
+Systems: {order, read/write sets}
+Code: {snippet}
+```
 
 ## 1. Why ECS Exists: The Performance Rationale
 
@@ -33,7 +60,7 @@ private:
 
 Each `Enemy` is heap-allocated individually. The pointer-chasing heap layout scatters `m_Position` across DRAM. Iterating 10,000 enemies forces the CPU to evict its L1/L2/L3 caches on **every single object**. The CPU does nothing but wait on memory.
 
-Measured impact: random-access iteration over a fragmented heap is **20–100x slower** than streaming over contiguous arrays. At 1.8 GHz × 8 cores, this is the difference between updating 1,000 and 100,000 entities per frame.
+Impact: once the working set exceeds cache, pointer-chasing iteration is typically an order of magnitude or more slower than streaming over contiguous arrays — measure your own case with a microbenchmark and hardware counters (cache misses) before and after.
 
 ### 1.2 The Data-Oriented Answer
 

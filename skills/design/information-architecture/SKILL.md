@@ -187,7 +187,7 @@ Targets:
 - Directness: >60% direct paths
 - Time: users should find most items within 10-20 seconds
 
-Iteration: After first round of tree testing, revise IA and re-test. Each round typically improves findability by 10-20%.
+Iteration: After first round of tree testing, revise IA and re-test. Repeat until task success rates meet the target you set before testing.
 
 ### Step 5: Sitemap Creation
 Visual hierarchy of pages and sections. Sitemap formats:
@@ -381,23 +381,25 @@ Tasks with Best Findability:
 | Dynalist | Content inventory and hierarchy | Freemium |
 | Slickplan | Visual sitemap builder | Paid |
 
-## Case Studies
+## Illustrative Scenarios
 
-### Case Study 1: E-commerce IA Redesign Increases Revenue 18%
+> Hypothetical scenarios for illustration. The figures are examples, not measured results from real projects.
+
+### Scenario 1: E-commerce IA Redesign Increases Revenue 18%
 An online retailer with 50,000+ products organized them by manufacturer (the company's org structure). Card sorting with 35 shoppers revealed users thought in terms of use case (home office, gaming, professional) and price range, not brand. The redesigned IA used use-case categories as primary navigation with brand as a filter. Findability in tree testing improved from 55% to 85%, and revenue increased 18% after launch as users found products more easily.
 
 Method: Open card sorting (35 participants) + tree testing (40 participants)
 Key insight: User mental model was use-case based, contrary to org chart structure
 Impact: Findability 55% to 85%, revenue +18%
 
-### Case Study 2: SaaS Documentation IA Reduces Support Tickets 30%
+### Scenario 2: SaaS Documentation IA Reduces Support Tickets 30%
 A B2B SaaS company had support documentation organized by feature name (matching internal engineering names). Tree testing showed only 40% findability for common tasks. After restructuring around user goals (getting started, troubleshooting, integrations, account management), findability improved to 82%. Support tickets for "how to" questions dropped 30% as users found self-serve answers.
 
 Method: Tree testing (50 participants) before and after IA restructure
 Key insight: Feature-name organization meant nothing to users; goal-based organization was intuitive
 Impact: Support tickets -30%, documentation findability 40% to 82%
 
-### Case Study 3: Government Website IA with Universal Design
+### Scenario 3: Government Website IA with Universal Design
 A government services website was organized by department (35+ departments, each with their own navigation). User research showed citizens don't know which department handles their issue. The redesign used a life-event IA (birth, marriage, moving, death, business) as primary, with department as secondary. Findability for common tasks increased from 35% to 78%, and task completion time decreased by 60%.
 
 Method: Large-scale card sorting (200 participants across demographics) + tree testing
@@ -428,122 +430,6 @@ Impact: Findability 35% to 78%, task time -60%
   - references/information-architecture-fundamentals.md — Information Architecture Fundamentals
   - references/navigation-design.md — Navigation Design Reference
   - references/sitemap-taxonomy.md — Sitemaps and Taxonomy Reference
-  - references/ia-card-sorting-tree-testing.md — IA Card Sorting and Tree Testing
-  - references/ia-navigation-design.md — IA Navigation Design
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
 ## Architecture Decision Trees
 
 ### Navigation Structure Decision Tree

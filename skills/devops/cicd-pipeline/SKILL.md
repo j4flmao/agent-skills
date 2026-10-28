@@ -24,6 +24,26 @@ tags: [devops, cicd, pipeline, phase-5]
 ## Purpose
 Design and implement CI/CD pipelines with proper stages, dependency caching, parallel execution, security scanning, deployment strategies, and rollback procedures.
 
+## Agent Protocol
+
+### Trigger
+"CI/CD", "pipeline", "deployment pipeline", "build pipeline", "workflow yaml", "continuous integration", "continuous delivery".
+
+### Input Context
+Repository layout, languages, CI platform, deploy target, security/compliance gates.
+
+### Output Artifact
+Pipeline configuration and deployment strategy. No file unless requested.
+
+### Response Format
+```
+Platform: {GitHub Actions|GitLab CI|Jenkins|CircleCI|...}
+Stages: {lint -> test -> build -> scan -> deploy}
+Caching: {strategy}
+Deploy: {rolling|blue/green|canary|GitOps}
+Config: {pipeline YAML}
+```
+
 ## Architecture Decision Trees
 
 ### CI/CD Platform Comparison
@@ -442,7 +462,6 @@ Pipeline runs for 30+ min before failing at end. Fail fast: lint first, then bui
   - references/multi-environment.md
   - references/pipeline-optimization.md
   - references/pipeline-security.md
-  - references/canary-deployment-guide.md
 
 ## Handoff
 Next: **kubernetes-patterns** — K8s deployment for pipeline output.

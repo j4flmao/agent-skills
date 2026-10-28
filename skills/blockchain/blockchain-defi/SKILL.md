@@ -430,9 +430,6 @@ interface CowOrder {
   - references/lending-borrowing.md — Lending & Borrowing Protocols
   - references/lsd-lrt-restaking.md — Liquid Staking & Restaking
   - references/yield-strategies.md — Yield Strategies
-  - references/defi-oracle-design.md — DeFi Oracle Design
-  - references/defi-flash-loans.md — Flash Loan Attack Patterns
-  - references/mev-in-defi.md — MEV in DeFi Protocols
 
 ## Architecture Decision Trees
 

@@ -1,9 +1,7 @@
 ---
 name: go
 description: >
-  Use this skill when the user asks about Go build tools, module management,
-  goroutines, channels, interfaces, error handling, testing, or production
-  deployment. Focus on tooling, concurrency, and ecosystem — not syntax.
+  Use this skill when the user says 'go build', 'go mod', 'goroutine', 'channel', 'golang concurrency', 'context cancellation', 'go testing', 'go fuzz', 'govulncheck', 'Go service in production'. Covers Go modules and toolchain, concurrency, error handling, testing and production hardening. Do NOT use for: Go web-framework specifics (use backend/golang), Kubernetes operators in Go (use devops/kubernetes-operators).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -30,6 +28,17 @@ Keywords: `go build`, `go mod`, `goroutine`, `channel`, `interface go`, `error h
 - Go version
 - Module organization (monorepo vs multi-module)
 - Deployment target
+
+### Output Artifact
+Code, `go.mod`/build commands, or a review of existing Go code. No file unless requested.
+
+### Response Format
+```
+Go version: {1.x}
+Change: {what and why}
+Code: {snippet}
+Verify: go vet ./... && go test -race ./... && govulncheck ./...
+```
 
 ## Decision Trees
 
@@ -498,25 +507,38 @@ package client
 
 import (
     "context"
+    "errors"
     "fmt"
-    "math/rand"
-    "net/http"
+    "math/rand/v2"
+    "sync"
     "time"
 )
 
+var ErrCircuitOpen = errors.New("circuit open")
+
+// CircuitBreaker is safe for concurrent use. After `threshold` consecutive
+// failures it rejects calls until `resetAfter` has elapsed, then lets calls
+// through again (half-open); one success closes it.
 type CircuitBreaker struct {
+    mu          sync.Mutex
     failures    int
     threshold   int
     resetAfter  time.Duration
     lastFailure time.Time
-    halfOpen    bool
 }
 
 func (cb *CircuitBreaker) Call(ctx context.Context, fn func(context.Context) error) error {
+    cb.mu.Lock()
     if cb.failures >= cb.threshold && time.Since(cb.lastFailure) < cb.resetAfter {
-        return fmt.Errorf("circuit open")
+        cb.mu.Unlock()
+        return ErrCircuitOpen
     }
+    cb.mu.Unlock()
+
     err := fn(ctx)
+
+    cb.mu.Lock()
+    defer cb.mu.Unlock()
     if err != nil {
         cb.failures++
         cb.lastFailure = time.Now()
@@ -527,6 +549,9 @@ func (cb *CircuitBreaker) Call(ctx context.Context, fn func(context.Context) err
 }
 
 func RetryBackoff(ctx context.Context, maxRetries int, fn func(context.Context) error) error {
+    if maxRetries < 1 {
+        return fmt.Errorf("RetryBackoff: maxRetries must be >= 1, got %d", maxRetries)
+    }
     for i := range maxRetries {
         err := fn(ctx)
         if err == nil {
@@ -535,14 +560,14 @@ func RetryBackoff(ctx context.Context, maxRetries int, fn func(context.Context) 
         if i == maxRetries-1 {
             return err
         }
-        delay := time.Duration(100*(1<<i)+rand.Intn(100)) * time.Millisecond
+        delay := time.Duration(100*(1<<i)+rand.IntN(100)) * time.Millisecond
         select {
         case <-ctx.Done():
             return ctx.Err()
         case <-time.After(delay):
         }
     }
-    return nil
+    panic("unreachable")
 }
 ```
 
@@ -553,19 +578,30 @@ package middleware
 
 import (
     "context"
+    "crypto/rand"
     "log/slog"
     "net/http"
     "time"
 )
 
 type ctxKey string
+
+type responseWriter struct {
+    http.ResponseWriter
+    status int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+    rw.status = code
+    rw.ResponseWriter.WriteHeader(code)
+}
 const RequestIDKey ctxKey = "request_id"
 
 func RequestID(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         id := r.Header.Get("X-Request-ID")
         if id == "" {
-            id = fmt.Sprintf("%d", time.Now().UnixNano())
+            id = rand.Text() // Go 1.24+: random base32 string
         }
         ctx := context.WithValue(r.Context(), RequestIDKey, id)
         next.ServeHTTP(w, r.WithContext(ctx))
@@ -607,18 +643,17 @@ func Logger(next http.Handler) http.Handler {
 | `init()` for registration | Implicit side effect. Can't test registration. | Register in main() or use `go:generate`. |
 | Embedding `sync.Mutex` publicly | Exposes Lock/Unlock. Breaks encapsulation. | `type safeMap struct { mu sync.Mutex; m map[string]T }` |
 | `io.ReadAll` without limit | OOM on large response. | `io.LimitReader(r, maxSize)` |
-| `defer db.Close()` in function | DB connection stays open until function returns. | Return DB connection to pool explicitly. |
+| `sql.Open` per request | `*sql.DB` is a pool; opening one per call defeats pooling and leaks. | Open once at startup, share it, `Close()` on shutdown. |
 | Writing to `http.ResponseWriter` after handler return | Panic. | Check `wroteHeader` flag. |
 
 ## Performance Optimization
 
-- `sync.Pool` for temporary structs in high-throughput handlers. Reduces GC pressure by 30-50%.
+- `sync.Pool` for short-lived buffers in hot handlers — measure with `go test -bench . -benchmem` before and after.
 - Pre-allocate slices: `make([]T, 0, expectedCap)` avoids multiple reallocations.
 - String concatenation: `strings.Builder` for many concatenations. Single `+` for 2-3 strings.
 - `encoding/json` vs `jsoniter`: stdlib is fine for most. Use `jsoniter` only under profiling evidence.
-- `runtime.GOMAXPROCS(N)` set to CPU quota in containerized environments (prevents over-subscription).
-- Memory pooling with `sync.Pool` for buffer reuse in HTTP response parsing.
-- Goroutine pool with errgroup for fan-out operations. Cap at `runtime.NumCPU() * 2`.
+- GOMAXPROCS: since Go 1.25 the runtime respects the cgroup CPU limit by default; on older toolchains use `go.uber.org/automaxprocs`.
+- Bounded fan-out with `errgroup.Group` + `g.SetLimit(n)`; for I/O work pick `n` from the downstream's capacity, not CPU count.
 
 ## Security Considerations
 

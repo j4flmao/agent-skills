@@ -1,214 +1,158 @@
-# Stencil Advanced Topics
+# Stencil Advanced: Forms, Accessibility, Theming, Framework Integration, and Performance
 
-## Introduction
-Advanced Stencil topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced techniques for production Stencil design systems: form-associated custom elements, accessibility across shadow boundaries, theming APIs, framework wrapper ergonomics, functional components, and runtime performance. Fundamentals are in `stencil-fundamentals.md`; build/SSR configuration in `stencil-deployment.md`.
 
-## Advanced Architecture Patterns
+## Form-Associated Custom Elements
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+Inputs inside shadow DOM are invisible to a surrounding `<form>`. Form-associated custom elements (FACE) let a component participate natively: submitted values, validation, `reset`, `disabled` via `<fieldset>`.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+```tsx
+import { Component, Prop, State, AttachInternals, h, Host } from '@stencil/core';
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+@Component({ tag: 'acme-input', shadow: true, formAssociated: true })
+export class AcmeInput {
+  @AttachInternals() internals: ElementInternals;
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+  @Prop() name: string;
+  @Prop() required = false;
+  @Prop({ mutable: true }) value = '';
 
-## Performance Optimization
+  @State() touched = false;
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+  private onInput = (ev: Event) => {
+    this.value = (ev.target as HTMLInputElement).value;
+    this.internals.setFormValue(this.value);
+    this.validate();
+  };
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+  private validate() {
+    if (this.required && !this.value) {
+      this.internals.setValidity({ valueMissing: true }, 'This field is required');
+    } else {
+      this.internals.setValidity({});
+    }
+  }
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+  componentWillLoad() {
+    this.internals.setFormValue(this.value);
+    this.validate();
+  }
 
-## Security Hardening
+  formResetCallback() {
+    this.value = '';
+    this.internals.setFormValue('');
+  }
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+  render() {
+    return (
+      <Host>
+        <input value={this.value} onInput={this.onInput} onBlur={() => (this.touched = true)}
+               aria-invalid={this.touched && !this.internals.validity.valid ? 'true' : 'false'} />
+      </Host>
+    );
+  }
+}
+```
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+- `formAssociated: true` plus `@AttachInternals()` (Stencil 4.x) expose `ElementInternals`.
+- Lifecycle callbacks `formResetCallback`, `formDisabledCallback`, and `formStateRestoreCallback` integrate with the browser.
+- Emit standard-like events (`acmeInput`, `acmeChange`) for framework bindings in addition to updating form value.
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+## Accessibility Across Shadow DOM
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+ARIA ID references (`aria-labelledby`, `aria-describedby`, `<label for>`) do not cross shadow boundaries.
 
-## Monitoring and Observability
+| Problem | Approach |
+|---------|----------|
+| External `<label for="x">` cannot target an inner input | FACE: labels associate with the host element; or accept a `label` prop rendered inside |
+| `aria-describedby` pointing to light DOM text | Copy text into an internal visually-hidden element, or use slots for help text inside the component |
+| Focus management | `delegatesFocus: true` in shadow options so focusing the host focuses the first focusable child |
+| Roles on host | Set role/states via `ElementInternals` (`internals.role`, `internals.ariaChecked`) where supported, or on the internal element |
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+```tsx
+@Component({ tag: 'acme-button', shadow: { delegatesFocus: true } })
+```
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+- Test with screen readers and axe (e.g. `@axe-core/playwright` against the docs site); spec tests cannot verify the accessibility tree.
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+## Theming API
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+Layer theming so consumers rarely need overrides:
 
-## Scalability and Reliability
+1. **Design tokens** as CSS custom properties defined globally (`--acme-color-primary`).
+2. **Component tokens** that default to global tokens (`--acme-button-bg: var(--acme-color-primary)`).
+3. **Parts** for structural overrides (`::part(label)`).
+4. **States** via reflected attributes (`:host([variant="danger"])`) or custom states (`:host(:state(loading))` with `internals.states`, where supported).
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+```css
+:host {
+  --acme-button-bg: var(--acme-color-primary, #2563eb);
+  --acme-button-fg: var(--acme-color-on-primary, #fff);
+}
+button { background: var(--acme-button-bg); color: var(--acme-button-fg); }
+```
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+Document every custom property and part (Stencil's `docs-json` output can feed documentation; JSDoc `@part` and `@cssprop` tags are picked up).
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+## Functional Components
 
-## Integration and Interoperability
+Stateless helpers rendered inside components (not custom elements):
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+```tsx
+import { FunctionalComponent, h } from '@stencil/core';
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+interface IconProps { name: string; size?: number }
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+export const Icon: FunctionalComponent<IconProps> = ({ name, size = 16 }) => (
+  <svg width={size} height={size} aria-hidden="true"><use href={`#icon-${name}`} /></svg>
+);
+```
 
-## DevOps and Automation
+They cannot have state, lifecycle, or styles of their own; use them to deduplicate markup within a component library.
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+## Framework Wrappers
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+Output targets (`@stencil/react-output-target`, `@stencil/angular-output-target`, `@stencil/vue-output-target`) generate wrappers that:
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+- Map custom events to framework props/outputs (`onAcmeChange` in React).
+- Set complex properties (objects/arrays) instead of attributes.
+- Provide `ngModel`/`v-model` value accessors for form controls when configured.
 
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
+React 19 supports custom elements natively (properties and custom events), which reduces the need for wrappers in React-only consumers, but wrappers still help with typing and SSR. Configuration options change between output target major versions; follow each package's README for your version.
 
-## Data Management
+## Performance
 
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
+- **Lazy loading**: the `dist` output loads components on demand; group related components into bundles (`bundles` in `stencil.config.ts`) to cut request counts when they always appear together.
+- **dist-custom-elements**: tree-shakeable, no lazy loader; best when consumers use a bundler and import only needed components.
+- Avoid re-rendering large lists on every keystroke: debounce input, keep derived data memoized in plain fields updated in `@Watch`.
+- `componentShouldUpdate(newVal, oldVal, propName)` can skip renders for irrelevant changes.
+- Use `key` on list items so the virtual DOM reuses nodes.
+- Keep `@Method()` calls async-aware: they always return Promises and wait for the component to be ready.
 
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
+## Server-Side Rendering and Hydration
 
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
+- The `dist-hydrate-script` output renders components to HTML on the server (used by frameworks or custom Node renderers).
+- Declarative Shadow DOM support in recent Stencil versions allows server-rendered shadow roots; verify browser and framework support for your targets.
+- Avoid accessing `window`/`document` during `componentWillLoad` in code paths that run on the server; guard with `Build.isBrowser`.
 
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
+## Versioning a Design System
 
-## API Design and Management
+- Follow semver strictly: removing props, events, parts, or CSS custom properties is a breaking change.
+- Deprecate with console warnings in dev builds and JSDoc `@deprecated` for one major cycle.
+- Visual regression tests (Playwright screenshots, Chromatic) on the documentation/storybook site catch style regressions.
 
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
+## Pitfalls
 
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
+- Custom inputs without FACE that silently drop values from native form submissions.
+- ARIA references across shadow boundaries that do nothing.
+- Exposing internal class names as a styling API instead of parts/custom properties.
+- Shipping only the lazy-loaded build to bundler users, increasing requests.
 
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
+## Checklist
 
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Form controls are form-associated with validation and reset
+- [ ] `delegatesFocus` and internal labelling for accessible inputs
+- [ ] Theming via tokens, component custom properties, and parts, all documented
+- [ ] Framework wrappers generated and tested in each framework
+- [ ] Output targets for both lazy loading and tree-shakeable consumption
+- [ ] SSR-safe code paths; visual regression testing in CI

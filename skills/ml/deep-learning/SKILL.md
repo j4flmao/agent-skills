@@ -412,7 +412,7 @@ Deep learning vs classical ML: deep learning requires more data (typically > 100
 - Memory optimization: use inplace ops, share buffers, avoid unnecessary tensor creation.
 - Inference optimization: torch.compile (2-5x speedup), ONNX (2-3x), TensorRT (3-8x).
 - Batch size: larger batches give better GPU utilization but may hurt generalization (use learning rate warmup).
-- Memory-efficient attention: FlashAttention (2-4x faster attention, 5-10x memory reduction) for transformers.
+- Memory-efficient attention: FlashAttention via `torch.nn.functional.scaled_dot_product_attention` (attention memory linear instead of quadratic in sequence length, faster at long sequences).
 
 Scalability: single GPU for models up to 7B params (quantized). 4-8 GPUs for 7B-70B. FSDP + CPU offloading for 70B+. TPU pods for 100B+ models.
 
@@ -487,7 +487,7 @@ Scalability: single GPU for models up to 7B params (quantized). 4-8 GPUs for 7B-
 ## Implementation Patterns
 
 ### Transformer for Time Series
-`python
+```python
 import torch
 import torch.nn as nn
 
@@ -508,21 +508,21 @@ class TimeSeriesTransformer(nn.Module):
         x = self.input_proj(x) + self.pos_encoding[:, :x.size(1), :]
         x = self.transformer(x)
         return self.output_head(x[:, -1, :])
-`
+```
 
 ### Training Loop with Mixed Precision
-`python
+```python
 import torch
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 
-scaler = GradScaler()
+scaler = GradScaler("cuda")  # loss scaling for fp16; with bf16 autocast it can be dropped
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.01)
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
 
 for epoch in range(num_epochs):
     for batch in dataloader:
         optimizer.zero_grad()
-        with autocast():
+        with autocast("cuda", dtype=torch.float16):
             outputs = model(batch['input'])
             loss = criterion(outputs, batch['target'])
         scaler.scale(loss).backward()
@@ -531,7 +531,7 @@ for epoch in range(num_epochs):
         scaler.step(optimizer)
         scaler.update()
     scheduler.step()
-`
+```
 
 ## Production Considerations
 

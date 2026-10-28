@@ -33,6 +33,15 @@ Exact user phrases: "visual design", "color theory", "typography", "layout", "vi
 ### Output Artifact
 Visual design specification with color system, typography scale, spacing grid, layout principles, and accessibility requirements.
 
+### Response Format
+```
+Color: {primitive scale} -> {semantic roles}, contrast {ratios checked}
+Type scale: {base size, ratio, steps}, line-height {values}
+Spacing: {base unit, scale}
+Layout: {grid columns, gutters, breakpoints}
+Issues fixed: {hierarchy/contrast/alignment findings}
+```
+
 ### Completion Criteria
 - [ ] Color palette defined with primary, secondary, neutral, semantic colors
 - [ ] All color combinations meet WCAG AA contrast ratios (4.5:1 text)
@@ -341,23 +350,25 @@ scale:
 | Material Design Color Tool | Color system, accessible variants | Systematic palette creation |
 | Sim Daltonism | Colorblindness simulator | Accessibility testing |
 
-## Case Studies
+## Illustrative Scenarios
 
-### Case Study 1: Dark Mode Redesign Reduces Eye Strain
+> Hypothetical scenarios for illustration. The figures are examples, not measured results from real projects.
+
+### Scenario 1: Dark Mode Redesign Reduces Eye Strain
 A productivity app used a pure white (#FFFFFF) background. After implementing a proper dark mode with reduced contrast (87% text, 60% secondary, 38% disabled on #1E1E1E background), user surveys showed 40% reduction in reported eye strain during evening use. The key was using true dark grays (#1E1E1E) instead of pure black (#000000) to reduce halation on OLED screens, and reducing saturation on accent colors from 100% to 75% for large surface areas.
 
 Method: Color system extension with dark theme overrides, tested on OLED and LCD displays
 Key insight: Dark surfaces should be dark gray, not black, and accent colors need desaturation for comfort
 Impact: Eye strain reports -40%, evening DAU +25%
 
-### Case Study 2: Typography Overhaul Increases Readability Scores
+### Scenario 2: Typography Overhaul Increases Readability Scores
 A news website used 14px body text with 1.4 line-height and 90ch max-width. Readability testing showed 65% comprehension. After increasing to 18px body text, 1.6 line-height, 70ch max-width, and using a more open typeface (system fonts → Inter), comprehension improved to 85%. Time-on-page increased 35% and scroll depth improved by 50%.
 
 Method: Typography audit → scale adjustment → readability testing with 30 participants
 Key insight: Readability improvements benefit all users, not just those with visual impairments
 Impact: Comprehension 65% to 85%, time-on-page +35%, scroll depth +50%
 
-### Case Study 3: Spacing System Reduces Development Time
+### Scenario 3: Spacing System Reduces Development Time
 An e-commerce team had 47 distinct spacing values across their CSS. Implementing an 8px-grid spacing system with 12 values eliminated all arbitrary spacing decisions. Developer productivity for layout tasks improved by 30%, and the visual consistency score (measured by design audit) increased from 62% to 94% in 3 months.
 
 Method: Audit all spacing → define 12-value 8px grid → codify in design tokens
@@ -584,13 +595,11 @@ Dark mode requires independent color tokens, not simple inversion:
 
 ## References
   - references/color-theory.md — Color Theory Reference
-  - references/layout-principles.md — Layout Principles Guide
+  - references/layout-principles.md — Color Theory Guide
   - references/spacing-grid.md — Spacing and Grid Systems Reference
   - references/typography.md — Typography Reference
   - references/visual-design-advanced.md — Visual Design Advanced Topics
   - references/visual-design-fundamentals.md — Visual Design Fundamentals
   - references/visual-hierarchy.md — Visual Hierarchy Reference
-  - references/visual-design-color-system.md — Color System Reference
-  - references/visual-design-dark-mode.md — Dark Mode Design Reference
 ## Handoff
 Hand off to `design-design-systems` for token implementation. Hand off to `design-brand-identity` for brand consistency. Hand off to `design-accessibility` for WCAG compliance audit.

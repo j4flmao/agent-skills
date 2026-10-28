@@ -493,7 +493,7 @@ class PSIProtocol:
 
 ## Performance Optimization
 
-- **PSI optimization**: Use Cuckoo filters instead of Bloom filters for 30% faster intersection.
+- **PSI optimization**: Use compact set representations (e.g. Bloom or Cuckoo filters) where the protocol allows, and benchmark intersection time on realistic set sizes.
 - **Batch processing**: Batch DP queries to amortize encryption overhead across multiple computations.
 - **Parallel enclaves**: Distribute TEE processing across multiple enclave instances for large datasets.
 - **Pre-filtering**: Filter non-intersecting records using pre-computed hash sets before DP computation.

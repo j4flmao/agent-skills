@@ -1,13 +1,42 @@
 ---
 name: cocos2d-patterns
-description: Cocos2d-x architectural patterns - Director main loop, scene graph, render queue and batching, event system, memory management, and cross-platform build patterns.
+description: >
+  Use this skill when the user says 'cocos2d-x internals', 'cocos director', 'cocos scene graph', 'cocos render queue', 'cocos memory management'. Explains Cocos2d-x internals — Director loop, scene graph, render queue and auto-batching, event dispatch, reference-counted memory — to design fast code. Do NOT use for: Cocos Creator gameplay scripting (use cocos2d), other engines.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, cocos2d-x, scene-graph, rendering]
 ---
 
 # Cocos2d-x Architectural Patterns
 
+## Purpose
 Cocos2d-x has a mature scene-graph architecture centered on the `Director` and `Node` tree. Understanding its internals lets you design for performance: batched rendering, minimal state changes, and memory discipline on mobile.
 
+## Agent Protocol
+
+### Trigger
+"cocos2d-x internals", "cocos director", "cocos scene graph", "cocos render queue", "cocos memory management".
+
+### Input Context
+- Cocos2d-x version and language (C++, Lua, JS bindings)
+- Platform targets
+- Observed performance or memory problem
+
+### Output Artifact
+Architecture guidance and C++ code. No file unless requested.
+
+### Response Format
+```
+Area: {director | scene graph | renderer | events | memory}
+Finding: {cause}
+Fix: {code}
+Verify: {draw-call / memory measurement}
+```
+
 ## 1. The Director Lifecycle
+
+Status note: Cocos2d-x's last major release is 4.0 (2019) and it is no longer actively developed; Cocos Creator 3.x (whose native runtime evolved from Cocos2d-x) is the maintained product. Use this skill for existing Cocos2d-x codebases.
 
 The `Director` singleton drives the game.
 
@@ -26,7 +55,6 @@ Director::mainLoop()
 
 - `Director::setAnimationInterval(1.0/60.0)` sets the desired FPS.
 - On mobile, respect `setProjection`/retina scaling (`CC_CONTENT_SCALE_FACTOR`).
-- Headless tests: `Director::setHighResFactor(0)` for pure-logic runs.
 
 ## 2. Scene Graph & Node Tree
 
@@ -37,7 +65,7 @@ Director::mainLoop()
 
 ### 2.1 Transforms & Anchor Points
 
-- `setAnchorPoint()` affects position relative to bounds (Cocos uses anchor = [0,1] vs Unity center).
+- `setAnchorPoint()` sets the pivot in normalised content-size units: plain `Node` defaults to (0,0), `Sprite` to (0.5,0.5); the origin is bottom-left, y up.
 - 2D games: work with `Vec2`/`Size`; world coordinates via `convertToWorldSpaceAR`.
 - Be careful with parent scale/rotation affecting child positions — standard matrix chaining.
 
@@ -45,8 +73,7 @@ Director::mainLoop()
 
 - `EventListenerTouchOneByOne` / `EventListenerTouchAllAtOnce`.
 - Custom events: `EventDispatcher::dispatchCustomEvent("name", &data)`.
-- Input -> mouse/touch classification abstracted by `Input` singleton.
-- Listeners attach to nodes (`node->addEventListener()`); remember to remove on `onExit`.
+- Register with `_eventDispatcher->addEventListenerWithSceneGraphPriority(listener, node)`: priority follows draw order and the listener is removed with the node. Fixed-priority listeners must be removed manually.
 
 ## 3. Rendering Architecture: The Render Queue
 
@@ -61,27 +88,27 @@ Renderer::render() -> sort commands (by z-order; transparent after opaque)
 
 ### 3.1 Batching Strategy
 
-- **SpriteBatchNode / `TextureAtlas`**: keep many sprites sharing ONE texture; they draw in one batch.
-- `Renderer` batches consecutive commands with the same texture + shader.
+- Since v3 the `Renderer` auto-batches consecutive `TrianglesCommand`s with the same texture, shader (GLProgramState) and blend func, so `SpriteBatchNode` is rarely needed.
+- Atlases (`SpriteFrameCache` + TexturePacker plists) keep consecutive sprites on one texture.
 - Sorting: opaque up-front (no blending), transparent sorted back-to-front.
 
 ### 3.2 Reducing Draw Calls (mobile gold)
 
 1. Pack art into atlases → fewer texture switches.
-2. Use `SpriteBatchNode` for repeated textures.
-3. Keep materials/shader switches minimal (MVV per vertex, no per-sprite shader).
+2. Keep draw order grouped by atlas (children of one parent from one atlas).
+3. Avoid per-sprite custom shaders/uniforms — each unique GLProgramState breaks the batch.
 4. Avoid per-node opacity/rotation trick for static UI; group static UI into one node.
 5. Disable depth test for 2D when not needed.
 
 ### 3.3 Custom Rendering
 
-- Subclass `Node` and override `draw(Renderer*)` to push custom `TrianglesCommand`/`CustomCommand`.
+- Subclass `Node` and override `draw(Renderer* renderer, const Mat4& transform, uint32_t flags)` to push a `TrianglesCommand` or `CustomCommand`.
 - `Renderer` supports custom geometry (a quad list) — great for particle trails, vector UI.
 
 ## 4. Action System (Animation Without Code)
 
 - `Action`s: `MoveTo`, `Sequence`, `Spawn`, `RepeatForever`, `EaseIn`.
-- `node->runAction(...)`; actions run inside `Node::i` update loop on the main thread.
+- `node->runAction(...)`; the `ActionManager` (a scheduled update on the main thread) steps all actions each frame.
 - Hierarchy: `Sequence`/`Spawn` composite actions; `ActionInterval` for timed.
 - `Director::getScheduler()` controls update priorities of actions.
 
@@ -93,32 +120,44 @@ Renderer::render() -> sort commands (by z-order; transparent after opaque)
 
 ## 5. Physics in Cocos2d-x
 
-- 2D: Box2D is the common physics backend (via `PhysicsBody` / `PhysicsWorld` or direct Box2D).
-- 3D: Cocos2d-x has a lightweight 3D physics module (mostly unmaintained → prefer external).
+- 2D: the integrated `PhysicsWorld`/`PhysicsBody` API wraps Chipmunk2D (`CC_USE_CHIPMUNK`); Box2D is available for direct use.
+- 3D: `Physics3DWorld` wraps Bullet (`CC_USE_3D_PHYSICS`).
 - `PhysicsBody::createBox`, `PhysicsWorld` integrated to scene.
 - Fixed timestep via scheduler; collisions: `EventListenerPhysicsContact`.
 
 ### 5.1 Sensor pattern
 
-Create a body with `PhysicsMaterial()`, set `setSensor(true)` for triggers, listen `onContactBegin` for overlap detection.
+Mark the shape as a sensor (`PhysicsShape::setSensor(true)`), set contact-test bitmasks, and handle `EventListenerPhysicsContact::onContactBegin` (return `false` to skip collision response).
 
 ## 6. Memory & Resource Management
 
 - `Ref`/`RefCounted`-style retention: `retain()/release()` (Cocos uses its own `Ref`).
-- `TextureCache::sharedTextureCache()->addImage()` caches textures (avoid duplicate loads).
-- `SpriteFrameCache` for atlases.
-- `ResourcesManager` for transparent asset handling.
+- `Director::getInstance()->getTextureCache()->addImage()` caches textures (avoid duplicate loads).
+- `SpriteFrameCache::getInstance()->addSpriteFramesWithFile()` for atlases.
+- Objects are autoreleased by `create()`; `addChild` retains them — only call `retain()` for objects you hold outside the scene graph.
 - **Rule**: keep references to big assets; `removeUnusedTextures()` after scene transitions.
 
 ### 6.1 Pooling Pattern
 
 ```cpp
-// recycle simple objects to avoid alloc/free churn
-auto pool = NodePool::getInstance("bullet");
-auto bullet = pool->getFromPoolOrCreate(...);
-bullet->setPosition(pos);
-this->addChild(bullet);
-// on death: pool->returnToPool(bullet)
+// Cocos2d-x has no built-in pool; cocos2d::Vector retains its elements.
+class BulletPool {
+public:
+    Sprite* acquire() {
+        if (_free.empty()) return Sprite::createWithSpriteFrameName("bullet.png");
+        Sprite* b = _free.back();        // still retained by _free
+        b->retain();
+        _free.popBack();
+        b->autorelease();                // balance the extra retain
+        return b;
+    }
+    void release(Sprite* b) {
+        _free.pushBack(b);               // retain before detaching
+        b->removeFromParentAndCleanup(true);
+    }
+private:
+    Vector<Sprite*> _free;
+};
 ```
 
 ## 7. Cross-Platform Build Pattern
@@ -126,7 +165,7 @@ this->addChild(bullet);
 - Engine wraps platform code (`platform/`): iOS/Win32/Android/Mac/Linux; define `__APPLE__`, `CC_PLATFORM_*` macros.
 - Resource paths: use `FileUtils::getInstance()->fullPathForFilename()`; Assets folder mapped per-platform.
 - Audio: `AudioEngine::play2d`; OGG/MP3/WAV platform-specific loading via `AudioDecoder`.
-- Bundle assets: pack into `.res` or Atlas; on Android use `assets/`.
+- Bundled assets live in `Resources/` (copied to the APK `assets/` on Android); add search paths with `FileUtils::addSearchPath()`.
 
 ### 7.1 Cocos Creator 3.x vs Cocos2d-x
 

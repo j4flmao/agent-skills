@@ -410,7 +410,7 @@ JOIN "s3"."lake"."orders" o ON c.customer_id = o.customer_id;
 Data lake caching: auto-caches hot data from S3/ADLS/GCS to local SSD. Built-in RBAC: table/row/column-level via Ranger. Warp Speed native engine for faster queries. Security: Kerberos, LDAP, OAuth, TLS. Starburst Galaxy offers serverless multi-cloud managed service. Use Starburst for regulated enterprises needing enterprise security or multi-cloud analytics with caching.
 
 #### Alluxio — Data Virtualization Layer
-Alluxio is a virtual distributed file system that unifies data access across disparate storage. Acts as caching and metadata layer between compute engines and storage backends. Caches hot data on local SSDs/memory for 10-100x faster data access on repeated queries. Supports any storage (S3, ADLS, GCS, HDFS, NFS) and any compute (Spark, Trino, MapReduce, Flink). Namespace service provides a single mounted namespace across storage systems.
+Alluxio is a virtual distributed file system that unifies data access across disparate storage. Acts as caching and metadata layer between compute engines and storage backends. Caches hot data on local SSDs/memory to cut latency and object-store requests for repeated reads of hot data. Supports any storage (S3, ADLS, GCS, HDFS, NFS) and any compute (Spark, Trino, MapReduce, Flink). Namespace service provides a single mounted namespace across storage systems.
 
 ```yaml
 # alluxio-site.properties

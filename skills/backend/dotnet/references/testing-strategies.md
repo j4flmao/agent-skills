@@ -1,1048 +1,205 @@
-# Testing Strategies in .NET 8
+# Testing Strategies for ASP.NET Core Services
 
-## Purpose
-This guide covers unit, integration, and end-to-end testing methodologies for .NET 8 applications using xUnit, Moq, and WebApplicationFactory.
+A practical test strategy for .NET APIs: fast unit tests for domain logic, integration tests through the real HTTP pipeline with `WebApplicationFactory`, real databases with Testcontainers, contract and architecture tests, and test data management. Examples use xUnit (v3 or v2), but NUnit and MSTest work the same way.
 
-## Integration Testing with WebApplicationFactory
-`WebApplicationFactory` allows for testing API endpoints in-memory without starting a real web server.
+## Test Pyramid for APIs
 
+| Level | Scope | Speed | Share |
+|-------|-------|-------|-------|
+| Unit | Domain logic, validators, mappers, pure functions | Milliseconds | Most tests |
+| Integration | HTTP endpoint through middleware, DI, EF Core, real database | Seconds | Key flows per endpoint |
+| Contract | API shape vs consumers (OpenAPI diff, Pact) | Seconds | Public/shared APIs |
+| End-to-end | Deployed system | Minutes | Few smoke tests |
+
+ASP.NET Core's in-memory test server makes integration tests cheap enough to cover each endpoint's main and error paths.
+
+## Unit Tests
 
 ```csharp
-// Integration Test Example 0
-public class ApiTests_0 : IClassFixture<WebApplicationFactory<Program>>
+public class OrderPricingTests
 {
-    private readonly HttpClient _client;
-
-    public ApiTests_0(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
     [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
+    public void Applies_discount_up_to_maximum()
     {
+        // Arrange
+        var options = Options.Create(new PricingOptions { MaxDiscount = 0.2m, Currency = "EUR" });
+        var pricing = new OrderPricing(options);
+
         // Act
-        var response = await _client.GetAsync("/api/v1/resource");
+        var total = pricing.Total(subtotal: 100m, requestedDiscount: 0.5m);
 
         // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
+        Assert.Equal(80m, total);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    public void Rejects_non_positive_subtotal(decimal subtotal)
+    {
+        var pricing = new OrderPricing(Options.Create(new PricingOptions()));
+
+        var act = () => pricing.Total(subtotal, 0m);
+
+        Assert.Throws<ArgumentOutOfRangeException>(act);
     }
 }
 ```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
+
+- Test behavior through public methods; avoid asserting on private implementation details.
+- Use `FakeTimeProvider` (`Microsoft.Extensions.Time.Testing`) for time-dependent logic.
+- Mock only boundaries you own the abstraction for (NSubstitute, Moq, FakeItEasy). Do not mock `DbContext`; use a real database in integration tests instead.
+- `FakeLogger<T>` (`Microsoft.Extensions.Diagnostics.Testing`) captures logs for assertions.
+
+## Integration Tests with WebApplicationFactory
 
 ```csharp
-// Integration Test Example 1
-public class ApiTests_1 : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly HttpClient _client;
+    private readonly PostgreSqlContainer _db = new PostgreSqlBuilder()
+        .WithImage("postgres:17")
+        .Build();
 
-    public ApiTests_1(WebApplicationFactory<Program> factory)
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        _client = factory.CreateClient();
+        builder.UseEnvironment("Testing");
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<DbContextOptions<OrdersDbContext>>();
+            services.AddDbContext<OrdersDbContext>(o => o.UseNpgsql(_db.GetConnectionString()));
+
+            services.AddAuthentication(TestAuthHandler.Scheme)
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.Scheme, _ => { });
+        });
     }
 
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
+    public async ValueTask InitializeAsync()
     {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
+        await _db.StartAsync();
+        using var scope = Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<OrdersDbContext>().Database.MigrateAsync();
+    }
 
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
+    public override async ValueTask DisposeAsync()
+    {
+        await _db.DisposeAsync();
+        await base.DisposeAsync();
     }
 }
 ```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
+
+The `IAsyncLifetime` signatures shown are xUnit v3 (`ValueTask`); xUnit v2 uses `Task InitializeAsync()` and `Task DisposeAsync()`. `Program` must be visible to the test project (`public partial class Program;` in the API project).
 
 ```csharp
-// Integration Test Example 2
-public class ApiTests_2 : IClassFixture<WebApplicationFactory<Program>>
+public sealed class OrdersEndpointTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
-    private readonly HttpClient _client;
-
-    public ApiTests_2(WebApplicationFactory<Program> factory)
+    [Fact]
+    public async Task Create_then_get_returns_order()
     {
-        _client = factory.CreateClient();
+        // Arrange
+        var client = factory.CreateClient();
+        var request = new CreateOrderRequest("REF-1001", Quantity: 2);
+
+        // Act
+        var create = await client.PostAsJsonAsync("/orders", request);
+        var location = create.Headers.Location;
+        var fetched = await client.GetFromJsonAsync<OrderDto>(location);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        Assert.NotNull(fetched);
+        Assert.Equal(2, fetched!.Quantity);
     }
 
     [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
+    public async Task Create_with_invalid_quantity_returns_problem_details()
     {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
+        var client = factory.CreateClient();
 
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
+        var response = await client.PostAsJsonAsync("/orders", new CreateOrderRequest("REF-1002", 0));
+        var problem = await response.Content.ReadFromJsonAsync<HttpValidationProblemDetails>();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Quantity", problem!.Errors.Keys);
     }
 }
 ```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
+
+## Test Authentication Handler
 
 ```csharp
-// Integration Test Example 3
-public class ApiTests_3 : IClassFixture<WebApplicationFactory<Program>>
+public sealed class TestAuthHandler(
+    IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
+    : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-    private readonly HttpClient _client;
+    public const string Scheme = "Test";
 
-    public ApiTests_3(WebApplicationFactory<Program> factory)
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
+        var claims = new[] { new Claim("sub", "user-1"), new Claim("scope", "orders.read orders.write") };
+        var identity = new ClaimsIdentity(claims, Scheme);
+        return Task.FromResult(AuthenticateResult.Success(
+            new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme)));
     }
 }
 ```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
+
+Also test the negative path: requests without credentials must get 401, and users without the scope 403. Make the default scheme in tests switchable so both paths are covered.
+
+## Database Strategy in Tests
+
+| Option | Fidelity | Speed | Notes |
+|--------|----------|-------|-------|
+| Testcontainers with the production engine | High | Container start once per fixture | Recommended |
+| SQLite in-memory | Medium | Fast | SQL dialect and behavior differ from SQL Server/PostgreSQL |
+| EF Core InMemory provider | Low | Fastest | Not a relational database; Microsoft discourages it for testing |
+
+Isolation between tests: wrap each test in a transaction rolled back at the end, or reset data with Respawn (`Respawner.ResetAsync`) between tests. Avoid test order dependencies.
+
+## Mocking External HTTP Dependencies
+
+- Replace typed `HttpClient` handlers with a stub `HttpMessageHandler`, or run WireMock.Net as a fake server and point configuration at it.
+- Test resilience behavior (retries, timeouts) against the fake: simulate 503 then 200, and slow responses.
+
+## Contract and API Shape Tests
+
+- Generate the OpenAPI document in CI (`Microsoft.Extensions.ApiDescription.Server` build-time generation, or fetch `/openapi/v1.json` from the test server) and diff it against the committed version to catch breaking changes.
+- Consumer-driven contracts with PactNet for service-to-service APIs.
+- Snapshot testing (Verify) for complex responses; review snapshot diffs in PRs.
+
+## Architecture Tests
 
 ```csharp
-// Integration Test Example 4
-public class ApiTests_4 : IClassFixture<WebApplicationFactory<Program>>
+[Fact]
+public void Domain_does_not_depend_on_infrastructure()
 {
-    private readonly HttpClient _client;
+    var result = Types.InAssembly(typeof(Order).Assembly)
+        .ShouldNot().HaveDependencyOn("Orders.Infrastructure")
+        .GetResult();
 
-    public ApiTests_4(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
+    Assert.True(result.IsSuccessful);
 }
 ```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
 
-```csharp
-// Integration Test Example 5
-public class ApiTests_5 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
+NetArchTest or ArchUnitNET enforce layering rules decided in ADRs.
 
-    public ApiTests_5(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
+## Running Tests in CI
 
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
+```bash
+dotnet test -c Release --logger "trx;LogFileName=results.trx" --collect:"XPlat Code Coverage"
 ```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
 
-```csharp
-// Integration Test Example 6
-public class ApiTests_6 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_6(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 7
-public class ApiTests_7 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_7(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 8
-public class ApiTests_8 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_8(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 9
-public class ApiTests_9 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_9(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 10
-public class ApiTests_10 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_10(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 11
-public class ApiTests_11 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_11(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 12
-public class ApiTests_12 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_12(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 13
-public class ApiTests_13 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_13(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 14
-public class ApiTests_14 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_14(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 15
-public class ApiTests_15 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_15(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 16
-public class ApiTests_16 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_16(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 17
-public class ApiTests_17 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_17(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 18
-public class ApiTests_18 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_18(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 19
-public class ApiTests_19 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_19(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 20
-public class ApiTests_20 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_20(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 21
-public class ApiTests_21 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_21(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 22
-public class ApiTests_22 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_22(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 23
-public class ApiTests_23 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_23(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 24
-public class ApiTests_24 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_24(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 25
-public class ApiTests_25 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_25(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 26
-public class ApiTests_26 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_26(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 27
-public class ApiTests_27 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_27(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 28
-public class ApiTests_28 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_28(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 29
-public class ApiTests_29 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_29(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 30
-public class ApiTests_30 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_30(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 31
-public class ApiTests_31 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_31(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 32
-public class ApiTests_32 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_32(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 33
-public class ApiTests_33 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_33(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 34
-public class ApiTests_34 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_34(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 35
-public class ApiTests_35 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_35(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 36
-public class ApiTests_36 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_36(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 37
-public class ApiTests_37 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_37(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 38
-public class ApiTests_38 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_38(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
-
-```csharp
-// Integration Test Example 39
-public class ApiTests_39 : IClassFixture<WebApplicationFactory<Program>>
-{
-    private readonly HttpClient _client;
-
-    public ApiTests_39(WebApplicationFactory<Program> factory)
-    {
-        _client = factory.CreateClient();
-    }
-
-    [Fact]
-    public async Task GetEndpoint_ReturnsSuccessAndCorrectContentType()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/v1/resource");
-
-        // Assert
-        response.EnsureSuccessStatusCode(); // Status Code 200-299
-        Assert.Equal("application/json; charset=utf-8", 
-            response.Content.Headers.ContentType.ToString());
-    }
-}
-```
-Testing is fundamental to continuous integration. Ensure coverage is high but focus on meaningful tests over arbitrary coverage metrics.
+- Fail the build on test failures; publish TRX and Cobertura coverage reports.
+- Track coverage trends but do not chase a percentage; focus on critical paths and error handling.
+- Run mutation testing (Stryker.NET) periodically on core domain logic to assess test quality.
+- Flaky tests are bugs: quarantine and fix rather than retry silently.
+
+## Checklist
+
+- [ ] Unit tests for domain rules, validators and edge cases (null, empty, out-of-range)
+- [ ] Integration tests per endpoint for success, validation, auth and not-found paths
+- [ ] Real database engine via Testcontainers; isolated test data
+- [ ] External HTTP dependencies faked at the handler or server level
+- [ ] OpenAPI diff or contract tests for public APIs
+- [ ] Architecture rules enforced by tests
+- [ ] Tests run in CI with reports; no tolerated flakiness

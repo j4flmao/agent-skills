@@ -1,324 +1,217 @@
 # GitHub Actions Workflow Optimization
 
-## Overview
-GitHub Actions provides CI/CD automation for GitHub repositories. Optimization covers workflow design, caching, parallel execution, self-hosted runners, matrix builds, and cost reduction strategies.
+Making GitHub Actions workflows faster, cheaper, and more reliable: triggering only when needed, caching correctly, parallelizing with matrices and dynamic fan-out, cancelling redundant runs, and sizing runners. Reusable workflows and composite actions are covered in `reusable-workflows.md` and `composite-actions.md`.
 
-## Workflow Structure
+## Measure First
 
-### Optimized Workflow
+- Use the workflow run summary and job timing to find the slowest jobs and steps.
+- Check billable minutes in organization billing/usage reports; macOS and Windows minutes cost more than Linux, and larger runners are billed at higher per-minute rates.
+- Track queue time separately from run time; long queues point to runner capacity or concurrency limits, not slow steps.
+
+## Trigger Only When Needed
+
 ```yaml
-name: CI Pipeline
-
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+    paths-ignore: ['**.md', 'docs/**']
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-
-env:
-  NODE_VERSION: '18'
-  PNPM_VERSION: '8'
-
-jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - run: npm ci
-      - run: npm run lint
-
-  test:
-    needs: lint
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [16, 18, 20]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ matrix.node-version }}
-      - run: npm run test:ci
-
-  build:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - run: npm run build
-      - uses: actions/upload-artifact@v3
-        with:
-          name: build-output
-          path: dist/
+    paths-ignore: ['**.md', 'docs/**']
+  workflow_dispatch:
 ```
 
-## Caching Strategies
+- `paths` / `paths-ignore` filter whole workflows. For per-job filtering in monorepos, compute changed paths in a first job (e.g. `dorny/paths-filter`) and gate jobs on its outputs.
+- Note: a workflow skipped by path filters reports no status; if it provides a required check, branch protection waits forever. Use job-level filtering with an always-running "gate" job for required checks.
 
-### Dependency Caching
-```yaml
-- name: Cache npm dependencies
-  uses: actions/cache@v3
-  with:
-    path: ~/.npm
-    key: npm-${{ hashFiles('package-lock.json') }}
-    restore-keys: |
-      npm-
-
-- name: Cache pnpm store
-  uses: actions/cache@v3
-  with:
-    path: |
-      ~/.local/share/pnpm/store
-      node_modules
-    key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-    restore-keys: |
-      pnpm-${{ runner.os }}-
-
-- name: Cache build output
-  uses: actions/cache@v3
-  with:
-    path: |
-      dist
-      .next
-      .cache
-    key: build-${{ github.sha }}
-    restore-keys: |
-      build-
-```
-
-### Docker Layer Caching
-```yaml
-- name: Set up Docker Buildx
-  uses: docker/setup-buildx-action@v3
-
-- name: Cache Docker layers
-  uses: actions/cache@v3
-  with:
-    path: /tmp/.buildx-cache
-    key: buildx-${{ runner.os }}-${{ hashFiles('Dockerfile') }}
-    restore-keys: |
-      buildx-${{ runner.os }}-
-
-- name: Build and push
-  uses: docker/build-push-action@v5
-  with:
-    context: .
-    push: true
-    tags: myapp:latest
-    cache-from: type=local,src=/tmp/.buildx-cache
-    cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-```
-
-## Parallel Execution
-
-### Job and Step Parallelism
 ```yaml
 jobs:
-  # Parallel execution of independent jobs
-  unit-test:
+  changes:
     runs-on: ubuntu-latest
-  integration-test:
-    runs-on: ubuntu-latest
-  lint:
-    runs-on: ubuntu-latest
-
-  # Parallel matrix execution
-  cross-platform:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
-        node: [16, 18, 20]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-      - run: npm test
-```
-
-### Fan-Out / Fan-In
-```yaml
-jobs:
-  prepare:
-    runs-on: ubuntu-latest
+    permissions: { contents: read, pull-requests: read }
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
     steps:
-      - id: set-matrix
-        run: |
-          echo "matrix={\"module\":${{ format('[{0}]', join(needs.list-modules.outputs.modules, ',')) }}}" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            api: ['services/api/**']
+            web: ['apps/web/**']
 
-  test:
-    needs: prepare
-    runs-on: ubuntu-latest
-    strategy:
-      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
-    steps:
-      - run: npm run test -- --scope=${{ matrix.module }}
-
-  deploy:
-    needs: test
-    if: success()
+  api-test:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     steps:
-      - run: npm run deploy
+      - uses: actions/checkout@v4
+      - run: make -C services/api test
 ```
 
-## Conditional Execution
+## Cancel Redundant Runs
 
-### Path Filtering
-```yaml
-jobs:
-  build:
-    # Only run when relevant files change
-    if: |
-      github.event_name == 'push' &&
-      contains(github.event.head_commit.modified, 'src/') ||
-      contains(github.event.head_commit.added, 'src/')
-
-  deploy:
-    if: github.ref == 'refs/heads/main'
-    needs: build
-```
-
-### Step Conditions
-```yaml
-- name: Deploy to production
-  if: |
-    github.event_name == 'push' &&
-    github.ref == 'refs/heads/main' &&
-    !cancelled()
-  run: npm run deploy:prod
-
-- name: Notify on failure
-  if: failure()
-  run: npm run notify:failure
-
-- name: Always cleanup
-  if: always()
-  run: npm run cleanup
-```
-
-## Self-Hosted Runners
-
-### Runner Configuration
-```yaml
-jobs:
-  deploy:
-    runs-on: [self-hosted, linux, x64, gpu]
-    steps:
-      - name: Check runner labels
-        run: |
-          echo "Running on: ${{ runner.name }}"
-          echo "OS: ${{ runner.os }}"
-          echo "Labels: ${{ join(runner.labels, ', ') }}"
-
-      - name: Clean workspace
-        run: |
-          rm -rf ${{ github.workspace }}/*
-          df -h
-```
-
-## Cost Optimization
-
-### Concurrency Groups
 ```yaml
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-# Environment-level concurrency
-environment: production
-concurrency: production-deploy
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 ```
 
-### Resource Sizing
+Cancel superseded PR runs, but do not cancel in-progress deployments on `main`; for deployments use a separate concurrency group per environment without cancellation.
+
+## Dependency Caching
+
+Prefer the built-in caching of setup actions; it keys on lockfiles automatically:
+
 ```yaml
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    # Use smallest runner for simple tasks
-
-  heavy-task:
-    runs-on: ubuntu-latest-8-cores  # Larger runner when needed
-
-  matrix-jobs:
-    runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 4  # Limit parallel matrix jobs
-      matrix:
-        version: [1, 2, 3, 4, 5, 6, 7, 8]
+- uses: actions/setup-node@v4
+  with:
+    node-version: 22
+    cache: npm            # or pnpm / yarn (install pnpm first with pnpm/action-setup)
+- run: npm ci
 ```
 
-## Workflow Reusability
+Equivalent options: `actions/setup-python` (`cache: pip|poetry|pipenv`), `actions/setup-java` (`cache: gradle|maven`), `actions/setup-go` (Go module and build cache on by default), `astral-sh/setup-uv` (`enable-cache: true`).
 
-### Reusable Workflow
+Manual cache when needed:
+
 ```yaml
-# .github/workflows/test-and-lint.yml
-name: Test and Lint
+- uses: actions/cache@v4
+  with:
+    path: ~/.cache/turbo
+    key: turbo-${{ runner.os }}-${{ github.sha }}
+    restore-keys: turbo-${{ runner.os }}-
+```
 
-on:
-  workflow_call:
-    inputs:
-      node-version:
-        required: true
-        type: string
-      os:
-        default: ubuntu-latest
-        type: string
-    secrets:
-      NPM_TOKEN:
-        required: true
+Rules:
+- Cache package manager stores (`~/.npm`, pnpm store), not `node_modules` with `npm ci` (which deletes `node_modules` anyway).
+- Keys must change when inputs change (lockfile hash); `restore-keys` provide partial hits.
+- Caches are scoped by branch: PRs can read caches from the base branch, not from other PRs. Warm caches on `main`.
+- Repository cache storage is limited (10 GB by default, with least-recently-used eviction); avoid caching large, rarely reused data.
 
+## Docker Build Caching
+
+Use the GitHub Actions cache backend for BuildKit instead of copying local cache directories:
+
+```yaml
+- uses: docker/setup-buildx-action@v3
+- uses: docker/login-action@v3
+  with:
+    registry: ghcr.io
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
+- uses: docker/build-push-action@v6
+  with:
+    context: .
+    push: ${{ github.ref == 'refs/heads/main' }}
+    tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+    cache-from: type=gha
+    cache-to: type=gha,mode=max
+```
+
+Alternatively `type=registry,ref=ghcr.io/org/app:buildcache` shares cache across repositories and runners. Order Dockerfile instructions so dependency installation layers come before copying source code.
+
+## Parallelism
+
+### Independent jobs run in parallel by default
+
+Only add `needs:` where there is a real dependency. A `lint → test → build` chain triples wall-clock time when the jobs are independent.
+
+### Matrix builds
+
+```yaml
+test:
+  runs-on: ${{ matrix.os }}
+  strategy:
+    fail-fast: false
+    max-parallel: 6
+    matrix:
+      os: [ubuntu-latest]
+      node: [20, 22, 24]
+      include:
+        - os: windows-latest
+          node: 22
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with: { node-version: '${{ matrix.node }}', cache: npm }
+    - run: npm ci
+    - run: npm test
+```
+
+Test only supported runtime versions (drop end-of-life versions such as Node 16 and 18). Use `include` for a few extra combinations instead of a full OS × version cross product.
+
+### Dynamic fan-out
+
+```yaml
 jobs:
-  lint:
-    runs-on: ${{ inputs.os }}
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.list.outputs.packages }}
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci
-      - run: npm run lint
+      - id: list
+        run: echo "packages=$(ls packages | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
 
   test:
-    runs-on: ${{ inputs.os }}
+    needs: plan
+    if: needs.plan.outputs.packages != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: ${{ fromJSON(needs.plan.outputs.packages) }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node-version }}
-      - run: npm ci
-      - run: npm test
+      - run: npm test --workspace packages/${{ matrix.package }}
 
-# Caller workflow
-jobs:
-  ci:
-    uses: ./.github/workflows/test-and-lint.yml
-    with:
-      node-version: '18'
-    secrets:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+  report:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test result: ${{ needs.test.result }}"
 ```
 
-## Key Points
-- Use path filtering to skip unnecessary workflow runs
-- Cache dependencies, build artifacts, and Docker layers
-- Parallelize independent jobs and use matrix strategies
-- Fan-out/fan-in patterns for dynamic parallel execution
-- Self-hosted runners for specialized hardware needs
-- Concurrency groups prevent redundant parallel runs
-- Resource sizing matches runner capacity to job needs
-- Reusable workflows reduce duplication across repositories
-- Workflow commands (set-output, save-state) enable inter-step communication
-- Composite actions encapsulate reusable step sequences
-- Environment protection rules gate production deployments
-- Artifact and cache retention policies manage storage costs
+A matrix is limited to 256 jobs per workflow run. Write outputs with `$GITHUB_OUTPUT`; the legacy workflow command for setting outputs has been removed from supported runners.
+
+### Test sharding
+
+Split slow suites across matrix jobs with the test runner's shard support (`playwright test --shard=${{ matrix.shard }}/4`, `jest --shard`, `pytest-split`), then merge reports in a final job.
+
+## Avoid Redundant Work
+
+- Build once, test the artifact: upload build outputs with `actions/upload-artifact@v4` and download them in later jobs instead of rebuilding.
+- Shallow checkout is the default (`fetch-depth: 1`); only fetch full history when tools need it (versioning, changelogs).
+- Skip expensive jobs for draft PRs: `if: github.event.pull_request.draft == false`.
+- Use `timeout-minutes` on jobs (default is 360) so hung jobs do not burn minutes.
+
+## Runner Sizing and Types
+
+| Option | When |
+|--------|------|
+| Standard GitHub-hosted runners | Default for most jobs |
+| Larger runners (more vCPU/RAM, GPU, static IPs) | CPU-bound builds/tests where more cores cut wall-clock time; configured as named runner groups/labels in the organization |
+| arm64 runners | Native ARM builds, often cheaper per minute |
+| Self-hosted runners (Actions Runner Controller on Kubernetes) | Special hardware, private network access, high volume |
+
+Self-hosted runners: use ephemeral runners (one job per runner) for isolation, never attach them to public repositories, and keep runner software updated.
+
+## Reliability Optimizations
+
+- Pin third-party actions to a full commit SHA (with a version comment) and update via Dependabot.
+- Set minimal `permissions:` at workflow level (`contents: read`) and elevate per job.
+- Retry only known-flaky network operations; fix flaky tests instead of blanket retries.
+- Cache invalidation issues: include tool versions in cache keys.
+
+## Checklist
+
+- [ ] Path filters with a required-check strategy that cannot deadlock
+- [ ] Concurrency cancels superseded PR runs, not deployments
+- [ ] Setup-action caching or correct manual cache keys; no `node_modules` caching with `npm ci`
+- [ ] BuildKit cache via `type=gha` or registry
+- [ ] Only true dependencies in `needs`; matrices for supported versions only
+- [ ] Build once, reuse artifacts; job timeouts set
+- [ ] Runner type matched to workload; self-hosted runners ephemeral
+- [ ] Actions pinned by SHA; minimal permissions

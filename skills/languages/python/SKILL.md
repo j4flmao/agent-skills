@@ -1,10 +1,7 @@
 ---
 name: python
 description: >
-  Use this skill when the user asks about Python build tools, packaging,
-  dependency management, virtual environments, type annotations, async/await,
-  testing, or production deployment. Focus on tooling and ecosystem — not
-  language syntax.
+  Use this skill when the user says 'python', 'uv', 'pyproject.toml', 'packaging', 'type hints', 'mypy', 'pytest', 'asyncio', 'virtual environment', 'python performance'. Covers the Python toolchain (uv-first), typing, async, testing and production deployment. Do NOT use for: FastAPI/Django/Flask framework architecture (use backend/python/*), ML training code (use ml/*).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -35,6 +32,14 @@ Keywords: `python build`, `pip`, `poetry`, `uv`, `pyproject.toml`, `venv`, `mypy
 ### Output Artifact
 Build configuration, dependency management setup, project structure, test configuration, and deployment config tailored to project type.
 
+### Response Format
+```
+Python: {3.x}  Tooling: uv
+Change: {what and why}
+Code/config: {snippet}
+Verify: uv run ruff check . && uv run mypy src && uv run pytest -q
+```
+
 ## Decision Trees
 
 ### Build Tool Selection
@@ -44,8 +49,8 @@ Project type?
 │   ├── Simple → setuptools + pyproject.toml (built-in, no extra deps)
 │   └── Modern → hatchling / flit (fast, standards-compliant)
 ├── Application (web API, CLI tool, service)
-│   ├── Python 3.12+ → uv (fastest, unified, Rust-based)
-│   ├── Large monorepo → PDM (PEP 582, no virtualenv needed)
+│   ├── Any supported Python → uv (default for this org: fast, unified, lockfile, manages interpreters)
+│   ├── Monorepo → uv workspaces (one lockfile, many packages)
 │   └── Team standard → Poetry (lock file, dependency resolution, publish)
 └── Data science / ML → conda / mamba (binary packages, CUDA support)
 ```
@@ -381,14 +386,14 @@ async def test_create_order(async_client):
 
 ### Dependency Management Comparison
 
-| Tool | Python Req | Lock File | Speed | Virtual Env | Monorepo | Extras |
-|------|-----------|-----------|-------|-------------|----------|--------|
-| pip | Any | No (pip freeze) | Slow | venv | No | Built-in |
-| pip-tools | Any | requirements.txt | Medium | venv | No | Compile + sync |
-| Poetry | 3.8+ | poetry.lock | Medium | Auto | No | Build, publish |
-| PDM | 3.8+ | pdm.lock | Medium | Optional | Workspaces | PEP 582 |
-| uv | 3.8+ | uv.lock | Fastest | Auto | Workspaces | pip-compat |
-| conda | Any | environment.yml | Slow | Auto | env per project | Binary packages |
+| Tool | Lock File | Speed | Virtual Env | Monorepo | Notes |
+|------|-----------|-------|-------------|----------|--------|
+| pip | No (pip freeze) | Slow | manual venv | No | Installer only |
+| pip-tools | requirements.txt (compiled) | Medium | manual venv | No | Compile + sync |
+| Poetry | poetry.lock | Medium | Auto | Limited | Build, publish |
+| PDM | pdm.lock | Medium | Auto | Workspaces | Standards-based |
+| uv | uv.lock | Fastest | Auto | Workspaces | Manages Python versions, pip-compatible CLI |
+| conda | environment.yml | Slow | Auto | env per project | Binary (non-Python) packages |
 
 Recommendation: use `uv` for new projects (2024+), Poetry for established teams, pip-tools for existing pip workflows, conda only for data science/ML with native dependencies.
 
@@ -469,7 +474,6 @@ Deploying a Python web app?
 ### Pattern: Repository with Cached Query
 
 ```python
-from functools import lru_cache
 from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -527,7 +531,7 @@ def process_order(self, order_id: int):
 ## Production Considerations
 
 ### ASGI Deployment with Uvicorn
-- Workers = `(2 * CPU cores) + 1` for sync workloads. `CPU cores * 2` for async.
+- Uvicorn/ASGI workers: start with one worker per CPU core (async code multiplexes I/O inside each worker); the `(2 * cores) + 1` rule is for sync Gunicorn workers.
 - `--limit-max-requests 10000` — prevents memory creep. Worker restarts after N requests.
 - Graceful shutdown: SIGTERM → Uvicorn stops accepting connections → waits for in-flight → exits.
 - Health checks: `/health` endpoint returning `{"status": "ok"}` with DB connectivity check.
@@ -544,30 +548,30 @@ def process_order(self, order_id: int):
 |---|---|---|
 | `from module import *` | Pollutes namespace. Breaks mypy. | Explicit imports. `__all__` in `__init__.py` |
 | `except: pass` | Swallows KeyboardInterrupt, SystemExit. | `except Exception: log.exception()` or re-raise |
-| Mutable default args | `def f(x=[])` — list shared across calls. | `def f(x=None): x = x or []` |
+| Mutable default args | `def f(x=[])` — list shared across calls. | `def f(x: list \| None = None)` then `if x is None: x = []` |
 | `datetime.now()` at module level | Evaluated at import time. Freezes timestamp. | Call inside function. `default_factory` in dataclasses |
-| Threading for CPU work | GIL limits to 1 core. | `multiprocessing` or `asyncio` for I/O |
+| Threading for CPU work | On the default (GIL) build only one thread runs Python bytecode at a time. | `ProcessPoolExecutor`, native extensions (NumPy), or the free-threaded build after verifying your C extensions support it |
 | `os.environ` in module scope | Can't mock in tests. | `os.getenv()` inside functions or pydantic-settings |
 
 ## Performance Optimization
 
-- `__slots__` on dataclasses: `@dataclass(slots=True)` — 50% memory reduction per instance.
-- `asyncio.gather()` for concurrent I/O: 5x-10x throughput gain over sequential.
+- `@dataclass(slots=True)` for many small instances: no per-instance `__dict__`, lower memory, faster attribute access.
+- `asyncio.TaskGroup` (3.11+) or `asyncio.gather()` for concurrent I/O; bound concurrency with `asyncio.Semaphore`.
 - `lru_cache` on pure functions: TTL via `cachetools.TTLCache` for time-sensitive caching.
-- `io.StringIO` / `io.BytesIO` for string building in hot paths. Avoid `+=` concatenation.
-- `numpy` vectorization over Python loops for numeric operations. 10x-100x speedup.
+- Build strings with `"".join(parts)`; avoid `+=` in loops.
+- NumPy vectorization instead of Python loops for numeric arrays — usually far faster; profile to confirm.
 - `selectinload()` over `joinedload()` for to-many SQLAlchemy relationships. Prevents cartesian explosion.
 - Query coalescing: `aiocache` with `RedisCache` for identical concurrent requests.
 
 ## Security Considerations
 
 - SQLAlchemy parameterized queries: `session.execute(select(User).where(User.id == user_id))`. Never f-strings.
-- JWT: `python-jose` with RS256. Validate `aud`, `iss`, `exp`, `iat`. Reject `alg: none`.
-- Password hashing: `bcrypt` or `argon2-cffi`. Minimum 12 rounds for bcrypt.
+- JWT: `PyJWT` — `jwt.decode(token, key, algorithms=["RS256"], audience=..., issuer=...)`; always pass an explicit `algorithms` list. Avoid `python-jose` for new code (poorly maintained).
+- Password hashing: `argon2-cffi` (Argon2id) first choice; `bcrypt` with cost >= 12 acceptable.
 - Secrets: pydantic-settings with `.env` file. Never commit `.env` to version control.
 - CORS: FastAPI `CORSMiddleware` with explicit `allow_origins`. Never `["*"]` in production.
 - Rate limiting: `slowapi` with in-memory or Redis backend. Apply to auth and write endpoints.
-- Input validation: Pydantic models on all API endpoints. Strip HTML with `markupsafe`.
+- Input validation: Pydantic models on all API endpoints. Escape HTML on output (Jinja2 autoescape / `markupsafe.escape`); sanitize rich-HTML input with `nh3`.
 - HTTPS: enforce via middleware. Redirect HTTP to 301. HSTS header set.
 - CSRF: token-based for form submissions. FastAPI apps using JWT don't need CSRF for API routes.
 - Data retention: async cleanup job for expired sessions, OTP codes, temp files. GDPR compliance.

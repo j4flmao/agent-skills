@@ -275,7 +275,7 @@ Discovery:
 
 Triage (within 24h of discovery):
   ├── Verify finding is valid (not false positive)
-  ├── Assign severity using CVSS 3.1
+  ├── Assign severity using CVSS (v4.0 preferred; state the version)
   ├── Identify affected systems and data
   ├── Determine exploitability in current context
   └── Assign to appropriate team with SLA

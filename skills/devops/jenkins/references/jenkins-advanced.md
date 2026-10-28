@@ -1,214 +1,167 @@
-# Jenkins Advanced Topics
-
-## Introduction
-Advanced Jenkins topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# Jenkins Advanced: Kubernetes Agents, Pipeline Internals, and Scale
+
+Advanced Jenkins topics: ephemeral Kubernetes agents with pod templates, caching, Pipeline CPS internals and their pitfalls, durability and resumption, resource locking, and controller scaling. Fundamentals and JCasC are in `jenkins-fundamentals.md`; shared libraries in `jenkins-shared-libraries.md`.
+
+## Kubernetes Agents
+
+The Kubernetes plugin creates one pod per build (or per `node` block) and deletes it afterwards. Each pod contains the `jnlp` agent container plus tool containers.
+
+```groovy
+pipeline {
+  agent {
+    kubernetes {
+      defaultContainer 'gradle'
+      yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: ci-builder
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  containers:
+    - name: gradle
+      image: gradle:8.14-jdk21
+      command: ["sleep"]
+      args: ["infinity"]
+      resources:
+        requests: { cpu: "1", memory: 2Gi }
+        limits: { memory: 4Gi }
+      volumeMounts:
+        - { name: gradle-cache, mountPath: /home/gradle/.gradle }
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:debug
+      command: ["sleep"]
+      args: ["infinity"]
+  volumes:
+    - name: gradle-cache
+      persistentVolumeClaim: { claimName: gradle-cache }
+'''
+    }
+  }
+  stages {
+    stage('Build') { steps { sh 'gradle build --no-daemon' } }
+    stage('Image') {
+      steps {
+        container('kaniko') {
+          sh '/kaniko/executor --context . --destination registry.example.com/app:${GIT_COMMIT}'
+        }
+      }
+    }
+  }
+}
+```
+
+- Tool containers need a long-running command (`sleep infinity`) so steps can `exec` into them.
+- Do not mount the host Docker socket; build images with daemonless builders (BuildKit rootless, Buildah, or Kaniko — note Kaniko was archived by Google in 2025, so prefer actively maintained alternatives or a maintained fork).
+- Put agent pods in a dedicated namespace with ResourceQuota, NetworkPolicy, and a minimal ServiceAccount.
+- Define reusable pod templates in JCasC (cloud `templates`) or shared libraries rather than repeating YAML.
+
+## Caching Strategies
+
+| Approach | Notes |
+|----------|-------|
+| ReadWriteMany PVC for dependency caches | Simple; concurrent writers can corrupt some caches; use per-tool safe caches |
+| Remote build caches (Gradle build cache, Bazel remote cache, sccache) | Best for ephemeral agents |
+| Registry/artifact proxies (Nexus, Artifactory) | Speeds dependency downloads, reduces external rate limits |
+| Image layer cache (`--cache-to/--cache-from` registry cache) | Reuses image layers across builds |
+
+## Pipeline Internals: CPS
+
+Pipeline Groovy runs through a continuation-passing-style (CPS) interpreter on the controller so builds can survive restarts. Consequences:
+
+- Pipeline code executes on the **controller**; heavy Groovy loops, JSON parsing of large files, or `readFile` on huge outputs consume controller CPU and memory. Do work in `sh` steps on agents.
+- Not all Groovy/Java methods are CPS-safe (closures passed to some library methods, e.g. `sort` with a comparator, behave incorrectly). Mark helper methods that call no steps with `@NonCPS`, and never call pipeline steps inside `@NonCPS` methods.
+- Local variables must be serializable when a step suspends the build; holding non-serializable objects (e.g. `Matcher`) across a step causes `NotSerializableException`.
+- The script security sandbox limits methods available in untrusted pipelines; approvals of dangerous signatures in "In-process Script Approval" can grant arbitrary code execution — review carefully.
+
+```groovy
+@NonCPS
+def parseVersions(String text) {
+  return text.readLines().findAll { it ==~ /\d+\.\d+\.\d+/ }.sort()
+}
+```
+
+## Durability Settings
+
+| Setting | Behaviour |
+|---------|-----------|
+| `MAX_SURVIVABILITY` | Writes state often; survives controller crashes best; slowest |
+| `SURVIVABLE_NONATOMIC` | Less frequent writes |
+| `PERFORMANCE_OPTIMIZED` | Much less I/O; running builds may be lost if the controller crashes uncleanly |
+
+```groovy
+options { durabilityHint('PERFORMANCE_OPTIMIZED') }
+```
+
+Use performance-optimized for short CI builds; keep higher durability for long deployment pipelines with manual gates.
+
+## Coordination: Locks, Milestones, Inputs
+
+```groovy
+stage('Deploy prod') {
+  options { lock(resource: 'prod-deploy') }      // Lockable Resources plugin
+  steps {
+    milestone(ordinal: 10)                       // older builds passing later are aborted
+    input message: 'Deploy to production?', submitter: 'release-managers'
+    milestone(ordinal: 20)
+    sh './deploy.sh prod'
+  }
+}
+```
+
+- Do not hold an agent while waiting for `input`; put `input` in a stage with `agent none` or outside `node` blocks so no executor is blocked.
+- Add `timeout` around `input` to avoid builds waiting forever.
+
+## Restarting and Replay
+
+- **Restart from Stage** (declarative) reruns from a chosen stage using stashed artifacts; mark stages with `preserveStashes` option on the pipeline if needed.
+- **Replay** runs a modified Jenkinsfile once; useful for debugging, but it bypasses code review, so restrict the `Run/Replay` permission.
+
+## Parallelism and Matrix
+
+```groovy
+stage('Test matrix') {
+  matrix {
+    axes {
+      axis { name 'JDK'; values '17', '21' }
+      axis { name 'DB';  values 'postgres', 'mysql' }
+    }
+    agent { kubernetes { inheritFrom 'gradle-jdk${JDK}' } }
+    stages { stage('Test') { steps { sh "./gradlew test -Pdb=${DB}" } } }
+  }
+}
+```
+
+Set `failFast true` on `parallel` blocks when any failure should stop siblings.
+
+## Controller Scaling
+
+- A single controller has practical limits (job count, concurrent builds, plugin load). Split by organization or domain into multiple controllers, managed uniformly via JCasC and the same image.
+- Keep build history bounded (`buildDiscarder`), archive artifacts to external storage (artifact-manager-s3 plugin) instead of `JENKINS_HOME`.
+- Tune JVM heap sensibly, enable GC logging, and monitor with the Prometheus metrics plugin or OpenTelemetry plugin.
+- Use WebSocket agent connections to avoid exposing the TCP inbound agent port.
+
+## Testing Pipelines
+
+- Unit test shared library code with JenkinsPipelineUnit.
+- Validate declarative syntax with the `pipeline-model-converter` validation endpoint or the `jenkins-cli declarative-linter` command before merging.
+- Integration tests: a disposable controller (container) with JCasC and sample repositories.
+
+## Pitfalls
+
+- Heavy Groovy logic on the controller causing UI slowness for everyone.
+- `input` steps blocking executors for days.
+- Approving sandbox signatures like `java.lang.Runtime exec` in script approval.
+- Agent pods with cluster-admin service accounts.
+
+## Checklist
+
+- [ ] Ephemeral Kubernetes agents with restricted service accounts and quotas
+- [ ] Daemonless image builds; no Docker socket mounts
+- [ ] Remote caches for builds and images
+- [ ] Heavy logic in agent steps; `@NonCPS` used correctly
+- [ ] Durability hint chosen per pipeline type
+- [ ] Locks, milestones, and timed-out inputs for deployments
+- [ ] Replay permission restricted; script approvals reviewed

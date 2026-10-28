@@ -1,11 +1,38 @@
 ---
 name: anti-cheat-server
-description: Expert server-side anti-cheat — server-side validation, client integrity, anomaly detection, cheat vectors and response/escalation systems for online games.
+description: >
+  Use this skill when the user says 'anti-cheat', 'server-side validation', 'cheat detection', 'speed hack', 'aimbot detection', 'ban system'. Designs server-side anti-cheat: authoritative validation, client integrity signals, anomaly detection, evidence capture and ban/escalation pipelines. Do NOT use for: kernel-level client anti-cheat drivers, general web fraud detection.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, anti-cheat, security, server]
 ---
 
 # Anti-Cheat (Server) — Deep Engineering Guide
 
+## Purpose
 The server is the only place that can *prove* cheating. Client-side checks lie; server-side checks, telemetry and escalation decide. This skill covers server-side validation, client integrity/attestation, anomaly detection, a cheat-vector catalog and the ban/escalation pipeline.
+
+## Agent Protocol
+
+### Trigger
+"anti-cheat", "server-side validation", "cheat detection", "speed hack", "aimbot detection", "ban system".
+
+### Input Context
+- Game genre and authority model
+- Known cheat vectors
+- Telemetry available
+
+### Output Artifact
+Validation rules, detection design and escalation policy. No file unless requested.
+
+### Response Format
+```
+Vector: {cheat type}
+Detection: {rule / model}
+Evidence: {what is stored}
+Response: {flag -> review -> ban}
+```
 
 ## 1. The Core Principle
 
@@ -28,7 +55,7 @@ Applied to every input command, every tick:
 | Shot requires line-of-sight at rewind time | wallhack, wallbang |
 | Cooldown/ammo/resources enforced | cooldown/dupe |
 | Ability effects checked server-side | god-mode mods |
-| Server recomputes damage | DP Shots |
+| Server recomputes damage | client-claimed damage / one-shot mods |
 
 Details in `server-side-validation.md`. Cheap, always-on, deterministic — **never optional per player**.
 
@@ -67,7 +94,7 @@ Scored via **confidence accumulation** (see `anomaly-detection.md`) — single i
 | Speedhack | partial | Δpos/Δrot checks |
 | Dupe/pickup | no | authority |
 | Memory-write mods | partial | integrity attestation + drift |
-| Input macro | no | skewed command shape |
+| Input macro / scripted input | yes | timing-regularity and command-shape statistics |
 
 Catalog drives the detection rules — keep it in a doc (this is the "known adversary" register).
 
@@ -84,7 +111,7 @@ server flags player (confidence + evidence packet)
 | Response | When |
 |----------|------|
 | `score adjustment` (MMR rollback) | low-confidence, borderline |
-| `shadowban` (sever pool) | suspected-but-unproven — the best "kill the cheating economy" tool |
+| `shadowban` (separate matchmaking pool) | suspected-but-unproven; protects clean players while evidence accumulates |
 | `temporary ban` | mid-confidence repeat |
 | `permanent ban` | high-confidence + repeated |
 

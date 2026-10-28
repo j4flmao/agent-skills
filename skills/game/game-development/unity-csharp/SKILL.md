@@ -1,11 +1,38 @@
 ---
 name: unity-csharp
-description: Unity C# scripting and DOTS/ECS mechanics - component systems, Jobs, Burst, archetypes/chunks, async patterns, and C# performance in game code.
+description: >
+  Use this skill when the user says 'unity dots', 'unity ecs', 'unity entities', 'ISystem', 'IJobEntity', 'burst compiler', 'unity job system', 'unity c# performance'. Covers Unity Entities (ECS), the C# Job System and Burst plus GC-free C# patterns for Unity gameplay code. Do NOT use for: general Unity project architecture (use unity), non-Unity ECS (use ecs-pattern).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, unity, dots, ecs, burst, csharp]
 ---
 
 # Unity Data-Oriented Technology Stack (DOTS) & C# Mechanics
 
+## Purpose
 This skill covers Unity's data-oriented stack (ECS, Job System, Burst) and the C# practices that make Unity code fast and correct.
+
+## Agent Protocol
+
+### Trigger
+"unity dots", "unity ecs", "unity entities", "ISystem", "IJobEntity", "burst compiler", "unity job system", "unity c# performance".
+
+### Input Context
+- Unity version and Entities package version
+- MonoBehaviour, hybrid or pure ECS
+- Performance symptom (profiler capture if available)
+
+### Output Artifact
+C# systems/jobs and authoring code. No file unless requested.
+
+### Response Format
+```
+Unity: {version}  Entities: {version}
+System: {name, query, read/write}
+Code: {snippet}
+Verify: {Profiler / Burst inspector / Entities hierarchy}
+```
 
 ## 1. Why DOTS: The OOP-Based Entry Points
 
@@ -18,6 +45,8 @@ Unity's classic `MonoBehaviour` model is object-oriented: each `Behaviour` insta
 DOTS replaces this with contiguous data and systems-in-a-loop.
 
 ## 2. ECS Model in Unity
+
+Packages: Entities 1.x on Unity 6.0-6.3 (`com.unity.entities` from the Package Manager); from Unity 6.4 Entities, Collections and Mathematics ship as core packages whose version matches the Editor. Code below uses the current `ISystem` + `SystemAPI` style (not the removed `SystemBase.Entities.ForEach` lambdas in new code).
 
 ### 2.1 Entities, Components, Systems
 
@@ -83,17 +112,17 @@ state.Dependency = handle;   // chain dependencies
 ```
 
 - Jobs run on worker threads; **dependencies** serialize through `JobHandle`.
-- `[ReadOnly]` / `[WriteOnly]` / `[DisableContainerSafetyRestriction]` on component access let Burst AND the safety system reason about aliasing.
+- Declare access precisely: `in`/`RefRO<T>` and `[ReadOnly]` for reads, `ref`/`RefRW<T>` for writes. This lets the job scheduler run readers in parallel and the safety system catch races. `[DisableContainerSafetyRestriction]` turns those checks off — use only with a written proof of disjoint access.
 
 ### 3.2 ParallelFor
 
 ```csharp
-[DisableParallelForRestriction]
-job.ScheduleParallel()   // splits entities across threads
+// IJobEntity: chunks are distributed across worker threads
+state.Dependency = new DamageJob { Damage = 5f }.ScheduleParallel(state.Dependency);
 ```
 
-- Race hazards: only write disjoint slices (`NativeArray<T>` per-chunk).
-- Use `NativeParallelHashMap`/`NativeAtomic` for cross-thread aggregation.
+- Each entity is processed by exactly one thread, so writing to the entity's own components is safe.
+- Cross-entity writes need `EntityCommandBuffer.ParallelWriter` (pass `[ChunkIndexInQuery] int sortKey`), `NativeQueue<T>.ParallelWriter`, or `NativeParallelHashMap<K,V>.ParallelWriter`; or write per-thread partial results and reduce afterwards.
 
 ## 4. Burst Compiler
 
@@ -101,16 +130,16 @@ job.ScheduleParallel()   // splits entities across threads
 - Requires `[BurstCompile]` + job code to be Burst-compatible:
   - No managed references, no allocations, no strings in hot jobs.
   - Use `float3`, `FixedString`, `NativeArray` (not `List<T>`).
-- `Burst.CompileSynchronously` for predictable startup; assert no managed exceptions.
+- `[BurstCompile(CompileSynchronously = true)]` makes the Editor wait for Burst instead of running managed code first (useful for benchmarks); players are always AOT-compiled.
 
 ### 4.1 Burst-Compatible Data Types
 
 | Use | Avoid |
 |-----|-------|
-| `float3/float4x4/quaternion` (Unity.Mathematics) | `Vector3`/`Matrix4x4` (managed overhead) |
+| `float3/float4x4/quaternion` (Unity.Mathematics) — map to SIMD-friendly code | `Vector3`/`Matrix4x4` in hot jobs (supported, but less vectorisation-friendly) |
 | `NativeArray<T>`, `NativeList<T>`, `NativeHashMap` | `List<T>`, `Dictionary<K,V>` |
 | `int4`/`uint4` | `System.Numerics` types |
-| `Burst.CompileSynchronously()` | exceptions/casting in hot path |
+| `FixedString64Bytes` etc. | `string`, managed exceptions as control flow |
 
 ## 5. C# Patterns for Game Code (Non-DOTS)
 
@@ -119,7 +148,7 @@ job.ScheduleParallel()   // splits entities across threads
 Unity's managed GC pauses frames. Hot-path rules:
 
 - No string concatenation per frame (use `StringBuilder` pooled, or `FixedString128Bytes`).
-- No boxing: avoid `object` params, `IEnumerable` foreach on `List`/`Dictionary` where possible (or cache enumerator).
+- No boxing: avoid `object` params and iterating collections through interfaces (`IEnumerable<T>`), which allocates an enumerator; `foreach` directly over `List<T>`/`Dictionary<K,V>` uses a struct enumerator and does not allocate.
 - Reuse arrays: cache `T[]` buffers as static/class fields; `ArrayPool<T>` for bigger needs.
 - Avoid `LINQ` in Update (allocates enumerators): `Where/Select/OrderBy` — replace with loops.
 
@@ -135,16 +164,19 @@ public struct PlayerState { public int Id; public float Hp; public float2 Pos; p
 ### 5.3 Async / Await Patterns
 
 ```csharp
-// UnityWebRequest + async
-async void LoadLevelAsync() {
-    var req = UnityWebRequest.Get(url);
-    var op = await req.SendWebRequest();
-    // post-process on main thread
+// Unity 6: Awaitable is Unity's allocation-light Task replacement
+async Awaitable<string> FetchAsync(string url, CancellationToken ct) {
+    using var req = UnityWebRequest.Get(url);
+    await req.SendWebRequest();                 // AsyncOperation is awaitable (2023.1+)
+    ct.ThrowIfCancellationRequested();
+    if (req.result != UnityWebRequest.Result.Success)
+        throw new IOException($"GET {url} failed: {req.error}");
+    return req.downloadHandler.text;            // continuation runs on the main thread
 }
 ```
 
-- `async void` only for event handlers; prefer `async Task`.
-- Never touch the scene graph from a background thread; marshal via `MainThread` dispatcher.
+- `async void` only for event handlers; return `Awaitable`/`Task` elsewhere and pass `destroyCancellationToken` (MonoBehaviour) for cancellation.
+- Never touch the scene graph from a background thread; hop with `await Awaitable.BackgroundThreadAsync()` / `await Awaitable.MainThreadAsync()`.
 - Use `Addressables.LoadAssetAsync` + `.Completed` to keep loads off the frame.
 
 ### 5.4 Singletons & Service Locators
@@ -161,19 +193,19 @@ public sealed class GameManager : MonoBehaviour {
 
 - `[SerializeField]` fields for inspector persistence.
 - `ISerializationCallbackReceiver` for custom (de)serialization hooks.
-- For save data: JSON (`JsonUtility` / Newtonsoft) on managed side, or custom bin with `Buffer.BinaryWriter` for versioned saves.
+- For save data: JSON (`JsonUtility` / Newtonsoft) on managed side, or custom binary with `System.IO.BinaryWriter` plus an explicit version header for migrations.
 - Never serialize large live ECS state; snapshot to stable DTOs on save.
 
 ## 7. Compilation & asmdef
 
 - `.asmdef` per system group → parallel module compile, controlled references.
 - `unsafe` blocks (rarely needed) need `Allow 'unsafe' Code` project setting.
-- `PlayerPrefs` deprecated in favor of `Application.persistentDataPath` + files, or Unity Cloud Save for live ops.
+- `PlayerPrefs` is for small settings only (stored in the registry/plist, unencrypted); save games go to files under `Application.persistentDataPath` or a cloud-save service.
 
 ## 8. Profiling C#
 
 - Unity Profiler "C#" module: allocations, GC mark/sweep, script cost.
-- `[BurstCompile]` + Burst Inspector to verify SIMD usage (`Show dot-product`).
+- Burst Inspector (Jobs > Burst > Open Inspector) shows generated assembly — check hot loops are vectorised and free of managed calls.
 - `try/catch` in Update: avoid exceptions per frame; let one crash surface early.
 - `Debug.Log` in hot loops: disable in production (`#if UNITY_EDITOR || DEVELOPMENT_BUILD`).
 
@@ -181,10 +213,9 @@ public sealed class GameManager : MonoBehaviour {
 
 | Rule | Why |
 |------|-----|
-| Prefer `TryGetComponent` over `GetComponent` | avoids exception/lookup cost |
-| Cache `Camera.main` | camera lookup is static-per-frame expensive |
+| Prefer `TryGetComponent` over `GetComponent` + null check | no Editor-only allocation when the component is missing |
+| Cache component references in `Awake` | repeated `GetComponent` calls are lookups every time |
 | Begin/End sample with profiler markers | measure before optimizing |
-| Use `Mathf.Approximately` sparingly | branchy; use tolerance math |
 | Pre-allocate everything once | cache and pool |
 | Avoid `FindObjectOfType` | scans scene; expensive |
 | Prefer fixed-point for sync systems | determinism across devices |
@@ -196,7 +227,7 @@ public sealed class GameManager : MonoBehaviour {
 | 100k entities / massive crowds | Strong | Poor |
 | Rapid UI/prototype | Poor | Excellent |
 | Deep gameplay narrative logic | More setup | Natural |
-| Physics via Individual Bodies | Has DOTS Physics | PhysX direct |
+| Physics | Unity Physics / Havok Physics for Unity packages | Built-in PhysX |
 | Shader/instancing synergy | GPU-instancing friendly | Manual |
 
 Rule: mix intelligently — DOTS for the simulation hot-path, MonoBehaviours for the editors/design-facing layers.

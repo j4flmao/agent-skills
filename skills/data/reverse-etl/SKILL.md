@@ -435,7 +435,6 @@ Destination type?
   - references/reverse-etl-monitoring.md — Reverse ETL Monitoring
   - references/reverse-etl-patterns.md — Reverse ETL Patterns
   - references/sync-config-examples.md — Sync Configuration Examples
-  - references/warehouse-activation.md — Warehouse Activation Reference
 ## Architecture Decision Trees
 
 ```

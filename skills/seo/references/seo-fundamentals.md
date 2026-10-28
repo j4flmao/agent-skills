@@ -140,14 +140,14 @@ Disallow: /
 ```
 
 ### Sitemap Generation
+Google uses `<loc>` and an accurate `<lastmod>`; it ignores `<changefreq>` and `<priority>`, so they are omitted. Do not set `lastmod` to the build time for unchanged pages.
+
 ```javascript
 function generateSitemap(pages: PageEntry[]): string {
   const urls = pages.map(page => `
     <url>
       <loc>${escapeXml(page.url)}</loc>
-      <lastmod>${page.lastModified || new Date().toISOString().split('T')[0]}</lastmod>
-      <changefreq>${page.changeFreq || 'weekly'}</changefreq>
-      <priority>${page.priority || 0.5}</priority>
+      <lastmod>${page.lastModified}</lastmod>
       ${page.images?.map(img => `
         <image:image>
           <image:loc>${escapeXml(img.url)}</image:loc>
@@ -173,13 +173,13 @@ function generateSitemap(pages: PageEntry[]): string {
 ## Core Web Vitals
 
 ### LCP Optimization
-```javascript
-// Preload hero image
+```html
+<!-- Preload hero image (or add fetchpriority="high" to the hero <img>) -->
 <link rel="preload" href="/hero-1200w.webp" as="image"
       imagesrcset="/hero-400w.webp 400w, /hero-800w.webp 800w, /hero-1200w.webp 1200w"
       imagesizes="(max-width: 600px) 400px, (max-width: 1200px) 800px, 1200px">
 
-// Inline critical CSS
+<!-- Inline critical CSS -->
 <style>
   /* Critical above-the-fold styles */
   body { font-family: system-ui, sans-serif; margin: 0; }
@@ -187,7 +187,7 @@ function generateSitemap(pages: PageEntry[]): string {
   .hero h1 { font-size: clamp(2rem, 5vw, 4rem); }
 </style>
 
-// Defer non-critical CSS
+<!-- Defer non-critical CSS -->
 <link rel="preload" href="/styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <link rel="stylesheet" href="/styles.css" media="print" onload="this.media='all'">
 ```
@@ -313,7 +313,7 @@ img, video, iframe {
 - Generate XML sitemaps and submit to Google Search Console
 - Create robots.txt with proper directives for crawlers
 - Implement hreflang tags for multilingual sites
-- Optimize page speed for Core Web Vitals (LCP, FID, CLS)
+- Optimize page speed for Core Web Vitals (LCP, INP, CLS; FID was retired in favour of INP in March 2024)
 - Use descriptive alt text for images (accessibility + SEO)
 - Build quality backlinks through content marketing
 - Ensure mobile responsiveness (mobile-first indexing)
@@ -323,7 +323,7 @@ img, video, iframe {
 - Use breadcrumb navigation for internal linking
 - Optimize URL structure (short, descriptive, hyphenated)
 - Use lazy loading for below-the-fold images
-- Implement pagination with rel=next/prev or view-all option
+- Paginate with plain crawlable `<a href>` links and self-referencing canonicals (Google stopped using rel=next/prev in 2019)
 - Avoid duplicate content (canonical or 301 redirect)
 - Monitor keyword rankings and adjust strategy
 - Use internal linking to distribute page authority
@@ -350,4 +350,4 @@ img, video, iframe {
 - Over-optimized anchor text (looks manipulative)
 - Publishing duplicate blog content across platforms
 - Not updating old content (freshness signal)
-- Slow server response time (TTFB over 200ms)
+- Slow server response time (web.dev rates TTFB under 0.8 s as good)

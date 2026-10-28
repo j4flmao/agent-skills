@@ -534,7 +534,7 @@ First-party mobile/web app?
 
 9. **DTOs coupled to models**: Using `@Field` properties directly in responses. Always map to dedicated response DTOs.
 
-10. **Missing `Sendable` conformance**: Vapor 4.90+ enforces Sendable for concurrent access. Mark controllers and services as `Sendable` when needed.
+10. **Missing `Sendable` conformance**: With Swift 6 language mode (strict concurrency checking), values shared across tasks must be `Sendable`. Make controllers and services `Sendable` (structs with immutable state, or actors) and fix warnings before enabling Swift 6 mode.
 
 ## Best Practices
 
@@ -569,9 +569,9 @@ First-party mobile/web app?
 
 ## Performance
 
-- Vapor 4 achieves ~80k req/s on modern hardware with PostgreSQL (simple queries).
+- Benchmark with your own queries and payloads (wrk, k6); throughput is usually bounded by the database, not the framework.
 - Connection pooling: Configure `maxConnectionsPerEventLoop` (default 2). Increase for high-throughput workloads.
-- Keep-alive reduces latency by 40% for repeated requests.
+- Keep HTTP keep-alive enabled so repeated requests skip TCP/TLS handshakes.
 - Leaf template caching in production: set `app.leaf.cache = .enabled`.
 - Database indexing on frequently queried columns: `customer_id`, `status`, `created_at`.
 - Use `req.eventLoop.submit {}` for CPU-intensive computations to avoid blocking.

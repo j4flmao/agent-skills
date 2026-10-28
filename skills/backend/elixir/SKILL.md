@@ -1,7 +1,7 @@
 ---
-name: elixir
+name: backend-elixir
 description: >
-  Use this skill when building with Elixir — Phoenix framework, OTP, BEAM, LiveView, Ecto, supervision trees. This skill enforces: OTP design principles, Phoenix context boundaries, LiveView state management, Ecto schema conventions, supervision tree structure. Do NOT use for: non-Elixir projects, frontend JavaScript, simple scripts better suited for Bash/Python.
+  Use this skill when the user says 'elixir backend', 'phoenix', 'phoenix liveview', 'ecto', 'otp supervision tree', 'genserver', 'oban', 'phoenix pubsub', 'mix phx.new'. Builds Phoenix/Elixir backends: contexts, Ecto schemas and migrations, LiveView, supervision trees, GenServer/ETS state, Oban jobs, releases and observability. Do NOT use for: Elixir language fundamentals outside web backends (languages skill for Elixir), non-Elixir stacks, frontend JavaScript.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -71,38 +71,34 @@ my_app/
     my_app/
       application.ex         # OTP application start
       repo.ex                # Ecto Repo
-      accounts/              # Context: accounts
+      accounts.ex            # Context module (public API)
+      accounts/              # Context internals
         user.ex              # Ecto schema
-        user_notifier.ex     # Boundary call
+        user_notifier.ex
         user_token.ex
-        accounts.ex           # Context module (public API)
-      catalog/               # Context: catalog
+      catalog.ex
+      catalog/
         product.ex
         category.ex
-        catalog.ex
-      store/                 # Context: orders
+      store.ex               # Context: orders
+      store/
         order.ex
         line_item.ex
-        store.ex
-      web/
-        endpoint.ex           # Phoenix endpoint
-        router.ex             # Router
-        controllers/          # Controllers (non-LiveView)
-          user_session_controller.ex
-        live/                 # LiveViews
-          product_live/
-            index.ex
-            show.ex
-          cart_live/
-            index.ex
-        components/           # Shared components
-          layout.ex           # App layout
-          navbar.ex
-          product_card.ex
-        templates/            # Templates (non-LiveView)
-          layout/
-      mailer.ex               # Mailer (Swoosh/Bamboo)
-    my_app.ex                 # Module aliases
+      mailer.ex              # Swoosh mailer
+    my_app_web/              # Web layer (separate namespace MyAppWeb)
+      endpoint.ex
+      router.ex
+      controllers/
+        user_session_controller.ex
+      live/
+        product_live/
+          index.ex
+          show.ex
+      components/
+        core_components.ex
+        layouts.ex
+    my_app.ex
+    my_app_web.ex
   priv/
     repo/
       migrations/
@@ -154,6 +150,7 @@ defmodule MyApp.Accounts.User do
     field :email, :string
     field :username, :string
     field :role, :string, default: "user"
+    field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
     field :deleted_at, :naive_datetime
 
@@ -179,7 +176,7 @@ end
 ### Step 3: Context Boundary
 
 ```elixir
-# lib/my_app/accounts/accounts.ex
+# lib/my_app/accounts.ex
 defmodule MyApp.Accounts do
   @moduledoc """
   Accounts context — user registration, authentication, profile management.
@@ -214,7 +211,8 @@ defmodule MyApp.Accounts do
     end
   end
 
-  defp check_password(nil, _password), do: false
+  # Run a dummy hash when the user is missing so response time does not reveal which emails exist.
+  defp check_password(nil, _password), do: Argon2.no_user_verify()
   defp check_password(user, password) do
     Argon2.verify_pass(password, user.hashed_password)
   end
@@ -359,7 +357,7 @@ end
   <.table
     id="products"
     rows={@streams.products}
-    row_click={fn {_id, product} -> navigate(~p"/products/#{product}")}
+    row_click={fn {_id, product} -> JS.navigate(~p"/products/#{product}") end}
   >
     <:col :let={{_id, product}} label="Name"><%= product.name %></:col>
     <:col :let={{_id, product}} label="Price"><%= product.price %></:col>
@@ -381,37 +379,26 @@ defmodule MyApp.Application do
 
   @impl true
   def start(_type, _args) do
+    # Children start in order and stop in reverse: dependencies first, Endpoint last
     children = [
-      # Start Ecto repo
+      MyAppWeb.Telemetry,
       MyApp.Repo,
-
-      # Start Telemetry
       {Phoenix.PubSub, name: MyApp.PubSub},
-
-      # Start Phoenix endpoint
-      MyAppWeb.Endpoint,
-
-      # Start workers
+      {Oban, Application.fetch_env!(:my_app, Oban)},
       MyApp.Workers.ProductCache,
-      MyApp.Workers.EmailQueue,
-      MyApp.Workers.SessionCleaner,
-
-      # Start Oban for background jobs
-      {Oban, oban_config()},
+      MyAppWeb.Endpoint
     ]
 
     opts = [strategy: :one_for_one, name: MyApp.Supervisor]
     Supervisor.start_link(children, opts)
   end
-
-  defp oban_config do
-    Oban.Config.new(
-      repo: MyApp.Repo,
-      queues: [default: 10, emails: 5, cleanup: 1],
-      prune: :active,
-    )
-  end
 end
+
+# config/config.exs
+# config :my_app, Oban,
+#   repo: MyApp.Repo,
+#   queues: [default: 10, emails: 5, cleanup: 1],
+#   plugins: [{Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7}]
 ```
 
 ```elixir
@@ -427,7 +414,8 @@ defmodule MyApp.Workers.ProductCache do
 
   @impl true
   def init(state) do
-    # Schedule initial cache refresh
+    # Create the table once; it lives as long as this owner process.
+    :ets.new(:product_cache, [:named_table, :protected, read_concurrency: true])
     send(self(), :refresh)
     {:ok, state}
   end
@@ -435,7 +423,6 @@ defmodule MyApp.Workers.ProductCache do
   @impl true
   def handle_info(:refresh, state) do
     products = MyApp.Catalog.list_products()
-    :ets.new(:product_cache, [:named_table, :public, read_concurrency: true])
     :ets.insert(:product_cache, {:products, products})
     Process.send_after(self(), :refresh, @cache_ttL)
     {:noreply, state}
@@ -479,7 +466,7 @@ State management pattern?
 │   get/update pattern. No handle_call/cast boilerplate. Good for config, counters.
 │   Risk: Agent.update is synchronous — wraps GenServer.call internally.
 └── Read-heavy, rarely-changed → ETS
-    No process bottleneck. ~1µs reads. Good for reference data, session caches.
+    No single-process bottleneck; concurrent reads. Good for reference data, caches.
     Risk: data lost on restart. Pair with Ecto for durability.
 ```
 
@@ -547,15 +534,17 @@ def place_order(cart_id, customer_id) do
     |> Order.changeset(%{})
     |> repo.insert()
   end)
-  |> Ecto.Multi.run(:line_items, fn repo, %{order: order} ->
+  |> Ecto.Multi.run(:line_items, fn repo, %{order: order, cart: cart} ->
+    now = NaiveDateTime.utc_now(:second)
+    # insert_all takes plain maps (not structs) and does not autogenerate timestamps
     items = Enum.map(cart.items, fn item ->
-      %LineItem{order_id: order.id, product_id: item.product_id, quantity: item.quantity, price: item.price}
+      %{order_id: order.id, product_id: item.product_id, quantity: item.quantity,
+        price: item.price, inserted_at: now, updated_at: now}
     end)
-    repo.insert_all(LineItem, items)
+    {count, _} = repo.insert_all(LineItem, items)
+    {:ok, count}
   end)
-  |> Ecto.Multi.run(:clear_cart, fn repo, _changes ->
-    repo.delete_all(from c in CartItem, where: c.cart_id == ^cart_id)
-  end)
+  |> Ecto.Multi.delete_all(:clear_cart, from(c in CartItem, where: c.cart_id == ^cart_id))
   |> Repo.transaction()
 end
 ```
@@ -583,20 +572,20 @@ mix release build → container image → CI tests → staging deploy → smoke 
 | Anti-Pattern | Why It Hurts | Fix |
 |---|---|---|
 | GenServer as DB replacement | State lost on crash, restart resets. No durability. | Use Ecto for persistent data; GenServer for cache/state only |
-| `IO.inspect` debugging in prod | Compiles into release. Exposes internal state in logs. | `Logger.debug(inspect(data))` removed by compiler in :prod |
+| `IO.inspect` debugging in prod | Ships in the release and writes internal state to stdout | `Logger.debug/1`; set `config :logger, level: :info` in prod (or `compile_time_purge_matching` to strip debug calls at compile time) |
 | Phoenix context cross-calls | Context A calls Context B's Repo directly. Breaks encapsulation. | Always go through public context API functions |
 | Large Ecto preloads in LiveView | 10+ preloads per query = slow mounts. | Paginate, lazy-load, or use ETS cache for reference data |
-| `send_after` without cancellation | Timer survives GenServer crash. Fires into dead process. | Store timer ref, cancel on terminate with `Process.cancel_timer/1` |
+| Rescheduling `send_after` without tracking the ref | Duplicate timers pile up when refresh is also triggered manually | Keep the timer ref in state and `Process.cancel_timer/1` before rescheduling |
 | `:infinity` GenServer timeout | Blocks caller indefinitely. Cascading failure on stuck call. | Always set explicit timeout (default 5000ms) |
 
 ## Performance Optimization
 
 - Streams over Enum for large collections: `Stream.map` / `Stream.filter` avoid intermediate list allocation.
 - ETS read concurrency: `:named_table, :public, read_concurrency: true` for read-heavy workloads.
-- Ecto query optimization: use `Repo.preload` with `select: [:id, :name]` to fetch only needed columns.
+- Ecto query optimization: `select` only needed fields; preload with a custom query (`preload: [items: ^from(i in Item, select: [:id, :name])]`) or join-preload to avoid N+1.
 - Phoenix LiveView stream diffing: `stream_insert` / `stream_delete` over full re-render for list performance.
 - `IO.iodata_to_binary/1` for string concatenation in hot paths — avoids binary copying.
-- `:persistent_term` for truly immutable configuration — fastest read on BEAM (~10ns).
+- `:persistent_term` for rarely-changing configuration — very fast reads, but every update triggers a global GC scan, so never use it for frequently written data.
 - Oban job batching: batch similar jobs into single worker execution to reduce DB roundtrips.
 - Caching with Cachex: `Cachex.fetch(:products, key, fn -> Catalog.get_product(id) end)` with TTL.
 
@@ -606,8 +595,8 @@ mix release build → container image → CI tests → staging deploy → smoke 
 - Ecto changesets prevent mass-assignment via `cast/3`. Never use `cast(attrs, [:all])`.
 - Password hashing: `Argon2` (memory-hard) over `bcrypt`. Never store plaintext or MD5/SHA.
 - Session tokens stored in signed cookies (default). Use database-backed sessions for sensitive apps.
-- CORS: configure `Plug.CORS` with explicit origins. Never `Access-Control-Allow-Origin: *` for auth endpoints.
+- CORS: configure `CORSPlug` or `Corsica` with explicit origins. Never `Access-Control-Allow-Origin: *` for auth endpoints.
 - SQL injection: Ecto's parameterized queries prevent injection. Never use `Ecto.Adapters.SQL.query!` with string interpolation.
 - LiveView: validate user permissions in handle_params/handle_event, not just in assigns.
 - Rate limiting: use Hammer or ExRated for per-IP/per-user rate limiting on auth endpoints.
-- Dependencies: run `mix hex.audit` in CI. Pin versions in mix.lock.
+- Dependencies: `mix hex.audit` (retired packages) and `mix deps.audit` from `mix_audit` (known vulnerabilities) in CI; commit mix.lock.

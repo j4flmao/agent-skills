@@ -1,768 +1,182 @@
-# Deployment Pipelines for .NET 8
+# Deployment Pipelines for ASP.NET Core Services
 
-## Purpose
-This document details CI/CD strategies for .NET 8, including GitHub Actions, Docker containerization, and automated deployments.
+CI/CD for .NET services: build and test in CI, produce container images (Dockerfile or SDK container publishing), run database migrations safely, and deploy to Kubernetes or Azure App Service. Examples target .NET 10 and GitHub Actions; the same steps apply in Azure DevOps or GitLab CI.
 
-## Dockerizing .NET 8 Minimal APIs
-Using multi-stage builds optimizes the final image size.
+## Pipeline Stages
 
+```text
+restore -> build -> test (unit + integration) -> publish image -> scan -> deploy dev
+        -> migrations (dev) -> smoke tests -> promote same image -> staging -> approval -> prod
+```
+
+Build once and promote the same image digest; environment differences come from configuration.
+
+## GitHub Actions CI
+
+```yaml
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write          # OIDC to cloud providers, no stored credentials
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/packages.lock.json', '**/Directory.Packages.props') }}
+      - run: dotnet restore --locked-mode
+      - run: dotnet build --no-restore -c Release
+      - run: dotnet test --no-build -c Release --logger trx --collect:"XPlat Code Coverage"
+      - name: Publish image
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker build -t ghcr.io/${{ github.repository }}/orders-api:${{ github.sha }} .
+          docker push ghcr.io/${{ github.repository }}/orders-api:${{ github.sha }}
+```
+
+`--locked-mode` requires `packages.lock.json` files (`<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>`), making restores reproducible. Integration tests using Testcontainers work on GitHub-hosted Ubuntu runners because Docker is available.
+
+## Dockerfile
 
 ```dockerfile
-# Dockerfile Example 0
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+# syntax=docker/dockerfile:1
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
+COPY Directory.Build.props Directory.Packages.props global.json ./
+COPY src/Orders.Api/Orders.Api.csproj src/Orders.Api/
+RUN dotnet restore src/Orders.Api/Orders.Api.csproj
+COPY src/ src/
+RUN dotnet publish src/Orders.Api/Orders.Api.csproj -c Release -o /app --no-restore
 
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
+COPY --from=build /app .
+USER $APP_UID
+ENV ASPNETCORE_HTTP_PORTS=8080
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "Orders.Api.dll"]
 ```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
 
-```dockerfile
-# Dockerfile Example 1
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
+- Official images since .NET 8 include a non-root `app` user (`APP_UID`) and listen on port 8080 by default.
+- Smaller images: `-alpine`, `-noble-chiseled` (Ubuntu chiseled, no shell or package manager) variants; chiseled images suit production but make interactive debugging harder.
+- Pin to a specific patch tag or digest in production pipelines and update deliberately (Dependabot/Renovate).
 
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+### SDK container publishing (no Dockerfile)
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
+```bash
+dotnet publish src/Orders.Api -c Release /t:PublishContainer \
+  -p ContainerRepository=orders-api \
+  -p ContainerImageTag=1.4.0 \
+  -p ContainerRegistry=ghcr.io/example
 ```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
 
-```dockerfile
-# Dockerfile Example 2
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
+Useful when no custom OS packages are needed; base image and user are configured through MSBuild properties.
 
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+## Native AOT
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
+```xml
+<PublishAot>true</PublishAot>
 ```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
 
-```dockerfile
-# Dockerfile Example 3
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
+Native AOT reduces startup time and memory, which helps serverless and scale-to-zero. Limitations: no runtime code generation, limited reflection, and not all libraries are compatible (EF Core has partial support with compiled models). Minimal APIs support AOT with the request delegate generator; MVC controllers do not. Evaluate with the trimming/AOT analyzers before committing.
 
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+## Database Migrations (EF Core)
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
+Do not call `Database.Migrate()` at application startup in multi-instance deployments: instances race and the app needs DDL permissions.
+
+Options:
+- **Migration bundles**: `dotnet ef migrations bundle --self-contained -r linux-x64 -o efbundle` produces an executable run once per deploy (pipeline step or Kubernetes Job) with a dedicated migration identity.
+- **Idempotent SQL scripts**: `dotnet ef migrations script --idempotent -o migrate.sql`, reviewed and applied by a DBA tool or pipeline.
+
+```bash
+./efbundle --connection "$MIGRATION_CONNECTION_STRING"
 ```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
 
-```dockerfile
-# Dockerfile Example 4
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
+Use expand/contract migrations so old and new application versions can run during a rolling update: add columns as nullable, deploy code that writes both, backfill, then remove old columns in a later release.
 
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+## Kubernetes Deployment
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-api
+spec:
+  replicas: 3
+  strategy:
+    rollingUpdate: {maxUnavailable: 0, maxSurge: 1}
+  selector: {matchLabels: {app: orders-api}}
+  template:
+    metadata: {labels: {app: orders-api}}
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/example/orders-api@sha256:<digest>
+          ports: [{containerPort: 8080}]
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ConnectionStrings__Orders
+              valueFrom: {secretKeyRef: {name: orders-db, key: connection-string}}
+          readinessProbe:
+            httpGet: {path: /health/ready, port: 8080}
+          livenessProbe:
+            httpGet: {path: /health/live, port: 8080}
+          resources:
+            requests: {cpu: 250m, memory: 256Mi}
+            limits: {memory: 512Mi}
 ```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
 
-```dockerfile
-# Dockerfile Example 5
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
+```csharp
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<OrdersDbContext>(tags: ["ready"]);
 
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
+app.MapHealthChecks("/health/live", new() { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new() { Predicate = c => c.Tags.Contains("ready") });
 ```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
 
-```dockerfile
-# Dockerfile Example 6
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
+Liveness must not depend on external systems; otherwise a database outage restarts every pod. Configuration keys use `__` for nesting in environment variables.
 
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+## Azure App Service
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
+- Deploy containers or zip packages; use deployment slots (`staging`) and swap for zero-downtime releases with warm-up.
+- Use managed identity for Key Vault, SQL and Storage instead of connection string secrets.
+- Mark slot-specific settings as "deployment slot settings" so they do not move during swaps.
 
-```dockerfile
-# Dockerfile Example 7
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
+## .NET Aspire
 
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+.NET Aspire provides an app host for local orchestration of services and dependencies, service defaults (OpenTelemetry, health checks, resilience), and deployment manifests consumed by `azd` or other tools. It is optional; adopt it for multi-service solutions where local orchestration and consistent defaults are valuable.
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
+## Release Safety
 
-```dockerfile
-# Dockerfile Example 8
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
+| Technique | Purpose |
+|-----------|---------|
+| Rolling update with readiness probes | No traffic to unready pods |
+| Canary or blue-green (Argo Rollouts, Flagger, App Service slots) | Limit blast radius |
+| Feature flags (`Microsoft.FeatureManagement`) | Decouple deploy from release |
+| Automated smoke tests after deploy | Catch config errors immediately |
+| Fast rollback to previous digest | Recovery in minutes |
 
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+## Checklist
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 9
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 10
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 11
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 12
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 13
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 14
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 15
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 16
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 17
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 18
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 19
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 20
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 21
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 22
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 23
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 24
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 25
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 26
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 27
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 28
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 29
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 30
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 31
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 32
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 33
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 34
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 35
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 36
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 37
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 38
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
-
-```dockerfile
-# Dockerfile Example 39
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["MyApp.csproj", "./"]
-RUN dotnet restore "MyApp.csproj"
-COPY . .
-RUN dotnet build "MyApp.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyApp.dll"]
-```
-Continuous integration pipelines should build, test, and containerize the application upon every commit to the main branch.
+- [ ] SDK pinned; locked restore in CI
+- [ ] Tests (unit + integration) gate image publishing
+- [ ] Image runs as non-root, pinned base, scanned
+- [ ] Same image digest promoted across environments
+- [ ] Migrations run once per deploy via bundle or script, expand/contract style
+- [ ] Separate liveness and readiness endpoints
+- [ ] Secrets from a secret store or managed identity; OIDC for pipeline cloud access

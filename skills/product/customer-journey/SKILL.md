@@ -341,7 +341,7 @@ Row 5: Leading Indicators — engagement trend, support volume, session frequenc
 Alerts: auto-triggered when any metric drops below threshold
 ```
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### SaaS Onboarding Journey Optimization
 A B2B SaaS company mapped their trial-to-paid journey and found 68% drop-off between signup and first key action. Service blueprint revealed six backstage steps (account provisioning, data migration, permission setup, training scheduling, integration configuration, compliance check) delaying first value experience. Average TTV was 11 days against a 14-day trial.

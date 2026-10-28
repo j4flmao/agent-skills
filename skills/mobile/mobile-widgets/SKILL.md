@@ -64,33 +64,33 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 import WidgetKit
 import SwiftUI
 
-struct TodoProvider: TimelineProvider {
-  typealias Entry = TodoEntry
+struct TaskProvider: TimelineProvider {
+  typealias Entry = TaskEntry
 
-  func placeholder(in context: Context) -> TodoEntry {
-    TodoEntry(date: Date(), items: TodoItem.previewData)
+  func placeholder(in context: Context) -> TaskEntry {
+    TaskEntry(date: Date(), items: TaskItem.previewData)
   }
 
-  func getSnapshot(in context: Context, completion: @escaping (TodoEntry) -> Void) {
-    let entry = TodoEntry(date: Date(), items: loadCurrentItems())
+  func getSnapshot(in context: Context, completion: @escaping (TaskEntry) -> Void) {
+    let entry = TaskEntry(date: Date(), items: loadCurrentItems())
     completion(entry)
   }
 
-  func getTimeline(in context: Context, completion: @escaping (Timeline<TodoEntry>) -> Void) {
-    let entries: [TodoEntry] = generateEntries()
+  func getTimeline(in context: Context, completion: @escaping (Timeline<TaskEntry>) -> Void) {
+    let entries: [TaskEntry] = generateEntries()
     let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
     let timeline = Timeline(entries: entries, policy: .after(nextUpdate))
     completion(timeline)
   }
 
-  private func generateEntries() -> [TodoEntry] {
+  private func generateEntries() -> [TaskEntry] {
     let now = Date()
     let items = loadCurrentItems()
-    var entries: [TodoEntry] = []
+    var entries: [TaskEntry] = []
 
     for minuteOffset in stride(from: 0, to: 60, by: 15) {
       let entryDate = Calendar.current.date(byAdding: .minute, value: minuteOffset, to: now)!
-      entries.append(TodoEntry(date: entryDate, items: items))
+      entries.append(TaskEntry(date: entryDate, items: items))
     }
 
     return entries
@@ -101,31 +101,31 @@ struct TodoProvider: TimelineProvider {
 2. **Widget View & Entry**: SwiftUI views adapted to widget families.
 
 ```swift
-struct TodoEntry: TimelineEntry {
+struct TaskEntry: TimelineEntry {
   let date: Date
-  let items: [TodoItem]
+  let items: [TaskItem]
 }
 
-struct TodoWidgetEntryView: View {
-  var entry: TodoProvider.Entry
+struct TaskWidgetEntryView: View {
+  var entry: TaskProvider.Entry
   @Environment(\.widgetFamily) var family
 
   var body: some View {
     switch family {
     case .systemSmall:
-      SmallTodoView(items: entry.items)
+      SmallTaskView(items: entry.items)
     case .systemMedium:
-      MediumTodoView(items: entry.items)
+      MediumTaskView(items: entry.items)
     case .systemLarge:
-      LargeTodoView(items: entry.items)
+      LargeTaskView(items: entry.items)
     default:
-      MediumTodoView(items: entry.items)
+      MediumTaskView(items: entry.items)
     }
   }
 }
 
-struct SmallTodoView: View {
-  let items: [TodoItem]
+struct SmallTaskView: View {
+  let items: [TaskItem]
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
@@ -143,7 +143,7 @@ struct SmallTodoView: View {
       }
     }
     .padding()
-    .widgetURL(URL(string: "myapp://todos"))
+    .widgetURL(URL(string: "myapp://tasks"))
   }
 }
 ```
@@ -271,8 +271,8 @@ struct DeliveryLiveActivityView: View {
 5. **Android App Widgets**: RemoteViews with configuration activity.
 
 ```kotlin
-// TodoWidgetProvider.kt
-class TodoWidgetProvider : AppWidgetProvider() {
+// TaskWidgetProvider.kt
+class TaskWidgetProvider : AppWidgetProvider() {
   override fun onUpdate(
     context: Context,
     appWidgetManager: AppWidgetManager,
@@ -285,7 +285,7 @@ class TodoWidgetProvider : AppWidgetProvider() {
 
   override fun onDeleted(context: Context, appWidgetIds: IntArray) {
     for (appWidgetId in appWidgetIds) {
-      TodoWidgetConfig.removeWidget(context, appWidgetId)
+      TaskWidgetConfig.removeWidget(context, appWidgetId)
     }
   }
 
@@ -303,23 +303,23 @@ class TodoWidgetProvider : AppWidgetProvider() {
       appWidgetManager: AppWidgetManager,
       appWidgetId: Int
     ) {
-      val listId = TodoWidgetConfig.loadListPref(context, appWidgetId)
-      val items = TodoRepository.getItems(listId)
+      val listId = TaskWidgetConfig.loadListPref(context, appWidgetId)
+      val items = TaskRepository.getItems(listId)
 
-      val views = RemoteViews(context.packageName, R.layout.todo_widget)
+      val views = RemoteViews(context.packageName, R.layout.task_widget)
       views.setTextViewText(R.id.widget_title, getListName(listId))
 
-      val rv = RemoteViews(context.packageName, R.layout.todo_widget_item)
+      val rv = RemoteViews(context.packageName, R.layout.task_widget_item)
       views.removeAllViews(R.id.widget_list_container)
 
       items.take(5).forEach { item ->
-        val itemView = RemoteViews(context.packageName, R.layout.todo_widget_item)
+        val itemView = RemoteViews(context.packageName, R.layout.task_widget_item)
         itemView.setTextViewText(R.id.item_text, item.title)
         itemView.setInt(R.id.item_checkbox, "setChecked", if (item.isCompleted) 1 else 0)
 
         val fillInIntent = Intent(context, MainActivity::class.java).apply {
           action = Intent.ACTION_VIEW
-          data = Uri.parse("myapp://todo/${item.id}")
+          data = Uri.parse("myapp://task/${item.id}")
         }
         val pendingIntent = PendingIntent.getActivity(
           context, item.id.toInt(), fillInIntent,
@@ -329,7 +329,7 @@ class TodoWidgetProvider : AppWidgetProvider() {
         views.addView(R.id.widget_list_container, itemView)
       }
 
-      val configIntent = Intent(context, TodoWidgetConfigureActivity::class.java).apply {
+      val configIntent = Intent(context, TaskWidgetConfigureActivity::class.java).apply {
         putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
       }
       val configPendingIntent = PendingIntent.getActivity(
@@ -343,7 +343,7 @@ class TodoWidgetProvider : AppWidgetProvider() {
   }
 }
 
-// Widget layout: res/layout/todo_widget.xml
+// Widget layout: res/layout/task_widget.xml
 // <LinearLayout
 //   xmlns:android="http://schemas.android.com/apk/res/android"
 //   android:layout_width="match_parent"
@@ -370,12 +370,12 @@ enum ReloadPolicy {
 
 // iOS Background refresh via push
 func handleWidgetPush(token: String, data: [String: Any]) {
-  let newEntry = TodoEntry(date: Date(), items: parseItems(from: data))
-  WidgetCenter.shared.reloadTimelines(ofKind: "TodoWidget")
+  let newEntry = TaskEntry(date: Date(), items: parseItems(from: data))
+  WidgetCenter.shared.reloadTimelines(ofKind: "TaskWidget")
 }
 
 // Android periodic refresh
-class TodoWidgetProvider : AppWidgetProvider() {
+class TaskWidgetProvider : AppWidgetProvider() {
   override fun onUpdate(...) {
     // Scheduled via AlarmManager or WorkManager
     val workRequest = PeriodicWorkRequestBuilder<WidgetRefreshWorker>(
@@ -397,12 +397,12 @@ class TodoWidgetProvider : AppWidgetProvider() {
 // widgetUrl(URL(string: "myapp://dashboard"))
 
 // iOS: Link for specific areas within widget
-Link(destination: URL(string: "myapp://todo/\(item.id)")!) {
+Link(destination: URL(string: "myapp://task/\(item.id)")!) {
   Text(item.title)
 }
 
 // Android: PendingIntent with custom URI
-val intent = Intent(Intent.ACTION_VIEW, Uri.parse("myapp://todo/$itemId"))
+val intent = Intent(Intent.ACTION_VIEW, Uri.parse("myapp://task/$itemId"))
 val pendingIntent = PendingIntent.getActivity(context, requestCode, intent, flags)
 views.setOnClickPendingIntent(R.id.item_container, pendingIntent)
 ```
@@ -411,19 +411,19 @@ views.setOnClickPendingIntent(R.id.item_container, pendingIntent)
 
 ```swift
 // iOS widget previews
-struct TodoWidget_Previews: PreviewProvider {
+struct TaskWidget_Previews: PreviewProvider {
   static var previews: some View {
     Group {
-      TodoWidgetEntryView(entry: TodoEntry(date: Date(), items: TodoItem.previewData))
+      TaskWidgetEntryView(entry: TaskEntry(date: Date(), items: TaskItem.previewData))
         .previewContext(WidgetPreviewContext(family: .systemSmall))
 
-      TodoWidgetEntryView(entry: TodoEntry(date: Date(), items: TodoItem.previewData))
+      TaskWidgetEntryView(entry: TaskEntry(date: Date(), items: TaskItem.previewData))
         .previewContext(WidgetPreviewContext(family: .systemMedium))
 
-      TodoWidgetEntryView(entry: TodoEntry(date: Date(), items: []))
+      TaskWidgetEntryView(entry: TaskEntry(date: Date(), items: []))
         .previewContext(WidgetPreviewContext(family: .systemSmall))
 
-      TodoWidgetEntryView(entry: TodoEntry(date: Date(), items: TodoItem.previewErrorData))
+      TaskWidgetEntryView(entry: TaskEntry(date: Date(), items: TaskItem.previewErrorData))
         .previewContext(WidgetPreviewContext(family: .systemLarge))
     }
   }
@@ -464,127 +464,3 @@ struct TodoWidget_Previews: PreviewProvider {
 - `mobile/mobile-localization` — Widget string localization and RTL support
 - `design/ui-kit` — Widget design guidelines and brand consistency
 - `frontend/react-native-widgets` — React Native widget bridge patterns
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
-## Rules
-- Default-deny security posture — allow only explicitly required access.
-- All inputs validated, all outputs encoded, all errors handled.
-- Defend in depth — multiple layers of security controls.
-- Fail securely — errors default to safe behavior.
-- Log security-relevant events for audit and investigation.
-- Keep dependencies updated — automate vulnerability scanning.
-- Design for observability from day one, not as an afterthought.
-- Document all architectural decisions with rationale.
-- Review code for security, performance, and correctness before merging.

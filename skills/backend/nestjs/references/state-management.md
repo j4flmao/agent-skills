@@ -1,298 +1,160 @@
-# Advanced state-management for nestjs
+# NestJS State Management: Stateless Services, Request Context, Caches, Sessions
 
-## 1. Executive Summary
-This document provides an exhaustive, production-grade reference for implementing state-management in the context of nestjs. It covers architectural decisions, common pitfalls, performance tuning, and security considerations.
+Server-side "state" in NestJS falls into a few buckets: per-request context, process-local caches, shared state (sessions, locks, counters) and persistent domain state. This reference covers where each belongs so services can scale horizontally.
 
-## 2. Deep Dive Principle 2
-When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. 
+## Principle: Stateless Instances
 
-### 2.1 Architectural Considerations
-The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+Default providers are singletons shared across concurrent requests. Mutable fields on a singleton are shared by all users and lost on restart.
 
 ```typescript
-// Advanced Implementation Example 2
-export class state_managementManager_2 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+// Wrong: per-user data on a singleton
+@Injectable()
+export class CartService {
+  private items: Item[] = [];          // shared by every request and replica-local
+}
 
-  private initialize(): void {
-    console.log('Initializing nestjs state-management subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for state-management
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
+// Right: state lives in a store keyed by user
+@Injectable()
+export class CartService {
+  constructor(@Inject('REDIS') private redis: RedisClientType) {}
+  add(userId: string, item: Item) {
+    return this.redis.hSet(`cart:${userId}`, item.sku, JSON.stringify(item));
   }
 }
 ```
 
-### 2.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. 
+| State kind | Where | Example |
+|------------|-------|---------|
+| Per-request context | `AsyncLocalStorage` (nestjs-cls) | request ID, tenant, current user |
+| Read-mostly config | Singleton, loaded at boot | feature defaults, lookup tables |
+| Hot cache | In-memory LRU (per pod) + Redis | product catalog |
+| Shared ephemeral | Redis | sessions, rate limits, locks, presence |
+| Durable domain state | Database | orders, users |
+| Workflow state | Queue/job store or workflow engine | multi-step processes |
 
-## 3. Deep Dive Principle 3
-When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. 
-
-### 3.1 Architectural Considerations
-The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 3
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class state_management_Processor_3:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 3.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. 
-
-## 4. Deep Dive Principle 4
-When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. 
-
-### 4.1 Architectural Considerations
-The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## Request Context with AsyncLocalStorage
 
 ```typescript
-// Advanced Implementation Example 4
-export class state_managementManager_4 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+// app.module.ts
+ClsModule.forRoot({
+  global: true,
+  middleware: {
+    mount: true,
+    generateId: true,
+    idGenerator: (req: Request) => (req.headers['x-request-id'] as string) ?? randomUUID(),
+    setup: (cls, req: Request) => cls.set('tenantId', req.headers['x-tenant-id']),
+  },
+});
 
-  private initialize(): void {
-    console.log('Initializing nestjs state-management subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for state-management
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
+// any singleton
+@Injectable()
+export class TenantRepository {
+  constructor(private cls: ClsService, private ds: DataSource) {}
+  findAll() {
+    const tenantId = this.cls.get<string>('tenantId');
+    return this.ds.query('SELECT * FROM projects WHERE tenant_id = $1', [tenantId]);
   }
 }
 ```
 
-### 4.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. 
+This avoids `Scope.REQUEST`, which recreates the dependency chain per request. Validate the tenant against the authenticated principal rather than trusting a raw header.
 
-## 5. Deep Dive Principle 5
-When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. 
+## Process-Local Caches
 
-### 5.1 Architectural Considerations
-The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 5
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class state_management_Processor_5:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 5.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. 
-
-## 6. Deep Dive Principle 6
-When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. 
-
-### 6.1 Architectural Considerations
-The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+Use a bounded LRU with TTL for small, hot, rarely changing data:
 
 ```typescript
-// Advanced Implementation Example 6
-export class state_managementManager_6 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+import { LRUCache } from 'lru-cache';
 
-  private initialize(): void {
-    console.log('Initializing nestjs state-management subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for state-management
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
+@Injectable()
+export class RatesService {
+  private readonly cache = new LRUCache<string, number>({ max: 5_000, ttl: 60_000 });
+  async rate(pair: string) {
+    const hit = this.cache.get(pair);
+    if (hit !== undefined) return hit;
+    const v = await this.fetchRate(pair);
+    this.cache.set(pair, v);
+    return v;
   }
 }
 ```
 
-### 6.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. 
+Each replica has its own copy; tolerate staleness up to the TTL or broadcast invalidations via Redis pub/sub.
 
-## 7. Deep Dive Principle 7
-When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. 
+## Sessions
 
-### 7.1 Architectural Considerations
-The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 7
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class state_management_Processor_7:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 7.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. 
-
-## 8. Deep Dive Principle 8
-When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. 
-
-### 8.1 Architectural Considerations
-The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+For server-rendered or cookie-based apps:
 
 ```typescript
-// Advanced Implementation Example 8
-export class state_managementManager_8 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+import session from 'express-session';
+import { RedisStore } from 'connect-redis';
 
-  private initialize(): void {
-    console.log('Initializing nestjs state-management subsystem...');
-    // Complex setup logic here
-  }
+app.use(session({
+  store: new RedisStore({ client: redisClient, prefix: 'sess:' }),
+  secret: config.getOrThrow('SESSION_SECRET'),
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, secure: true, sameSite: 'lax', maxAge: 8 * 3600_000 },
+}));
+```
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for state-management
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
+The default `MemoryStore` leaks memory and does not work across replicas; never use it in production. Regenerate the session ID on login to prevent fixation.
+
+## Distributed Locks and Idempotency
+
+```typescript
+// single-instance Redis lock with token and TTL
+const token = randomUUID();
+const ok = await redis.set(`lock:invoice:${id}`, token, { NX: true, PX: 30_000 });
+if (!ok) throw new ConflictException('Invoice is being processed');
+try {
+  await this.process(id);
+} finally {
+  // compare-and-delete via Lua so we only release our own lock
+  await redis.eval(
+    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+    { keys: [`lock:invoice:${id}`], arguments: [token] },
+  );
 }
 ```
 
-### 8.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. 
+Locks with TTLs are advisory; for correctness also use DB constraints or fencing tokens. For retried POSTs store `Idempotency-Key -> response` atomically with the side effect.
 
-## 9. Deep Dive Principle 9
-When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. 
-
-### 9.1 Architectural Considerations
-The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 9
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class state_management_Processor_9:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 9.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. 
-
-## 10. Deep Dive Principle 10
-When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. When dealing with nestjs, addressing state-management requires a multi-layered approach. 
-
-### 10.1 Architectural Considerations
-The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that state-management must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## Durable State and Transactions
 
 ```typescript
-// Advanced Implementation Example 10
-export class state_managementManager_10 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs state-management subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for state-management
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
+await this.dataSource.transaction(async (em) => {
+  const acct = await em.findOne(Account, { where: { id }, lock: { mode: 'pessimistic_write' } });
+  if (!acct) throw new NotFoundException();
+  acct.balance -= amount;
+  await em.save(acct);
+  await em.insert(OutboxEvent, { type: 'AccountDebited', payload: { id, amount } });
+});
 ```
 
-### 10.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. A frequent mistake when implementing state-management in nestjs is ignoring edge cases. 
+Optimistic concurrency: TypeORM `@VersionColumn()`; Prisma conditional `updateMany({ where: { id, version } })` and check `count`.
 
-## 11. Conclusion
-This concludes the deep dive into state-management for nestjs. Ensure you review the other 7 references in this category for a holistic understanding.
+## WebSocket Gateway State
 
+Connected sockets live on one instance. Use the Redis adapter (`@socket.io/redis-adapter`) so `server.to(room).emit()` reaches clients on other replicas, and keep presence/room membership in Redis rather than Maps on the gateway.
+
+## Background Job State
+
+`@nestjs/bullmq` persists job state in Redis; job processors should be idempotent because jobs can be retried. For long multi-step workflows consider a workflow engine (Temporal) instead of chaining jobs manually.
+
+## Pitfalls
+
+- Mutable instance fields in singletons.
+- In-memory session store or rate limiter with several replicas.
+- Unbounded `Map` caches growing until OOM.
+- Request-scoped providers used only to carry a user ID.
+- Relying on a Redis lock alone for financial correctness.
+
+## Checklist
+
+- [ ] No per-user mutable state on singletons
+- [ ] Request context via AsyncLocalStorage
+- [ ] Bounded caches with TTL; invalidation strategy documented
+- [ ] Sessions, throttling and socket rooms backed by Redis
+- [ ] DB constraints/versions guard concurrent writes
+- [ ] Jobs and handlers idempotent

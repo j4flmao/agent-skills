@@ -1,138 +1,122 @@
-# Performance SEO Reference
+# Performance and Rendering for SEO
 
-## Core Web Vitals for SEO
+How page performance and rendering strategy affect search visibility: Core Web Vitals as ranking signals, server rendering for crawlability, critical resource loading, and how to measure with field and lab data. Structured data is covered in `structured-data.md`; full audits in `seo-technical-audit.md`.
 
-| Metric              | Good      | Needs Work | Poor       |
-|---------------------|-----------|------------|------------|
-| LCP (Largest Contentful Paint) | ≤ 2.5s    | ≤ 4.0s     | > 4.0s     |
-| FID (First Input Delay)        | ≤ 100ms   | ≤ 300ms    | > 300ms    |
-| CLS (Cumulative Layout Shift)  | ≤ 0.1     | ≤ 0.25     | > 0.25     |
-| INP (Interaction to Next Paint)| ≤ 200ms   | ≤ 500ms    | > 500ms    |
-| TTFB (Time to First Byte)      | ≤ 800ms   | ≤ 1800ms   | > 1800ms   |
+## Core Web Vitals
 
-## SSR for SEO
+Google's page experience signals use field data (Chrome UX Report, 75th percentile of page loads, segmented by mobile and desktop).
 
-### Why SSR Matters for SEO
+| Metric | Measures | Good | Needs improvement | Poor |
+|--------|----------|------|-------------------|------|
+| LCP (Largest Contentful Paint) | Loading of main content | at most 2.5 s | at most 4.0 s | over 4.0 s |
+| INP (Interaction to Next Paint) | Responsiveness across all interactions | at most 200 ms | at most 500 ms | over 500 ms |
+| CLS (Cumulative Layout Shift) | Visual stability | at most 0.1 | at most 0.25 | over 0.25 |
 
-- Crawlers (Googlebot) execute JS but have a budget — slow JS execution means partial indexing
-- SSR delivers fully rendered HTML on first response
-- No flash of empty state, no loading spinners for crawlers
+INP replaced First Input Delay as a Core Web Vital in March 2024. TTFB (good at most 0.8 s) is a diagnostic metric, not a Core Web Vital, but slow TTFB delays LCP.
 
-### Framework SSR Patterns
+Relevance matters more than speed for ranking; Core Web Vitals act as one signal among many, most influential when competing pages are similar in relevance. Fast pages also improve crawl efficiency and conversions.
+
+## Rendering Strategy and Crawlability
+
+Googlebot renders JavaScript with an evergreen Chromium, but rendering can be deferred, and other crawlers (social previews, some search engines, AI crawlers) may not execute JavaScript at all.
+
+| Strategy | SEO properties |
+|----------|----------------|
+| SSG (static generation) | Full HTML at request; fastest TTFB from CDN |
+| SSR / streaming SSR | Full HTML per request; good for dynamic content |
+| ISR / revalidation | Static performance with periodic freshness |
+| CSR only | Content depends on JS execution; risk of empty or partial indexing, slower LCP |
+
+Guidelines:
+- Main content, title, meta description, canonical, and links must be present in the initial HTML.
+- Use real `<a href>` links for navigation; crawlers do not click buttons or follow `onClick` routing.
+- Do not rely on user interaction (scroll, click) to load indexable content.
+- Return correct status codes from the server (404/410 for missing pages, 301 for moves); soft 404s (200 with "not found") waste crawl budget.
+
+Framework examples:
 
 ```tsx
-// Next.js App Router — server components render HTML by default
-// app/orders/page.tsx
-export default async function OrdersPage() {
-  const orders = await fetchOrders(); // fetched on server
-  return <OrderList orders={orders} />;
+// Next.js App Router: server component fetches on the server
+export const revalidate = 3600;   // ISR: regenerate at most hourly
+export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const product = await getProduct(slug);
+  if (!product) notFound();        // real 404 status
+  return <ProductView product={product} />;
 }
 ```
 
-```ts
-// Nuxt 3 — universal rendering by default
-// pages/orders/index.vue
+```vue
+<!-- Nuxt: universal rendering by default -->
 <script setup lang="ts">
-const { data: orders } = await useFetch('/api/orders');
+const route = useRoute();
+const { data: product } = await useFetch(`/api/products/${route.params.slug}`);
+if (!product.value) throw createError({ statusCode: 404, statusMessage: 'Not found' });
+useSeoMeta({ title: () => product.value?.name, description: () => product.value?.summary });
 </script>
 ```
 
-```ts
-// SvelteKit — SSR by default
-// src/routes/orders/+page.ts
-export async function load({ fetch }) {
-  const response = await fetch('/api/orders');
-  return { orders: await response.json() };
-}
-```
+## Improving LCP
 
-### Critical Rendering Path
+1. Identify the LCP element (usually hero image or headline) in Lighthouse or the Performance panel.
+2. Reduce TTFB: CDN caching, edge rendering, efficient server data fetching.
+3. Make the LCP resource discoverable in HTML and prioritized:
 
 ```html
-<!-- Inline critical CSS, defer non-critical -->
-<style>
-  /* Above-the-fold styles only — ~14 KB gzipped max */
-  header, nav, .hero { /* layout styles */ }
-</style>
-<link rel="preload" href="/styles/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
-<noscript><link rel="stylesheet" href="/styles/main.css" /></noscript>
-
-<!-- Defer JavaScript -->
-<script src="/scripts/app.js" defer></script>
+<link rel="preload" as="image" href="/hero-1200.avif" imagesrcset="/hero-800.avif 800w, /hero-1200.avif 1200w" imagesizes="100vw">
+<img src="/hero-1200.avif" srcset="/hero-800.avif 800w, /hero-1200.avif 1200w" sizes="100vw"
+     width="1200" height="600" fetchpriority="high" alt="Product line overview">
 ```
 
-## Preload Critical Assets
+4. Never lazy-load the LCP image (`loading="lazy"` delays it); lazy-load below-the-fold images only.
+5. Inline critical CSS, defer the rest; avoid render-blocking scripts (`defer`/`async`/`type="module"`).
+6. Use modern formats (AVIF/WebP) and correctly sized images.
+7. Self-host fonts or preconnect to font origins; use `font-display: swap` or `optional`.
 
-```html
-<!-- Preload hero image (above-the-fold LCP candidate) -->
-<link rel="preload" href="/images/hero.webp" as="image" fetchpriority="high" />
+## Improving INP
 
-<!-- Preload fonts -->
-<link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin />
+- Break up long tasks (over 50 ms): yield to the main thread (`scheduler.yield()` where supported, or `setTimeout`), chunk work.
+- Reduce JavaScript shipped: code-splitting, removing unused libraries, server components/islands.
+- Avoid heavy work in input handlers; update UI first, then do expensive work.
+- Minimize hydration cost (partial or progressive hydration, React Server Components, Astro islands).
+- Watch third-party scripts (tag managers, chat widgets); load them after interaction or with `defer`.
 
-<!-- Preconnect to origins -->
-<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
-<link rel="dns-prefetch" href="https://api.example.com" />
-```
+## Improving CLS
 
-## Structured Data Impact
-
-- JSON-LD in `<head>` or end of `<body>` does NOT block rendering
-- Google parses JSON-LD asynchronously — no performance concern
-- Maximum JSON-LD block size: ~100 KB (keep under 20 KB per page)
-- Lazy-load JSON-LD for non-critical types (FAQ below fold is fine)
+- Always set `width`/`height` (or `aspect-ratio`) on images, videos, iframes and ad slots.
+- Reserve space for banners and dynamic content; avoid inserting content above existing content.
+- Use `transform` animations rather than layout-affecting properties.
+- Match fallback font metrics (`size-adjust`, `ascent-override`) to reduce font-swap shifts.
 
 ## Mobile-First Indexing
 
-```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+Google indexes the mobile version of pages. Ensure the mobile rendering contains the same content, structured data, metadata and internal links as desktop, and that resources are not blocked by robots.txt.
+
+## Measuring
+
+| Source | Type | Use |
+|--------|------|-----|
+| Search Console Core Web Vitals report | Field (CrUX) | URL groups failing thresholds |
+| PageSpeed Insights | Field + lab | Per-URL diagnosis |
+| CrUX API / BigQuery dataset | Field | Trends, origin-level monitoring |
+| `web-vitals` JS library | Real user monitoring | Your own percentile data with attribution |
+| Lighthouse / Lighthouse CI | Lab | Regression gates in CI |
+
+```typescript
+import { onLCP, onINP, onCLS } from 'web-vitals/attribution';
+const send = (m: { name: string; value: number; id: string }) =>
+  navigator.sendBeacon('/rum', JSON.stringify(m));
+onLCP(send); onINP(send); onCLS(send);
 ```
 
-- Google uses mobile content for ranking
-- Mobile and desktop must have equivalent content and structured data
-- Lazy loading: use `loading="lazy"` for below-fold images, `loading="eager"` for above-fold
+Lab scores and field data differ; prioritize field data for SEO decisions and use lab tools to debug.
 
-```html
-<!-- Above fold: eager -->
-<img src="/hero.webp" alt="Hero" fetchpriority="high" loading="eager" />
+## Checklist
 
-<!-- Below fold: lazy -->
-<img src="/image.webp" alt="Content" loading="lazy" />
-```
-
-## Rendering Budget
-
-```
-SSR Time:            < 500ms (server render)
-Time to First Byte:  < 800ms
-First Contentful Paint: < 1.5s
-Largest Contentful Paint: < 2.5s
-Total Blocking Time: < 200ms
-JavaScript Bundle:   < 200 KB (gzipped) for critical pages
-```
-
-## SEO Performance Audit
-
-```bash
-# Lighthouse CI
-npx lhci collect --url=https://example.com --numberOfRuns=3
-npx lhci assert --preset=lighthouse:recommended
-npx lhci upload --target=temporary-public-storage
-
-# Core Web Vitals via CrUX API
-curl "https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"origin": "https://example.com", "formFactor": "PHONE"}'
-```
-
-## Common SSR SEO Issues
-
-| Issue                        | Symptom                        | Fix                              |
-|------------------------------|--------------------------------|----------------------------------|
-| Client-only rendering        | Blank HTML, JS-dependent index | Move data fetch to server        |
-| Missing meta tags on SSR     | OG previews not rendering      | Use framework head management    |
-| Large CSS blocking render    | Slow LCP                       | Inline critical CSS, defer rest  |
-| Unoptimized images           | Large LCP, high CLS            | WebP/AVIF, set width/height      |
-| No lazy loading              | Slow initial paint             | `loading="lazy"` below fold      |
-| Heavy third-party scripts    | High TBT, slow FID             | Defer, async, or remove          |
-| No cache headers on SSR      | High TTFB                      | CDN cache, SWR stale-while-revalidate |
+- [ ] Indexable content, metadata and links in initial HTML
+- [ ] Correct HTTP status codes for missing and moved pages
+- [ ] LCP resource preloaded/high priority, never lazy-loaded
+- [ ] Long tasks broken up; JavaScript and third parties trimmed for INP
+- [ ] Dimensions reserved for media and dynamic content for CLS
+- [ ] Mobile and desktop content parity
+- [ ] RUM with `web-vitals`; Lighthouse CI budgets in CI

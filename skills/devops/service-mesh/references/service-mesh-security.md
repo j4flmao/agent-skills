@@ -3,7 +3,7 @@
 ## Mutual TLS Configuration
 
 ```yaml
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 metadata:
   name: default
@@ -13,7 +13,7 @@ spec:
     mode: STRICT
 
 ---
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 metadata:
   name: permissive-mtls
@@ -26,7 +26,7 @@ spec:
 ## Authorization Policies
 
 ```yaml
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
   name: payment-service-authz
@@ -59,7 +59,7 @@ spec:
             paths: ["/health", "/metrics"]
 
 ---
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
   name: deny-all
@@ -79,7 +79,7 @@ spec:
 ## Request Authentication
 
 ```yaml
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: RequestAuthentication
 metadata:
   name: jwt-auth
@@ -97,7 +97,7 @@ spec:
       outputPayloadToHeader: x-jwt-payload
 
 ---
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: RequestAuthentication
 metadata:
   name: external-jwt
@@ -110,7 +110,7 @@ spec:
 ## Egress Control
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: ServiceEntry
 metadata:
   name: external-api
@@ -125,7 +125,7 @@ spec:
   location: MESH_EXTERNAL
 
 ---
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: external-api-route
@@ -146,7 +146,7 @@ spec:
         - "."
 
 ---
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
   name: egress-control

@@ -422,7 +422,6 @@ Terraform HCL (alicloud provider), Alibaba Cloud CLI commands, RAM policy JSON, 
   - references/aliyun-ecs-vpc.md
   - references/aliyun-kubernetes.md
   - references/aliyun-security.md
-  - references/network-comparison.md
 
 ## Handoff
 After completing this skill:

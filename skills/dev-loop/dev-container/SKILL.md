@@ -35,6 +35,16 @@ Exact user phrases: "dev container", "devcontainer.json", "development container
 ### Output Artifact
 Complete dev container configuration with Dockerfile, devcontainer.json, and Docker Compose (if multi-service).
 
+### Response Format
+```
+Base: {image or Dockerfile}
+Features: {ghcr.io/devcontainers/features/... list}
+Services: {compose services | none}
+Lifecycle: postCreateCommand {cmd}
+Ports: {forwardPorts}
+Files: .devcontainer/devcontainer.json {+ Dockerfile, compose.yaml}
+```
+
 ### Completion Criteria
 - [ ] devcontainer.json configured with image or Dockerfile
 - [ ] Dockerfile defined (or base image selected) with all required tools
@@ -75,7 +85,7 @@ What is the project type?
 ### Dev Container Architecture
 ```
 Host Machine (VS Code, Codespaces, JetBrains)
-    ↕ Remote-SSH or Remote-Containers
+    ↕ Dev Containers extension / Codespaces / devcontainer CLI
 Container (Docker)
 ├── Application code (mounted volume)
 ├── Language runtime (Node, Python, Go, etc.)
@@ -117,32 +127,28 @@ Docker Compose (optional multi-service)
   // "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 
   // Features (additional tools from registry)
+  // (the typescript-node image already ships Node; add the node feature only on generic bases)
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "20"
-    },
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
 
-  // VS Code extensions to install
-  "extensions": [
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
-    "bradlc.vscode-tailwindcss",
-    "ms-vscode.vscode-typescript-next",
-    "github.vscode-github-actions",
-    "ms-azuretools.vscode-docker"
-  ],
-
-  // Settings to apply
-  "settings": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "typescript.updateImportsOnFileMove.enabled": "always",
-    "[typescript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+  // Tool-specific settings live under "customizations" (top-level "extensions"/"settings" are deprecated)
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "github.vscode-github-actions",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "typescript.updateImportsOnFileMove.enabled": "always"
+      }
     }
   },
 
@@ -156,15 +162,15 @@ Docker Compose (optional multi-service)
     "NODE_ENV": "development"
   },
 
-  // Mounts
+  // Git credentials, ~/.gitconfig and the SSH agent are forwarded automatically by
+  // VS Code Dev Containers / Codespaces — avoid bind-mounting ~/.ssh into the container.
   "mounts": [
-    "source=${localEnv:HOME}/.ssh,target=/home/node/.ssh,type=bind,readonly",
-    "source=${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,readonly"
+    "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
   ],
 
   // Commands to run after the container is created
   "postCreateCommand": "npm install && npm run build",
-  "postStartCommand": "git config --global --add safe.directory /workspaces/*",
+  "postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
   "postAttachCommand": "npm run dev"
 }
 ```
@@ -197,8 +203,7 @@ COPY --chown=node:node .zshrc /home/node/.zshrc
 ### Step 3: Docker Compose for Multi-Service
 
 ```yaml
-# .devcontainer/docker-compose.yml
-version: '3.8'
+# .devcontainer/docker-compose.yml  (Compose Specification: top-level `version` is obsolete)
 services:
   app:
     build:
@@ -286,9 +291,9 @@ npm run db:migrate
 echo "🌱 Seeding database..."
 npm run db:seed
 
-# Install git hooks
+# Install git hooks (husky v9: `husky` replaces the deprecated `husky install`)
 echo "🔗 Installing git hooks..."
-npx husky install
+npx husky
 
 echo "✅ Development environment ready!"
 ```
@@ -320,9 +325,10 @@ echo "✅ Development environment ready!"
     }
   },
 
-  // Secrets (set in GitHub repo settings)
-  "remoteEnv": {
-    "API_KEY": "${secrets:API_KEY}"
+  // Codespaces secrets are injected as environment variables automatically;
+  // "secrets" only prompts users to provide recommended ones when creating a codespace.
+  "secrets": {
+    "API_KEY": { "description": "API key for the staging backend" }
   },
 
   "onCreateCommand": ".devcontainer/post-create.sh",
@@ -336,23 +342,18 @@ echo "✅ Development environment ready!"
 }
 ```
 
-### Step 6: JetBrains Remote Dev
+### Step 6: JetBrains IDEs
 
-```xml
-<!-- .devcontainer/devcontainer.json (with JetBrains support) -->
+JetBrains IDEs (via Gateway or the IDE's Dev Containers support) read the same `devcontainer.json`; VS Code extensions are ignored there, so install CLI tools in the Dockerfile or via features. IDE-specific options go under `customizations.jetbrains` (check the JetBrains Dev Containers docs for the supported keys in your IDE version).
+
+```jsonc
 {
   "name": "My App",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
-  "extensions": [
-    // JB Gateway doesn't use VS Code extensions.
-    // Instead, install tools in Dockerfile.
-  ],
-  "settings": {
-    "remote.autoForwardPorts": true,
-    "jetbrains.gateway.enabled": true
-  },
-  // Ports that JetBrains should forward
-  "forwardPorts": [3000, 5432]
+  "forwardPorts": [3000, 5432],
+  "customizations": {
+    "jetbrains": { "backend": "WebStorm" }
+  }
 }
 ```
 
@@ -372,14 +373,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build dev container
-        uses: devcontainers/ci@v3
+        uses: devcontainers/ci@v0.3
         with:
-          subFolder: .devcontainer
           imageName: ghcr.io/myorg/devcontainer
           cacheFrom: ghcr.io/myorg/devcontainer
           push: never
-      - name: Run post-create
-        run: docker run --rm ghcr.io/myorg/devcontainer /bin/bash -c ".devcontainer/post-create.sh && npm test"
+          runCmd: npm test   # runs inside the built container with the repo mounted
 ```
 
 ## Common Pitfalls
@@ -408,7 +407,7 @@ jobs:
 | Configure git credentials | Without this, git operations fail inside container |
 | Use postCreateCommand for setup | Automatically set up after first build |
 | Healthcheck for DB services | App container waits for ready database |
-| Mount .gitconfig and .ssh | Preserve host git configuration |
+| Rely on built-in credential/SSH-agent forwarding | Host git config and keys stay on the host |
 | Keep .devcontainer in version control | All team members use the same setup |
 | Test dev container in CI | Ensure it builds and works on every PR |
 | Document .env variables | Team knows what needs configuring |
@@ -420,12 +419,10 @@ jobs:
 ```jsonc
 {
   "features": {
-    "ghcr.io/devcontainers/features/kubectl:1": {},
-    "ghcr.io/devcontainers/features/helm:1": {},
-    "ghcr.io/devcontainers/features/docker-from-docker:1": {},
-    "ghcr.io/devcontainers/features/k3d:1": {}
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
-  "postCreateCommand": "k3d cluster create dev"
+  "postStartCommand": "minikube start --driver=docker"
 }
 ```
 
@@ -435,16 +432,16 @@ jobs:
   "name": "My Monorepo",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
   "workspaceFolder": "/workspaces/myapp",
-  "extensions": [...],
-  "postCreateCommand": "cd packages/core && npm install && cd ../ui && npm install"
+  "customizations": { "vscode": { "extensions": ["dbaeumer.vscode-eslint"] } },
+  "postCreateCommand": "npm install --workspaces"
 }
 ```
 
 ## References
   - references/dev-container-advanced.md — Dev Container Advanced Topics
   - references/dev-container-fundamentals.md — Dev Container Fundamentals
-  - references/dev-container-features.md — Dev Container Features Reference
-  - references/dev-container-multi-service.md — Multi-Service Dev Container Reference
+  - references/devcontainer-setup.md — Dev Container Setup
+  - references/devcontainer-advanced.md — Dev Container Multi-Service and Advanced Setup
 ## Handoff
 Hand off to `dev-loop-git-workflow` for Git credential configuration. Hand off to `dev-loop-security-auditor` for container security.
 
@@ -453,7 +450,7 @@ Hand off to `dev-loop-git-workflow` for Git credential configuration. Hand off t
 ### Development Environment Strategy
 | Decision Point | Option A | Option B | Decision Criteria |
 |---|---|---|---|
-| Container base image | Distroless (small, secure) | Full distro (tooling-rich) | Dev experience vs attack surface |
+| Container base image | Slim distro (smaller pulls) | Full devcontainers image (tooling-rich) | Pull time vs out-of-box tooling |
 | Package manager | apt + pip | nix/home-manager | Reproducibility vs learning curve |
 | Shell | bash | zsh + oh-my-zsh | Portability vs productivity |
 | Dotfiles management | Manual COPY in Dockerfile | chezmoi/ dotfiles repo | Simplicity vs flexibility |

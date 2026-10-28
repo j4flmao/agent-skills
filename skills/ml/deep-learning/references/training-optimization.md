@@ -60,9 +60,9 @@ model = FSDP(model, cpu_offload=CPUOffload(offload_params=True))
 ## Mixed Precision (AMP)
 
 ```python
-from torch.cuda.amp import autocast, GradScaler
-
-scaler = GradScaler()
+# The CUDA-only amp namespace is deprecated; use the device-generic torch.amp API.
+# bfloat16 (Ampere+) needs no GradScaler; float16 does.
+scaler = torch.amp.GradScaler("cuda")
 for inputs, targets in train_loader:
     optimizer.zero_grad()
     with torch.amp.autocast(device_type="cuda", dtype=torch.float16):
@@ -92,10 +92,10 @@ for i, (inputs, targets) in enumerate(train_loader):
 ## CUDA Optimization
 
 ```python
-# Enable cudnn autotune (faster after warmup)
+# Let cuDNN benchmark conv algorithms (helps when input shapes are fixed)
 torch.backends.cudnn.benchmark = True
 
-# TF32 on A100 (faster than FP32)
+# Allow TF32 matmuls on Ampere+ (reduced mantissa precision, higher throughput)
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 

@@ -412,23 +412,25 @@ function AnimatedComponent() {
 | Framer Motion (React) | React animation library | Production web animation | React code |
 | Greensock (GSAP) | JavaScript animation library | High-performance web animation | JavaScript code |
 
-## Case Studies
+## Illustrative Scenarios
 
-### Case Study 1: E-commerce Micro-interaction Overhaul Increases Conversion 12%
+> Hypothetical scenarios for illustration. The figures are examples, not measured results from real projects.
+
+### Scenario 1: E-commerce Micro-interaction Overhaul Increases Conversion 12%
 An e-commerce site had no micro-interactions — buttons simply changed appearance without animation. They implemented purposeful micro-interactions: hover animations on product cards (300ms, ease-out, shadow lift), button press feedback (100ms, scale 0.95), cart add confirmation (badge bounce animation), and smooth page transitions between categories. The result: 12% increase in add-to-cart rate, 8% increase in conversion, and a 5% decrease in bounce rate. Users perceived the site as faster and more responsive even though actual load times hadn't changed.
 
 Method: Systematic micro-interaction audit and redesign
 Key insight: Perceived performance (mediated by animation) matters as much as actual performance
 Impact: Add-to-cart +12%, conversion +8%, bounce -5%
 
-### Case Study 2: Motion Design System for Enterprise SaaS
+### Scenario 2: Motion Design System for Enterprise SaaS
 An enterprise SaaS platform had 40+ teams building features with inconsistent animation — some used 1000ms transitions, others had none. A centralized motion system was created with: timing scale (100/200/300/400/500ms), easing specifications (ease-out, ease-in-out, spring), micro-interaction patterns per component, and page transition guidelines. After adoption, user satisfaction scores for "smoothness" improved by 22%, and development time for animation decreased by 40% because patterns were pre-defined.
 
 Method: Centralized motion design system with documented patterns and code
 Key insight: Design systems must include motion, not just visual components
 Impact: Satisfaction score +22%, animation dev time -40%
 
-### Case Study 3: Lottie Optimization for Mobile Performance
+### Scenario 3: Lottie Optimization for Mobile Performance
 A mobile app used Lottie animations for onboarding illustrations but users experienced jank on mid-range Android devices. Analysis showed Lottie files were averaging 120KB each with 2000+ keyframes. After optimization — reducing to 6 keyframes per animation, removing unused layers, using solid fills instead of gradients, and converting complex shapes to simpler paths — file sizes dropped to 18KB average and frame rate improved from 30fps to 58fps on target devices.
 
 Method: Lottie file optimization audit and reconstruction
@@ -464,122 +466,6 @@ Impact: File size 120KB to 18KB, frame rate 30fps to 58fps on mid-range devices
   - references/motion-design-advanced.md — Motion Design Advanced Topics
   - references/motion-design-fundamentals.md — Motion Design Fundamentals
   - references/ui-animation-patterns.md — UI Animation Patterns Reference
-  - references/motion-design-principles.md — Motion Design Principles
-  - references/motion-design-implementation.md — Motion Design Implementation
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
 ## Architecture Decision Trees
 
 ### Animation Strategy Decision Tree

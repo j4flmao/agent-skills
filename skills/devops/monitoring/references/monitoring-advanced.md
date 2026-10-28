@@ -1,214 +1,155 @@
-# Monitoring Advanced Topics
-
-## Introduction
-Advanced Monitoring topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# Advanced Monitoring: Scaling, SLO Burn-Rate Alerting, OpenTelemetry Pipelines and Cost Control
+
+Techniques for monitoring at scale: long-term and highly available metrics storage (Thanos, Grafana Mimir, VictoriaMetrics), multi-window burn-rate alerts, OpenTelemetry Collector pipelines, exemplars and signal correlation, cardinality management, synthetic and RUM monitoring, and monitoring the monitoring system itself.
+
+## Scaling Prometheus
+
+A single Prometheus server is limited by memory (active series) and local disk retention, and is a single point of failure.
+
+| Approach | How it works | Use when |
+|---|---|---|
+| Functional sharding | Separate Prometheus per team/domain | Simple growth |
+| HA pairs | Two identical Prometheus scraping the same targets; dedupe at query time | Need availability |
+| Thanos | Sidecar uploads blocks to object storage; Querier fans out and deduplicates; Store Gateway serves history; Compactor downsamples | Keep existing Prometheus, add global view and long retention |
+| Grafana Mimir | Horizontally scalable, multi-tenant remote-write backend on object storage | Central metrics platform for many teams |
+| VictoriaMetrics (single or cluster) | Remote-write backend with efficient compression | Cost-efficient large-scale storage |
+| Agent mode / Grafana Alloy / OTel Collector | Scrape and remote-write without local storage | Edge clusters feeding a central backend |
+
+```yaml
+# prometheus.yml remote write to a central backend
+remote_write:
+  - url: https://mimir.example.com/api/v1/push
+    headers:
+      X-Scope-OrgID: team-payments
+    queue_config:
+      max_samples_per_send: 5000
+      capacity: 20000
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: "go_gc_.*|process_.*"
+        action: drop                      # do not ship low-value series
+```
+
+Prometheus 3.x supports native histograms, OTLP ingestion (`--web.enable-otlp-receiver`) and UTF-8 metric names; plan label conventions accordingly.
+
+## Multi-Window, Multi-Burn-Rate SLO Alerts
+
+Burn rate = observed error rate / allowed error rate (1 - SLO). A burn rate of 1 uses the budget exactly over the SLO window.
+
+Recommended pattern for a 30-day SLO (from the Google SRE workbook):
+| Severity | Long window | Short window | Burn rate | Budget consumed when it fires |
+|---|---|---|---|---|
+| Page | 1 h | 5 min | 14.4 | 2% |
+| Page | 6 h | 30 min | 6 | 5% |
+| Ticket | 3 d | 6 h | 1 | 10% |
+
+```yaml
+groups:
+  - name: checkout-slo
+    rules:
+      - record: slo:checkout_errors:ratio_rate5m
+        expr: |
+          sum(rate(http_requests_total{job="checkout",code=~"5.."}[5m]))
+          / sum(rate(http_requests_total{job="checkout"}[5m]))
+      - record: slo:checkout_errors:ratio_rate1h
+        expr: |
+          sum(rate(http_requests_total{job="checkout",code=~"5.."}[1h]))
+          / sum(rate(http_requests_total{job="checkout"}[1h]))
+      - alert: CheckoutErrorBudgetFastBurn
+        expr: |
+          slo:checkout_errors:ratio_rate1h > (14.4 * 0.001)
+          and
+          slo:checkout_errors:ratio_rate5m > (14.4 * 0.001)
+        labels:
+          severity: page
+          team: payments
+        annotations:
+          summary: "Checkout is burning its 99.9% error budget fast"
+          runbook_url: https://runbooks.example.com/checkout/slo-burn
+```
+The short window makes the alert resolve quickly after recovery. Tools such as Sloth, Pyrra or OpenSLO-based generators produce these rules from SLO definitions.
+
+## OpenTelemetry Collector Pipelines
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      grpc: { endpoint: 0.0.0.0:4317 }
+      http: { endpoint: 0.0.0.0:4318 }
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: node
+          static_configs: [{ targets: ["node-exporter:9100"] }]
+
+processors:
+  memory_limiter: { check_interval: 1s, limit_percentage: 80, spike_limit_percentage: 20 }
+  k8sattributes: {}
+  resource:
+    attributes:
+      - { key: deployment.environment.name, value: production, action: upsert }
+  attributes/redact:
+    actions:
+      - { key: http.request.header.authorization, action: delete }
+  tail_sampling:
+    decision_wait: 10s
+    policies:
+      - { name: errors, type: status_code, status_code: { status_codes: [ERROR] } }
+      - { name: slow, type: latency, latency: { threshold_ms: 1000 } }
+      - { name: baseline, type: probabilistic, probabilistic: { sampling_percentage: 5 } }
+  batch: {}
+
+exporters:
+  otlphttp/metrics: { endpoint: https://mimir.example.com/otlp }
+  otlphttp/traces: { endpoint: https://tempo.example.com }
+  otlphttp/logs: { endpoint: https://loki.example.com/otlp }
+
+service:
+  pipelines:
+    metrics: { receivers: [otlp, prometheus], processors: [memory_limiter, k8sattributes, resource, batch], exporters: [otlphttp/metrics] }
+    traces:  { receivers: [otlp], processors: [memory_limiter, k8sattributes, attributes/redact, tail_sampling, batch], exporters: [otlphttp/traces] }
+    logs:    { receivers: [otlp], processors: [memory_limiter, k8sattributes, attributes/redact, batch], exporters: [otlphttp/logs] }
+```
+- Agent collectors (DaemonSet) near workloads, gateway collectors for sampling, redaction and export.
+- Tail sampling needs all spans of a trace on the same gateway: use the load-balancing exporter keyed by trace ID.
+- `memory_limiter` first in every pipeline; persistent sending queues for backend outages.
+
+## Correlating Signals
+- **Exemplars**: attach trace IDs to histogram samples so a latency spike links to example traces (Prometheus exemplar storage, Grafana).
+- **Trace-to-logs**: inject `trace_id`/`span_id` into structured logs.
+- **Deploy annotations** on dashboards from CI/CD events.
+- Consistent resource attributes (`service.name`, `service.version`, `k8s.namespace.name`) across all signals.
+
+## Cardinality Management
+| Technique | Example |
+|---|---|
+| Find top series | `topk(20, count by (__name__) ({__name__=~".+"}))`, Prometheus TSDB status page, Mimir cardinality API |
+| Drop or aggregate at ingestion | `metric_relabel_configs` drop labels; recording rules then drop raw |
+| Per-tenant limits | Mimir/VictoriaMetrics series and ingestion limits |
+| Bucket design | Fewer histogram buckets or native histograms |
+| Route templating | Use route templates, not raw paths |
+
+## Synthetic and Real-User Monitoring
+- Synthetic checks from multiple regions for critical journeys (login, checkout) with browser automation; alert on multi-location failures to avoid single-probe noise.
+- RUM: Core Web Vitals (LCP, INP, CLS) and JS errors by page and release; FID was replaced by INP as a Core Web Vital in March 2024.
+
+## Monitoring the Monitoring
+- Alert on: scrape failures (`up == 0`), rule evaluation failures, remote-write queue backlog/dropped samples, collector refused/dropped data, Alertmanager notification failures.
+- **Dead man's switch**: an always-firing alert routed to an external heartbeat service; silence of the heartbeat pages someone.
+- Run the alerting path (Alertmanager/on-call) in a separate failure domain from the systems it monitors.
+
+## Cost Control
+- Budget per team: series, log GB/day, trace spans/day.
+- Sample traces (head + tail); keep 100% of errors.
+- Log levels and sampling for noisy debug logs; drop health-check logs.
+- Downsample old metrics; tier logs to object storage.
+
+## Checklist
+- [ ] HA and long-term storage strategy chosen (Thanos/Mimir/VictoriaMetrics)
+- [ ] SLO alerts use multi-window burn rates
+- [ ] OTel Collector agent + gateway tiers with memory limits, redaction and sampling
+- [ ] Exemplars and trace IDs in logs for correlation
+- [ ] Cardinality monitored with enforced limits
+- [ ] Synthetic checks for critical journeys; RUM with INP
+- [ ] Meta-monitoring and dead man's switch in place

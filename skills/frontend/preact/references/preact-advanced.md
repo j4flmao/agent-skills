@@ -1,214 +1,175 @@
 # Preact Advanced Topics
 
-## Introduction
-Advanced Preact topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+Advanced Preact techniques: Signals in depth, React ecosystem interop with `preact/compat`, server-side rendering and hydration, islands and prerendering, routing and code splitting with `preact-iso`, performance tuning and debugging. Fundamentals are in `preact-fundamentals.md`; deployment in `preact-deployment.md`.
+
+## Signals in Depth
+
+```tsx
+import { signal, computed, effect, batch, untracked } from '@preact/signals';
+
+const items = signal<CartItem[]>([]);
+const discount = signal(0);
+
+const subtotal = computed(() => items.value.reduce((s, i) => s + i.priceMinor * i.qty, 0));
+const total = computed(() => Math.max(0, subtotal.value - discount.value));
+
+const dispose = effect(() => {
+  // re-runs when total changes
+  localStorage.setItem('cart-total', String(total.value));
+});
+
+function addItem(item: CartItem) {
+  batch(() => {                                  // one notification for several writes
+    items.value = [...items.value, item];
+    discount.value = items.value.length > 5 ? 500 : 0;
+  });
+}
+
+function logWithoutTracking() {
+  effect(() => {
+    console.log(total.value, untracked(() => discount.value));  // discount does not subscribe
+  });
+}
+```
+
+Rules:
+- Signals compare by identity: assign a new array/object (`items.value = [...]`) rather than mutating in place.
+- `computed` values are lazy and cached; keep them pure.
+- `effect` returns a disposer; dispose module-level effects in tests and HMR.
+- `signal.peek()` reads without subscribing.
+
+### Component-Level Signals
+
+```tsx
+import { useSignal, useComputed, useSignalEffect } from '@preact/signals';
+
+function Search() {
+  const query = useSignal('');
+  const trimmed = useComputed(() => query.value.trim());
+
+  useSignalEffect(() => {
+    if (trimmed.value.length < 2) return;
+    const ctrl = new AbortController();
+    fetch(`/api/search?q=${encodeURIComponent(trimmed.value)}`, { signal: ctrl.signal });
+    return () => ctrl.abort();
+  });
+
+  return <input value={query} onInput={e => (query.value = e.currentTarget.value)} />;
+}
+```
+
+Binding a signal as `value={query}` updates the DOM property directly without re-rendering `Search`.
+
+### Signals Architecture
+
+- Domain stores: a module exporting signals plus action functions (no direct writes from components).
+- Avoid deep chains of effects writing to other signals; prefer `computed`.
+- For server data, combine signals with a fetch layer or use libraries that support Preact (e.g. TanStack Query via `preact/compat`).
+
+## preact/compat: Using React Libraries
+
+```ts
+// vite.config.ts (preset-vite sets these aliases automatically)
+resolve: {
+  alias: {
+    react: 'preact/compat',
+    'react-dom': 'preact/compat',
+    'react-dom/test-utils': 'preact/test-utils',
+    'react/jsx-runtime': 'preact/jsx-runtime',
+  },
+},
+```
+
+- Most React libraries work: routing, forms, UI kits; libraries depending on React internals or concurrent APIs may not.
+- `compat` adds `forwardRef`, `memo`, `PureComponent`, `Suspense`/`lazy`, `createPortal`, `onChange` input semantics, `useSyncExternalStore`, `startTransition` (executes synchronously).
+- Validate each library: render tests plus a quick bundle-size check, since compat and React-specific libraries can erode Preact's size advantage.
+- TypeScript: map `react` types to compat with `paths` in `tsconfig.json` if a library's types require it.
+
+## Server-Side Rendering and Hydration
+
+```tsx
+// server.ts
+import { renderToStringAsync } from 'preact-render-to-string';
+import { App } from './app';
+
+export async function handle(req: Request): Promise<Response> {
+  const html = await renderToStringAsync(<App url={new URL(req.url).pathname} />);
+  return new Response(`<!doctype html><html><body><div id="app">${html}</div><script type="module" src="/client.js"></script></body></html>`, {
+    headers: { 'content-type': 'text/html; charset=utf-8' },
+  });
+}
+```
+
+```tsx
+// client.ts
+import { hydrate } from 'preact';
+hydrate(<App url={location.pathname} />, document.getElementById('app')!);
+```
+
+- `renderToStringAsync` waits for lazy components and suspended data; `renderToString` is synchronous.
+- Server and client must render identical markup for the same data; serialize initial data into the page (escape `<` to prevent script injection) and read it on the client.
+- Streaming SSR is available in `preact-render-to-string` (`renderToReadableStream`/`renderToPipeableStream` in recent versions); check the installed version.
+
+## Islands and Frameworks
+
+| Option | Model |
+|--------|-------|
+| Fresh (Deno) | Server-rendered pages, islands hydrated individually, Preact + Signals |
+| Astro with `@astrojs/preact` | Static/server pages with Preact islands (`client:visible`, `client:idle`) |
+| `@preact/preset-vite` prerender | Static prerendering for SPA routes with `preact-iso` |
+
+Islands keep JavaScript proportional to interactive components, which suits content-heavy sites.
+
+## Routing and Code Splitting with preact-iso
+
+```tsx
+import { LocationProvider, Router, Route, lazy, ErrorBoundary } from 'preact-iso';
+
+const Home = lazy(() => import('./pages/home'));
+const Product = lazy(() => import('./pages/product'));
+
+export function App() {
+  return (
+    <LocationProvider>
+      <ErrorBoundary>
+        <Router>
+          <Route path="/" component={Home} />
+          <Route path="/products/:id" component={Product} />
+          <Route default component={NotFound} />
+        </Router>
+      </ErrorBoundary>
+    </LocationProvider>
+  );
+}
+```
+
+`preact-iso` supports async routes that keep the previous page visible until the next one loads, and pairs with `prerender()` for static generation.
+
+## Performance
+
+- Prefer signals for frequently changing values (timers, inputs, live data) to avoid component re-renders.
+- `memo` (compat) or splitting components to narrow re-render scope.
+- Virtualize long lists (e.g. `@tanstack/virtual-core` with a small Preact wrapper).
+- Measure field performance with Core Web Vitals (INP, LCP, CLS); Preact's small runtime mainly helps parse/execute time on low-end devices.
+- Check bundles with `rollup-plugin-visualizer` or `vite-bundle-visualizer`; compat and React-only dependencies are the usual size regressions.
+
+## Debugging and DevTools
+
+- `preact/debug` (development only) adds helpful warnings and enables the Preact DevTools extension.
+- Signals debugging: log in `effect`s or use the signals devtools integrations available for your version.
+- Hydration mismatch symptoms: duplicated or missing nodes after load; compare server HTML with client render for the same data.
+
+## Testing Advanced Cases
+
+- Signals: test stores without rendering (call actions, assert `.value`); dispose effects after each test.
+- SSR: snapshot `renderToStringAsync` output for key routes.
+- compat-heavy code: run the library's own interaction patterns in tests to catch event semantic differences.
+
+## Checklist
+
+- [ ] Signals updated immutably; effects disposed; `batch` for grouped writes
+- [ ] compat used deliberately; each React library verified
+- [ ] SSR markup matches client; initial data safely serialized
+- [ ] Routes lazy-loaded; prerender for static pages where possible
+- [ ] Bundle size and INP tracked per release
+- [ ] `preact/debug` excluded from production builds

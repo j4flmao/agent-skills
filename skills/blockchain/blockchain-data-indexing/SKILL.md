@@ -422,9 +422,6 @@ class Indexer:
   - references/goldsky-chainindex.md — Goldsky & ChainIndex Reference
   - references/indexer-architecture.md — Indexer Architecture Patterns
   - references/the-graph-subgraph.md — The Graph — Subgraph Reference
-  - references/subgraph-performance-tuning.md — Subgraph Performance Tuning
-  - references/multi-chain-indexing.md — Multi-Chain Indexing Strategies
-  - references/custom-indexer-patterns.md — Custom Indexer Patterns
 
 ## Architecture Decision Trees
 

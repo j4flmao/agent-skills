@@ -244,7 +244,6 @@ Before delivering compressed summary, verify:
   - references/context-compressor-fundamentals.md — Context Compressor Fundamentals
   - references/context-retrieval.md — Context Retrieval System
   - references/context-window-management.md — Context Window Management
-  - references/state-management.md — State Management
   - references/summary-templates.md — Summary Templates
   - references/token-management.md — Token Management
 

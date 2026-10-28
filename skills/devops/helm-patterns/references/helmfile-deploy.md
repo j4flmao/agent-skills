@@ -237,7 +237,6 @@ creation_rules:
 helmDefaults:
   args:
     - --kube-context={{ .Values.kubeContext }}
-  tillerNamespace: kube-system
 
 releases:
   - name: myapp

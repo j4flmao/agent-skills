@@ -1,213 +1,116 @@
-# Web Real Time Fundamentals
+# WebRTC Fundamentals: Signaling, ICE, Media Security and the Peer Connection API
 
-## Overview
-Web Real Time is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+The building blocks of a WebRTC session: what signaling must carry, how SDP offer/answer works, how ICE with STUN/TURN establishes connectivity, how media is secured, and the browser APIs that tie it together. Topology choices (mesh/SFU/MCU) are in `webrtc-architecture.md`.
 
-## Core Concepts
+## Session Setup Overview
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Web Real Time helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+```
+Caller                         Signaling server                      Callee
+getUserMedia ─┐
+createOffer ──┴─ SDP offer ──────────►  relay  ──────────────────────► setRemoteDescription
+                                                                       createAnswer
+setRemoteDescription ◄──────────────── relay ◄──────── SDP answer ──── setLocalDescription
+ICE candidates  ◄──────────── trickled both ways via signaling ───────► ICE candidates
+──────────────── ICE connectivity checks (STUN) / relay via TURN ────────────────
+──────────────── DTLS handshake → SRTP media + SCTP data channels ────────────────
+```
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Web Real Time solutions. These principles help maintain code quality and reduce technical debt.
+WebRTC does not define signaling; use WebSocket, HTTP, or standardized WHIP/WHEP for ingest/egress to media servers.
 
-### Concept 3: Data Management
-Proper data management is essential for Web Real Time. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Signaling Responsibilities
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+- Exchange SDP offers/answers and ICE candidates.
+- Authenticate users and authorize room membership.
+- Issue short-lived TURN credentials.
+- Handle presence, joins/leaves, renegotiation messages.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+Signaling must run over TLS (WSS/HTTPS); it carries the DTLS fingerprints that authenticate the media path.
 
-## Architecture Patterns
+## SDP Essentials
 
-### Pattern 1: Standard Architecture
-The standard architecture for Web Real Time follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+SDP describes media sections (`m=audio`, `m=video`, `m=application` for data channels), codecs and payload types, ICE credentials (`a=ice-ufrag`, `a=ice-pwd`), DTLS fingerprint (`a=fingerprint:sha-256 ...`), directions (`sendrecv`, `sendonly`, `recvonly`), and extensions (simulcast `a=simulcast`, RTP header extensions). Treat SDP as opaque in application code except for well-understood edits; prefer API methods (`setCodecPreferences`, transceiver directions) over string munging.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+## ICE, STUN and TURN
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+| Candidate type | Source | Works when |
+|---|---|---|
+| host | Local interface address | Same network |
+| srflx (server reflexive) | Public address learned via STUN | Most NATs (not symmetric NAT) |
+| relay | Allocated on a TURN server | Always (if TURN reachable), at relay cost |
 
-## Implementation Guide
+- STUN: lightweight; tells a client its public address.
+- TURN: relays media when direct paths fail (symmetric NATs, restrictive firewalls). Provide TURN over UDP, TCP and TLS on 443 for corporate networks.
+- Trickle ICE: send candidates as they are gathered to reduce setup time.
+- ICE restart (`pc.restartIce()`) recovers from network changes (Wi-Fi → cellular).
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+TURN credentials: use time-limited credentials (the TURN REST API pattern with HMAC of `expiry:username`, supported by coturn's `use-auth-secret`), never static passwords in client code.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+## Media Security
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+- All WebRTC media is encrypted: DTLS-SRTP for audio/video, DTLS for SCTP data channels. There is no unencrypted mode in browsers.
+- Encryption is hop-by-hop with servers: an SFU decrypts SRTP to route it. End-to-end encryption through SFUs needs encoded transforms with SFrame-style payload encryption (see `web-real-time-advanced.md`).
+- `getUserMedia` requires a secure context (HTTPS) and user permission.
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## Codecs
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+| Media | Mandatory-to-implement | Common choices |
+|---|---|---|
+| Audio | Opus, G.711 | Opus (with in-band FEC, DTX) |
+| Video | VP8, H.264 (Constrained Baseline) | VP8, VP9, H.264, AV1 (support varies by browser and hardware) |
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+Pick codecs per client support and hardware acceleration; AV1/VP9 give better compression with more CPU, mainly beneficial with SVC.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## Browser API Example
 
-## Best Practices
+```ts
+const pc = new RTCPeerConnection({
+  iceServers: [
+    { urls: "stun:stun.example.com:3478" },
+    { urls: ["turn:turn.example.com:3478?transport=udp", "turns:turn.example.com:443?transport=tcp"],
+      username: turnCreds.username, credential: turnCreds.credential },
+  ],
+});
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { width: 1280, height: 720 } });
+for (const track of stream.getTracks()) pc.addTrack(track, stream);
 
-## Common Pitfalls
+pc.onicecandidate = ({ candidate }) => { if (candidate) signaling.send({ type: "candidate", candidate }); };
+pc.ontrack = ({ streams }) => { remoteVideo.srcObject = streams[0]; };
+pc.onconnectionstatechange = () => {
+  if (pc.connectionState === "failed") pc.restartIce();
+};
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+const offer = await pc.createOffer();
+await pc.setLocalDescription(offer);
+signaling.send({ type: "offer", sdp: pc.localDescription });
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+signaling.on("answer", async (msg) => pc.setRemoteDescription(msg.sdp));
+signaling.on("candidate", async (msg) => pc.addIceCandidate(msg.candidate));
+```
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+Use the "perfect negotiation" pattern (polite/impolite peers, `negotiationneeded` handler, rollback on glare) when both sides may renegotiate.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## Data Channels
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+```ts
+const dc = pc.createDataChannel("chat", { ordered: true });                         // reliable, ordered
+const telemetry = pc.createDataChannel("pos", { ordered: false, maxRetransmits: 0 }); // unreliable, low latency
+```
 
-## Tooling Ecosystem
+Use unreliable channels for state that is superseded quickly (game positions, cursors).
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Web Real Time concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+## Connection States to Handle
+
+| State | Meaning | Action |
+|---|---|---|
+| `iceConnectionState=disconnected` | Temporary loss | Wait briefly; UI "reconnecting" |
+| `connectionState=failed` | No working path | ICE restart; check TURN reachability |
+| `closed` | Ended | Release media tracks (`track.stop()`) |
+
+## Checklist
+- [ ] Signaling over TLS with authentication and room authorization
+- [ ] STUN plus TURN (UDP, TCP, TLS/443) with time-limited credentials
+- [ ] Trickle ICE and ICE restart on failure
+- [ ] Perfect negotiation for renegotiation
+- [ ] Codec choices matched to client/hardware support
+- [ ] Media tracks stopped and connections closed on leave

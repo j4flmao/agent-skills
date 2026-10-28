@@ -527,9 +527,7 @@ alert_rules:
 - Ceph OSDs sharing same physical disk as OS — resource contention and data loss risk.
 
 ## References
-  - references/nvme-of.md — NVMe-oF — TCP, RoCE, Fibre Channel
   - references/ceph.md — Ceph — RBD, CephFS, Object Gateway, CRUSH, BlueStore
-  - references/minio.md — MinIO — Erasure Coding, Distributed Mode, S3 Gateway
   - references/storage-infrastructure-advanced.md — Storage Infrastructure Advanced Topics
   - references/storage-infrastructure-fundamentals.md — Storage Infrastructure Fundamentals
 ## Handoff

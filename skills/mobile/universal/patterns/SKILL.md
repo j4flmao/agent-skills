@@ -581,7 +581,7 @@ class OrderRepositoryImpl(
 ) : OrderRepository {
   override fun getOrders(): Flow<List<Order>> {
     return dao.observeAll().map { entities ->
-      entities.map { it.toDomain() }
+      entities.map { it.asDomain() }
     }
   }
 
@@ -782,7 +782,6 @@ final class OrderViewModelTests: XCTestCase {
 - Profile recomposition counts in debug builds to detect unnecessary redraws
 
 ## References
-- `references/architecture-patterns.md` — Mobile Architecture Patterns
 - `references/clean-arch.md` — Clean Architecture for Mobile
 - `references/coordinator.md` — Coordinator / Navigator
 - `references/design-patterns.md` — Mobile Design Patterns

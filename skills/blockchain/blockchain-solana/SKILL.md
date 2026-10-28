@@ -499,9 +499,6 @@ pub struct Metadata {
   - references/solana-runtime.md — Solana Runtime
   - references/solana-token-program.md — Solana Token Program
   - references/solana-tools.md — Solana Tools & SDKs
-  - references/solana-security.md — Solana Security Best Practices
-  - references/solana-deployment.md — Solana Program Deployment
-  - references/solana-poh-deep-dive.md — Solana Proof of History Deep Dive
 
 ## Phase
 blockchain → blockchain-solana

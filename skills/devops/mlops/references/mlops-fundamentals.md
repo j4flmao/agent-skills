@@ -1,213 +1,156 @@
-# Mlops Fundamentals
+# MLOps Fundamentals: Lifecycle, Artifacts, Reproducibility and Maturity
 
-## Overview
-Mlops is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+MLOps applies DevOps practices to machine learning systems, where behavior depends on code, data and trained parameters together. This reference covers the ML lifecycle, the artifacts that must be versioned, reproducibility, the main platform components, maturity levels and common failure modes. Pipeline automation, deployment, retraining and governance are covered in sibling references.
 
-## Core Concepts
+## Why ML Systems Need More Than DevOps
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Mlops helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Aspect | Traditional software | ML system |
+|--------|---------------------|-----------|
+| Behavior defined by | Code | Code + data + hyperparameters + random seeds |
+| Testing | Unit/integration tests on logic | Plus data validation, model quality metrics, fairness, robustness |
+| Failure mode | Errors, crashes | Silent degradation (drift) with no errors |
+| Release artifact | Binary / image | Model artifact + serving code + feature definitions |
+| Change trigger | Code change | Code change, new data, drift, schedule |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Mlops solutions. These principles help maintain code quality and reduce technical debt.
+## Lifecycle
 
-### Concept 3: Data Management
-Proper data management is essential for Mlops. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+```text
+Problem framing -> Data collection & labeling -> Data validation -> Feature engineering
+  -> Training & tuning -> Evaluation (offline) -> Registration & approval
+  -> Deployment (batch / online / edge) -> Monitoring (data, predictions, outcomes)
+  -> Retraining or rollback -> (loop)
+```
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+Each arrow is a handoff that should be automated and recorded as the system matures.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+## Artifacts to Version
 
-## Architecture Patterns
+| Artifact | Tooling examples | Why |
+|----------|------------------|-----|
+| Code | Git | Reproducibility, review |
+| Data snapshots / dataset versions | DVC, lakeFS, Delta/Iceberg time travel, dataset hashes | Retrain the exact model; audit |
+| Features (definitions) | Feature store (Feast, Tecton, Databricks), dbt models | Training/serving consistency |
+| Environment | Lock files (`uv.lock`, `poetry.lock`), container images | Same libraries in training and serving |
+| Hyperparameters and configs | Config files (Hydra, YAML) tracked with runs | Explain results |
+| Experiments | MLflow, Weights & Biases, Neptune, Comet | Compare runs, lineage |
+| Models | Model registry (MLflow Model Registry, SageMaker, Vertex AI, Azure ML) | Promotion, rollback |
+| Evaluation reports | Stored with the model version | Approval evidence |
 
-### Pattern 1: Standard Architecture
-The standard architecture for Mlops follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+Lineage target: from any prediction in production you can identify model version, training run, code commit, data version and feature definitions.
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+## Reproducibility Basics
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+```python
+import random
+import numpy as np
+import torch
 
-## Implementation Guide
+def set_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+```
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+- Seeds reduce but do not eliminate nondeterminism (GPU kernels, parallel data loading). For strict determinism in PyTorch, set `torch.use_deterministic_algorithms(True)` and accept the performance cost.
+- Record library versions and hardware type with each run.
+- Read training data through versioned references, never "latest" paths.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+## Experiment Tracking Minimal Example (MLflow)
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+```python
+import mlflow
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_auc_score
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+mlflow.set_experiment("churn")
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+with mlflow.start_run(run_name="rf-baseline") as run:
+    params = {"n_estimators": 300, "max_depth": 8, "random_state": 42}
+    mlflow.log_params(params)
+    mlflow.set_tag("data_version", data_version)          # e.g. DVC rev or table snapshot id
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+    model = RandomForestClassifier(**params).fit(X_train, y_train)
+    auc = roc_auc_score(y_valid, model.predict_proba(X_valid)[:, 1])
+    mlflow.log_metric("valid_auc", auc)
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+    mlflow.sklearn.log_model(model, name="model", input_example=X_train.head(5),
+                             registered_model_name="churn-classifier")
+```
 
-## Best Practices
+The `name=` argument is the MLflow 3 form; MLflow 2.x uses `artifact_path=`. Registry promotion in recent MLflow versions uses **aliases** (for example `champion`, `challenger`) instead of the deprecated stages (`Staging`, `Production`).
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+## Platform Components
+
+| Component | Purpose | Examples |
+|-----------|---------|----------|
+| Data/feature layer | Versioned training data and online features | Lakehouse tables, Feast |
+| Orchestration | Pipelines for training, evaluation, batch inference | Airflow, Kubeflow Pipelines, Vertex AI Pipelines, SageMaker Pipelines, Dagster, Prefect, Metaflow, ZenML |
+| Compute | CPUs/GPUs for training and serving | Kubernetes, managed training jobs, Ray |
+| Tracking and registry | Experiments, model versions, approvals | MLflow, W&B, cloud registries |
+| Serving | Online/batch inference | KServe, Seldon Core, BentoML, Ray Serve, Triton, managed endpoints; vLLM/SGLang for LLMs |
+| Monitoring | Data drift, prediction quality, service health | Evidently, WhyLabs, Arize, NannyML, Prometheus |
+
+Start with the smallest set that solves your current pain; many teams run well with Git + DVC/lakehouse + MLflow + one orchestrator + container serving.
+
+## Training-Serving Skew
+
+The most common production bug in ML: features computed differently at training time and serving time.
+
+| Cause | Prevention |
+|-------|------------|
+| Separate code paths for offline and online features | Shared feature definitions (feature store or shared library) |
+| Point-in-time leakage in training data | Point-in-time correct joins (features as of the label timestamp) |
+| Different preprocessing libraries/versions | Package preprocessing with the model (scikit-learn `Pipeline`, model signature) |
+| Default values for missing data differ | Explicit schema and validation at serving time |
+
+## Data Validation
+
+Validate data before training and at inference:
+
+- Schema: columns, types, allowed categories.
+- Distributions: ranges, null rates, cardinality compared with a reference.
+- Freshness and volume.
+
+Tools: Great Expectations, Pandera, TensorFlow Data Validation, Deequ, or dbt tests for upstream tables.
+
+## Maturity Levels
+
+| Level | Characteristics |
+|-------|-----------------|
+| 0: Manual | Notebooks, manual training and handoff, no monitoring |
+| 1: Pipeline automation | Automated training pipeline, experiment tracking, registry, continuous training on new data |
+| 2: CI/CD for pipelines | Pipeline code tested and deployed through CI/CD, automated evaluation gates, monitoring-driven retraining, full lineage |
+
+Progress is driven by need: a model retrained yearly may not need level 2.
+
+## Roles
+
+| Role | Focus |
+|------|-------|
+| Data scientist | Problem framing, features, modeling, evaluation |
+| ML engineer | Pipelines, serving, performance, reliability |
+| Data engineer | Data pipelines, quality, feature data |
+| Platform / MLOps engineer | Shared tooling, compute, security, standards |
+| Product owner / domain expert | Success metrics, acceptance, risk |
 
 ## Common Pitfalls
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+| Pitfall | Consequence |
+|---------|-------------|
+| Notebook-only training | Not reproducible, no review |
+| Evaluating on leaked or non-representative data | Offline metrics overstate production performance |
+| No baseline model | Cannot tell if complexity pays off |
+| Monitoring only latency/errors | Silent accuracy decay goes unnoticed |
+| Model shipped without its preprocessing | Training-serving skew |
+| No owner after launch | Degradation without response |
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+## Checklist
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Mlops concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- [ ] Code, data version, environment, config and model linked for every run
+- [ ] Experiments tracked; models registered with aliases and evaluation evidence
+- [ ] Preprocessing packaged with the model; feature definitions shared
+- [ ] Data validation before training and at serving
+- [ ] Baseline and offline evaluation on a representative holdout
+- [ ] Production monitoring covers data drift, prediction quality and service health
+- [ ] Named owner for each production model

@@ -1,1368 +1,177 @@
-# Error Handling in .NET 8
+# Error Handling in ASP.NET Core: ProblemDetails, IExceptionHandler, Result Types
 
-## Purpose
-This document outlines global error handling strategies, problem details standard (RFC 7807), and logging in .NET 8.
+How to handle errors consistently in ASP.NET Core APIs: a global exception handler, RFC 9457 Problem Details responses, validation errors, expected failures as results instead of exceptions, and logging that helps diagnosis without leaking internals. Applies to .NET 8 and later.
 
-## Global Exception Handler
-.NET 8 introduces `IExceptionHandler` for cleaner global exception handling in Minimal APIs.
+## Principles
 
+- **Expected failures** (not found, validation, business rule violations, conflicts) are part of the API contract: return typed results with proper status codes.
+- **Unexpected failures** (bugs, unavailable dependencies) are exceptions: let them propagate to one global handler that logs and returns a generic 500.
+- Never return stack traces or exception messages to clients in production.
+- Every error response has the same shape: Problem Details (`application/problem+json`, RFC 9457, which obsoletes RFC 7807).
+
+## Problem Details Setup
 
 ```csharp
-// Global Exception Handler Example 0
-public class GlobalExceptionHandler_0 : IExceptionHandler
+builder.Services.AddProblemDetails(options =>
 {
-    private readonly ILogger<GlobalExceptionHandler_0> _logger;
-
-    public GlobalExceptionHandler_0(ILogger<GlobalExceptionHandler_0> logger)
+    options.CustomizeProblemDetails = ctx =>
     {
-        _logger = logger;
-    }
+        ctx.ProblemDetails.Instance = $"{ctx.HttpContext.Request.Method} {ctx.HttpContext.Request.Path}";
+        ctx.ProblemDetails.Extensions["traceId"] = Activity.Current?.Id ?? ctx.HttpContext.TraceIdentifier;
+    };
+});
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
+var app = builder.Build();
+app.UseExceptionHandler();      // uses registered IExceptionHandler(s) and ProblemDetails
+app.UseStatusCodePages();       // ProblemDetails bodies for empty 4xx/5xx responses
+```
+
+`AddProblemDetails` registers `IProblemDetailsService`, used by the exception handler middleware, status code pages, and `TypedResults.Problem`.
+
+## Global Exception Handler (IExceptionHandler, .NET 8+)
+
+```csharp
+public sealed class GlobalExceptionHandler(
+    IProblemDetailsService problemDetails,
+    ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
+{
     public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
+        HttpContext http, Exception exception, CancellationToken ct)
     {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
+        var (status, title) = exception switch
         {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
+            OperationCanceledException when http.RequestAborted.IsCancellationRequested
+                => (StatusCodes.Status499ClientClosedRequest, "Client closed request"),
+            DbUpdateConcurrencyException
+                => (StatusCodes.Status409Conflict, "The resource was modified by another request"),
+            _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
         };
 
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+        if (status >= 500)
+            logger.LogError(exception, "Unhandled exception for {Method} {Path}",
+                http.Request.Method, http.Request.Path);
+        else
+            logger.LogWarning(exception, "Request failed with {Status} for {Method} {Path}",
+                status, http.Request.Method, http.Request.Path);
 
-        return true;
+        http.Response.StatusCode = status;
+        return await problemDetails.TryWriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = http,
+            Exception = exception,
+            ProblemDetails = { Status = status, Title = title }
+        });
     }
 }
 ```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
+
+- Multiple handlers can be registered; they run in registration order until one returns `true`.
+- `ProblemDetailsContext.Exception` lets the default writer include exception details only in Development (when the developer exception page is active). Keep production responses generic.
+- Status 499 is a non-standard code (nginx convention) used here for logging clarity; the client has gone, so the body is not read.
+
+## Expected Failures as Results
+
+Throwing exceptions for control flow is slower and hides the contract. Return typed results from Minimal APIs:
 
 ```csharp
-// Global Exception Handler Example 1
-public class GlobalExceptionHandler_1 : IExceptionHandler
+public static async Task<Results<Created<OrderDto>, ValidationProblem, Conflict<ProblemDetails>>> Handle(
+    CreateOrderRequest request, IOrderService orders, CancellationToken ct)
 {
-    private readonly ILogger<GlobalExceptionHandler_1> _logger;
+    var errors = CreateOrderValidator.Validate(request);
+    if (errors.Count > 0)
+        return TypedResults.ValidationProblem(errors);   // 400 with "errors" dictionary
 
-    public GlobalExceptionHandler_1(ILogger<GlobalExceptionHandler_1> logger)
+    var result = await orders.CreateAsync(request, ct);
+    return result switch
     {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
+        { IsSuccess: true } => TypedResults.Created($"/orders/{result.Value!.Id}", result.Value),
+        { Error: OrderError.DuplicateReference } => TypedResults.Conflict(new ProblemDetails
         {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
+            Title = "Duplicate order reference",
+            Status = StatusCodes.Status409Conflict,
+            Detail = $"An order with reference '{request.Reference}' already exists."
+        }),
+        _ => throw new InvalidOperationException($"Unhandled order error {result.Error}")
+    };
 }
 ```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
+
+A minimal result type:
 
 ```csharp
-// Global Exception Handler Example 2
-public class GlobalExceptionHandler_2 : IExceptionHandler
+public enum OrderError { None, DuplicateReference, CustomerBlocked }
+
+public readonly record struct Result<T>(T? Value, OrderError Error)
 {
-    private readonly ILogger<GlobalExceptionHandler_2> _logger;
-
-    public GlobalExceptionHandler_2(ILogger<GlobalExceptionHandler_2> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
+    public bool IsSuccess => Error == OrderError.None;
+    public static Result<T> Ok(T value) => new(value, OrderError.None);
+    public static Result<T> Fail(OrderError error) => new(default, error);
 }
 ```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
+
+Libraries such as `ErrorOr`, `FluentResults` or `OneOf` provide richer versions; keep one approach per codebase.
+
+## Validation
+
+| Option | Notes |
+|--------|-------|
+| Built-in Minimal API validation (.NET 10) | `builder.Services.AddValidation()`; DataAnnotations on parameters and records; returns 400 ProblemDetails automatically |
+| Controllers with `[ApiController]` | Automatic 400 `ValidationProblemDetails` from model state |
+| FluentValidation | Rich rules; call validators explicitly or via an endpoint filter |
 
 ```csharp
-// Global Exception Handler Example 3
-public class GlobalExceptionHandler_3 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_3> _logger;
-
-    public GlobalExceptionHandler_3(ILogger<GlobalExceptionHandler_3> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
+public sealed record CreateOrderRequest(
+    [property: Required, StringLength(64)] string Reference,
+    [property: Range(1, 1000)] int Quantity);
 ```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
+
+## Mapping Domain Errors to HTTP
+
+| Situation | Status | Notes |
+|-----------|--------|-------|
+| Malformed input / validation | 400 | `ValidationProblem` with field errors |
+| Unauthenticated | 401 | Produced by authentication middleware |
+| Authenticated but not allowed | 403 | Do not reveal resource existence if sensitive (consider 404) |
+| Resource missing | 404 | |
+| Version conflict, duplicate | 409 | Include what conflicted |
+| Precondition failed (ETag mismatch) | 412 | With `If-Match` |
+| Business rule violation on valid input | 422 | Use consistently or stick to 400/409 |
+| Rate limited | 429 | `Retry-After` header; built-in rate limiter `RejectionStatusCode = 429` |
+| Downstream unavailable | 503 | `Retry-After` if known |
+
+## Logging Errors
+
+- Log once, at the boundary (global handler), not at every layer that rethrows.
+- Use message templates with named properties, not string interpolation: `logger.LogError(ex, "Failed to charge order {OrderId}", orderId)`.
+- Include correlation: trace ID in logs and in the ProblemDetails response so support can find the log entry.
+- High-volume paths: use the `[LoggerMessage]` source generator to avoid allocations.
+- Never log secrets, tokens or full request bodies with personal data.
 
 ```csharp
-// Global Exception Handler Example 4
-public class GlobalExceptionHandler_4 : IExceptionHandler
+public static partial class Log
 {
-    private readonly ILogger<GlobalExceptionHandler_4> _logger;
-
-    public GlobalExceptionHandler_4(ILogger<GlobalExceptionHandler_4> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Payment declined for order {OrderId} with code {Code}")]
+    public static partial void PaymentDeclined(ILogger logger, Guid orderId, string code);
 }
 ```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
 
-```csharp
-// Global Exception Handler Example 5
-public class GlobalExceptionHandler_5 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_5> _logger;
+## Exceptions in Background Work
 
-    public GlobalExceptionHandler_5(ILogger<GlobalExceptionHandler_5> logger)
-    {
-        _logger = logger;
-    }
+- `BackgroundService.ExecuteAsync` exceptions stop the service; since .NET 6 the default `BackgroundServiceExceptionBehavior.StopHost` also stops the host. Catch, log and decide per iteration whether to continue.
+- Always observe tasks (`await`); fire-and-forget tasks swallow exceptions.
+- Pass and honor `CancellationToken` so shutdown is clean.
 
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
+## Resilience vs Error Handling
 
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
+Transient errors from HTTP dependencies are handled by resilience pipelines (`Microsoft.Extensions.Http.Resilience` with `AddStandardResilienceHandler()`, built on Polly v8: retry with jitter, circuit breaker, timeouts) before they become exceptions in your handlers. Do not add another retry loop in business code on top.
 
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+## Checklist
 
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 6
-public class GlobalExceptionHandler_6 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_6> _logger;
-
-    public GlobalExceptionHandler_6(ILogger<GlobalExceptionHandler_6> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 7
-public class GlobalExceptionHandler_7 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_7> _logger;
-
-    public GlobalExceptionHandler_7(ILogger<GlobalExceptionHandler_7> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 8
-public class GlobalExceptionHandler_8 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_8> _logger;
-
-    public GlobalExceptionHandler_8(ILogger<GlobalExceptionHandler_8> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 9
-public class GlobalExceptionHandler_9 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_9> _logger;
-
-    public GlobalExceptionHandler_9(ILogger<GlobalExceptionHandler_9> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 10
-public class GlobalExceptionHandler_10 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_10> _logger;
-
-    public GlobalExceptionHandler_10(ILogger<GlobalExceptionHandler_10> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 11
-public class GlobalExceptionHandler_11 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_11> _logger;
-
-    public GlobalExceptionHandler_11(ILogger<GlobalExceptionHandler_11> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 12
-public class GlobalExceptionHandler_12 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_12> _logger;
-
-    public GlobalExceptionHandler_12(ILogger<GlobalExceptionHandler_12> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 13
-public class GlobalExceptionHandler_13 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_13> _logger;
-
-    public GlobalExceptionHandler_13(ILogger<GlobalExceptionHandler_13> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 14
-public class GlobalExceptionHandler_14 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_14> _logger;
-
-    public GlobalExceptionHandler_14(ILogger<GlobalExceptionHandler_14> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 15
-public class GlobalExceptionHandler_15 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_15> _logger;
-
-    public GlobalExceptionHandler_15(ILogger<GlobalExceptionHandler_15> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 16
-public class GlobalExceptionHandler_16 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_16> _logger;
-
-    public GlobalExceptionHandler_16(ILogger<GlobalExceptionHandler_16> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 17
-public class GlobalExceptionHandler_17 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_17> _logger;
-
-    public GlobalExceptionHandler_17(ILogger<GlobalExceptionHandler_17> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 18
-public class GlobalExceptionHandler_18 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_18> _logger;
-
-    public GlobalExceptionHandler_18(ILogger<GlobalExceptionHandler_18> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 19
-public class GlobalExceptionHandler_19 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_19> _logger;
-
-    public GlobalExceptionHandler_19(ILogger<GlobalExceptionHandler_19> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 20
-public class GlobalExceptionHandler_20 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_20> _logger;
-
-    public GlobalExceptionHandler_20(ILogger<GlobalExceptionHandler_20> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 21
-public class GlobalExceptionHandler_21 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_21> _logger;
-
-    public GlobalExceptionHandler_21(ILogger<GlobalExceptionHandler_21> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 22
-public class GlobalExceptionHandler_22 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_22> _logger;
-
-    public GlobalExceptionHandler_22(ILogger<GlobalExceptionHandler_22> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 23
-public class GlobalExceptionHandler_23 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_23> _logger;
-
-    public GlobalExceptionHandler_23(ILogger<GlobalExceptionHandler_23> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 24
-public class GlobalExceptionHandler_24 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_24> _logger;
-
-    public GlobalExceptionHandler_24(ILogger<GlobalExceptionHandler_24> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 25
-public class GlobalExceptionHandler_25 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_25> _logger;
-
-    public GlobalExceptionHandler_25(ILogger<GlobalExceptionHandler_25> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 26
-public class GlobalExceptionHandler_26 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_26> _logger;
-
-    public GlobalExceptionHandler_26(ILogger<GlobalExceptionHandler_26> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 27
-public class GlobalExceptionHandler_27 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_27> _logger;
-
-    public GlobalExceptionHandler_27(ILogger<GlobalExceptionHandler_27> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 28
-public class GlobalExceptionHandler_28 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_28> _logger;
-
-    public GlobalExceptionHandler_28(ILogger<GlobalExceptionHandler_28> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 29
-public class GlobalExceptionHandler_29 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_29> _logger;
-
-    public GlobalExceptionHandler_29(ILogger<GlobalExceptionHandler_29> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 30
-public class GlobalExceptionHandler_30 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_30> _logger;
-
-    public GlobalExceptionHandler_30(ILogger<GlobalExceptionHandler_30> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 31
-public class GlobalExceptionHandler_31 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_31> _logger;
-
-    public GlobalExceptionHandler_31(ILogger<GlobalExceptionHandler_31> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 32
-public class GlobalExceptionHandler_32 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_32> _logger;
-
-    public GlobalExceptionHandler_32(ILogger<GlobalExceptionHandler_32> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 33
-public class GlobalExceptionHandler_33 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_33> _logger;
-
-    public GlobalExceptionHandler_33(ILogger<GlobalExceptionHandler_33> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 34
-public class GlobalExceptionHandler_34 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_34> _logger;
-
-    public GlobalExceptionHandler_34(ILogger<GlobalExceptionHandler_34> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 35
-public class GlobalExceptionHandler_35 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_35> _logger;
-
-    public GlobalExceptionHandler_35(ILogger<GlobalExceptionHandler_35> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 36
-public class GlobalExceptionHandler_36 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_36> _logger;
-
-    public GlobalExceptionHandler_36(ILogger<GlobalExceptionHandler_36> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 37
-public class GlobalExceptionHandler_37 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_37> _logger;
-
-    public GlobalExceptionHandler_37(ILogger<GlobalExceptionHandler_37> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 38
-public class GlobalExceptionHandler_38 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_38> _logger;
-
-    public GlobalExceptionHandler_38(ILogger<GlobalExceptionHandler_38> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
-
-```csharp
-// Global Exception Handler Example 39
-public class GlobalExceptionHandler_39 : IExceptionHandler
-{
-    private readonly ILogger<GlobalExceptionHandler_39> _logger;
-
-    public GlobalExceptionHandler_39(ILogger<GlobalExceptionHandler_39> logger)
-    {
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(exception, "An unhandled exception occurred");
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Server Error",
-            Detail = exception.Message
-        };
-
-        httpContext.Response.StatusCode = problemDetails.Status.Value;
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-        return true;
-    }
-}
-```
-Consistent error formats such as Problem Details make it easier for clients to parse and understand errors returned by the API.
+- [ ] `AddProblemDetails` + `UseExceptionHandler` + one `IExceptionHandler`
+- [ ] Expected failures returned as typed results, not exceptions
+- [ ] Validation errors return 400 ValidationProblem with field details
+- [ ] No exception details or stack traces in production responses
+- [ ] Trace ID in responses and logs; structured log templates
+- [ ] Background services catch and log per iteration
+- [ ] Transient dependency failures handled by resilience handlers, once

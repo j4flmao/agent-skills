@@ -634,7 +634,6 @@ OpenAPI 3.x YAML/JSON specification, Spectral lint config, CI workflow YAML for 
   - references/design-first.md
   - references/documentation-tools.md
   - references/openapi-basics.md
-  - references/api-changelog-guide.md
 
 ## Handoff
 After completing this skill:

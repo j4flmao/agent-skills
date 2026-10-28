@@ -1,16 +1,16 @@
 # Skills Master Summary
 
-Generated: 2026-09-25
+Generated: 2026-10-27
 
 ## Totals
 
 | Metric | Count |
 |--------|-------|
 | Skills (SKILL.md) | 641 |
-| SKILL.md lines | 249,901 |
+| SKILL.md lines | 256,213 |
 | Reference files | 3,942 |
-| Reference lines | 1,678,927 |
-| Grand total lines | 1,928,828 |
+| Reference lines | 1,678,710 |
+| Grand total lines | 1,934,923 |
 
 ## Skills by Category
 
@@ -29,14 +29,13 @@ Generated: 2026-09-25
 | design | 7 |
 | desktop | 10 |
 | dev-loop | 12 |
-| devops | 69 |
+| devops | 70 |
 | ecommerce | 5 |
 | embedded-systems | 6 |
 | enterprise | 18 |
 | frontend | 60 |
 | fundamental-truths | 4 |
 | game | 29 |
-| devops | 70 |
 | hardware-acceleration | 11 |
 | harness-engineering | 2 |
 | languages | 14 |

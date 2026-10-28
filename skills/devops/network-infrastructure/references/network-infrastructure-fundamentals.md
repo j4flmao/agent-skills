@@ -1,213 +1,118 @@
 # Network Infrastructure Fundamentals
 
-## Overview
-Network Infrastructure is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Core networking knowledge for DevOps and infrastructure engineers: layering, IPv4/IPv6 addressing and subnetting, Ethernet and VLANs, routing protocols, NAT, DNS, MTU, load balancing, firewalls, and a troubleshooting toolkit. Data center fabric design is in `leaf-spine.md`; BGP and anycast in `bgp-anycast.md`; first-hop redundancy in `vrrp-hsrp.md`.
 
-## Core Concepts
+## Layers in Practice
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Network Infrastructure helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Layer | Examples | Typical failures |
+|-------|----------|------------------|
+| L1 physical | Optics, cables, link speed/duplex | CRC errors, flapping links, wrong optic type |
+| L2 data link | Ethernet, VLAN 802.1Q, LACP 802.3ad, STP | Loops, MAC flapping, VLAN mismatch |
+| L3 network | IPv4/IPv6, OSPF, BGP, ICMP | Missing routes, asymmetric routing, MTU black holes |
+| L4 transport | TCP, UDP, QUIC (over UDP) | Firewall state timeouts, port exhaustion |
+| L7 application | HTTP, DNS, TLS | Certificate errors, DNS misconfiguration |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Network Infrastructure solutions. These principles help maintain code quality and reduce technical debt.
+## IPv4 Addressing
 
-### Concept 3: Data Management
-Proper data management is essential for Network Infrastructure. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+| CIDR | Hosts (usable) | Mask |
+|------|----------------|------|
+| /32 | 1 (host route) | 255.255.255.255 |
+| /31 | 2 (point-to-point, RFC 3021) | 255.255.255.254 |
+| /30 | 2 | 255.255.255.252 |
+| /24 | 254 | 255.255.255.0 |
+| /22 | 1022 | 255.255.252.0 |
+| /16 | 65,534 | 255.255.0.0 |
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+Private ranges (RFC 1918): `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`. Shared address space for carrier-grade NAT: `100.64.0.0/10` (RFC 6598). Plan non-overlapping ranges across VPCs, offices and partners from the start; overlapping space blocks peering and VPNs later.
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+## IPv6 Essentials
 
-## Architecture Patterns
+- 128-bit addresses; typical allocation: /48 per site, /64 per subnet (SLAAC requires /64).
+- Link-local `fe80::/10` on every interface; unique local addresses `fd00::/8` for internal use; global unicast `2000::/3`.
+- Neighbor Discovery (NDP) replaces ARP; ICMPv6 must not be blocked wholesale (needed for NDP and Path MTU discovery).
+- Dual-stack is the common migration path; cloud providers support IPv6-only subnets with DNS64/NAT64 for IPv4 reachability.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Network Infrastructure follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+## Ethernet, VLANs and Link Aggregation
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+- VLANs segment broadcast domains; trunks carry multiple VLANs with 802.1Q tags; set native VLAN deliberately (or tag all).
+- LACP bonds multiple links for bandwidth and redundancy; hashing is per flow, so one flow never exceeds a single member link.
+- MLAG / vPC lets a server bond to two switches.
+- Spanning Tree prevents loops in L2 domains; modern data centers minimise L2 with routed (L3) designs and EVPN-VXLAN overlays.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+## Routing
 
-## Implementation Guide
+| Protocol | Type | Use |
+|----------|------|-----|
+| Static | Manual | Small edges, default routes |
+| OSPF | Link-state IGP | Campus and DC underlay; areas for scale |
+| IS-IS | Link-state IGP | Service provider and large DC underlays |
+| BGP | Path-vector EGP | Internet edge, DC fabrics (eBGP underlay), cloud interconnect, Kubernetes (Calico, Cilium BGP) |
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+Route selection: longest prefix match first, then administrative distance between protocols, then protocol metric. ECMP spreads flows over equal-cost paths.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+## NAT
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+| Type | Purpose |
+|------|---------|
+| SNAT / masquerade | Many private hosts share public IPs outbound |
+| DNAT / port forwarding | Expose internal service |
+| Cloud NAT gateway | Managed SNAT for private subnets |
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+NAT gateways have per-destination port limits; high-connection workloads can hit SNAT port exhaustion (symptoms: intermittent connection timeouts). Mitigate with more public IPs, connection reuse (keep-alive, pooling), or private endpoints.
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+## DNS
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+- Record types: A, AAAA, CNAME (not at zone apex; use provider ALIAS/ANAME), MX, TXT, SRV, NS, CAA, PTR.
+- TTLs control propagation speed; lower TTLs before migrations, raise afterwards.
+- Split-horizon DNS for internal vs external answers; private hosted zones in clouds.
+- Resolver failures cascade: run redundant resolvers, cache locally (NodeLocal DNSCache in Kubernetes), monitor SERVFAIL rates.
+- DNSSEC signs zones; CAA restricts which CAs may issue certificates.
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+## MTU
 
-## Best Practices
+- Ethernet default 1500 bytes; jumbo frames 9000 (9216 on many switches) inside data centers.
+- Encapsulation overhead: VXLAN adds 50 bytes, Geneve 50+ bytes, WireGuard about 60-80, IPsec varies.
+- Path MTU discovery needs ICMP "fragmentation needed" (IPv4) / "packet too big" (ICMPv6) to pass; blocking them creates black holes where small packets work and large transfers hang.
+- TCP MSS clamping on tunnel edges is a common fix.
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+## Load Balancing
 
-## Common Pitfalls
+| Type | Operates on | Examples | Notes |
+|------|-------------|----------|-------|
+| L4 | IP/port | AWS NLB, IPVS, MetalLB, Maglev-style | Fast, preserves client IP options, no HTTP awareness |
+| L7 | HTTP/gRPC | Envoy, NGINX, HAProxy, ALB | Routing by host/path/header, retries, TLS termination |
+| DNS/GSLB | Name resolution | Route 53, Cloudflare | Geographic/failover, limited by TTL caching |
+| Anycast | Routing | Same IP announced from many sites | See `bgp-anycast.md` |
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+Health checks should test real dependencies lightly (readiness), not just process liveness.
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+## Firewalls and Segmentation
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+- Stateful firewalls/security groups track connections; stateless ACLs need rules for both directions.
+- Default deny inbound; restrict east-west traffic with security groups, NetworkPolicies, or microsegmentation.
+- Document flows (source, destination, port, purpose) and review periodically.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## Troubleshooting Toolkit
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Network Infrastructure concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+```bash
+ip addr; ip route; ip -6 route; ip neigh              # interfaces, routes, ARP/NDP
+ping -M do -s 1472 10.0.0.1                           # test 1500 MTU path (IPv4, DF set)
+traceroute -T -p 443 example.com ; mtr -rwz example.com
+ss -tanp state established                            # sockets
+dig +trace example.com ; dig @10.0.0.2 api.internal AAAA
+curl -v --resolve api.example.com:443:203.0.113.10 https://api.example.com/health
+tcpdump -ni eth0 'host 10.0.1.5 and port 443'
+ethtool -S eth0 | grep -i err                         # NIC error counters
+```
+
+Method: confirm the layer (link up? IP reachable? port open? application responding?), test from both ends, compare working vs failing paths, and check recent changes.
+
+## Checklist
+
+- [ ] Non-overlapping IP plan across environments and partners; IPv6 strategy defined
+- [ ] Redundant links (LACP/MLAG) and gateways (VRRP or routed design)
+- [ ] MTU consistent end to end; ICMP needed for PMTUD allowed
+- [ ] Redundant DNS resolvers with monitoring
+- [ ] SNAT capacity monitored for egress-heavy workloads
+- [ ] Default-deny firewalling with documented flows
+- [ ] Troubleshooting runbook with the commands above

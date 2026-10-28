@@ -25,6 +25,26 @@ tags: [devops, cloud-migration, migration, phase-5]
 ## Purpose
 Plan and execute cloud migrations using the 7 Rs strategy framework, with tools, testing, cutover planning, and post-migration optimization.
 
+## Agent Protocol
+
+### Trigger
+"cloud migration", "migrate to cloud", "lift and shift", "rehost", "replatform", "7 Rs", "migration strategy", "AWS MGN", "Azure Migrate".
+
+### Input Context
+Application inventory, dependencies, data volumes, downtime tolerance, target cloud, licensing constraints.
+
+### Output Artifact
+Migration plan, wave schedule, cutover runbook. No file unless requested.
+
+### Response Format
+```
+Portfolio: {apps and chosen R (rehost|replatform|refactor|repurchase|relocate|retain|retire)}
+Waves: {wave -> apps}
+Tooling: {MGN|DMS|Azure Migrate|...}
+Cutover: {strategy, downtime window, rollback}
+Risks: {...}
+```
+
 ## Architecture Decision Trees
 
 ### 7 Rs Migration Strategies
@@ -572,7 +592,6 @@ Testing only the first wave thoroughly. Each wave may have unique dependencies â
   - references/migration-testing.md
   - references/migration-tools.md
   - references/post-migration-optimization.md
-  - references/cutover-checklist.md
 
 ## Handoff
 Next: **database-migration** â€” detailed DB migration strategies.

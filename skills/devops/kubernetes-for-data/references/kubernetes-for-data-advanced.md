@@ -1,214 +1,148 @@
-# Kubernetes For Data Advanced Topics
+# Kubernetes for Data Workloads: Advanced Scheduling, Multi-Tenancy, Autoscaling and Cost
+
+Advanced patterns for platforms running many teams' data and ML jobs on shared clusters: batch queueing and gang scheduling with Kueue/Volcano/YuniKorn, quotas and fair sharing, node autoscaling with Karpenter or Cluster Autoscaler, spot strategies, Spark and Flink operator specifics, and cost attribution.
+
+## Why the Default Scheduler Is Not Enough
+
+The default scheduler places pods one at a time. Data jobs need:
+- Gang scheduling: start all pods of a job or none, avoiding partial allocations that deadlock (two half-started Spark jobs each waiting for more executors).
+- Queueing and admission: hold jobs until quota is available instead of creating pending pods that trigger runaway autoscaling.
+- Fair sharing and borrowing between teams.
+
+## Batch Schedulers
+
+| Project | Model | Notes |
+|---------|-------|-------|
+| Kueue (Kubernetes SIG) | Admission controller over the default scheduler; ClusterQueues, LocalQueues, ResourceFlavors, cohorts for borrowing | Integrates with Job, JobSet, RayJob/RayCluster, Spark (via pod groups), Kubeflow trainers, plain pods |
+| Volcano (CNCF) | Replacement scheduler with PodGroups, queues, gang scheduling | Popular for Spark/MPI/AI |
+| Apache YuniKorn | Scheduler with hierarchical queues, gang scheduling | Common with Spark on K8s |
+
+Kueue example:
+
+```yaml
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ResourceFlavor
+metadata: { name: spot-cpu }
+spec:
+  nodeLabels: { karpenter.sh/capacity-type: spot }
+---
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ClusterQueue
+metadata: { name: analytics }
+spec:
+  cohort: data-platform
+  namespaceSelector: {}
+  resourceGroups:
+    - coveredResources: ["cpu", "memory"]
+      flavors:
+        - name: spot-cpu
+          resources:
+            - { name: cpu, nominalQuota: 400, borrowingLimit: 200 }
+            - { name: memory, nominalQuota: 1600Gi, borrowingLimit: 800Gi }
+  preemption:
+    reclaimWithinCohort: Any
+    withinClusterQueue: LowerPriority
+---
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: LocalQueue
+metadata: { name: team-a, namespace: team-a }
+spec: { clusterQueue: analytics }
+```
+
+Jobs opt in with the label `kueue.x-k8s.io/queue-name: team-a` (and are created suspended until admitted). Check the API version for your Kueue release.
+
+## Multi-Tenancy
+
+| Control | Purpose |
+|---------|---------|
+| Namespace per team/environment | Isolation boundary for RBAC, quotas, network policies |
+| `ResourceQuota` + queue quotas | Caps on aggregate consumption |
+| `LimitRange` | Defaults so pods without requests do not run unbounded |
+| NetworkPolicies | Restrict access to data stores and between teams |
+| Pod Security Admission (`restricted`) | Non-root, no privilege escalation |
+| Separate service accounts with workload identity | Per-team data access |
+
+## Node Autoscaling
+
+| Tool | Approach |
+|------|----------|
+| Cluster Autoscaler | Scales predefined node groups |
+| Karpenter (AWS GA, Azure via AKS node autoprovisioning) | Provisions right-sized nodes per pending pod requirements; consolidation |
+
+Karpenter NodePool (v1 API):
+
+```yaml
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata: { name: batch-spot }
+spec:
+  template:
+    spec:
+      requirements:
+        - { key: karpenter.sh/capacity-type, operator: In, values: [spot] }
+        - { key: kubernetes.io/arch, operator: In, values: [amd64, arm64] }
+        - { key: karpenter.k8s.aws/instance-category, operator: In, values: [c, m, r] }
+      taints:
+        - { key: workload, value: batch, effect: NoSchedule }
+      nodeClassRef: { group: karpenter.k8s.aws, kind: EC2NodeClass, name: batch }
+  limits: { cpu: "2000" }
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 5m
+```
+
+Long-running batch pods can be protected from voluntary consolidation with the annotation `karpenter.sh/do-not-disrupt: "true"`.
+
+Interaction with queueing: with Kueue admission, only admitted jobs create pods, so autoscalers scale for work that is allowed to run.
+
+## Spot Strategy
+
+- Diversify instance types and zones to reduce simultaneous interruptions.
+- Keep drivers, coordinators, Airflow schedulers, Flink JobManagers on on-demand nodes.
+- Use frameworks' resilience: Spark executor decommissioning, remote shuffle services, Flink checkpoints, Ray task retries.
+- Handle interruption notices (AWS Node Termination Handler or Karpenter's native interruption handling).
 
-## Introduction
-Advanced Kubernetes For Data topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+## Spark on Kubernetes
 
-## Advanced Architecture Patterns
+- Submit via the Kubeflow Spark Operator (`SparkApplication` CRD) or `spark-submit --master k8s://...`.
+- Enable dynamic allocation with shuffle tracking (`spark.dynamicAllocation.shuffleTracking.enabled=true`) or a remote shuffle service.
+- Pod templates for tolerations, node selectors, sidecars.
+- Executor local dirs on NVMe-backed volumes (`spark.kubernetes.executor.volumes...` with names prefixed `spark-local-dir-`).
+- Run a Spark History Server reading event logs from object storage.
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+## Flink on Kubernetes
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+- Flink Kubernetes Operator `FlinkDeployment` (application mode) with checkpoints/savepoints in object storage.
+- Upgrade mode `savepoint` or `last-state` for stateful upgrades.
+- Kubernetes HA services for JobManager leader election.
+- Autoscaler in the operator can tune parallelism based on backlog/throughput.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+## GPU Workloads
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+- NVIDIA GPU Operator for drivers, device plugin, DCGM exporter.
+- Time-slicing or MIG to share GPUs for small jobs; whole GPUs for training.
+- Dynamic Resource Allocation (DRA) is maturing for more flexible device requests; check your Kubernetes version and driver support.
+- See `gpu-computing.md` and `gpu-storage-k8s.md` for depth.
 
-## Performance Optimization
+## Cost Attribution
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+- Label every workload with `team`, `pipeline`, `cost-center`; enforce with admission policy (Kyverno/Gatekeeper).
+- Use OpenCost/Kubecost or cloud cost allocation to report cost per namespace/label.
+- Track request vs actual usage; oversized requests waste nodes.
+- Report cost per pipeline run and per TB processed to owners.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+## Reliability
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+- PodDisruptionBudgets for stateful services (Kafka, databases), not for batch executors.
+- Priority classes: system > streaming > scheduled batch > ad hoc.
+- Separate clusters or node pools for latency-sensitive streaming vs bursty batch to avoid noisy neighbors.
 
-## Security Hardening
+## Checklist
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Queue/admission (Kueue/Volcano/YuniKorn) with gang semantics
+- [ ] Team quotas with borrowing and preemption rules
+- [ ] Autoscaler tied to admitted work; limits on node pools
+- [ ] Spot for workers, on-demand for coordinators
+- [ ] Spark/Flink configured for preemption resilience
+- [ ] Mandatory cost labels and per-team cost reports
+- [ ] Priority classes and isolation between streaming and batch

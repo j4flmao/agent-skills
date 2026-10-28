@@ -361,7 +361,7 @@ if (!allowTraffic) {
 ### Step 5: Traffic Mirroring (Shadow Deployment)
 
 ```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
   name: app-mirror
@@ -383,7 +383,7 @@ spec:
       # mirrorPercentage:
       #   value: 10.0
 ---
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
   name: app-destination
@@ -578,10 +578,6 @@ groups:
 - references/progressive-delivery-advanced.md — Progressive Delivery Advanced Topics
 - references/progressive-delivery-fundamentals.md — Progressive Delivery Fundamentals
 - references/traffic-mirroring.md — Traffic Mirroring / Shadowing
-- references/feature-flag-patterns.md — Feature Flag Design Patterns
-- references/rollback-strategies.md — Automated Rollback Strategies
-- references/canary-metrics.md — Canary Metrics and Thresholds
-- references/flagger-metrics.md — Flagger Metric Templates and Alerting
 
 ## Handoff
 Related skills: gitops-advanced (ArgoCD + Rollouts integration), service-mesh (Istio traffic management), sre-practices (SLO-based canary promotion), platform-engineering (IDP deployment templates), cicd-pipeline (CI/CD + deployment pipeline).

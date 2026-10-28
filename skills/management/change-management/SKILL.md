@@ -380,7 +380,7 @@ kotter_timeline:
     deliverable: Change embedded, transition to BAU
 ```
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: Enterprise SaaS — CRM Migration
 A 2000-person company migrated from Salesforce to a custom CRM. ADKAR assessment revealed high Knowledge and Ability gaps among sales teams who had used Salesforce for 10+ years. The change team built a 12-week training program with sandbox environment, created a sales champion network, and provided 1:1 coaching for low-adoption reps. Adoption reached 90% by week 16. Key success factor: executive sponsor joined sales calls to model the new system.

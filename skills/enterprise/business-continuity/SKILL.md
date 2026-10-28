@@ -466,7 +466,7 @@ Every drill succeeds because everyone knows the scenario in advance and prepares
 ### Anti-Pattern 5: BCP Written for the Last Disaster
 Plans reflect the last outage rather than anticipating future threats. If the last disaster was a cloud region failure, the plan focuses on multi-region. Meanwhile, a ransomware or supply-chain attack would bypass those defenses. Use threat modeling to identify current risks, not historical ones.
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: Regional Cloud Outage Survival
 A mid-stage SaaS company with active-active multi-region architecture survived a 6-hour AWS us-east-1 outage with zero revenue impact. Key factors: all Tier-1 services deployed in us-west-2 and eu-west-1 with traffic routing via Route53 health checks. Database was multi-region with asynchronous replication. Failover was fully automated. The BCP called for a quarterly failover drill, which had been executed 3 weeks before the actual outage.

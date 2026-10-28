@@ -14,7 +14,7 @@ HNSW builds a multi-layered graph (similar to a Skip List).
 2. It drops down one layer, doing finer hops.
 3. It keeps dropping down until it reaches Layer 0, performing a localized, highly accurate search.
 
-- **Pros**: Blazing fast (`O(log N)` complexity). Extremely high recall (99%+ accuracy).
+- **Pros**: Fast (search cost grows roughly logarithmically with N in practice). High recall (often 95-99%+ with tuned `ef_search`; measure on your data).
 - **Cons**: Massive memory footprint. The graph edges consume significant RAM, often requiring instances with 128GB+ RAM for large datasets.
 
 ## 2. IVF-PQ (Inverted File Index + Product Quantization)
@@ -33,5 +33,5 @@ IVF-PQ tackles the memory problem by heavily compressing the vectors.
 - **Cons**: Lower recall accuracy than HNSW. Finding the optimal PQ codebook requires a training phase on your specific data distribution before inserting.
 
 ## 3. Which one to choose?
-- Use **HNSW** (Default in pgvector, Qdrant) if you have < 100 million vectors, plenty of RAM, and need maximum accuracy for RAG.
+- Use **HNSW** (Qdrant's index; the usual choice in pgvector, which also offers IVFFlat) if you have < 100 million vectors, plenty of RAM, and need maximum accuracy for RAG.
 - Use **IVF-PQ** (Milvus, Faiss) if you are building web-scale search (1 Billion+ vectors) and infrastructure costs are the primary concern.

@@ -1,10 +1,7 @@
 ---
 name: typescript
 description: >
-  Use this skill when the user asks about TypeScript build tools, tsconfig,
-  module resolution, type system, advanced types, generics, testing, or
-  production deployment. Focus on tooling, type system, and ecosystem — not
-  syntax basics.
+  Use this skill when the user says 'typescript', 'tsconfig', 'module resolution', 'ESM vs CJS', 'generics', 'conditional types', 'type narrowing', 'zod', 'tsc is slow', 'type-safe API'. Covers TypeScript compiler configuration, the type system, runtime validation at boundaries and build tooling. Do NOT use for: React/Next.js component architecture (use frontend skills), NestJS/Node backends (use backend/nodejs or backend/nestjs).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -31,6 +28,17 @@ Keywords: `typescript build`, `tsconfig`, `module resolution`, `tsc`, `esbuild`,
 - Module system (ESM, CJS, both)
 - Bundler (tsc, esbuild, webpack, tsup, rollup)
 - Runtime (Node.js, Deno, Bun, browser)
+
+### Output Artifact
+Types, `tsconfig.json` changes, or refactored code. No file unless requested.
+
+### Response Format
+```
+TS: {5.x}  Module: {nodenext|bundler}
+Change: {what and why}
+Code: {snippet}
+Verify: tsc --noEmit && {test runner}
+```
 
 ## Decision Trees
 
@@ -413,21 +421,20 @@ Type of application state?
 - **Mixing `default` and named exports**: Causes import confusion. Stick to named exports exclusively for better tree-shaking.
 - **Large barrel files (`index.ts`)**: Re-exporting everything creates circular import risks and slows down type checking.
 - **`enum` with computed values**: Loses type safety. Define with string literals: `type Status = "active" | "inactive"`.
-- **`typeof` checks on runtime values**: TypeScript types are erased. Use Zod `.safeParse()` or user-defined type guards.
+- **Trusting static types at I/O boundaries**: types are erased at runtime, so JSON from the network is `unknown` until validated. Use Zod `.safeParse()` or a user-defined type guard.
 - **Ignoring `strictNullChecks`**: The single most impactful setting. Without it, `null` and `undefined` pass through silently.
 - **`as any` escape hatch**: Propagates silently through your type system. Use `satisfies` or `@ts-expect-error` with intent.
 - **Not using `declarationMap`**: Consumers of your library can't "Go to Definition" into source. Always include `.d.ts.map`.
 
 ### Performance Optimization (Expanded)
 
-- **Bundle size**: Use `tsup` for tree-shaking — `tsup --treeshake` removes unused exports. Analyze with `bundle-buddy` or `analyze`.
+- **Bundle size**: let the bundler (Vite/Rollup/esbuild/tsup) tree-shake ES modules; inspect output with `rollup-plugin-visualizer` or `source-map-explorer`.
 - **Type checking speed**: Use `tsc --noEmit` exclusively for type checking (not for compilation). `--incremental` caches `.tsbuildinfo`.
-- **`skipLibCheck: true`**: Library type resolution takes 60%+ of total type checking time. Keep enabled for app projects.
+- **`skipLibCheck: true`**: skips checking `.d.ts` files, often a large share of check time in apps; use `tsc --extendedDiagnostics` / `--generateTrace` to see where time goes.
 - **`isolatedModules: true`**: Required for esbuild/Vite transpilation. Ensures each file is independently transformable.
-- **`verbatimModuleSyntax`** (TS 5.0+): Prevents type-only imports without `type` prefix — ensures they're elided at runtime.
-- **`noEmit: true` + `tsc --noEmit`**: Use `tsc` only for type checking, let bundler handle emit. Faster than `tsc` for both.
+- **`verbatimModuleSyntax`** (TS 5.0+): imports/exports are emitted as written; type-only imports must use `import type`, so single-file transpilers never keep or drop the wrong import.
 - **`const` assertions**: `"hello" as const` gives literal type `"hello"` (not `string`). Use for discriminant values, config objects.
-- **`declare` for ambient types**: Declare module augmentations, global types, `declare module "*.module.css"`. Reduces type-checking load.
+- **Project references (`composite: true`, `tsc -b`)**: split large monorepos so only changed projects are rechecked.
 
 ### Code Examples — Type-Safe Event Bus
 ```typescript

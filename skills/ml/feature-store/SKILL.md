@@ -128,61 +128,59 @@ feature_repo/
 ### Step 3: Configure Entities and Sources
 ```python
 # entities.py
-from feast import Entity
+from feast import Entity, ValueType
 
 driver = Entity(
-    name="driver_id",
+    name="driver",
+    join_keys=["driver_id"],
     description="Driver identifier",
     value_type=ValueType.INT64,
 )
 
 # data_sources.py
-from feast import FileSource
+from feast import FileSource, PushSource
 
 driver_stats_source = FileSource(
     path="/data/features/driver_stats.parquet",
-    event_timestamp_column="event_timestamp",
+    timestamp_field="event_timestamp",
     created_timestamp_column="created",
 )
+
+# Push source: streaming pipelines (Flink/Spark/Kafka consumers) push fresh rows
+driver_trips_push = PushSource(name="driver_trips_push", batch_source=driver_stats_source)
 ```
 
 ### Step 4: Define Feature Views
 ```python
 # feature_views.py
-from feast import FeatureView, Feature
 from datetime import timedelta
+
+from feast import FeatureView, Field
+from feast.types import Float32, Int32, Int64
 
 driver_stats_fv = FeatureView(
     name="driver_stats",
-    entities=["driver_id"],
+    entities=[driver],
     ttl=timedelta(days=7),
-    features=[
-        Feature(name="avg_daily_trips", dtype=ValueType.FLOAT),
-        Feature(name="avg_rating", dtype=ValueType.FLOAT),
-        Feature(name="lifetime_trips", dtype=ValueType.INT64),
+    schema=[
+        Field(name="avg_daily_trips", dtype=Float32),
+        Field(name="avg_rating", dtype=Float32),
+        Field(name="lifetime_trips", dtype=Int64),
     ],
     online=True,
-    input=driver_stats_source,
+    source=driver_stats_source,
 )
 
-# Streaming feature view
-from feast import StreamFeatureView
-from feast.data_format import AvroFormat
-
-driver_stream_fv = StreamFeatureView(
-    name="driver_stats_streaming",
-    entities=["driver_id"],
+# Near-real-time feature view fed by the push source
+driver_recent_fv = FeatureView(
+    name="driver_recent_trips",
+    entities=[driver],
     ttl=timedelta(hours=1),
-    features=[
-        Feature(name="trips_last_hour", dtype=ValueType.INT32),
-    ],
+    schema=[Field(name="trips_last_hour", dtype=Int32)],
     online=True,
-    source=KafkaSource(
-        kafka_bootstrap_servers="broker:9092",
-        message_format=AvroFormat(schema_registry_url="registry:8081"),
-        topic="driver-trips",
-    ),
+    source=driver_trips_push,
 )
+# producer side: store.push("driver_trips_push", df_with_driver_id_and_event_timestamp)
 ```
 
 ### Step 5: Point-in-Time Join
@@ -217,9 +215,8 @@ store.materialize_incremental(end_date=datetime.now())
 
 ### Step 7: Feature Validation
 ```python
-from feast import Feature
-from feast.infra.offline_stores.bigquery_source import BigQuerySource
-from great_expectations.core import ExpectationSuite
+import pandas as pd
+from feast import FeatureStore
 
 def define_validation_rules():
     return {
@@ -238,20 +235,23 @@ def define_validation_rules():
         },
     }
 
-def validate_features(store, feature_view_name):
-    """Run validation rules against feature view."""
+def validate_features(store: FeatureStore, feature_view_name: str, entity_df: pd.DataFrame) -> None:
+    """Run validation rules against a sample of historical features."""
     fv = store.get_feature_view(feature_view_name)
-    df = store._get_offline_features(
-        feature_view=fv,
-        entity_df=entity_df,
-    )
-    rules = define_validation_rules()
-    for feature_name, rule in rules.items():
-        if feature_name in df.columns:
-            null_pct = df[feature_name].isnull().mean()
-            assert null_pct < rule["null_ratio"], \
-                f"{feature_name}: null ratio {null_pct:.2%} > {rule['null_ratio']:.0%}"
-    print("Validation passed")
+    refs = [f"{feature_view_name}:{f.name}" for f in fv.features]
+    df = store.get_historical_features(entity_df=entity_df, features=refs).to_df()
+    failures = []
+    for feature_name, rule in define_validation_rules().items():
+        if feature_name not in df.columns:
+            continue
+        null_pct = df[feature_name].isnull().mean()
+        if null_pct > rule["null_ratio"]:
+            failures.append(f"{feature_name}: null ratio {null_pct:.2%} > {rule['null_ratio']:.0%}")
+        col = df[feature_name].dropna()
+        if len(col) and (col.min() < rule["min"] or col.max() > rule["max"]):
+            failures.append(f"{feature_name}: values outside [{rule['min']}, {rule['max']}]")
+    if failures:
+        raise ValueError(f"Feature validation failed for {feature_view_name}: {failures}")
 ```
 
 ## Anti-Patterns
@@ -489,7 +489,7 @@ For model training with feature store integration, hand off to `ml-ml-pipeline`.
 ## Implementation Patterns
 
 ### Feast Feature Definition
-`python
+```python
 from datetime import timedelta
 from feast import Entity, FeatureView, Field, FileSource, ValueType
 from feast.types import Float32, Int64, String
@@ -518,10 +518,10 @@ transaction_features = FeatureView(
     ],
     source=customer_transactions,
 )
-`
+```
 
 ### Feature Serving API
-`python
+```python
 from feast import FeatureStore
 import pandas as pd
 
@@ -545,7 +545,7 @@ training_df = store.get_historical_features(
         "customer_profile_features:segment",
     ],
 ).to_df()
-`
+```
 
 ## Performance Optimization
 

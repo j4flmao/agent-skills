@@ -443,10 +443,6 @@ resource "oci_monitoring_alarm" "cpu_high" {
 - Ignoring OCI announcements service — unplanned maintenance surprises.
 
 ## References
-  - references/oci-compute.md — OCI Compute and Shapes
-  - references/oci-networking.md — VCN, Subnets, Security Lists, DRG
-  - references/oci-storage.md — Object Storage, Block Volume, File Storage
-  - references/oci-oke.md — OKE Cluster and Node Pool Management
   - references/oracle-cloud-advanced.md — Oracle Cloud Advanced Topics
   - references/oracle-cloud-fundamentals.md — Oracle Cloud Fundamentals
 ## Handoff

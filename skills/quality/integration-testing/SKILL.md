@@ -94,7 +94,7 @@ Is state isolation critical?
 └── NO → Data cleanup between tests (truncation)
 
 Does CI support Docker?
-├── YES → TestContainers with DinD
+├── YES → Testcontainers against the runner's Docker daemon (GitHub-hosted Linux runners have Docker)
 └── NO → Embedded services or mocked infrastructure
 ```
 
@@ -223,16 +223,24 @@ class OrderServiceIntegrationTest {
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Container
-    static WireMockContainer wiremock = new WireMockContainer("wiremock/wiremock:3.5.4");
+    static WireMockContainer wiremock = new WireMockContainer("wiremock/wiremock:3.5.4"); // org.wiremock.integrations.testcontainers
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("payment.service.url", () -> "http://" + wiremock.getHost() + ":" + wiremock.getMappedPort(8080));
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("payment.service.url", wiremock::getBaseUrl);
     }
 
     @Autowired
     private OrderService orderService;
+
+    @BeforeEach
+    void pointWireMockClientAtContainer() {
+        // static stubFor(...) talks to localhost:8080 unless configured
+        WireMock.configureFor(wiremock.getHost(), wiremock.getPort());
+    }
 
     @Test
     void shouldCreateOrderWhenPaymentSucceeds() {
@@ -240,7 +248,9 @@ class OrderServiceIntegrationTest {
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader("Content-Type", "application/json")
-                .withBody(""{"id": "pay_123", "status": "confirmed"}"")));
+                .withBody("""
+                    {"id": "pay_123", "status": "confirmed"}
+                    """)));
 
         Order order = orderService.placeOrder(customerId, cartItems);
         assertThat(order.getStatus()).isEqualTo("CONFIRMED");
@@ -251,49 +261,48 @@ class OrderServiceIntegrationTest {
 
 ### TypeScript + TestContainers — Message Queue Integration Test
 ```typescript
-import { GenericContainer } from "testcontainers";
-import { Kafka } from "kafkajs";
+import { KafkaContainer, type StartedKafkaContainer } from "@testcontainers/kafka";
+import { Kafka, type Consumer } from "kafkajs";
+import { OrderEventPublisher } from "../src/order-event-publisher";
 
 describe("Order Event Publisher", () => {
-  let kafkaContainer: StartedTestContainer;
+  let container: StartedKafkaContainer;
   let kafka: Kafka;
+  let consumer: Consumer;
 
   beforeAll(async () => {
-    kafkaContainer = await new GenericContainer("confluentinc/cp-kafka:7.6.0")
-      .withExposedPorts(9093)
-      .withEnvironment({
-        KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9093",
-      })
-      .start();
+    container = await new KafkaContainer("confluentinc/cp-kafka:7.6.0").start();
     kafka = new Kafka({
       clientId: "test",
-      brokers: [`localhost:${kafkaContainer.getMappedPort(9093)}`],
+      brokers: [`${container.getHost()}:${container.getMappedPort(9093)}`],
     });
-  }, 120000);
+  }, 120_000);
 
   afterAll(async () => {
-    await kafkaContainer.stop();
+    await consumer?.disconnect();
+    await container.stop();
   });
 
-  it("should publish order created event", async () => {
-    const producer = kafka.producer();
-    const consumer = kafka.consumer({ groupId: "test" });
-    await producer.connect();
+  it("publishes an order-created event", async () => {
+    consumer = kafka.consumer({ groupId: `test-${Date.now()}` });
     await consumer.connect();
-    await consumer.subscribe({ topic: "order-events" });
+    await consumer.subscribe({ topic: "order-events", fromBeginning: true });
 
-    const messages: any[] = [];
-    await consumer.run({
-      eachMessage: async ({ message }) => {
-        messages.push(JSON.parse(message.value!.toString()));
-      },
+    const received = new Promise<Record<string, unknown>>((resolve) => {
+      void consumer.run({
+        eachMessage: async ({ message }) => resolve(JSON.parse(message.value!.toString())),
+      });
     });
 
+    const publisher = new OrderEventPublisher(kafka.producer());
     await publisher.publishOrderCreated({ orderId: "ord_123" });
-    await new Promise((r) => setTimeout(r, 1000));
 
-    expect(messages.length).toBe(1);
-    expect(messages[0].orderId).toBe("ord_123");
+    // Wait for the actual message instead of sleeping a fixed time
+    const event = await Promise.race([
+      received,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("No order-created event within 10s")), 10_000)),
+    ]);
+    expect(event.orderId).toBe("ord_123");
   });
 });
 ```
@@ -325,7 +334,6 @@ jobs:
         run: npx vitest run --config vitest.integration.config.ts --shard=${{ matrix.shard }}/2
         env:
           CI: true
-          TESTCONTAINERS_RYUK_DISABLED: true
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -411,130 +419,6 @@ After integration testing, hand off to:
 - `quality-contract-testing` — for formal contract verification between services
 - `quality-regression-testing` — for regression suite updates
 - `quality-smoke-testing` — for BVT smoke test inclusion
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
-## Rules
-- Default-deny security posture — allow only explicitly required access.
-- All inputs validated, all outputs encoded, all errors handled.
-- Defend in depth — multiple layers of security controls.
-- Fail securely — errors default to safe behavior.
-- Log security-relevant events for audit and investigation.
-- Keep dependencies updated — automate vulnerability scanning.
-- Design for observability from day one, not as an afterthought.
-- Document all architectural decisions with rationale.
-- Review code for security, performance, and correctness before merging.
 ## Architecture Decision Trees
 
 ### Integration Test Scope

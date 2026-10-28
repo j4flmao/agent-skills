@@ -483,8 +483,6 @@ dbt: transformation layer (SELECT statements). Airflow: orchestration layer (DAG
 - references/data-testing.md -- Data Testing
 - references/data-contracts-ops.md -- Data Contracts Operations
 - references/data-observability.md -- DataOps Observability
-- references/dataops-pipeline-orchestration.md -- Pipeline Orchestration
-- references/dataops-data-quality-monitoring.md -- Data Quality Monitoring
 
 ## Handoff
 For data warehouse schema design, hand off to data-warehouse. For data pipeline ETL, hand off to etl-pipeline. For quality monitoring, hand off to data-quality.

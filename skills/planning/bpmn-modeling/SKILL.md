@@ -113,7 +113,7 @@ Process exists and is documented?
 | Subprocess | Rounded rectangle with + | Compound activity with internal flow | Process payment |
 | Exclusive Gateway | Diamond with X | XOR split/merge, one path taken | If credit check passes |
 | Parallel Gateway | Diamond with + | AND split/merge, all paths taken | Notify warehouse + billing |
-| Event-Based Gateway | Diamond with double circle | React to first occurring event | Wait for payment or timeout |
+| Event-Based Gateway | Diamond with a pentagon inside a double circle | React to first occurring event | Wait for payment or timeout |
 | Inclusive Gateway | Diamond with O | OR split/merge, one or more paths | Ship partial or full order |
 
 ### Connecting Objects
@@ -216,25 +216,28 @@ Process takes the first path whose event fires. Used for timeouts, external trig
 ### Decision Table Structure
 ```
 Decision: Approve Loan
-Hit Policy: UNIQUE (only one rule matches)
+Hit Policy: FIRST (rules evaluated top to bottom; first match wins)
 
-| Credit Score | Income > $50K | Employment | Decision | Reason |
-|--------------|---------------|------------|----------|--------|
-| > 700        | YES           | > 2 years  | Approve  | Low risk |
-| 600-700      | YES           | > 2 years  | Review   | Medium risk |
-| < 600        | —             | —          | Reject   | High risk |
-| —            | NO            | —          | Reject   | Insufficient income |
+| # | Credit Score | Income > $50K | Employment | Decision | Reason |
+|---|--------------|---------------|------------|----------|--------|
+| 1 | < 600        | -             | -          | Reject   | High risk |
+| 2 | -            | NO            | -          | Reject   | Insufficient income |
+| 3 | > 700        | YES           | > 2 years  | Approve  | Low risk |
+| 4 | [600..700]   | YES           | > 2 years  | Review   | Medium risk |
+| 5 | -            | -             | -          | Review   | Catch-all: no rule above matched |
 ```
+`-` means "any value". With UNIQUE, rules 1 and 2 would overlap (score < 600 and income NO) and the table would be invalid; either make rules mutually exclusive or use FIRST/PRIORITY deliberately. Always include a catch-all row so every input produces an output.
 
-### Hit Policies
-| Policy | Behavior | Use Case |
-|--------|----------|----------|
-| UNIQUE | Exactly one rule matches | Most business rules |
-| FIRST | First matching rule in order | Prioritized rules |
-| ANY | All matching rules have same output | Consistent classifications |
-| COLLECT | Aggregate matching rules | Multiple outputs |
-| RULE ORDER | First matching, priority by position | Sequential logic |
-| OUTPUT ORDER | Collect and sort outputs | Ranked results |
+### Hit Policies (DMN 1.x)
+| Policy | Type | Behavior | Use Case |
+|--------|------|----------|----------|
+| UNIQUE (U) | Single | Rules must not overlap; at most one matches | Default for well-partitioned rules |
+| ANY (A) | Single | Several may match but must all give the same output | Overlapping rules with consistent result |
+| PRIORITY (P) | Single | Several may match; output with highest priority (order of output values) wins | Risk levels, severity |
+| FIRST (F) | Single | First matching rule in table order wins | Prioritized rules, exception-first tables |
+| COLLECT (C) | Multiple | All matching outputs; optional aggregator SUM (+), MIN (<), MAX (>), COUNT (#) | Scoring, list of applicable fees |
+| RULE ORDER (R) | Multiple | All matching outputs, in rule order | Ordered list of actions |
+| OUTPUT ORDER (O) | Multiple | All matching outputs, sorted by output-value priority | Ranked results |
 
 ## Common Anti-Patterns
 
@@ -242,7 +245,7 @@ Hit Policy: UNIQUE (only one rule matches)
 Showing technical implementation details to business stakeholders (L5 diagram for L1 audience). Fix: match level to audience. Create separate views for different stakeholders.
 
 ### 2. Unbalanced Gateways
-Opening with a parallel gateway but closing with an exclusive gateway. Fix: every split must have a corresponding merge of the same type.
+Opening with a parallel gateway but closing with an exclusive gateway. Fix: as a modeling convention, close each split with a merge of the same type (a parallel split merged by an exclusive gateway never synchronizes; an exclusive split merged by a parallel join deadlocks).
 
 ### 3. Magic Wand Automation
 Modeling automation for activities that require human judgment, unstructured data, or subjective decisions. Fix: DMN tables only work for deterministic rules. If a decision requires judgment, it's a user task.
@@ -257,21 +260,23 @@ Putting an entire enterprise process on a single diagram. Overwhelming and unrea
 Using lanes for systems within a company pool when they should be separate pools with message flows. Fix: separate pools for autonomous participants. Lanes for departments within the same organization.
 
 ### 7. No Start or End Events
-Processes that start in the middle or never terminate. Fix: every process must have exactly one start event and one or more end events.
+Processes that start in the middle or never terminate. Fix: give every process explicit start and end events — usually one start event per trigger type (message, timer, none) and one end event per distinct outcome.
 
 ### 8. Over-Complex Gateway Logic
 Chaining 5+ exclusive gateways in sequence makes the diagram unreadable. Fix: extract complex decision logic into DMN tables. Use business rule tasks instead of gateways.
 
 ## Automation Platform Comparison
 
-| Platform | BPMN 2.0 Support | DMN | Language | Deployment | Cost |
-|----------|-----------------|-----|-----------|------------|------|
-| Camunda 8 | Full | Yes | Java, JS, Go | SaaS/Self-hosted | Free + Enterprise |
-| Flowable | Full | Yes | Java, Spring | Self-hosted | Free + Enterprise |
-| Temporal | Workflow engine | No | Java, Go, TS, Python | Self-hosted/SaaS | Free + Cloud |
-| Zeebe (Camunda) | Full | Yes | Java, Go, JS | SaaS/Orchestration | Included in Camunda 8 |
-| jBPM | Full | Yes | Java | Self-hosted | Open source |
-| IBM BPM | Full | Limited | Java | Self-hosted | Commercial |
+| Platform | BPMN 2.0 | DMN | Client languages | Deployment | Licensing notes |
+|----------|----------|-----|------------------|------------|-----------------|
+| Camunda 8 (Zeebe engine) | Executable subset, broad coverage | Yes | Java/Spring SDK, Node.js SDK, REST API | SaaS or self-managed | Self-managed production use requires a commercial license since 8.6; free for development |
+| Camunda 7 | Yes | Yes | Java (embedded/Spring), REST | Self-hosted | Community Edition reached end of life in Oct 2025 — plan migration to 8 or an alternative |
+| Flowable | Yes (also CMMN) | Yes | Java/Spring, REST | Self-hosted / cloud | Apache 2.0 open source + enterprise edition |
+| jBPM / Apache KIE | Yes | Yes (Drools) | Java | Self-hosted | Open source |
+| Temporal | No — code-first workflows, not BPMN | No | Go, Java, TypeScript, Python, .NET, PHP | Self-hosted / Temporal Cloud | MIT open source + cloud |
+| IBM Business Automation Workflow | Yes | Limited | Java | Self-hosted / cloud | Commercial |
+
+Choose BPMN engines when business stakeholders must read/own the executable model; choose code-first engines (Temporal) when developers own long-running orchestration and the diagram is documentation only.
 
 ## BPMN to Automation Mapping
 
@@ -312,7 +317,7 @@ Process mining discovers actual process flows from event log data, while BPMN mo
 | Best for | TO-BE design, new processes | AS-IS validation, compliance checking |
 
 ### Conformance Checking
-Compare mined process against BPMN model to identify deviations. Calculate fitness score: how much of the mined process fits the model (0-1). Calculate precision: how much of the model is actually observed in data (0-1). Calculate generalization: how well the model explains unseen behavior. Targets: fitness >0.8, precision >0.7, generalization >0.8.
+Compare mined process against BPMN model to identify deviations. Calculate fitness score: how much of the mined process fits the model (0-1). Calculate precision: how much of the model is actually observed in data (0-1). Calculate generalization: how well the model explains unseen behavior. Set targets per process from a baseline; low fitness means the model misses real behavior, low precision means it allows behavior that never occurs. Open-source tooling: PM4Py, ProM; commercial: Celonis, Apromore, SAP Signavio.
 
 ### Process Enhancement
 Use mining insights to enhance BPMN models: discovered bottlenecks (where does the process actually slow down?), actual path frequencies (which paths are most/least used?), exception patterns (what deviations recur?), resource utilization (which lanes are overloaded?), cycle time distribution (min/avg/max/P90 per activity).
@@ -320,40 +325,16 @@ Use mining insights to enhance BPMN models: discovered bottlenecks (where does t
 ### Mining-Driven Automation Prioritization
 Rank automation candidates by mining data: frequency (how often does this activity occur?), duration (how much time is spent on it?), variability (is it standardized or ad-hoc?), error rate (how often does it fail?). Target high-frequency, high-duration, low-variability activities first — these have the highest automation ROI and lowest implementation risk.
 
-## DMN Decision Table Design
-
-### Decision Table Structure
-```
-Decision: Approve Loan
-Hit Policy: UNIQUE (only one rule matches)
-
-| Credit Score | Income > $50K | Employment | Decision | Reason |
-|--------------|---------------|------------|----------|--------|
-| > 700        | YES           | > 2 years  | Approve  | Low risk |
-| 600-700      | YES           | > 2 years  | Review   | Medium risk |
-| < 600        | —             | —          | Reject   | High risk |
-| —            | NO            | —          | Reject   | Insufficient income |
-```
-
-### Hit Policies
-| Policy | Behavior | Use Case |
-|--------|----------|----------|
-| UNIQUE | Exactly one rule matches | Most business rules |
-| FIRST | First matching rule in order | Prioritized rules |
-| ANY | All matching rules have same output | Consistent classifications |
-| COLLECT | Aggregate matching rules | Multiple outputs |
-| RULE ORDER | First matching, priority by position | Sequential logic |
-| OUTPUT ORDER | Collect and sort outputs | Ranked results |
-
 ## Success Metrics
+Measure a baseline before the change and compare the same metrics after rollout (targets come from the business case, not generic percentages):
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Process cycle time reduction | >30% | Before/after comparison |
-| Error rate reduction | >50% | Exception path frequency |
-| Automation coverage | >80% of deterministic tasks | Task type audit |
-| Stakeholder understanding | >90% can explain diagram | Survey |
-| Model accuracy | Matches reality within 5% deviation | Process mining comparison |
+| Metric | Measurement |
+|--------|-------------|
+| Cycle time (P50/P90) | Engine history or process mining, before vs after |
+| Error / rework rate | Frequency of exception paths and rework loops |
+| Automation coverage | Share of deterministic tasks implemented as service/business-rule tasks |
+| SLA attainment | % of instances completed within SLA |
+| Model fidelity | Conformance-checking fitness against event logs |
 
 ## Rules
 - Start with AS-IS modeling before designing TO-BE — skipping current-state analysis produces unrealistic designs
@@ -365,7 +346,7 @@ Hit Policy: UNIQUE (only one rule matches)
 - Service tasks should be idempotent — process engines may retry failed service calls
 - Subprocesses should be limited to 2 levels of nesting for readability
 - Process models at Level 4+ should only be designed if automation is planned
-- Every process must have exactly one start event and one or more end events
+- Every process has explicit start event(s) (one per trigger type) and end event(s) (one per distinct outcome)
 - Label every sequence flow leaving a gateway with the condition
 - Use intermediate catch events for waiting states, not timer tasks
 - Message flows only cross pool boundaries, never within a pool
@@ -412,10 +393,11 @@ Can multiple rules match the same input?
   |-- YES --> Do all matching rules produce the same output?
         |-- YES --> ANY hit policy (consistent classification)
         |-- NO --> What behavior do you need?
-              |-- First rule by priority order → FIRST
-              |-- Collect all matching outputs → COLLECT
-              |-- Collect and sort results → OUTPUT ORDER
-              |-- Sequential evaluation → RULE ORDER
+              |-- Single result, first rule in table order → FIRST
+              |-- Single result, highest-priority output → PRIORITY
+              |-- All matching outputs (optionally aggregated) → COLLECT
+              |-- All matching outputs, in rule order → RULE ORDER
+              |-- All matching outputs, sorted by output priority → OUTPUT ORDER
 ```
 
 ## Templates
@@ -439,8 +421,8 @@ Can multiple rules match the same input?
 
 ## Metrics (Current State)
 - Average cycle time: {time}
-- Error rate: {%
-- Rework rate: {%
+- Error rate: {%}
+- Rework rate: {%}
 - Handoff count: {number}
 - Automation level: {manual / partially automated / fully automated}
 ```
@@ -519,7 +501,7 @@ Use parallel gateway to send approval requests simultaneously to multiple approv
 When a process spans multiple systems, implement compensating transactions for rollback. Each service task must have a corresponding compensation handler. If the process fails at step N, trigger compensation for steps N-1 through 1 in reverse order. Use event subprocesses for compensation logic. Important: compensation handlers must be idempotent and logged.
 
 ### Pattern: Case Management with BPMN
-For processes that are ad-hoc and knowledge-worker driven (not sequential), use Case Management Model and Notation (CMMN) concepts within BPMN. Model milestones instead of sequential steps. Allow workers to choose the order of tasks. Use event subprocesses for unplanned work. Plan items can be discretionary — available but not required.
+For processes that are ad-hoc and knowledge-worker driven (not sequential), borrow Case Management Model and Notation (CMMN) concepts — or use CMMN directly on an engine that supports it (Flowable); Camunda 8 does not execute CMMN. Model milestones instead of sequential steps. Allow workers to choose the order of tasks. Use event subprocesses for unplanned work. Plan items can be discretionary — available but not required.
 
 ## Expanded Anti-Patterns
 
@@ -580,8 +562,6 @@ Use data stores visible to multiple pools when participants share data. Define r
   - references/process-modeling.md — Process Modeling
   - references/bpmn-modeling-advanced.md — Bpmn Modeling Advanced Topics
   - references/bpmn-modeling-fundamentals.md — Bpmn Modeling Fundamentals
-  - references/dmn-decision-tables.md — DMN Decision Tables
-  - references/process-discovery-guide.md — Process Discovery Guide
-  - references/bpmn-automation-patterns.md — BPMN to Automation Patterns
+
 ## Handoff
 `create-tech-spec` for automation implementation specifications. `solution-architecture` for integration architecture design. `create-story` for breaking automation into user stories.

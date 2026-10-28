@@ -356,7 +356,7 @@ Practice 7: Integrate capacity data with financial planning. Cost-per-unit trend
 6. Procurement decisions and sign-off (15 min)
 7. Action items and owners (10 min)
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: E-Commerce Platform Holiday Scaling
 A major e-commerce platform with steady 20% QoQ growth faced Q4 spikes of 5x baseline. Using seasonal growth models, they established dynamic autoscale limits that expanded 2 hours before known flash sales. Pre-warmed 30% of peak capacity using spot instances. Result: zero scale-related incidents during Black Friday, 40% cost savings vs always-provisioned peak capacity.

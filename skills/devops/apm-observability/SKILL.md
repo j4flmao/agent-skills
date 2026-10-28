@@ -632,7 +632,6 @@ OpenTelemetry collector config, Prometheus rules, Grafana dashboard JSON, SLI/SL
   - references/grafana-cloud.md
   - references/new-relic-setup.md
   - references/synthetic-monitoring.md
-  - references/otel-sampling-guide.md
 
 ## Handoff
 After completing this skill:

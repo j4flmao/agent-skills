@@ -533,7 +533,6 @@ Ansible playbook YAML, role directory structure, inventory YAML/INI, Jinja2 temp
   - references/ansible-tower.md
   - references/automation-playbooks.md
   - references/inventory-config.md
-  - references/dynamic-inventory-guide.md
 
 ## Handoff
 After completing this skill:

@@ -1,7 +1,7 @@
 ---
 name: dotnet-architecture
 description: >
-  Use this skill when structuring .NET applications — clean architecture, vertical slices, CQRS, MediatR, dependency injection, and project organization. This skill enforces: solution structure conventions, dependency flow direction, DI registration patterns, and architecture testing. Requires .NET SDK (dotnet new). Do NOT use for: Go, Node.js, Java, or non-.NET stacks.
+  Use this skill when the user says 'dotnet clean architecture', 'dotnet vertical slice', 'dotnet CQRS', 'dotnet solution structure', '.NET project layout', 'dotnet DI', 'dotnet MediatR', 'ASP.NET Core architecture'. Structures .NET solutions (Clean Architecture, vertical slices, N-tier): project boundaries and references, DI composition, mediator pipelines, EF Core configuration and architecture tests. Do NOT use for: .NET implementation patterns such as Result types and EF Core query tuning (dotnet-patterns), non-.NET stacks.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -24,7 +24,7 @@ Structure .NET applications with clean architecture, vertical slices, or CQRS �
 User request includes: `dotnet clean architecture`, `dotnet vertical slice`, `dotnet CQRS`, `dotnet solution structure`, `.NET project layout`, `dotnet DI`, `dotnet MediatR`.
 
 ### Input Context
-- .NET version (6+, 8+, 9+)
+- .NET version (supported releases: .NET 8 LTS, .NET 9 STS, .NET 10 LTS; .NET 6/7 are out of support)
 - Architecture (Clean Architecture, Vertical Slices, N-tier)
 - Database (EF Core, Dapper, ADO.NET)
 - Patterns (CQRS, Event Sourcing, Repository)
@@ -130,7 +130,7 @@ public class Order : IAggregateRoot
 
     public Order(string orderNumber)
     {
-        Id = Guid.NewGuid();
+        Id = Guid.CreateVersion7(); // .NET 9+: time-ordered, index-friendly
         OrderNumber = orderNumber;
         Status = OrderStatus.Pending;
         AddDomainEvent(new OrderCreatedDomainEvent(Id));
@@ -333,6 +333,8 @@ public class ArchitectureTests
 }
 ```
 
+Reference checks only catch direct references; NetArchTest.Rules or ArchUnitNET express richer rules (namespaces, naming, transitive dependencies).
+
 ## Production Considerations
 
 ### EF Core Performance
@@ -373,13 +375,13 @@ builder.Services.AddOpenTelemetry()
 | Fat controllers | Business logic in UI layer | Thin controller → MediatR handler |
 | `DbContext` as singleton | Concurrency issues, stale data | Scoped per request |
 | AutoMapper in Domain | Domain shouldn't know about mapping | Mapping only in Application layer |
-| `[ApiController]` without validation attribute | Model state may be invalid | Always add `[ApiController]` for auto-400 |
+| Controllers without `[ApiController]` | Invalid model state reaches the action | `[ApiController]` returns automatic 400 ProblemDetails |
 
 ## Security Considerations
 - Apply `[Authorize]` at controller or endpoint level, never globally skip
 - Use Data Protection API for encrypting sensitive data at rest
 - Validate anti-forgery tokens for state-changing endpoints
-- Rate limiting with `AspNetCoreRateLimit` or YARP
+- Rate limiting with the built-in `Microsoft.AspNetCore.RateLimiting` middleware (.NET 7+)
 - CSRF protection via anti-forgery tokens in cookie-based auth
 - Secrets via User Secrets (dev), Key Vault / environment (prod)
 - Never log sensitive data — use `[LogProperties]` selectively
@@ -418,8 +420,8 @@ Use `WebApplicationFactory<T>` for integration tests. Use `Testcontainers` for S
 
 ## Rules
 - Domain layer has ZERO external NuGet dependencies.
-- Application depends only on Domain and NuGet packages (MediatR, FluentValidation, AutoMapper).
-- Infrastructure implements Application/Infrastructure interfaces, never depends on Application.
+- Application depends only on Domain and abstraction-level packages (mediator, validation). Note MediatR (v13+) and AutoMapper (v15+) moved to commercial licensing in 2025; hand-written mapping and handlers are a valid choice.
+- Infrastructure references Application/Domain and implements their interfaces; Application and Domain never reference Infrastructure.
 - DI registration happens only in the Composition Root (Presentation/Program.cs or each layer's DependencyInjection.cs).
 - All async methods return Task<T> — no async void.
 - Configuration via IOptions pattern, never direct IConfiguration injection.
@@ -435,69 +437,6 @@ Use `WebApplicationFactory<T>` for integration tests. Use `Testcontainers` for S
   - references/project-structure.md — Project Structure Reference
 ## Handoff
 Hand off to `backend/dotnet/patterns/SKILL.md` for MediatR pipelines, result pattern, and EF Core patterns.
-## Implementation Patterns
-
-### Factory Pattern for Module Creation
-`
-function createModule<T>(config: ModuleConfig): T {
-  const dependencies = initializeDependencies(config);
-  const module = new Module(dependencies);
-  module.hooks.onInit();
-  return module as T;
-}
-`
-
-### Builder Pattern for Complex Configuration
-`
-class ConfigBuilder {
-  private config: AppConfig = new AppConfig();
-  withDatabase(url: string): ConfigBuilder { ... }
-  withCache(ttl: number): ConfigBuilder { ... }
-  withLogging(level: string): ConfigBuilder { ... }
-  build(): AppConfig { return this.config; }
-}
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Production build with optimizations enabled
-- [ ] Environment variables configured per environment
-- [ ] Health check endpoint responds correctly
-- [ ] Error tracking and monitoring integrated
-- [ ] Logging level configured (not debug in production)
-- [ ] Resource limits configured
-- [ ] Database migrations applied
-- [ ] Static assets built and served from CDN or cache
-- [ ] Feature flags toggled appropriately
-- [ ] Rollback plan documented and tested
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% | Critical | Rollback or fix |
-| p95 latency | > 500ms | Warning | Profile and optimize |
-| Uptime | < 99.9% | Critical | Investigate infrastructure |
-| Memory usage | > 80% | Warning | Check for leaks |
-| CPU usage | > 80% | Warning | Scale up or optimize |
-
-## Rules
-- Prefer composition over inheritance
-- Favor immutable data structures
-- Use dependency injection for testability
-- Keep functions pure when possible — no side effects
-- Fail fast with clear error messages
-- Don't repeat yourself (DRY) — extract shared logic
-- Keep it simple (KISS) — avoid unnecessary complexity
-- You aren't gonna need it (YAGNI) — build what's required
-- Separate concerns — single responsibility per module
-- Code to interfaces, not implementations
-- Write self-documenting code — clear names over comments
-- Prefer standard library over third-party dependencies
-- Handle errors explicitly — no silent failures
-- Validate inputs at boundaries
-- Log at appropriate levels (debug, info, warn, error)
-
 ## Implementation Patterns
 
 ### Pattern: MediatR + CQRS Pipeline
@@ -529,40 +468,13 @@ public class GetOrderHandler : IRequestHandler<GetOrderQuery, OrderDto>
 
 ### Pattern: FluentValidation Pipeline Behaviour
 
-```csharp
-public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : IRequest<TResponse>
-{
-    private readonly IEnumerable<IValidator<TRequest>> _validators;
-
-    public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
-    {
-        _validators = validators;
-    }
-
-    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
-    {
-        if (!_validators.Any()) return await next();
-
-        var context = new ValidationContext<TRequest>(request);
-        var failures = _validators
-            .Select(v => v.Validate(context))
-            .SelectMany(r => r.Errors)
-            .Where(f => f != null)
-            .ToList();
-
-        if (failures.Count != 0)
-            throw new ValidationException(failures);
-
-        return await next();
-    }
-}
-```
+Use the `ValidationBehavior<TRequest, TResponse>` shown in the workflow above and register it once with `services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>))`. Prefer `ValidateAsync` when validators perform I/O (e.g. uniqueness checks).
 
 ## Production Considerations
 
-- .NET version upgrades: plan for LTS releases. Test against previews. Deprecation window: 6 months.
-- Assembly binding redirects: audit for version conflicts. Central package management with `Directory.Packages.props`.
+- .NET version upgrades: LTS releases (even-numbered, 3 years of support) vs STS (odd-numbered, 2 years since .NET 9). Plan upgrades before end of support.
+- Dependency versions: central package management with `Directory.Packages.props`; binding redirects are a .NET Framework concern, not needed on modern .NET.
+- MediatR v13+ is commercially licensed (free community tier with revenue limits); confirm licensing or use plain handlers/alternatives such as Wolverine or source-generated mediators.
 - Startup performance: `ReadyToRun` images. Assembly trimming for self-contained deployments.
 - Memory management: configure GC mode (Server vs Workstation). Monitor `# Gen 0/1/2 collections`.
 - Thread pool sizing: avoid thread pool starvation in async code. Use `Task.Run` only for CPU-bound work.
@@ -576,7 +488,7 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 |---|---|---|
 | Async void | Crash on exception. Uncatchable. | Always return `Task` or `Task<T>`. |
 | Blocking in async code | Thread pool starvation. Deadlocks. | Use `await` all the way. No `.Result` or `.Wait()`. |
-| Giant startup class | SRP violation. Hard to test. | Modular startup with `StartupFilter` or `IHostingStartup`. |
+| Giant `Program.cs` | SRP violation. Hard to test. | Group registrations in `IServiceCollection` extension methods per layer/module. |
 | Stringly-typed configuration | No compile-time safety. | Strongly-typed options with `IOptions<T>`. |
 | Ignoring cancellation tokens | Hung requests on shutdown. | Pass `CancellationToken` to all async methods. |
 | Catching `Exception` broadly | Swallows critical failures. | Catch specific exceptions. Re-throw if not recoverable. |
@@ -584,7 +496,7 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 ## Performance Optimization
 
 - `AsNoTracking()` for read-only queries. Skip EF change tracker overhead.
-- Compiled queries with `EF.Functions.Like` for dynamic filtering.
+- Compiled queries (`EF.CompileAsyncQuery`) for hot, fixed-shape queries.
 - `ValueTask` for synchronous completion paths. Avoid `Task` allocation.
 - Array pool (`System.Buffers.ArrayPool<T>`) for buffer-heavy operations.
 - StringBuilder pool for string concatenation in hot paths.
@@ -598,53 +510,11 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 
 - Data protection: `IDataProtector` for encrypting sensitive data. Key management with Azure Key Vault.
 - ASP.NET Core Data Protection API for cookie, CSRF, and anti-forgery tokens.
-- Authentication: JWT Bearer with short expiry (15 min). Refresh tokens with rotation.
+- Authentication: JWT Bearer with short-lived access tokens (minutes) and rotated refresh tokens.
 - Authorization: policy-based with claims. `[Authorize(Policy = "RequireAdmin")]`.
-- Anti-forgery: `[AutoValidateAntiforgeryToken]` on all POST endpoints.
+- Anti-forgery: `[AutoValidateAntiforgeryToken]` for cookie-authenticated MVC/Razor apps; bearer-token APIs are not CSRF-prone the same way.
 - CORS: restrict origins. No wildcard in production.
 - CSP: Content-Security-Policy header. Restrict script-src and style-src.
 - Input validation: `[FromBody]` with `[Required]` attributes. FluentValidation for complex rules.
 - Output encoding: Razor auto-encodes. API responses use content negotiation.
 - Secrets: User Secrets in dev. Azure Key Vault / AWS Secrets Manager in prod.
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets

@@ -1,214 +1,137 @@
-# Capacity Planning Advanced Topics
+# Capacity Planning Advanced: Validation, Failure-Mode Capacity, and Stateful Systems
 
-## Introduction
-Advanced Capacity Planning topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced capacity work for large or critical estates: validating capacity with load tests, planning for zone and region failures, capacity of stateful systems (databases, queues, storage), cold-start and scaling-speed limits, and balancing capacity against cost commitments. Fundamentals are in `capacity-planning-fundamentals.md`; statistical models in `capacity-planning-models.md`.
 
-## Advanced Architecture Patterns
+## Validating Capacity with Load Tests
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+Goal: find the maximum throughput per capacity unit that still meets the SLO, and the system's failure behaviour beyond it.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+| Test | Shape | Answers |
+|------|-------|---------|
+| Step / ramp test | Increase arrival rate in steps, hold each step | Knee of the latency curve; capacity per unit |
+| Soak test | Expected peak for hours | Leaks, GC, connection exhaustion, storage growth |
+| Spike test | Sudden jump (e.g. 3–10x) | Autoscaling reaction, queue buffering, shedding |
+| Failover test | Peak load while removing a zone/node | Whether N+1 really holds |
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+Use open-model load generation (constant arrival rate) so the generator does not slow down when the system does:
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+```javascript
+// k6: step to find the knee
+export const options = {
+  scenarios: {
+    steps: {
+      executor: 'ramping-arrival-rate',
+      startRate: 500, timeUnit: '1s', preAllocatedVUs: 2000,
+      stages: [
+        { target: 1000, duration: '5m' }, { target: 1000, duration: '10m' },
+        { target: 2000, duration: '5m' }, { target: 2000, duration: '10m' },
+        { target: 3000, duration: '5m' }, { target: 3000, duration: '10m' },
+      ],
+    },
+  },
+  thresholds: { http_req_duration: ['p(99)<300'], http_req_failed: ['rate<0.001'] },
+};
+```
 
-## Performance Optimization
+Record throughput, p99 latency, and saturation signals at each step; capacity is the last step where SLOs hold, minus a margin for production variance.
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+Production-like conditions matter: realistic data volumes, cache hit ratios, payload mix, and dependency latencies. Testing against empty databases overstates capacity.
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+## Universal Scalability Law (Scaling Limits)
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+Adding nodes rarely scales linearly because of contention (serialization) and coherency (crosstalk) costs. The USL models throughput as `X(N) = λN / (1 + α(N−1) + βN(N−1))`. Fit α and β from measurements at several cluster sizes to predict where adding nodes stops helping — or makes things worse when β > 0. Use it to decide when to shard instead of scaling out a shared component.
 
-## Security Hardening
+## Failure-Mode Capacity
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+| Failure domain | Capacity rule |
+|----------------|---------------|
+| Node | Survive loss of one node (N+1) at peak |
+| Availability zone | With 3 zones, each zone runs ≤ ~67% of required peak capacity so two zones can absorb the third's traffic |
+| Region (active-active) | Each region must absorb the failed region's traffic, or a defined degraded mode must apply |
+| Dependency outage | Retry storms and queue backlogs after recovery need burst capacity |
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+Zone math: required per-zone capacity = peak / (zones − tolerated zone failures). For 3 zones tolerating 1 failure: peak / 2 per zone, so total provisioned = 1.5 × peak.
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+Validate with game days: drain a zone at peak-like load and watch SLOs.
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+## Scaling Speed as a Capacity Constraint
 
-## Monitoring and Observability
+Autoscaling capacity at time t is limited by how fast new units become ready:
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+| Component | Typical delay source |
+|-----------|---------------------|
+| Metrics pipeline | Scrape and evaluation intervals |
+| HPA / scaling policy | Stabilization windows, step limits |
+| Node provisioning | Cloud instance launch, image pull, node join |
+| Application warm-up | JVM JIT, cache warming, connection pools |
+| Load balancer registration | Health check intervals |
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+If demand can rise faster than this chain reacts, keep warm headroom (low-priority overprovisioning pods that real workloads preempt, minimum replicas, scheduled scaling before known peaks). Quantify: `required_warm_headroom ≈ max demand increase during total_scale_up_time`.
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+## Stateful Systems
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+### Databases
 
-## Scalability and Reliability
+- Vertical ceiling: largest instance class available; plan sharding or read scaling before reaching ~70% of it.
+- Track: CPU, buffer cache hit ratio, IOPS and throughput vs provisioned limits, connections, replication lag, lock waits, storage growth, autovacuum/compaction backlog.
+- Read replicas add read capacity, not write capacity; replica lag limits what can be offloaded.
+- Storage growth: forecast table and index growth separately; account for bloat and maintenance space.
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+### Queues and Streams
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+- Capacity = sustained consumer throughput > producer peak, plus drain capacity for backlogs after incidents.
+- Kafka: partitions bound consumer parallelism; broker disk and network bound throughput, with replication multiplying write traffic.
+- Measure backlog drain time after a simulated consumer outage of N minutes.
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+### Storage
 
-## Integration and Interoperability
+- Track growth rate by tier; plan migrations to cheaper tiers via lifecycle policies.
+- Watch non-capacity limits: object count limits, request rate per prefix (mostly mitigated in S3), filesystem inode exhaustion, IOPS limits on volumes.
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+## Capacity vs Cost Commitments
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+| Lever | Fits |
+|-------|------|
+| On-demand | Spiky, uncertain demand |
+| Savings plans / committed use discounts | Stable baseline compute |
+| Reserved instances / capacity reservations | Specific instance types and zones where capacity availability itself is a risk |
+| Spot / preemptible | Fault-tolerant batch and stateless workers |
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+Commit to the baseline you are confident in (e.g. the lower bound of the forecast interval), not to the forecast peak. Capacity reservations guarantee availability during regional shortages but cost money even when unused.
 
-## DevOps and Automation
+## Quotas and Hidden Limits
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+Inventory and monitor:
+- Cloud service quotas (vCPUs per family, IPs, load balancers, Lambda concurrency, API rate limits).
+- Kubernetes limits (pods per node, IPs per subnet with VPC CNI, etcd object counts).
+- Third-party SaaS rate limits and license seats.
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+Request quota increases ahead of forecasted needs; they can take days.
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+## Communicating Capacity Risk
 
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
+| Status | Meaning |
+|--------|---------|
+| Green | Forecast peak + failure-mode capacity covered beyond lead time |
+| Amber | Covered for now; action required within lead time |
+| Red | Forecast exceeds capacity within lead time; escalation needed |
 
-## Data Management
+Report per service: current peak, capacity, headroom, days until exhaustion (forecast), lead time to add capacity, and planned actions.
 
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
+## Pitfalls
 
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
+- Load testing with closed models that hide queueing.
+- N+1 at node level but not at zone level.
+- Ignoring scaling reaction time in "elastic" systems.
+- Committing spend to the optimistic forecast.
+- Forgetting backlog drain capacity after outages.
 
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
+## Checklist
 
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Step, soak, spike, and failover tests with production-like data
+- [ ] Zone/region failure capacity calculated and game-day validated
+- [ ] Warm headroom sized from scale-up time
+- [ ] Stateful systems have vertical ceilings and sharding triggers documented
+- [ ] Queue drain capacity tested
+- [ ] Commitments based on conservative baseline
+- [ ] Quotas inventoried and monitored

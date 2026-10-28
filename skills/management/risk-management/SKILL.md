@@ -278,7 +278,7 @@ Success Criteria: {how to confirm Plan B worked}
 Fallback from Fallback: {what if Plan B also fails}
 ```
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: SaaS Platform — Dependency Risk
 A SaaS team building on a third-party API identified the risk "Vendor API deprecation with 30-day notice" scoring P=3, I=4 (score 12). They mitigated by building an abstraction layer that could swap to a second provider. When the vendor announced deprecation with only 14 days notice, the team switched providers in 10 days with no customer impact. Cost of mitigation: 2 weeks engineering. Cost avoided: 3 months of rework + customer churn.

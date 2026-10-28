@@ -24,8 +24,8 @@ Structure Rust backend applications with workspace layout, type-driven design, e
 User request includes: `Rust project structure`, `Rust workspace`, `Rust crate layout`, `Rust error handling`, `Rust async`, `Rust traits`, `Rust architecture`, `Cargo workspace`.
 
 ### Input Context
-- Rust edition (2021)
-- Async runtime (tokio, async-std, smol)
+- Rust edition (2024 for new crates, stable since Rust 1.85; 2021 for existing ones)
+- Async runtime (tokio is the default choice; smol for small footprints; async-std is discontinued)
 - Web framework (Actix-web, Axum, Rocket, Warp)
 - Database (sqlx, diesel, sea-orm, tokio-postgres)
 - Build target (Linux server, Lambda, WASM)
@@ -127,7 +127,7 @@ my-api/
 [package]
 name = "domain"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -492,65 +492,3 @@ Use `#[tokio::test]` for async tests. Use `mockall` or manual mock traits for re
   - references/workspace-layout.md — Workspace Layout
 ## Handoff
 Hand off to `backend/rust/patterns/SKILL.md` for Rust-specific patterns or `backend/universal/api-response/SKILL.md` for API response formatting.
-## Implementation Patterns
-
-### Factory Pattern for Module Creation
-`
-function createModule<T>(config: ModuleConfig): T {
-  const dependencies = initializeDependencies(config);
-  const module = new Module(dependencies);
-  module.hooks.onInit();
-  return module as T;
-}
-`
-
-### Builder Pattern for Complex Configuration
-`
-class ConfigBuilder {
-  private config: AppConfig = new AppConfig();
-  withDatabase(url: string): ConfigBuilder { ... }
-  withCache(ttl: number): ConfigBuilder { ... }
-  withLogging(level: string): ConfigBuilder { ... }
-  build(): AppConfig { return this.config; }
-}
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Production build with optimizations enabled
-- [ ] Environment variables configured per environment
-- [ ] Health check endpoint responds correctly
-- [ ] Error tracking and monitoring integrated
-- [ ] Logging level configured (not debug in production)
-- [ ] Resource limits configured
-- [ ] Database migrations applied
-- [ ] Static assets built and served from CDN or cache
-- [ ] Feature flags toggled appropriately
-- [ ] Rollback plan documented and tested
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% | Critical | Rollback or fix |
-| p95 latency | > 500ms | Warning | Profile and optimize |
-| Uptime | < 99.9% | Critical | Investigate infrastructure |
-| Memory usage | > 80% | Warning | Check for leaks |
-| CPU usage | > 80% | Warning | Scale up or optimize |
-
-## Rules
-- Prefer composition over inheritance
-- Favor immutable data structures
-- Use dependency injection for testability
-- Keep functions pure when possible — no side effects
-- Fail fast with clear error messages
-- Don't repeat yourself (DRY) — extract shared logic
-- Keep it simple (KISS) — avoid unnecessary complexity
-- You aren't gonna need it (YAGNI) — build what's required
-- Separate concerns — single responsibility per module
-- Code to interfaces, not implementations
-- Write self-documenting code — clear names over comments
-- Prefer standard library over third-party dependencies
-- Handle errors explicitly — no silent failures
-- Validate inputs at boundaries
-- Log at appropriate levels (debug, info, warn, error)

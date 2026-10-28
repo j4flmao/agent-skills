@@ -1,213 +1,162 @@
-# Longhorn Fundamentals
-
-## Overview
-Longhorn is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
-
-## Core Concepts
-
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Longhorn helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
-
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Longhorn solutions. These principles help maintain code quality and reduce technical debt.
-
-### Concept 3: Data Management
-Proper data management is essential for Longhorn. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
-
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Longhorn follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
-
-## Implementation Guide
-
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
-
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Longhorn concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+# Longhorn Fundamentals: Architecture, Installation, Volumes
+
+Longhorn is a CNCF distributed block storage system for Kubernetes. Each volume is served by its own engine (controller) and synchronously replicated to replicas on several nodes' local disks. This reference covers architecture, prerequisites, installation, StorageClasses, and the volume lifecycle. Tuning, backup, and DR have their own references in this directory.
+
+## 1. Architecture
+
+```
+Pod ──► PVC ──► Longhorn CSI driver (driver.longhorn.io)
+                     │
+               longhorn-manager (DaemonSet, control plane + API, CRDs)
+                     │
+   instance-manager pods per node
+        ├── engine (one per attached volume, on the node where the pod runs)
+        │       └── iSCSI/block frontend → /dev/longhorn/<volume>
+        └── replicas (one per replica, on nodes holding replica data)
+                └── data in /var/lib/longhorn/replicas/<volume>-<id>/
+```
+
+| Component | Role |
+|---|---|
+| longhorn-manager | Reconciles Longhorn CRDs (`volumes`, `engines`, `replicas`, `nodes`, `settings`, `backups`) |
+| Engine | Receives block I/O and writes synchronously to all healthy replicas |
+| Replica | Stores data as a chain of sparse snapshot files plus a live head |
+| CSI plugin | Provision, attach, expand, snapshot via Kubernetes CSI |
+| Longhorn UI | Web UI for volumes, nodes, backups, settings |
+| share-manager | NFS server pod per RWX volume |
+
+Data engines: V1 (default, mature) and V2 (SPDK-based, higher performance, stricter requirements such as huge pages; check the release notes of your version for its support status before production use).
+
+## 2. Prerequisites per Node
+
+| Requirement | Why |
+|---|---|
+| `open-iscsi` installed, `iscsid` running | V1 block frontend |
+| NFSv4 client (`nfs-common` / `nfs-utils`) | RWX volumes and NFS backup targets |
+| `bash`, `curl`, `findmnt`, `grep`, `awk`, `blkid`, `lsblk` | Manager operations |
+| Supported filesystem for `/var/lib/longhorn` (ext4 or XFS) | Replica storage |
+| Kernel modules `dm_crypt` (encryption), `nvme-tcp` and huge pages (V2) | Optional features |
+| Multipathd configured to ignore Longhorn devices | Avoid device conflicts |
+
+Check with the Longhorn CLI preflight: `longhornctl check preflight` (and `longhornctl install preflight` to install missing dependencies on supported distributions).
+
+## 3. Installation (Helm)
+
+```bash
+helm repo add longhorn https://charts.longhorn.io
+helm repo update
+helm upgrade --install longhorn longhorn/longhorn \
+  --namespace longhorn-system --create-namespace \
+  --version <chart-version> \
+  -f longhorn-values.yaml
+kubectl -n longhorn-system get pods
+```
+
+```yaml
+# longhorn-values.yaml
+defaultSettings:
+  defaultReplicaCount: 3
+  defaultDataPath: /var/lib/longhorn
+  storageMinimalAvailablePercentage: 25
+  storageOverProvisioningPercentage: 100
+  replicaZoneSoftAntiAffinity: true
+  nodeDrainPolicy: block-if-contains-last-replica
+persistence:
+  defaultClass: true
+  defaultClassReplicaCount: 3
+ingress:
+  enabled: false        # expose the UI only behind authentication
+```
+
+Pin the chart version and read upgrade notes; Longhorn supports upgrading one minor version at a time.
+
+## 4. StorageClass
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-fast
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "30"          # minutes before a failed replica is cleaned up
+  dataLocality: "best-effort"        # disabled | best-effort | strict-local
+  fsType: "ext4"
+  diskSelector: "ssd"                # only disks tagged ssd
+  nodeSelector: "storage"            # only nodes tagged storage
+  dataEngine: "v1"
+```
+
+| Parameter | Effect |
+|---|---|
+| `numberOfReplicas` | Copies of data; 3 for production, 2 for less critical, 1 only with app-level replication |
+| `dataLocality` | `best-effort` tries to keep one replica on the pod's node (lower read latency) |
+| `diskSelector` / `nodeSelector` | Place replicas on tagged disks/nodes |
+| `fromBackup` | Create the volume by restoring a backup URL |
+| `recurringJobSelector` | Attach recurring snapshot/backup job groups |
+
+## 5. Using Volumes
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-postgres-0
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn-fast
+  resources:
+    requests:
+      storage: 50Gi
+```
+
+| Access mode | Implementation |
+|---|---|
+| ReadWriteOnce / ReadWriteOncePod | Block device attached to one node |
+| ReadWriteMany | NFS export via a share-manager pod backed by a Longhorn volume |
+| Block mode (`volumeMode: Block`) | Raw device for databases or VMs |
+
+Expansion: edit the PVC `resources.requests.storage`; Longhorn expands online for V1 volumes on supported filesystems.
+
+## 6. Volume States and Robustness
+
+| State | Meaning |
+|---|---|
+| `attached` / `detached` | Engine running or not |
+| Robustness `healthy` | All replicas in sync |
+| `degraded` | Fewer healthy replicas than desired; rebuilding |
+| `faulted` | No healthy replica; data unavailable until recovered |
+
+```bash
+kubectl -n longhorn-system get volumes.longhorn.io
+kubectl -n longhorn-system get replicas.longhorn.io -l longhornvolume=<pv-name>
+```
+
+## 7. Snapshots vs Backups
+
+| | Snapshot | Backup |
+|---|---|---|
+| Where | Inside the volume's replicas (same cluster) | Backup target (S3-compatible, NFS, CIFS/SMB, Azure Blob) |
+| Protects against | Logical errors, bad writes | Cluster/node loss, disasters |
+| Created by | UI, CSI `VolumeSnapshot` (`type: snap`), recurring job | UI, CSI `VolumeSnapshot` (`type: bak`), recurring job |
+
+Snapshots are not backups. Configure a backup target for anything that matters (see `longhorn-backup.md`).
+
+## Pitfalls
+
+- Missing `iscsid` on new nodes: volumes fail to attach there.
+- One replica per volume on a cluster with node churn: data loss on node failure.
+- Exposing the Longhorn UI without authentication: it can delete volumes.
+- Running out of disk because over-provisioning and snapshot growth were not monitored.
+
+## Checklist
+
+- [ ] Node prerequisites verified with `longhornctl check preflight`.
+- [ ] Helm chart version pinned; defaults set in values.
+- [ ] StorageClasses per tier with replica count, data locality, disk/node selectors.
+- [ ] UI protected; RBAC limits who can manage Longhorn CRDs.
+- [ ] Backup target configured; snapshots not treated as backups.

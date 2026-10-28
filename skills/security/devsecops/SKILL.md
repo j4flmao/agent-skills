@@ -1,10 +1,35 @@
 ---
 name: devsecops
-description: Apply DevSecOps practices, focusing on automated SAST/DAST scanning within CI/CD pipelines.
+description: >
+  Use this skill when the user says 'DevSecOps', 'shift-left security', 'SAST in CI', 'DAST pipeline', 'secret scanning in CI', 'security gate', 'pipeline hardening'. Embeds automated SAST, DAST, dependency and secret scanning into CI/CD with policy gates. Do NOT use for: deep SAST/DAST tool configuration (use security/sast-dast), secrets storage/rotation (use security/secrets-management), or SBOM generation (use security/sbom).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [security, devsecops, ci-cd, sast, dast, shift-left]
 ---
 # DevSecOps: Automated Security Scanning
 
-Embed security directly into CI/CD pipelines to catch vulnerabilities early. Focus on Static Application Security Testing (SAST), Dynamic Application Security Testing (DAST), and Secret Scanning.
+## Purpose
+Embed security directly into CI/CD pipelines to catch vulnerabilities early (shift-left). Covers Static Application Security Testing (SAST), Dynamic Application Security Testing (DAST), dependency scanning, and secret scanning, with explicit pass/fail gates that block merges on verified findings.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "DevSecOps pipeline", "shift-left security", "add SAST to CI", "secret scanning in CI", "security gate".
+
+### Input Context
+- CI platform (GitHub Actions, GitLab CI, etc.) and languages in the repo.
+- Which scan classes are required and the gating policy.
+
+### Output Artifact
+A pipeline definition with scan stages and a gate. No secrets committed.
+
+### Response Format
+```
+Stage: {sast|dast|secrets|deps}
+Tool: {Semgrep | TruffleHog | Trivy | ...}
+Gate: {block on verified/high | warn}
+```
 
 ## Pipeline Architecture
 
@@ -45,7 +70,13 @@ jobs:
           extra_args: --only-verified
 
       - name: SAST Scanning (Semgrep)
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: "p/default"
+        # The legacy returntocorp/semgrep-action is deprecated; run `semgrep ci`
+        # from the official package/image instead.
+        run: |
+          pip install semgrep
+          semgrep ci --config p/default
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 ```
+
+> Note: `returntocorp/semgrep-action@v1` is deprecated. Current practice is `semgrep ci` (official `semgrep/semgrep` image or the pip package). Pin third-party actions/images to a release tag or SHA rather than `@main` in production.

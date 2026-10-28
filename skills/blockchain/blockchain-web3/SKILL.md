@@ -474,9 +474,6 @@ function handleError(error: unknown) {
   - references/wallet-integration.md — Wallet Integration
   - references/web3-hooks.md — Web3 React Hooks
   - references/web3-react-patterns.md — Web3 React Integration
-  - references/account-abstraction-web3.md — Account Abstraction for Web3 Frontends
-  - references/web3-error-handling.md — Web3 Error Handling Patterns
-  - references/multicall-batching.md — Multicall & RPC Batching
 
 ## Architecture Decision Trees
 

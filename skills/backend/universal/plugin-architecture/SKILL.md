@@ -490,7 +490,6 @@ class PluginResourceLimiter {
 
 ## References
   - references/plugin-implementation.md — Plugin Implementation
-  - references/plugin-lifecycle.md — Plugin Lifecycle Reference
   - references/plugin-patterns.md — Plugin Patterns
   - references/plugin-security.md — Plugin Security Reference
   - references/plugin-system-design.md — Plugin Architecture Design

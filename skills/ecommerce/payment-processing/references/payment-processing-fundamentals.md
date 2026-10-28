@@ -1,213 +1,158 @@
 # Payment Processing Fundamentals
 
-## Overview
-Payment Processing is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
-
-## Core Concepts
-
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Payment Processing helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
-
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Payment Processing solutions. These principles help maintain code quality and reduce technical debt.
-
-### Concept 3: Data Management
-Proper data management is essential for Payment Processing. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
-
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Payment Processing follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
-
-## Implementation Guide
-
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
-
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Payment Processing concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+How card and alternative payments move, the lifecycle states an integration must model, and the engineering basics every payment integration needs: money representation, idempotency, webhooks, and failure handling. Provider specifics are in `stripe-integration.md`; compliance in `pci-dss-guide.md`.
+
+## Parties in a Card Payment
+
+| Party | Role |
+|-------|------|
+| Cardholder | Pays |
+| Merchant | Sells; holds an account with an acquirer (directly or via a PSP) |
+| PSP / payment gateway | API the merchant integrates (Stripe, Adyen, Braintree, Checkout.com ...); often also the acquirer |
+| Acquirer | Merchant's bank in the card network |
+| Card network | Visa, Mastercard, Amex, ...; routes authorizations and settlement |
+| Issuer | Cardholder's bank; approves or declines |
+
+## Lifecycle
+
+```text
+created ─► (customer action: 3DS / redirect) ─► authorized ─► captured ─► settled ─► paid out
+              │                                     │             │
+              └─► failed / canceled                 └─► voided    ├─► refunded (full/partial)
+                                                                  └─► disputed ─► won / lost
+```
+
+| Step | Meaning | Money moves? |
+|------|---------|--------------|
+| Authorization | Issuer approves and places a hold on funds | Hold only |
+| Capture | Merchant claims the authorized amount (immediately or later) | Yes, enters clearing |
+| Void / cancel | Release an authorization before capture | Hold released |
+| Settlement | Networks and acquirer move funds | Yes |
+| Payout | PSP transfers balance to the merchant bank account | Yes |
+| Refund | Return captured funds | Yes (reverse) |
+| Dispute (chargeback) | Cardholder contests via issuer; funds pulled back pending evidence | Yes (reverse, plus fee) |
+
+Authorizations expire (commonly around 7 days for card-not-present, varying by network and card type). Capture before expiry or re-authorize. Separate auth and capture when fulfilment happens later (ship-then-charge); capture immediately for digital goods.
+
+## Payment Methods Beyond Cards
+
+| Method | Characteristic |
+|--------|----------------|
+| Wallets (Apple Pay, Google Pay) | Tokenized cards with device authentication; good conversion on mobile |
+| Bank debits (SEPA Direct Debit, ACH) | Low fees, delayed confirmation (days), returns possible after "success" |
+| Bank transfers / real-time payments (Pix, UPI, FedNow-based) | Push payments, often instant, customer initiates |
+| Buy now pay later | Provider takes credit risk; redirect flows |
+| Local methods (iDEAL, Bancontact, BLIK, ...) | Redirect/app-to-app; essential in some markets |
+
+Asynchronous methods mean "submitted" is not "paid": fulfil only after the confirmation event.
+
+## Money Representation
+
+```ts
+// integer minor units + ISO 4217 currency
+type Money = { amountMinor: bigint; currency: 'EUR' | 'USD' | 'JPY' | string }
+
+const MINOR_UNITS: Record<string, number> = { EUR: 2, USD: 2, JPY: 0, KWD: 3 }
+
+export function toMinor(decimal: string, currency: string): bigint {
+  const digits = MINOR_UNITS[currency]
+  if (digits === undefined) throw new Error(`Unknown currency exponent for ${currency}`)
+  const [whole, frac = ''] = decimal.split('.')
+  if (frac.length > digits) throw new Error(`Too many decimals for ${currency}: ${decimal}`)
+  return BigInt(whole + frac.padEnd(digits, '0'))
+}
+```
+
+- Never use binary floating point for money.
+- Currency exponents vary (JPY 0, KWD 3); PSP APIs usually take minor units.
+- Store currency with every amount; never add amounts of different currencies.
+
+## Idempotency
+
+Network failures make retries inevitable; a retried "charge" must not charge twice.
+
+```ts
+const intent = await stripe.paymentIntents.create(
+  { amount: 4999, currency: 'eur', customer: customerId, metadata: { orderId } },
+  { idempotencyKey: `order-${orderId}-attempt-${attempt}` },
+)
+```
+
+- Generate the key once per logical operation (e.g. per order payment attempt) and store it before calling the PSP.
+- Make your own endpoints idempotent too: clients retry checkout submissions.
+- Enforce one active payment per order with a database unique constraint.
+
+## Webhooks
+
+The PSP reports asynchronous outcomes (succeeded, failed, refunded, disputed) through webhooks. Treat them as the source of truth for final state.
+
+```ts
+app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  let event: Stripe.Event
+  try {
+    event = stripe.webhooks.constructEvent(req.body, req.header('stripe-signature')!, process.env.STRIPE_WEBHOOK_SECRET!)
+  } catch (err) {
+    logger.warn({ err }, 'stripe webhook signature verification failed')
+    return res.status(400).send('invalid signature')
+  }
+
+  const inserted = await db.processedEvents.insertIfAbsent(event.id)   // dedupe
+  if (!inserted) return res.sendStatus(200)
+
+  await queue.enqueue('payment-event', { id: event.id, type: event.type })  // process async
+  res.sendStatus(200)
+})
+```
+
+Rules:
+- Verify signatures on the raw body; reject unsigned events.
+- Deduplicate by event ID; delivery is at-least-once.
+- Acknowledge quickly (2xx) and process asynchronously.
+- Do not assume ordering; fetch the current object from the PSP API when order matters.
+
+## Order and Payment State
+
+Keep payment state separate from order state, linked by IDs:
+
+```sql
+CREATE TABLE payments (
+  id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  order_id      BIGINT NOT NULL REFERENCES orders(id),
+  psp           TEXT NOT NULL,
+  psp_reference TEXT NOT NULL,
+  status        TEXT NOT NULL CHECK (status IN ('requires_action','authorized','captured','failed','canceled','refunded','partially_refunded','disputed')),
+  amount_minor  BIGINT NOT NULL CHECK (amount_minor > 0),
+  currency      CHAR(3) NOT NULL,
+  idempotency_key TEXT NOT NULL UNIQUE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (psp, psp_reference)
+);
+CREATE INDEX payments_order_id_idx ON payments (order_id);
+```
+
+## Declines and Errors
+
+| Category | Example | Action |
+|----------|---------|--------|
+| Soft decline | Insufficient funds, issuer unavailable | Let customer retry or use another method |
+| Hard decline | Stolen card, invalid account | Do not retry the same card |
+| Authentication required | SCA/3DS challenge | Complete the customer action flow |
+| Integration error | Invalid parameters | Fix code; alert |
+| Network/timeout | Unknown outcome | Retry with the same idempotency key, or query status |
+
+Show generic decline messages to customers; detailed decline codes can help fraudsters test cards.
+
+## Compliance Basics
+
+- Use PSP-hosted fields/elements or redirects so card data never touches your servers; this keeps you in the smallest PCI DSS scope (typically SAQ A for fully hosted fields/redirect).
+- Never log PANs, CVCs or full track data; CVC must never be stored after authorization.
+- Strong Customer Authentication applies to many European payments (PSD2); use the PSP's 3DS2 flow.
+
+## Checklist
+
+- [ ] Amounts in integer minor units with currency
+- [ ] Idempotency keys on every PSP mutation and on your own endpoints
+- [ ] Webhooks verified, deduplicated, processed asynchronously
+- [ ] Fulfilment triggered by confirmed payment events, not client redirects
+- [ ] Auth/capture timing chosen deliberately
+- [ ] Card data handled only by PSP-hosted components

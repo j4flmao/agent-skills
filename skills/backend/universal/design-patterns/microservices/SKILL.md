@@ -1,61 +1,173 @@
 ---
 name: microservice-design-patterns
-description: Hardcore microservice patterns including SAGA, CQRS, and Event Sourcing mechanics.
+description: >
+  Use this skill when the user says 'saga pattern', 'distributed transaction', 'compensating transaction', 'choreography vs orchestration', 'CQRS with event sourcing', 'cross-service consistency', 'two-phase commit microservices'. Explains and designs the data-consistency patterns used between microservices (Saga, CQRS, Event Sourcing, Outbox) and how they combine, with a concrete orchestrated saga. Do NOT use for: service decomposition and deployment topology (microservices), CQRS implementation details (backend-cqrs-patterns), event store internals (backend-event-sourcing), outbox implementation (backend-transactional-outbox).
+version: "1.1.0"
+author: "j4flmao"
+license: "MIT"
+tags: [backend, microservices, saga, cqrs, event-sourcing, consistency]
 ---
 
-# Advanced Microservice Architecture Patterns
+# Microservice Data-Consistency Patterns
 
-Distributed systems demand rigorous data consistency models and scalable communication pipelines. This reference explores advanced patterns for transaction management and state propagation in highly decoupled topologies.
+## Purpose
+With a database per service, one business operation spans several local transactions. This skill picks the pattern that keeps such operations consistent (sagas with compensation), separates read and write models when needed (CQRS), and shows how event sourcing and the outbox fit in.
 
-## 1. The SAGA Pattern: Distributed Transactions
+## Agent Protocol
 
-In microservices, traditional ACID transactions (2PC/Two-Phase Commit) are antipatterns due to synchronous blocking and lock contention. SAGA mitigates this by decomposing a distributed transaction into a sequence of local ACID transactions.
+### Trigger
+Exact user phrases: "saga pattern", "distributed transaction", "compensating transaction", "choreography vs orchestration", "CQRS with event sourcing", "cross-service consistency", "two-phase commit microservices".
 
-If a local transaction fails, the SAGA executes **compensating transactions** to rollback the preceding steps, achieving eventual consistency.
+### Input Context
+- Business flow and participating services with their data stores.
+- Which steps are reversible, and which have external side effects (payments, emails).
+- Existing messaging infrastructure and workflow engines (Temporal, Camunda, AWS Step Functions).
 
-### Choreography vs. Orchestration
-- **Choreography (Event-Driven):** Services publish domain events upon completing their local transactions. Other services subscribe to these events and trigger their respective local transactions. There is no centralized controller.
-  - *Pros:* Highly decoupled, no single point of failure.
-  - *Cons:* Emergent complexity; difficult to trace the lifecycle of a complex transaction.
-- **Orchestration (Command-Driven):** A centralized orchestrator (e.g., an AWS Step Function or Camunda engine) manages the transaction lifecycle. It issues commands to participant services and handles failure logic.
-  - *Pros:* Centralized observability, straightforward compensation logic.
-  - *Cons:* The orchestrator can become a god-object and a bottleneck.
+### Output Artifact
+Saga step table with compensations, chosen coordination style, and the event/command contracts. No files unless requested.
 
-## 2. CQRS: Command Query Responsibility Segregation
+### Response Format
+```
+Saga: {name}   Style: {orchestration | choreography}
+| # | Service | Action | Compensation | Retryable |
+Pivot step: {step after which saga only moves forward}
+Isolation countermeasure: {semantic lock | commutative update | reread}
+Read model: {CQRS projection or none}
+```
 
-CQRS separates the data modification (Command) and data retrieval (Query) pipelines, acknowledging that read and write workloads scale asymmetrically and require different storage paradigms.
+## 1. Saga: Distributed Transactions Without 2PC
+Two-phase commit (XA) needs every participant to support it and holds locks while a coordinator decides; most brokers, NoSQL stores and SaaS APIs cannot participate, and a coordinator failure blocks participants. Sagas replace one global transaction with a sequence of local transactions, each publishing an event or replying to a command. On failure, already-completed steps are undone by **compensating transactions** (semantic undo such as "refund", not a rollback).
 
-- **Command Model:** Highly normalized, focuses on business rules, validation, and transaction boundaries. Often backed by a relational database or event store.
-- **Query Model:** Highly denormalized, materialized views optimized for specific UI read operations. Often backed by NoSQL, Elasticsearch, or Redis.
-- **Synchronization:** The Command side emits events upon state changes. The Query side projects these events into its read-optimized data stores. This introduces an eventual consistency window.
+Step types:
+- **Compensatable**: can be undone (reserve inventory -> release).
+- **Pivot**: the go/no-go point (charge card). After it, the saga must complete.
+- **Retryable**: steps after the pivot that must eventually succeed (send confirmation) and are retried until they do.
+
+Order steps so that hard-to-undo actions come as late as possible.
+
+### Choreography vs Orchestration
+
+| | Choreography | Orchestration |
+|---|---|---|
+| Control | Each service reacts to others' events | Central orchestrator sends commands, tracks state |
+| Coupling | Services know event types of others | Services know only their own commands |
+| Visibility | Flow is implicit; hard to trace | Saga state is explicit and queryable |
+| Good for | 2-4 steps, simple linear flows | Many steps, branching, timeouts, human tasks |
+| Risk | Cyclic dependencies, "event spaghetti" | Orchestrator becomes a god service if it holds business logic |
+
+Durable workflow engines (Temporal, Camunda 8, AWS Step Functions, Azure Durable Functions) implement orchestration with persisted state, timers and retries, so you do not hand-build a state machine.
+
+### Orchestrated Saga Example (TypeScript, persisted state machine)
+
+```ts
+type Step = 'RESERVE_STOCK' | 'CHARGE' | 'SHIP' | 'DONE' | 'COMPENSATING' | 'FAILED';
+
+interface OrderSaga {
+  sagaId: string;
+  orderId: string;
+  step: Step;
+  completed: Array<'RESERVE_STOCK' | 'CHARGE'>;
+}
+
+interface Deps {
+  save(s: OrderSaga): Promise<void>;                       // persist before each command
+  send(cmd: string, payload: object, key: string): Promise<void>; // via outbox
+}
+
+export async function onReply(saga: OrderSaga, reply: { ok: boolean }, deps: Deps) {
+  if (!reply.ok) return compensate(saga, deps);
+  switch (saga.step) {
+    case 'RESERVE_STOCK':
+      saga.completed.push('RESERVE_STOCK');
+      saga.step = 'CHARGE';
+      await deps.save(saga);
+      return deps.send('ChargePayment', { orderId: saga.orderId }, `${saga.sagaId}:charge`);
+    case 'CHARGE': // pivot: from here we only move forward
+      saga.completed.push('CHARGE');
+      saga.step = 'SHIP';
+      await deps.save(saga);
+      return deps.send('ScheduleShipment', { orderId: saga.orderId }, `${saga.sagaId}:ship`);
+    case 'SHIP':
+      saga.step = 'DONE';
+      return deps.save(saga);
+    default:
+      throw new Error(`Unexpected reply for saga ${saga.sagaId} in step ${saga.step}`);
+  }
+}
+
+async function compensate(saga: OrderSaga, deps: Deps) {
+  saga.step = 'COMPENSATING';
+  await deps.save(saga);
+  for (const done of [...saga.completed].reverse()) {
+    if (done === 'CHARGE') await deps.send('RefundPayment', { orderId: saga.orderId }, `${saga.sagaId}:refund`);
+    if (done === 'RESERVE_STOCK') await deps.send('ReleaseStock', { orderId: saga.orderId }, `${saga.sagaId}:release`);
+  }
+  saga.step = 'FAILED';
+  await deps.save(saga);
+}
+```
+
+The third argument is an idempotency key: participants must deduplicate, because commands and replies are delivered at least once.
+
+### Lack of Isolation
+Sagas are ACD without I: other transactions see intermediate states. Countermeasures:
+- **Semantic lock**: mark the record `PENDING` until the saga ends; other operations check the flag.
+- **Commutative updates**: design operations so order does not matter (credit/debit deltas).
+- **Reread value**: verify the record is unchanged before overwriting.
+- **Version file / pessimistic view**: reorder steps to reduce exposure of risky intermediate states.
+
+## 2. CQRS
+Separate the write model (enforces invariants, normalized) from one or more read models (denormalized for specific queries). Read models are updated from events, so they are eventually consistent.
+
+Use when read and write shapes differ heavily, read volume dwarfs writes, or queries span several services' data. Avoid for plain CRUD: it doubles the moving parts. Handle read-your-own-writes by returning the new state from the command, or by waiting for the projection to reach the command's version.
 
 ## 3. Event Sourcing
+Persist the sequence of domain events as the source of truth; current state is a left fold over the events. Benefits: complete history, temporal queries, natural event publication. Costs: event schema versioning (upcasters), snapshotting for long streams, and GDPR erasure needs crypto-shredding or stream rewriting, so "never deleted" is a design choice, not a free property.
 
-Instead of storing the current state of an entity, Event Sourcing stores a purely append-only log of immutable domain events. The current state is derived by replaying the event stream (Left Fold).
+Event sourcing does not require CQRS in principle, but in practice querying requires projections, so the two are almost always combined.
 
-- **Immutability:** Data is never updated or deleted. This guarantees an unimpeachable audit trail.
-- **Snapshots:** To avoid replaying millions of events for an entity, snapshots of the current state are periodically materialized.
-- **Synergy with CQRS:** Event Sourcing naturally pairs with CQRS. The event store acts as the Command model, and event handlers build the Query model projections.
-
-## 4. Architectural Diagram
+## 4. How They Combine
 
 ```mermaid
-%%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
 flowchart TD
-    Client[Client Application] --> API[API Gateway]
-    
-    API --> CMD[Command Handler / SAGA Orchestrator]
-    API --> QRY[Query Handler]
-    
-    CMD --> ES[(Event Store - Append Only)]
-    
-    ES -->|Event Bus / Message Broker| Proj[Event Projector]
-    
-    Proj --> ReadDB[(Denormalized Read DB)]
-    QRY --> ReadDB
-    
-    CMD --> ServiceA[Participant Service A]
-    CMD --> ServiceB[Participant Service B]
-    
-    ServiceA -.->|Compensating Action| CMD
+    Client --> API[API Gateway]
+    API --> CMD[Command handler / saga orchestrator]
+    API --> QRY[Query handler]
+    CMD --> WDB[(Write DB or event store)]
+    WDB -->|outbox / CDC| BUS[Message broker]
+    BUS --> PROJ[Projector]
+    PROJ --> RDB[(Read models)]
+    QRY --> RDB
+    CMD -->|commands| SA[Participant A]
+    CMD -->|commands| SB[Participant B]
+    SA -->|replies| BUS
+    SB -->|replies| BUS
 ```
+
+Publishing must be atomic with the state change: use the transactional outbox or CDC, never "commit then publish" in application code.
+
+## Decision Table
+
+| Need | Pattern |
+|---|---|
+| Multi-service business transaction | Saga (orchestrated if >3 steps) |
+| Atomic "save + publish" | Transactional outbox / CDC |
+| Read-heavy cross-service queries | CQRS projection or API composition |
+| Full audit history / temporal queries | Event sourcing |
+| Strong consistency across two aggregates | Reconsider boundaries: maybe they belong in one service |
+
+## Anti-Patterns
+- Sagas without idempotent participants: redelivery double-charges.
+- Compensations that can fail permanently with no alert or manual-repair queue.
+- Using event sourcing for every service "for consistency".
+- Synchronous HTTP chains (A calls B calls C) pretending to be a transaction.
+
+## Checklist
+- [ ] Each saga step lists action, compensation, and retry policy; pivot identified.
+- [ ] Saga state persisted; timeouts defined for each step.
+- [ ] All participants idempotent; messages published via outbox.
+- [ ] Isolation countermeasure chosen for each exposed intermediate state.
+- [ ] Read models have lag metrics and a rebuild procedure.
+
+## References
+- Related skills: `skills/backend/universal/microservices/SKILL.md`, `skills/backend/universal/cqrs-patterns/SKILL.md`, `skills/backend/universal/event-sourcing/SKILL.md`, `skills/backend/universal/transactional-outbox/SKILL.md`.

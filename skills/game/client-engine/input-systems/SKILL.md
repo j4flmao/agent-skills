@@ -1,11 +1,39 @@
 ---
 name: input-systems
-description: Expert game input systems — device abstraction, action mapping, sampling vs events, text/IME, touch/gestures, haptics and input-to-game timing.
+description: >
+  Use this skill when the user says 'input system', 'action mapping', 'key rebinding', 'gamepad input', 'touch gestures', 'IME text input', 'haptics', 'input latency'. Designs device-agnostic input: device abstraction, action mapping and rebinding, sampling vs events, text/IME, touch gestures, haptics and input-to-simulation timing. Do NOT use for: UI widget design (use frontend or design skills), accessibility audits of menus (use design/accessibility).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, input, action-mapping, haptics, client-engine]
 ---
 
 # Input Systems — Deep Engineering Guide
 
+## Purpose
 Input is the player's handshake: it must be lag-free, remappable, device-agnostic and deterministic. This skill covers device abstraction, action mapping, raw sampling vs event flows, text/IME, touch/gestures, haptics and the input-to-simulation timing that separates "responsive" from "floaty".
+
+## Agent Protocol
+
+### Trigger
+"input system", "action mapping", "key rebinding", "gamepad input", "touch gestures", "IME text input", "haptics", "input latency".
+
+### Input Context
+- Engine and platforms (PC, console, mobile)
+- Device set (keyboard/mouse, gamepad, touch)
+- Networked or local (determinism of input stream)
+
+### Output Artifact
+Input architecture and code for sampling, mapping and dispatch. No file unless requested.
+
+### Response Format
+```
+Devices: {list}
+Actions: {action -> bindings}
+Timing: {sample point vs sim tick}
+Code: {snippet}
+Risks: {latency, lost events, rebinding conflicts}
+```
 
 ## 1. The Three Layers
 
@@ -99,7 +127,7 @@ Haptic events are *timed impulses* ("hit feedback 20 ms, 60% L / 0% R"), remappe
 | provider → poll | < 1 ms |
 | poll → sim tick | ≤ 1 tick (16.6 ms @60) |
 | sim → render | ≤ 1 frame |
-| **full click-to-result** | **≤ ~33–50 ms** (imperceptible), p95 < 80 ms |
+| **full click-to-photon** | measure it (high-speed camera, NVIDIA Reflex Latency Analyzer); at 60 fps many games land around 50–100 ms — every extra queued frame adds ~16.7 ms |
 
 Threads/queue/timing decisions that add a tick of latency are *the* feel killers — measure, don't assume.
 

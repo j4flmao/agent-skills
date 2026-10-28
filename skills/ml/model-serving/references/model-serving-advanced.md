@@ -1,214 +1,163 @@
 # Model Serving Advanced Topics
 
-## Introduction
-Advanced Model Serving topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+High-throughput and cost-efficient model serving: dynamic batching, GPU utilization, LLM serving engines (continuous batching, paged KV cache, quantization), multi-model hosting, autoscaling GPU workloads, safe rollout of new models, caching, and drift-aware operations.
+
+## Dynamic Batching
+
+GPUs reach high throughput only with batches. Dynamic batching collects concurrent requests for a short window and runs them together.
+
+```text
+# Triton model config (config.pbtxt)
+name: "fraud_onnx"
+platform: "onnxruntime_onnx"
+max_batch_size: 64
+dynamic_batching {
+  preferred_batch_size: [ 16, 32 ]
+  max_queue_delay_microseconds: 2000
+}
+instance_group [ { count: 2, kind: KIND_GPU } ]
+```
+
+Trade-off: larger `max_queue_delay` raises throughput and per-request latency. Tune with load tests at realistic concurrency (Triton `perf_analyzer`, Locust/k6 against your API).
+
+## GPU Utilization
+
+| Technique | Effect |
+|-----------|--------|
+| Lower precision (bf16/fp16), INT8/FP8 where supported | Higher throughput, less memory |
+| Compiled runtimes (TensorRT, ONNX Runtime with TensorRT/CUDA EP, `torch.compile`) | Fused kernels, lower latency |
+| Multiple model instances per GPU | Overlap execution for small models |
+| GPU sharing (MIG partitions, time-slicing, MPS) | Fit several small models on one GPU with isolation trade-offs |
+| CPU offload of pre/post-processing | Keep GPU busy with inference |
+
+Measure GPU utilization and memory alongside latency (DCGM exporter metrics). Low utilization with high latency usually means a CPU or I/O bottleneck in pre-processing or batching.
+
+## LLM Serving
+
+LLM inference is dominated by memory bandwidth and KV cache size. Use a serving engine with continuous batching and paged KV cache instead of a web framework wrapping `generate()`.
+
+| Engine | Highlights |
+|--------|-----------|
+| vLLM | PagedAttention, continuous batching, prefix caching, OpenAI-compatible server, many quantization formats |
+| SGLang | RadixAttention prefix reuse, structured generation, fast scheduling |
+| TensorRT-LLM | NVIDIA-optimized kernels, in-flight batching, FP8 on supported GPUs |
+| TGI (Text Generation Inference) | Hugging Face server with continuous batching |
+
+```bash
+vllm serve meta-llama/Llama-3.1-8B-Instruct \
+  --dtype bfloat16 \
+  --max-model-len 8192 \
+  --gpu-memory-utilization 0.90 \
+  --enable-prefix-caching \
+  --port 8000
+```
+
+Sizing:
+- Weights ≈ parameters × bytes per parameter (8B in bf16 ≈ 16 GB).
+- KV cache ≈ 2 × layers × KV heads × head dim × tokens × bytes, per sequence; it limits concurrency more than weights do.
+- Quantization (AWQ, GPTQ, FP8) reduces memory; validate quality on your evaluation set.
+- Tensor parallelism (`--tensor-parallel-size`) splits large models across GPUs in one node.
+
+Key LLM metrics: time to first token (TTFT), inter-token latency / time per output token, tokens per second per GPU, queue time, KV cache utilization, preemptions.
+
+Put authentication, rate limits (per tenant, in tokens), request size limits and timeouts in a gateway in front of the engine.
+
+## Multi-Model Serving
+
+| Approach | Use |
+|----------|-----|
+| One deployment per model | Few high-traffic models, independent scaling |
+| Multi-model server (Triton model repository, KServe ModelMesh) | Many small/long-tail models; load/unload on demand |
+| LoRA adapters on a shared base (vLLM multi-LoRA) | Many fine-tuned variants of one LLM |
+
+Watch cold-load latency for on-demand models and keep hot models pinned.
+
+## Autoscaling
+
+GPU pods are slow to start (image pull, model download, load). Scale before saturation:
+
+- Scale on in-flight requests per replica, queue depth, or engine metrics (e.g. vLLM waiting requests) via KEDA or custom-metrics HPA; CPU utilization is a poor signal for GPU servers.
+- Keep a minimum warm replica count for latency-sensitive services; scale-to-zero only for tolerant workloads.
+- Reduce cold start: preloaded model weights on node-local disk or a shared volume, smaller images, model streaming loaders.
+- Cluster autoscaler / node provisioning with GPU node pools and quotas; spot/preemptible GPUs for batch and tolerant online tiers.
+
+```yaml
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: llm-server
+spec:
+  scaleTargetRef:
+    name: llm-server
+  minReplicaCount: 1
+  maxReplicaCount: 8
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus.monitoring:9090
+        query: sum(vllm:num_requests_waiting{service="llm-server"})
+        threshold: "10"
+```
+
+Check the exact metric names exposed by your engine version.
+
+## Rolling Out New Models
+
+| Stage | Purpose |
+|-------|---------|
+| Offline evaluation | Frozen test set, slices, fairness, calibration |
+| Shadow deployment | New model receives mirrored traffic; outputs logged, not used |
+| Canary | Small share of live traffic with guardrail metrics |
+| A/B test | Measure business impact with statistical design |
+| Full rollout + rollback path | Previous version kept warm |
+
+KServe `InferenceService` supports canary traffic percentages between revisions:
+
+```yaml
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: churn-classifier
+spec:
+  predictor:
+    canaryTrafficPercent: 10
+    model:
+      modelFormat: { name: mlflow }
+      storageUri: s3://models/churn-classifier/15
+```
+
+Compare prediction distributions between versions during shadow/canary; large shifts without explanation block promotion.
+
+## Caching
+
+- Exact-match response cache for deterministic models with repeated inputs (key = model version + normalized input hash).
+- Feature cache for expensive online features.
+- LLM prefix caching (system prompts, shared context) inside the engine; semantic caches only with careful evaluation, because near-duplicate questions can need different answers.
+- Invalidate caches on model version change.
+
+## Drift and Feedback Loops
+
+- Monitor input drift (PSI, KL divergence, population statistics) and output drift per feature and segment.
+- Join predictions with delayed ground truth to compute live quality metrics.
+- Alert on drift as a signal to investigate, not to retrain automatically without evaluation.
+- Beware feedback loops: models that influence the data they are retrained on (recommendations, fraud blocks) need exploration or holdout traffic.
+
+## Cost Management
+
+| Lever | Notes |
+|-------|-------|
+| Right-size GPU type | Smaller GPUs for small models; memory-bound LLMs need high-bandwidth memory |
+| Batch offline when possible | Cheaper than always-on replicas |
+| Quantization and distillation | Smaller models with acceptable quality |
+| Utilization targets | Track cost per 1k predictions / per 1M tokens |
+| Spot capacity | For interruptible workloads with checkpointed queues |
+
+## Checklist
+
+- [ ] Dynamic/continuous batching tuned with load tests
+- [ ] LLMs served by a dedicated engine with bf16/quantized weights and KV-cache sizing
+- [ ] Gateway with auth, token-based rate limits, timeouts
+- [ ] Autoscaling on queue/concurrency metrics with warm minimums
+- [ ] Shadow → canary → A/B rollout with rollback
+- [ ] Drift and live-quality monitoring tied to delayed labels
+- [ ] Cost per prediction/token tracked

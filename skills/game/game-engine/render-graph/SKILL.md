@@ -1,11 +1,38 @@
 ---
 name: render-graph
-description: Expert render graph architecture — command lists and queues, resource lifecycle, passes, barriers, synchronization and GPU-driven rendering for real-time engines.
+description: >
+  Use this skill when the user says 'render graph', 'frame graph', 'transient resources', 'barriers', 'async compute', 'GPU-driven rendering', 'command lists'. Designs render/frame graphs: pass declaration, resource lifetimes and aliasing, automatic barriers, queues and async compute, and GPU-driven rendering. Do NOT use for: raw Vulkan API usage (use vulkan), shader authoring.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, rendering, render-graph, gpu, engine]
 ---
 
 # Render Graph — Deep Engineering Guide
 
+## Purpose
 A modern renderer records a *graph* of dependencies between passes each frame, allocates transient resources, orders passes topologically, and emits command lists. Skill covers the scheduling, allocation, synchronization and GPU-driven patterns that make it fast and safe on Vulkan/DX12/Metal.
+
+## Agent Protocol
+
+### Trigger
+"render graph", "frame graph", "transient resources", "barriers", "async compute", "GPU-driven rendering", "command lists".
+
+### Input Context
+- Graphics API(s) (Vulkan, D3D12, Metal)
+- Pass list and resolution/format needs
+- Profiler/validation data
+
+### Output Artifact
+Graph design and C++ code. No file unless requested.
+
+### Response Format
+```
+Passes: {ordered list with reads/writes}
+Resources: {transient vs imported, aliasing}
+Sync: {barriers generated}
+Code: {snippet}
+```
 
 ## 1. The Core Idea
 
@@ -19,7 +46,7 @@ graph.AddPass<Shadows>([&](RenderPassBuilder& b){
     setExecLambdaShadows(b);   // recorded later
 });
 
-// 2. Resolve phase: pick graph decides ordering (topological by edge),
+// 2. Compile phase: the graph culls unused passes, orders them topologically,
 //    assigns transient memory, decides barriers between passes.
 
 // 3. Execute phase: for pass in order: emit barriers + record commands from lambdas.
@@ -46,7 +73,7 @@ Passes are *declared* one frame in advance (or same-frame with deferred record),
 ### 3.1 Pass Types
 
 - Graphics pass (VS/PS from PSO, draw commands).
-- Compute pass (Dispached).
+- Compute pass (dispatches).
 - Copy pass (blit, upload).
 - Async compute (with ownership / queue transfer, see §7).
 
@@ -54,9 +81,9 @@ Passes are *declared* one frame in advance (or same-frame with deferred record),
 
 ```cpp
 struct ResourceID { uint32 index; Generation gen; };   // opaque, non-nullable
-int graph.CreateTexture(width, height, format, Usage::RenderTarget);
-// Where the graph sees a texture created + destroyed within the frame → transient:
-// it aliases memory with other transients (offline vsr-rpt).
+TextureHandle h = graph.CreateTexture({width, height, format, Usage::RenderTarget});
+// A texture created and last used within the frame is transient:
+// its memory can alias other transients whose lifetimes do not overlap.
 ```
 
 A transient attachment lives through exactly the passes that read/write it; the allocator proves it's safe to alias at different points of the graph (the "frame-scoped arena").
@@ -67,9 +94,9 @@ The resource must stay alive while in-flight frames still reference it. Render g
 
 ## 4. Scheduling Passes
 
-1. **Topological order** by edges (output → input taint).
-2. **Early-out merges**: adjacent passes with compatible states can merge draws (no intermediate attachment fetch) — the graph detects "read after write within same raw area" and fuses.
-3. **Caching**: a stable frame-id → cached schedule reused for subsequent identical frames (only dynamic parts reflatlive).
+1. **Topological order** by edges (writer → reader); passes whose outputs nobody reads are culled.
+2. **Pass merging**: adjacent raster passes with compatible attachments can become one render pass / subpasses so tile-based GPUs keep data on-chip.
+3. **Caching**: when the declared graph is identical to last frame's, reuse the compiled schedule and barrier plan.
 4. Compute/shadow passes that don't write the final target placed off the main thread (frontend).
 
 Reordering goals: maximize temporal locality (attach reuse), minimize barrier count and transitions (see `barriers.md`).
@@ -80,7 +107,7 @@ Edges define transitions:
 
 ```
 read  (PresentableTarget) → SHADER_READ
-write (depth)             → DEPTH_WRITE (after previous prevent)
+write (depth)             → DEPTH_WRITE (after the previous reader finishes)
 ```
 
 The graph inserts the *minimal* set of barriers between passes. It also merges: a transition needed by N passes emitted once, not per-pass.
@@ -89,14 +116,14 @@ The graph inserts the *minimal* set of barriers between passes. It also merges: 
 { pass A writes tex } → barrier (UNDEFINED→GENERAL/write) → pass B reads tex → barrier (GENERAL→READ)
 ```
 
-Layout transitions (Vulkan) / ResourceState changes (DX12) are emitted in the execute phase. Async compute inserts **queue-fence split** automatically (ownership transfer) — records extra slides by design (see `sync.md`).
+Layout transitions (Vulkan) / ResourceState changes (DX12) are emitted in the execute phase. Async compute adds cross-queue semaphores and, for exclusive-sharing resources, queue-family ownership transfers (see `synchronization-and-fencing.md`).
 
 ## 6. Rendering Pattern: GPU-Driven
 
-GPU-driven calls: culling happens on GPU (see `gpu-driven-rendering.md`). The render graph awards:
-- compute-pass emits indirect draw lists from CPU-fed *constant* buffers only.
-- main lighting/depth passes dispatch the same thread-group SIR kernel.
-- visibility all composed from `DrawArgs` in the indirect index.
+Culling happens on the GPU (see `gpu-driven-rendering.md`):
+- a compute pass culls instances/meshlets and writes indirect draw arguments + a draw count;
+- raster passes consume them with `vkCmdDrawIndexedIndirectCount` / `ExecuteIndirect`;
+- the graph tracks the argument buffer like any other resource (compute write → indirect-argument read barrier).
 
 Graph treats these indirect draws just like regular passes — no extra edges, no barriers hand-written.
 
@@ -111,10 +138,10 @@ Graph treats these indirect draws just like regular passes — no extra edges, n
 
 | Metric | Target |
 |--------|--------|
-| Graph resolve time | < 0.2 ms silent |
+| Graph compile time | small fraction of a ms; cache when unchanged |
 | Barrier count per frame | minimized; no duplicates |
 | Command-list count | ≤ queues; coalesced |
-| Transient memory aliased | ~2x vs dedicated |
+| Transient memory | measure peak with vs without aliasing |
 | Record threads | all cores available to frontend |
 
 Watch: cratering if frontend record is single-threaded or the resolve does full recursion each frame.

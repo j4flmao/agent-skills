@@ -1,213 +1,118 @@
 # Monitoring Fundamentals
 
-## Overview
-Monitoring is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
-
-## Core Concepts
-
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Monitoring helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
-
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Monitoring solutions. These principles help maintain code quality and reduce technical debt.
-
-### Concept 3: Data Management
-Proper data management is essential for Monitoring. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
-
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Monitoring follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
-
-## Implementation Guide
-
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
-
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Monitoring concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+Core concepts for monitoring production systems: the signal types, what to measure (golden signals, RED, USE), SLIs and SLOs, metric types and cardinality, collection models, and alerting principles. Tool-specific setup (Prometheus, Grafana, Loki, ELK, alerting/on-call) is in sibling references.
+
+## Monitoring vs. Observability
+- **Monitoring**: collecting predefined signals and alerting when known conditions occur ("is the error rate above 1%?").
+- **Observability**: the ability to ask new questions about system behavior from its telemetry (high-cardinality events, traces) without shipping new code.
+Both are needed: monitoring detects, observability explains.
+
+## Telemetry Signals
+
+| Signal | What it is | Strength | Cost driver |
+|---|---|---|---|
+| Metrics | Numeric time series with labels | Cheap aggregation, alerting, long retention | Number of unique series (cardinality) |
+| Logs | Timestamped records (prefer structured JSON) | Detail and context | Volume (bytes ingested/retained) |
+| Traces | Spans across services for one request | Latency breakdown, dependencies | Span volume; use sampling |
+| Profiles | Continuous CPU/memory profiling | Code-level hotspots | Sampling rate |
+| Events | Deploys, config changes, incidents | Correlate changes with symptoms | Low |
+
+OpenTelemetry is the vendor-neutral standard for generating and exporting metrics, logs and traces.
+
+## What to Measure
+
+### Four golden signals (user-facing services)
+| Signal | Example metric |
+|---|---|
+| Latency | p50/p95/p99 request duration, separately for success and errors |
+| Traffic | Requests per second |
+| Errors | Rate of failed requests (5xx, failed business outcomes) |
+| Saturation | How full the service is: CPU, memory, queue depth, connection pool usage |
+
+### RED (request-driven services)
+Rate, Errors, Duration per endpoint.
+
+### USE (resources: CPU, disks, network, pools)
+Utilization, Saturation, Errors per resource.
+
+### Business and pipeline signals
+Orders per minute, sign-ups, payment success rate; for batch jobs: last success time, duration, records processed; for queues: lag and age of oldest message.
+
+## SLIs, SLOs and Error Budgets
+
+| Term | Definition | Example |
+|---|---|---|
+| SLI | Measured ratio of good events to valid events | Successful requests under 300 ms / all requests |
+| SLO | Target for an SLI over a window | 99.9% over 30 days |
+| Error budget | 1 - SLO | 0.1% of requests (about 43 minutes of full outage per 30 days) |
+| SLA | Contractual commitment with penalties | Usually looser than the internal SLO |
+
+```promql
+# Availability SLI over 30 days
+sum(rate(http_requests_total{job="checkout",code!~"5.."}[30d]))
+/
+sum(rate(http_requests_total{job="checkout"}[30d]))
+```
+Alert on error-budget burn rate rather than raw thresholds (see the advanced reference).
+
+## Metric Types (Prometheus/OpenTelemetry)
+
+| Type | Use | Query pattern |
+|---|---|---|
+| Counter | Monotonic totals: requests, errors, bytes | `rate(x_total[5m])` |
+| Gauge | Current value: memory, queue depth, temperature | Raw value, `avg_over_time` |
+| Histogram | Distributions: latency, sizes | `histogram_quantile(0.95, sum by (le) (rate(x_bucket[5m])))` |
+| Summary | Client-side quantiles | Cannot be aggregated across instances; prefer histograms |
+
+Native histograms (Prometheus) / exponential histograms (OpenTelemetry) give better resolution with fewer series.
+
+### Naming and units
+- Prometheus style: `http_server_request_duration_seconds`, base units (seconds, bytes), `_total` suffix for counters.
+- OpenTelemetry semantic conventions define standard names (`http.server.request.duration`) and attributes.
+
+## Labels and Cardinality
+Each unique combination of label values is a separate time series.
+- Good labels: `service`, `method`, `route` (templated `/users/{id}`), `status_code` class, `region`.
+- Never use unbounded values as labels: user IDs, emails, full URLs, request IDs, timestamps. Put those in logs or trace attributes.
+- Estimate series: product of distinct values per label for each metric.
+
+## Collection Models
+
+| Model | How | Examples |
+|---|---|---|
+| Pull (scrape) | Server scrapes `/metrics` endpoints | Prometheus, VictoriaMetrics agent |
+| Push | Agents/SDKs send to a collector | OTLP to OpenTelemetry Collector, StatsD |
+| Agent-based logs | Tail files/journal, ship | Grafana Alloy, Fluent Bit, Vector, Filebeat |
+| Synthetic | Probes from outside | Blackbox exporter, uptime services |
+| Real user monitoring | Browser/mobile SDKs | Web vitals (LCP, INP, CLS), crash/error rates |
+
+Use both white-box (internal metrics) and black-box (external probes) monitoring: the latter catches DNS, TLS, CDN and network failures that internal metrics miss.
+
+## Alerting Principles
+- Page only on **symptoms users feel** (SLO burn, unavailable endpoints), not on every cause (CPU 90%).
+- Every page must be actionable, urgent and linked to a runbook.
+- Use tickets/notifications for slow-burning issues (disk at 80% in a week).
+- Group and deduplicate alerts; route by ownership labels.
+- Review alert noise regularly; delete alerts nobody acts on.
+
+## Dashboards
+- Top-level service dashboard: golden signals and SLO status, deploy annotations.
+- Drill-down dashboards per dependency/resource.
+- Consistent layout across services; template variables for environment and instance.
+
+## Retention and Cost
+| Data | Typical retention |
+|---|---|
+| High-resolution metrics | Days to weeks |
+| Downsampled metrics | Months to years (long-term storage) |
+| Logs | Days to weeks hot; archive to object storage for compliance |
+| Traces | Days; sampled |
+
+## Checklist
+- [ ] Golden signals/RED for every service, USE for key resources
+- [ ] SLIs and SLOs defined with owners
+- [ ] Histograms for latency; counters for totals
+- [ ] No unbounded label values
+- [ ] Black-box probes for public endpoints
+- [ ] Pages are symptom-based with runbooks
+- [ ] Retention set per signal by value and cost

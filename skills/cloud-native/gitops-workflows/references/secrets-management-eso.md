@@ -19,7 +19,7 @@ flowchart TD
 ## The CRDs
 1. **SecretStore / ClusterSecretStore**: Defines *how* to authenticate to the external provider.
 ```yaml
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: SecretStore
 metadata:
   name: aws-secretsmanager
@@ -36,7 +36,7 @@ spec:
 
 2. **ExternalSecret**: Defines *what* secret to fetch and where to put it.
 ```yaml
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: db-credentials

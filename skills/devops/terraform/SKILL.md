@@ -109,14 +109,14 @@ bucket         = "tf-state-prod"
 key            = "production/terraform.tfstate"
 region         = "us-east-1"
 encrypt        = true
-dynamodb_table = "tf-state-lock"
+use_lockfile   = true   # S3-native locking (Terraform >= 1.10); dynamodb_table is deprecated
 
 # environments/production/main.tf
 terraform {
   backend "s3" {
     # Use -backend-config=backend.hcl for partial config
   }
-  required_version = ">= 1.5"
+  required_version = ">= 1.10"
   required_providers {
     aws = {
       source  = "hashicorp/aws"

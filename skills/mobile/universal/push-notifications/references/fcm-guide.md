@@ -63,16 +63,20 @@ Authorization: key={SERVER_KEY}
 # Publish — use HTTP v1 with "topic" field
 ```
 
-## Device Group Messaging (Legacy)
+## Topic Send (HTTP v1)
+
+The legacy `fcm/send` endpoint and server keys were shut down in 2024. Use HTTP v1 with an OAuth2 access token from a service account:
 
 ```bash
-POST https://fcm.googleapis.com/fcm/send
+POST https://fcm.googleapis.com/v1/projects/{PROJECT_ID}/messages:send
 Content-Type: application/json
-Authorization: key={SERVER_KEY}
+Authorization: Bearer {OAUTH2_ACCESS_TOKEN}
 
 {
-  "to": "/topics/deals",
-  "notification": { "title": "Flash Sale!" }
+  "message": {
+    "topic": "deals",
+    "notification": { "title": "Flash Sale!" }
+  }
 }
 ```
 

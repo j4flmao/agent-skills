@@ -515,10 +515,7 @@ BGP hold timers alone (30-120s) are too slow for modern DC failover. Always enab
   - references/leaf-spine.md — Leaf-Spine — Clos Fabric, ECMP, EVPN/VXLAN
   - references/network-infrastructure-advanced.md — Network Infrastructure Advanced Topics
   - references/network-infrastructure-fundamentals.md — Network Infrastructure Fundamentals
-  - references/sd-wan-mpls.md — SD-WAN vs MPLS — Branch + Hybrid Connectivity
   - references/vrrp-hsrp.md — L2 Redundancy — VRRP / HSRP / CARP / MLAG
-  - references/evpn-vxlan-deep-dive.md — EVPN/VXLAN Deep Dive
-  - references/bgp-automation.md — BGP Automation with Ansible
 ## Handoff
 - `devops-datacenter` for physical cabling and patch panels.
 - `devops-cdn-edge` for global anycast and DDoS scrubbing.

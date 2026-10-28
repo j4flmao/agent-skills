@@ -110,7 +110,6 @@ Write pattern?
 # Delta Lake ACID config
 delta.autoOptimize.autoCompact: true
 delta.autoOptimize.optimizeWrite: true
-delta.maxRetryCommitAttempts: 10000000  # Retry on conflict
 delta.tuneFileSizesForRewrites: true
 
 # Concurrent write conflict handling
@@ -119,8 +118,8 @@ delta.tuneFileSizesForRewrites: true
 # Avoid writing to same partition from multiple jobs simultaneously
 
 # Isolation level
-delta.isolationLevel: Serializable  # Default (most strict)
-# delta.isolationLevel: WriteSerializable  # Less strict, better concurrency
+delta.isolationLevel: WriteSerializable  # Default: better write concurrency
+# delta.isolationLevel: Serializable     # Strictest: also orders reads vs writes
 ```
 
 #### Iceberg Concurrency
@@ -158,8 +157,9 @@ hoodie.table.type: MERGE_ON_READ
 hoodie.compact.inline: true  # Inline compaction
 hoodie.compact.inline.max.delta.commits: 5  # Compact every 5 commits
 
-# Iceberg: use merge-in-read (not separate write mode)
-# Iceberg handles all updates via merge-on-read automatically
+# Iceberg: per-operation mode, default copy-on-write (format v2+)
+# write.update.mode / write.delete.mode / write.merge.mode: copy-on-write | merge-on-read
+# merge-on-read writes delete files (cheap writes, needs compaction for fast reads)
 ```
 
 ### Step 4: Partition Strategy
@@ -291,7 +291,7 @@ expire_snapshots:
   retain_last_n: 10     # Keep 10 most recent
   older_than: 7 days    # Delete snapshots older than 7 days
   # Run daily as maintenance job
-  # Spark SQL: CALL catalog.system.expire_snapshots('table', older_than => 7)
+  # Spark SQL: CALL catalog.system.expire_snapshots(table => 'db.events', older_than => TIMESTAMP '2026-01-01 00:00:00', retain_last => 10)
 
 # Hudi cleaner
 hoodie.cleaner.policy: KEEP_LATEST_COMMITS
@@ -393,7 +393,7 @@ spark.sql.hive.convertMetastoreParquet: true
 # Iceberg write optimizations
 write.distribution-mode: hash                 # hash, range, none
 write.wap.enabled: false                      # Write-Audit-Publish
-write.merge.mode: merge-on-read               # Default for Iceberg updates
+write.merge.mode: merge-on-read               # Default is copy-on-write; MoR suits frequent small MERGEs
 
 # Delta write optimizations
 delta.autoOptimize.autoCompact: true
@@ -493,27 +493,33 @@ Lake Table Format Selection
 from pyspark.sql import SparkSession
 
 class IcebergMaintenance:
-    def __init__(self, spark: SparkSession, table: str):
-        self.spark = spark
-        self.table = table
+    """Iceberg Spark procedures live under <catalog>.system and take the table name as an argument."""
 
-    def expire_snapshots(self, retain_days: int = 7):
+    def __init__(self, spark: SparkSession, catalog: str, table: str):
+        self.spark = spark
+        self.catalog = catalog          # e.g. "lake"
+        self.table = table              # e.g. "db.events"
+
+    def expire_snapshots(self, retain_days: int = 7) -> None:
+        cutoff = (datetime.now() - timedelta(days=retain_days)).strftime("%Y-%m-%d %H:%M:%S")
         self.spark.sql(f"""
-            CALL {self.table}.expire_snapshots(
-                older_than => TIMESTAMP '{datetime.now() - timedelta(days=retain_days)}',
+            CALL {self.catalog}.system.expire_snapshots(
+                table => '{self.table}',
+                older_than => TIMESTAMP '{cutoff}',
                 retain_last => 5
             )
         """)
 
-    def compact_data(self, target_size_mb: int = 256):
+    def compact_data(self, target_size_mb: int = 256) -> None:
         self.spark.sql(f"""
-            CALL {self.table}.rewrite_data_files(
-                target_file_size_bytes => {target_size_mb * 1024 * 1024}
+            CALL {self.catalog}.system.rewrite_data_files(
+                table => '{self.table}',
+                options => map('target-file-size-bytes', '{target_size_mb * 1024 * 1024}')
             )
         """)
 
-    def rewrite_manifests(self):
-        self.spark.sql(f"CALL {self.table}.rewrite_manifests()")
+    def rewrite_manifests(self) -> None:
+        self.spark.sql(f"CALL {self.catalog}.system.rewrite_manifests('{self.table}')")
 ```
 
 ### Lake Catalog Registration
@@ -561,7 +567,7 @@ catalog:
 - **File clustering**: Run Z-order clustering on frequently filtered non-partition columns (Iceberg sort order).
 - **Metadata caching**: Cache Iceberg/Delta manifests in memory (local SSD) to reduce S3 metadata requests.
 - **Committed write ordering**: Use sorted writes to align with partition boundaries for faster merges.
-- **Parallel manifest reads**: Increase metadata parallelism via `spark.sql.iceberg.worker.numThreads`.
+- **Parallel manifest reads**: Increase Iceberg's worker pool via the JVM system property `iceberg.worker.num-threads`.
 
 ## Security Considerations
 

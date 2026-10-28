@@ -37,19 +37,19 @@ Kubernetes-specific container security:
 ```dockerfile
 # Multi-stage build for minimal attack surface
 # Stage 1: Build
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci                      # dev dependencies needed for the build
 COPY . .
-RUN npm run build
+RUN npm run build && npm prune --omit=dev
 
-# Stage 2: Runtime (distroless)
-FROM gcr.io/distroless/nodejs20-debian12
-COPY --from=builder /app/dist /app
-COPY --from=builder /app/node_modules /app/node_modules
-USER nonroot:nonroot
+# Stage 2: Runtime (distroless, Node 22 LTS; pin by digest in production)
+FROM gcr.io/distroless/nodejs22-debian12
 WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+USER nonroot:nonroot
 EXPOSE 3000
 CMD ["dist/server.js"]
 ```
@@ -68,7 +68,8 @@ jobs:
       - name: Build image
         run: docker build -t myapp:${{ github.sha }} .
       - name: Scan with Trivy
-        uses: aquasecurity/trivy-action@master
+        # Pin third-party actions to a full commit SHA you have reviewed (never @master)
+        uses: aquasecurity/trivy-action@<commit-sha>
         with:
           image-ref: myapp:${{ github.sha }}
           format: sarif
@@ -85,13 +86,14 @@ kind: ClusterPolicy
 metadata:
   name: require-run-as-non-root
 spec:
-  validationFailureAction: enforce
   rules:
     - name: check-run-as-non-root
       match:
-        resources:
-          kinds: ["Pod"]
+        any:
+          - resources:
+              kinds: ["Pod"]
       validate:
+        failureAction: Enforce      # per-rule field (Kyverno 1.13+); spec.validationFailureAction is deprecated
         message: "Containers must run as non-root user"
         pattern:
           spec:
@@ -109,7 +111,7 @@ spec:
 ### Step 4: Secret Management in Kubernetes
 ```yaml
 # External Secrets Operator — sync secrets from vault
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: database-credentials
@@ -128,14 +130,14 @@ spec:
 ```
 
 ## Best Practices
-- Use minimal base images (distroless, Alpine) — reduce CVE surface by 80%+
+- Use minimal base images (distroless, Alpine, Chainguard/Wolfi) — fewer packages means fewer CVEs to triage
 - Scan images in CI before any deployment — fail builds on critical/high CVEs
 - Sign images with cosign and verify signatures before deployment
 - Drop all container capabilities, add back only required ones
 - Run containers as non-root with read-only root filesystem
 - Use Pod Security Standards (restricted profile) for all namespaces
 - Implement network policies — default deny all traffic
-- Use External Secrets Operator instead of Kubernetes Secrets for production
+- Source production secrets from an external manager via External Secrets Operator (it still materializes Kubernetes Secrets, so enable etcd encryption at rest and restrict RBAC on Secrets)
 - Regular image scanning (weekly minimum) for newly discovered CVEs
 - Pin base image digests for reproducible builds
 

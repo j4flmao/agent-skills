@@ -496,6 +496,11 @@ What aspect are we validating?
 - Price observability platforms against cost of bad data, not just subscription cost
 
 ## References
-  - references/data-quality-management.md — Data Quality Management
-  - references/observability-platform.md — Observability Platform
-  - references/observability-rules.md — Observability Rules Reference
+  - references/observability-dimensions.md — Observability Dimensions
+  - references/observability-setup.md — Observability Setup
+  - references/monitor-config-examples.md — Monitor Configuration Examples
+  - references/anomaly-detection-observability.md — Anomaly Detection for Data
+  - references/slo-framework.md — Data SLO Framework
+  - references/observability-incident-response.md — Data Incident Response
+  - references/observability-dashboards.md — Observability Dashboards
+  - references/observability-cost-monitoring.md — Observability Cost Monitoring

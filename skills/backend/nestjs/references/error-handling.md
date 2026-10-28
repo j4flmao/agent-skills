@@ -1,298 +1,180 @@
-# Advanced error-handling for nestjs
+# NestJS Error Handling: Exceptions, Filters, and Problem Details
 
-## 1. Executive Summary
-This document provides an exhaustive, production-grade reference for implementing error-handling in the context of nestjs. It covers architectural decisions, common pitfalls, performance tuning, and security considerations.
+How NestJS turns thrown errors into responses, how to design a consistent error contract, and how to keep domain code free of HTTP concerns.
 
-## 2. Deep Dive Principle 2
-When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. 
+## Built-in Behavior
 
-### 2.1 Architectural Considerations
-The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+Any unhandled exception reaches the global exception layer. `HttpException` subclasses become their status code and body; anything else becomes `500 {"statusCode":500,"message":"Internal server error"}`.
+
+| Exception | Status |
+|-----------|--------|
+| `BadRequestException` | 400 |
+| `UnauthorizedException` | 401 |
+| `ForbiddenException` | 403 |
+| `NotFoundException` | 404 |
+| `ConflictException` | 409 |
+| `UnprocessableEntityException` | 422 |
+| `TooManyRequestsException` (from `@nestjs/throttler` it is `ThrottlerException`) | 429 |
+| `InternalServerErrorException` | 500 |
+| `ServiceUnavailableException` | 503 |
 
 ```typescript
-// Advanced Implementation Example 2
-export class error_handlingManager_2 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+throw new NotFoundException(`Order ${id} not found`);
+throw new ConflictException({ code: 'EMAIL_TAKEN', message: 'Email already registered' });
+throw new BadRequestException('Invalid cursor', { cause: err, description: 'cursor must be base64' });
+```
 
-  private initialize(): void {
-    console.log('Initializing nestjs error-handling subsystem...');
-    // Complex setup logic here
-  }
+## Keep Domain Errors HTTP-Free
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for error-handling
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
+```typescript
+// domain/errors.ts
+export abstract class DomainError extends Error {
+  abstract readonly code: string;
+}
+export class OrderNotFoundError extends DomainError {
+  readonly code = 'ORDER_NOT_FOUND';
+  constructor(readonly orderId: string) { super(`Order ${orderId} not found`); }
+}
+export class InsufficientStockError extends DomainError {
+  readonly code = 'INSUFFICIENT_STOCK';
+  constructor(readonly sku: string, readonly requested: number) { super(`Insufficient stock for ${sku}`); }
+}
+```
+
+Services throw domain errors; a filter maps them to HTTP. The same service can then be used from a queue consumer or CLI.
+
+## Global Filter Producing RFC 9457 Problem Details
+
+```typescript
+// common/filters/problem-details.filter.ts
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Request, Response } from 'express';
+import { DomainError, OrderNotFoundError, InsufficientStockError } from '../../domain/errors';
+
+const DOMAIN_STATUS: Record<string, number> = {
+  ORDER_NOT_FOUND: HttpStatus.NOT_FOUND,
+  INSUFFICIENT_STOCK: HttpStatus.CONFLICT,
+};
+
+@Catch()
+export class ProblemDetailsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(ProblemDetailsFilter.name);
+
+  catch(exception: unknown, host: ArgumentsHost): void {
+    const ctx = host.switchToHttp();
+    const req = ctx.getRequest<Request>();
+    const res = ctx.getResponse<Response>();
+    const { status, title, detail, code } = this.classify(exception);
+
+    if (status >= 500) {
+      this.logger.error(`Unhandled error on ${req.method} ${req.url} requestId=${req.headers['x-request-id']}`,
+        exception instanceof Error ? exception.stack : String(exception));
     }
+
+    res.status(status).type('application/problem+json').json({
+      type: `https://errors.example.com/${code.toLowerCase()}`,
+      title,
+      status,
+      detail,
+      instance: req.originalUrl,
+      code,
+    });
+  }
+
+  private classify(e: unknown) {
+    if (e instanceof DomainError) {
+      const status = DOMAIN_STATUS[e.code] ?? HttpStatus.UNPROCESSABLE_ENTITY;
+      return { status, title: e.code, detail: e.message, code: e.code };
+    }
+    if (e instanceof HttpException) {
+      const body = e.getResponse();
+      const detail = typeof body === 'string' ? body : (body as { message?: unknown }).message;
+      return { status: e.getStatus(), title: e.name, detail, code: e.name.replace(/Exception$/, '').toUpperCase() };
+    }
+    return { status: 500, title: 'Internal Server Error', detail: 'Unexpected error', code: 'INTERNAL' };
   }
 }
 ```
 
-### 2.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. 
-
-## 3. Deep Dive Principle 3
-When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. 
-
-### 3.1 Architectural Considerations
-The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 3
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class error_handling_Processor_3:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 3.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. 
-
-## 4. Deep Dive Principle 4
-When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. 
-
-### 4.1 Architectural Considerations
-The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+Register with DI so the filter can inject services:
 
 ```typescript
-// Advanced Implementation Example 4
-export class error_handlingManager_4 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+// app.module.ts
+providers: [{ provide: APP_FILTER, useClass: ProblemDetailsFilter }]
+```
 
-  private initialize(): void {
-    console.log('Initializing nestjs error-handling subsystem...');
-    // Complex setup logic here
-  }
+`app.useGlobalFilters(new X())` works too but bypasses DI.
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for error-handling
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
+## Validation Errors
+
+`ValidationPipe` throws `BadRequestException` with an array of messages. Customize to return field-level errors:
+
+```typescript
+new ValidationPipe({
+  whitelist: true,
+  transform: true,
+  exceptionFactory: (errors) => new UnprocessableEntityException({
+    message: 'Validation failed',
+    errors: errors.map((e) => ({ field: e.property, constraints: e.constraints })),
+  }),
+});
+```
+
+## Mapping Database Errors
+
+```typescript
+// PostgreSQL unique violation via TypeORM
+import { QueryFailedError } from 'typeorm';
+
+try {
+  await this.repo.insert(user);
+} catch (err) {
+  if (err instanceof QueryFailedError && (err.driverError as { code?: string }).code === '23505') {
+    throw new ConflictException({ code: 'EMAIL_TAKEN', message: 'Email already registered' });
+  }
+  throw err;
+}
+```
+
+Prisma raises `PrismaClientKnownRequestError` with codes such as `P2002` (unique) and `P2025` (record not found). Rely on the constraint rather than a "check then insert" race.
+
+## Non-HTTP Contexts
+
+`host.getType()` returns `'http' | 'rpc' | 'ws'` (and `'graphql'` via `GqlArgumentsHost`). For microservices throw `RpcException`; for gateways throw `WsException`. A filter decorated with `@Catch()` that assumes HTTP will crash in other contexts, so branch on `getType()`.
+
+## Interceptors for Timeouts and Error Mapping
+
+```typescript
+@Injectable()
+export class TimeoutInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler) {
+    return next.handle().pipe(
+      timeout(5000),
+      catchError((err) => throwError(() =>
+        err instanceof TimeoutError ? new RequestTimeoutException() : err)),
+    );
   }
 }
 ```
 
-### 4.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. 
+## Process-Level Safety
 
-## 5. Deep Dive Principle 5
-When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. 
+- Do not swallow `unhandledRejection`; log and let the orchestrator restart on `uncaughtException`, since process state may be corrupt.
+- Await every promise; floating promises escape filters. Enable `@typescript-eslint/no-floating-promises`.
 
-### 5.1 Architectural Considerations
-The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+## Pitfalls
 
-```python
-# Advanced Python Implementation 5
-import asyncio
-import logging
+- Returning stack traces or ORM messages to clients.
+- `catch (e) { return null; }` hiding failures.
+- Throwing `HttpException` from domain code, coupling it to HTTP.
+- Logging 4xx as errors, flooding alerts.
+- Filters relying on Express types when running on Fastify (`FastifyReply.code()` vs `res.status()`).
 
-logger = logging.getLogger(__name__)
+## Checklist
 
-class error_handling_Processor_5:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 5.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. 
-
-## 6. Deep Dive Principle 6
-When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. 
-
-### 6.1 Architectural Considerations
-The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 6
-export class error_handlingManager_6 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs error-handling subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for error-handling
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 6.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. 
-
-## 7. Deep Dive Principle 7
-When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. 
-
-### 7.1 Architectural Considerations
-The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 7
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class error_handling_Processor_7:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 7.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. 
-
-## 8. Deep Dive Principle 8
-When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. 
-
-### 8.1 Architectural Considerations
-The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 8
-export class error_handlingManager_8 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs error-handling subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for error-handling
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 8.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. 
-
-## 9. Deep Dive Principle 9
-When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. 
-
-### 9.1 Architectural Considerations
-The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 9
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class error_handling_Processor_9:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 9.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. 
-
-## 10. Deep Dive Principle 10
-When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. When dealing with nestjs, addressing error-handling requires a multi-layered approach. 
-
-### 10.1 Architectural Considerations
-The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 10
-export class error_handlingManager_10 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs error-handling subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for error-handling
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 10.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. A frequent mistake when implementing error-handling in nestjs is ignoring edge cases. 
-
-## 11. Conclusion
-This concludes the deep dive into error-handling for nestjs. Ensure you review the other 7 references in this category for a holistic understanding.
-
+- [ ] One global filter with a stable error schema (problem+json)
+- [ ] Domain errors mapped centrally to status codes
+- [ ] 5xx logged with stack and request ID; 4xx logged at info/warn
+- [ ] Validation errors return field-level detail
+- [ ] DB constraint violations mapped to 409/422
+- [ ] RPC/WS contexts handled separately

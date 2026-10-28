@@ -862,9 +862,6 @@ func init() {
 - references/operator-patterns.md — Kubernetes Operator Design Patterns
 - references/operator-sdk-guide.md — Operator SDK Guide
 - references/testing-operators.md — Operator Testing
-- references/conversion-webhooks.md — Multi-Version CRD with Conversion Webhooks
-- references/operator-metrics.md — Operator Metrics and Observability
-- references/olm-deployment.md — OLM Operator Deployment
 
 ## Handoff
 Related skills: kubernetes-patterns (K8s resource patterns), helm-patterns (Helm chart design), gitops-advanced (GitOps with custom operators), policy-as-code (admission webhooks integration), monitoring (operator metrics and dashboards).

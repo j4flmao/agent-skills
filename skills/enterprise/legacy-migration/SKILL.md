@@ -276,7 +276,7 @@ Practice 7: Communicate migration progress to stakeholders weekly. Visibility bu
 - Terraform for infrastructure provisioning
 - Custom diff/comparison framework for parallel run validation
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: Monolith to Microservices (Strangler Fig)
 A financial services company migrated a 15-year-old Java monolith handling 50M daily transactions. Using strangler fig with an API gateway routing layer, they extracted 12 microservices over 18 months. Each extraction began with an anti-corruption layer, followed by dual-write, then cutover. The monolith was decommissioned after 14 months of parallel operation. Zero customer-facing incidents during migration. Performance improved 3x for migrated services.

@@ -1,51 +1,137 @@
-# Architecture Patterns Internal Wiki
+# Streaming Lakehouse Patterns
 
-### Architectural Deep Dive: Architecture Patterns
-In modern distributed systems, Architecture Patterns represents a critical bottleneck and opportunity for optimization. The Medallion architecture (Bronze, Silver, Gold) separates raw ingestion from refined aggregations, utilizing distributed engines like Trino and Spark. By isolating the compute layer from the storage plane, we achieve elastic scalability.
+Patterns for writing continuous data into Iceberg, Delta, and Paimon tables with Spark Structured Streaming and Apache Flink: commit cadence, exactly-once, small-file control, and reading tables as streams. Batch write patterns are in `architecture-patterns.md`.
 
-To further guarantee ACID compliance and low-latency reads, the system implements multi-version concurrency control (MVCC). For Architecture Patterns, this means readers are never blocked by writers. The compaction daemon runs asynchronously to merge small files and reclaim space.
+## 1. Reference Topology
 
-### System Architecture
-```mermaid
-%%{init: {"theme": "default", "themeVariables": {"fontSize": "28px"}, "flowchart": {"useMaxWidth": true}}}%%
-graph TD
-    S3_Bucket["S3_Bucket Layer"] -->|Stream| ORC_Writer["ORC_Writer Processor"]
-    ORC_Writer -->|Checkpoint| RocksDB_State
-    ORC_Writer -->|Optimize| ArchitecturePatterns_C["ArchitecturePatterns_C Engine"]
-    ArchitecturePatterns_C -->|Write| ArchitecturePatterns_B
-    ArchitecturePatterns_B -->|Persist| KMS_Auth
-    ArchitecturePatterns_A -.->|Authenticate| ArchitecturePatterns_C
+```
+Kafka / Kinesis / CDC
+        │
+        ▼
+Streaming job (Spark Structured Streaming or Flink)
+        │  commit every N seconds/minutes
+        ▼
+Bronze table (append) ──► incremental read ──► Silver (MERGE) ──► Gold (aggregates)
+        │                                                     ▲
+        └──────────── compaction / snapshot expiry ───────────┘
 ```
 
-### Mathematical Thresholds
-To determine the optimal configuration for Architecture Patterns, we apply the following mathematical formula to calculate the system threshold:
+Each commit is a new table snapshot. Commit interval is the main lever: shorter means fresher data and more small files and metadata.
 
-$$ \text{Threshold}_{compaction} = \sum_{i=1}^{N} \frac{S_i}{T_{merge}} \times e^{-\lambda t} $$
+## 2. Engine and Format Fit
 
-### Code Implementation
-Below is a highly optimized production-grade implementation addressing Architecture Patterns:
+| Need | Good fit |
+|---|---|
+| Spark-centric platform, Delta tables | Structured Streaming + Delta, CDF for downstream reads |
+| Spark or Flink with Iceberg | Iceberg Spark/Flink sinks; Iceberg Kafka Connect sink for simple ingestion |
+| High-rate upserts with sub-minute freshness | Paimon primary-key tables (LSM) with Flink |
+| Database CDC into open tables | Flink CDC or Debezium → Kafka → sink |
 
-```java
-// Flink Java Implementation
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+## 3. Spark Structured Streaming → Iceberg
 
-public class StreamingJob {
-    public static void main(String[] args) throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.enableCheckpointing(60000); // 1 min RocksDB checkpoints
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env);
-        
-        tableEnv.executeSql(
-            "CREATE TABLE sink_table (" +
-            "  id BIGINT, " +
-            "  data STRING" +
-            ") WITH (" +
-            "  'connector' = 'hudi', " +
-            "  'path' = 's3a://lakehouse/hudi/', " +
-            "  'table.type' = 'MERGE_ON_READ'" +
-            ")"
-        );
-    }
-}
+```python
+stream = (spark.readStream.format("kafka")
+          .option("kafka.bootstrap.servers", brokers)
+          .option("subscribe", "orders")
+          .option("startingOffsets", "earliest")
+          .load())
+
+parsed = stream.selectExpr("CAST(value AS STRING) AS json", "timestamp AS ingest_ts")
+
+(parsed.writeStream
+   .format("iceberg")
+   .outputMode("append")
+   .trigger(processingTime="1 minute")
+   .option("checkpointLocation", "s3://lake-checkpoints/bronze_orders")
+   .option("fanout-enabled", "true")      # skip local sort by partition
+   .toTable("lake.bronze.orders"))
 ```
+
+Exactly-once comes from the checkpoint (source offsets) plus the sink recording the batch ID in the commit. One checkpoint location per query; never share or delete it casually.
+
+## 4. Spark Structured Streaming → Delta with Upserts
+
+```python
+from delta.tables import DeltaTable
+
+def upsert(batch_df, batch_id):
+    latest = (batch_df
+              .withColumn("rn", F.row_number().over(
+                  Window.partitionBy("order_id").orderBy(F.col("lsn").desc())))
+              .filter("rn = 1").drop("rn"))
+    (DeltaTable.forName(spark, "silver.orders").alias("t")
+        .merge(latest.alias("s"), "t.order_id = s.order_id")
+        .whenMatchedUpdateAll(condition="s.lsn > t.lsn")
+        .whenNotMatchedInsertAll()
+        .execute())
+
+(bronze_stream.writeStream
+   .foreachBatch(upsert)
+   .option("checkpointLocation", "s3://lake-checkpoints/silver_orders")
+   .trigger(processingTime="2 minutes")
+   .start())
+```
+
+`foreachBatch` is at-least-once: a batch can re-run after failure. The `lsn` guard makes the merge idempotent. For plain appends inside `foreachBatch`, pass `txnAppId` and `txnVersion=batch_id` to Delta writes.
+
+## 5. Flink → Iceberg / Paimon
+
+```sql
+-- Flink SQL: Iceberg catalog
+CREATE CATALOG lake WITH (
+  'type' = 'iceberg',
+  'catalog-type' = 'rest',
+  'uri' = 'https://catalog.example.com',
+  'warehouse' = 's3://lake/warehouse'
+);
+
+SET 'execution.checkpointing.interval' = '60 s';
+
+INSERT INTO lake.bronze.orders
+SELECT order_id, customer_id, amount, order_ts FROM kafka_orders;
+```
+
+Flink sinks commit on checkpoint completion, so the checkpoint interval equals the commit interval. Iceberg tables used as upsert targets need `'write.upsert.enabled' = 'true'` and identifier fields (primary key) declared.
+
+Paimon equivalent:
+
+```sql
+CREATE TABLE paimon.ods.orders (
+  order_id BIGINT, amount DECIMAL(18,2), lsn BIGINT,
+  PRIMARY KEY (order_id) NOT ENFORCED
+) WITH ('merge-engine' = 'deduplicate', 'sequence.field' = 'lsn',
+        'changelog-producer' = 'lookup');
+```
+
+## 6. Reading Tables as Streams
+
+| Format | Incremental read |
+|---|---|
+| Delta | `spark.readStream.table("bronze.orders")`; CDF with `readChangeFeed=true` for updates/deletes |
+| Iceberg (Spark) | `spark.readStream.format("iceberg").load("lake.bronze.orders")` (append snapshots only) |
+| Iceberg (Flink) | `/*+ OPTIONS('streaming'='true', 'monitor-interval'='30s') */` hint |
+| Paimon | streaming read of the changelog produced by `changelog-producer` |
+
+Spark's Iceberg streaming source fails on overwrite/delete snapshots unless `streaming-skip-overwrite-snapshots` / `streaming-skip-delete-snapshots` is set; skipping means those changes are not propagated.
+
+## 7. Small Files and Maintenance
+
+- Commit interval: start at 1–5 minutes for bronze; go lower only with a measured freshness requirement.
+- Run compaction on recent partitions on a schedule (Iceberg `rewrite_data_files` with a `where` filter; Delta `OPTIMIZE ... WHERE`). Compaction and streaming writes can conflict; streaming appends rarely conflict with bin-pack rewrites, but MERGE streams do.
+- Expire snapshots frequently on streaming tables: each commit adds a snapshot and a manifest list.
+- Delta auto compaction / optimized writes (`delta.autoOptimize.*`) reduce small files at write time on platforms that support them.
+
+## Pitfalls
+
+- Changing the query (source topics, aggregation keys) and reusing the old checkpoint: Spark may refuse to start or produce wrong state.
+- Deleting a checkpoint to "fix" a stream re-reads from `startingOffsets` and duplicates data.
+- Snapshot expiry or `VACUUM` shorter than a downstream stream's lag removes files it still needs.
+- Late events written into old partitions spread small files across the table; route them or compact those partitions.
+
+## Checklist
+
+- [ ] Commit interval chosen from a freshness target, not the default.
+- [ ] Checkpoint location durable, unique per query, and backed up with the job definition.
+- [ ] Upsert streams idempotent (ordering column or transaction IDs).
+- [ ] Compaction and snapshot expiry scheduled for every streaming table.
+- [ ] Downstream incremental readers' retention needs known.

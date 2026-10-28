@@ -406,14 +406,14 @@ def target_encode_cv_classification(df, cat_col, target, n_folds=5, smoothing=10
 ### Feature Store Integration
 ```python
 # Feast feature view with engineered features
-from feast import FeatureView, Feature, Field
+from feast import Entity, FeatureView, Field
 from feast.types import Float32, Int64, String
 
 user_features = FeatureView(
     name="user_engineered_features",
-    entities=["user_id"],
+    entities=[Entity(name="user", join_keys=["user_id"])],
     ttl=timedelta(days=1),
-    features=[
+    schema=[
         Field(name="user_total_purchases", dtype=Float32),
         Field(name="user_days_since_last_purchase", dtype=Float32),
         Field(name="user_avg_order_value", dtype=Float32),
@@ -507,7 +507,7 @@ feature_engineering:
 ## Implementation Patterns
 
 ### Feature Engineering Pipeline
-`python
+```python
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import FunctionTransformer
 import numpy as np
@@ -539,10 +539,10 @@ pipeline = Pipeline([
     ('aggregations', AggregationFeatures('user_id', 'amount')),
     ('scaler', StandardScaler())
 ])
-`
+```
 
 ### Text Feature Extraction
-`python
+```python
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 import spacy
@@ -567,7 +567,7 @@ def extract_text_features(documents):
     ]).reshape(-1, 1)
 
     return np.hstack([text_embeddings, pos_features])
-`
+```
 
 ## Performance Optimization
 

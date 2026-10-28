@@ -1,213 +1,102 @@
-# Ab Testing Fundamentals
+# A/B Testing Fundamentals for Product Teams
 
-## Overview
-Ab Testing is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+An A/B test (online controlled experiment) randomly assigns users to variants and compares outcomes to estimate the causal effect of a change. This reference covers when to test, hypothesis and metric design, randomization, sample size, running and reading a test, and common mistakes. Statistical methods in depth: `ab-testing-statistics.md` and `statistical-methods.md`; platform setup: `ab-testing-infrastructure.md`.
 
-## Core Concepts
+## When to A/B Test
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Ab Testing helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Good fit | Poor fit |
+|----------|----------|
+| Change with uncertain impact on a measurable behavior | Bug fixes, legal requirements (just ship) |
+| Enough traffic to detect a meaningful effect in weeks | Very low traffic (use qualitative research, longer-term metrics, or Bayesian approaches with caution) |
+| Reversible changes | One-way doors that need other validation |
+| Short-term measurable outcome | Effects that take months to appear (consider holdouts) |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Ab Testing solutions. These principles help maintain code quality and reduce technical debt.
+## Anatomy of an Experiment
 
-### Concept 3: Data Management
-Proper data management is essential for Ab Testing. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+1. Hypothesis: "Showing delivery dates on product pages will increase checkout conversion because uncertainty about delivery causes drop-off."
+2. Unit of randomization: usually user (logged-in ID or stable device ID); sometimes session, page view, or cluster (company, region).
+3. Variants: control (A) and treatment (B), optionally more.
+4. Metrics: one primary metric, guardrails, and diagnostics.
+5. Sample size and duration computed before launch.
+6. Decision rule written down before seeing results.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+## Metrics
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+| Type | Purpose | Examples |
+|------|---------|----------|
+| Primary (decision) metric | The one metric the decision is based on | Conversion rate, revenue per user, retention day 7 |
+| Guardrail metrics | Must not get worse | Page latency, error rate, unsubscribe rate, refunds |
+| Diagnostic / secondary | Explain the result | Click-through on the new element, funnel steps |
+| Sample ratio check | Data quality | Assignment counts vs expected split |
 
-## Architecture Patterns
+Good primary metrics are sensitive (move when the product improves), attributable to the change, and aligned with long-term value. Prefer per-user metrics (conversion per user) matching the randomization unit.
 
-### Pattern 1: Standard Architecture
-The standard architecture for Ab Testing follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+## Randomization
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+- Deterministic hashing: `bucket = hash(experiment_salt + user_id) mod 10000`; assignment is stable across sessions and independent across experiments with different salts.
+- Assign at the moment the user would experience the difference (trigger point) and analyze triggered users to reduce noise, while keeping assignment logic identical for both groups.
+- Log exposures (who actually saw which variant) separately from assignment.
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+## Sample Size
 
-## Implementation Guide
+For a conversion metric with baseline rate p, minimum detectable effect (MDE) as an absolute difference d, significance alpha = 0.05 (two-sided) and power 80%, an approximate per-group sample size is:
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+```
+n ≈ 2 x (1.96 + 0.84)^2 x p(1 - p) / d^2  ≈ 15.7 x p(1 - p) / d^2
+```
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+Example: p = 0.05, d = 0.005 (5.0% to 5.5%, a 10% relative lift): n ≈ 15.7 x 0.0475 / 0.000025 ≈ 29,800 users per group.
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+```python
+from statsmodels.stats.power import NormalIndPower
+from statsmodels.stats.proportion import proportion_effectsize
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+effect = proportion_effectsize(0.055, 0.05)
+n_per_group = NormalIndPower().solve_power(effect_size=effect, alpha=0.05, power=0.8, alternative="two-sided")
+```
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+Duration: at least the computed sample and at least one or two full weekly cycles to cover day-of-week effects. Decide MDE by business value: what is the smallest effect worth shipping?
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+## Running the Test
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+- Ramp gradually (e.g. 1% -> 10% -> 50%) to catch bugs, but analyze only the stable full-allocation period or account for ramp properly.
+- Do not change variants, allocation or targeting mid-test.
+- Check sample ratio mismatch (SRM) early: a chi-squared test on assignment counts; a significant mismatch indicates a bug, and results should not be trusted.
+- Monitor guardrails for severe regressions and stop early for harm.
 
-## Best Practices
+## Reading Results
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+- Report the effect size with a confidence interval, not only a p-value: "conversion +0.4 pp (95% CI +0.1 to +0.7 pp)".
+- p < 0.05 means data this extreme would be unlikely if there were no effect; it does not give the probability that the treatment is better.
+- A non-significant result means "not detected at this sample size", not "no effect"; look at the interval width.
+- Check guardrails and segments for consistency, but treat segment findings as hypotheses (multiple comparisons).
 
-## Common Pitfalls
+## Decision Framework
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+| Primary metric | Guardrails | Decision |
+|----------------|------------|----------|
+| Significant positive | Neutral | Ship |
+| Significant positive | Significant negative | Discuss trade-off; often iterate |
+| Not significant, narrow CI around zero | Neutral | Ship only if there is another reason (simplicity, strategy) |
+| Not significant, wide CI | Neutral | Inconclusive; more traffic or a bolder change |
+| Significant negative | Any | Do not ship; learn |
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+## Common Mistakes
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+| Mistake | Consequence | Fix |
+|---------|-------------|-----|
+| Peeking and stopping at first significance | Inflated false positives | Fixed horizon, or sequential methods designed for peeking |
+| Many metrics, no primary | Cherry-picking | Pre-register primary metric |
+| Randomizing by page view but measuring per user | Wrong variance, contamination | Match analysis unit to randomization unit |
+| Ignoring SRM | Biased results | Automated SRM checks |
+| Novelty/primacy effects | Short-term spikes or dips | Run long enough; look at effect over time |
+| Interference between users (marketplaces, social) | Biased estimates | Cluster or switchback designs |
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## Checklist
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Ab Testing concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- [ ] Written hypothesis, primary metric, guardrails, decision rule
+- [ ] Randomization unit chosen and assignment deterministic
+- [ ] Sample size and duration computed from MDE
+- [ ] Exposure logging and SRM check in place
+- [ ] No mid-test changes; no unplanned peeking
+- [ ] Results reported with confidence intervals and documented

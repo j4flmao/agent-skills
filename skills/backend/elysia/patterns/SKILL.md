@@ -1,7 +1,7 @@
 ---
 name: elysia-patterns
 description: >
-  Use this skill when implementing Elysia.js patterns — Eden Treaty client, WebSocket handlers, auth/guard macros, custom plugins, performance optimization, and type-safe validation. This skill enforces: type-safe client-server communication, macro-based guards, schema-first validation. Requires Bun (bun create elysia). Do NOT use for: Express middleware patterns, Node.js streams, or non-Elysia frameworks.
+  Use this skill when the user says 'elysia pattern', 'elysia eden treaty', 'elysia websocket', 'elysia macro', 'elysia validation', 'elysia file upload', 'elysia custom plugin'. Implements Elysia recipes: Eden Treaty clients, built-in WebSocket pub/sub, parameterized macros, custom plugins with lifecycle hooks, TypeBox validation, uploads, error mapping and DI via decorate. Do NOT use for: overall project structure and lifecycle order (elysia-architecture), Express middleware, non-Elysia frameworks.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -49,7 +49,7 @@ Code-first: pattern name, problem, implementation. Compress output.
 
 | Criterion | Eden Treaty | tRPC | REST+OpenAPI |
 |-----------|-------------|------|--------------|
-| Backend | Elysia only | Node.js only | Any |
+| Backend | Elysia only | TypeScript servers (Node, Bun, Deno, edge adapters) | Any |
 | Type safety | Full-stack inference | Full-stack inference | Generated client |
 | Setup | Single `typeof app` | Manual procedure defs | External tooling |
 | File upload | Declarative | Manual | Multipart |
@@ -62,7 +62,7 @@ Decision: Elysia backend + any frontend → Eden Treaty. tRPC backend → tRPC f
 
 | Pattern | Scope | Use Case |
 |---------|-------|----------|
-| Macro (`guard`, `resolve`) | Route-level | Auth check, permission guard |
+| Macro (`.macro()`, enabled per route or `guard`) | Route-level | Auth check, permission guard |
 | Middleware (`onRequest`, `beforeHandle`) | Global or group | Logging, CORS, rate limit |
 | Plugin (`new Elysia({name})`) | Modular feature | User module, auth module |
 
@@ -84,32 +84,30 @@ export const app = new Elysia()
 export type App = typeof app
 
 // client/src/api.ts
-import { edenTreaty } from '@elysiajs/eden'
+import { treaty } from '@elysiajs/eden' // Eden Treaty 2
 import type { App } from '../../server/src/app'
 
-export const client = edenTreaty<App>('http://localhost:3000', {
+export const client = treaty<App>('localhost:3000', {
   headers: () => ({
     authorization: `Bearer ${localStorage.getItem('token')}`,
   }),
 })
 
-// React component
-async function UserProfile({ id }: { id: string }) {
+// Usage (e.g. inside a data-fetching hook)
+export async function loadUser(id: string) {
   const { data, error } = await client.users({ id }).get()
-  if (error) return <div>Error: {error.message}</div>
-  return <div>{data.name}</div>
+  if (error) throw new Error(`Failed to load user ${id}: HTTP ${error.status}`)
+  return data
 }
 ```
 
 ### Step 2: WebSocket Pattern
 
 ```typescript
-// src/plugins/realtime.ts
+// src/plugins/realtime.ts — WebSocket support is built into Elysia (Bun's uWebSockets), no plugin needed
 import { Elysia, t } from 'elysia'
-import { ws } from '@elysiajs/websocket'
 
-export const realtimePlugin = new Elysia()
-  .use(ws())
+export const realtimePlugin = new Elysia({ name: 'realtime' })
   .ws('/ws/orders/:orderId', {
     body: t.Object({
       type: t.String(),
@@ -128,13 +126,14 @@ export const realtimePlugin = new Elysia()
     },
   })
 
-// Emit from service
+// Emit from service code (app = the listening Elysia instance)
 function notifyOrderStatus(orderId: string, status: string) {
-  app.server?.publish(`order:${orderId}`, {
+  app.server?.publish(`order:${orderId}`, JSON.stringify({
     type: 'status_update',
     payload: { orderId, status },
-  })
+  }))
 }
+// Pub/sub is per process; fan out through Redis/NATS when running several instances.
 ```
 
 ### Step 3: Custom Plugin with Lifecycle
@@ -159,16 +158,17 @@ interface AuditEntry {
 
 export const auditLogPlugin = (config: AuditLogConfig) =>
   new Elysia({ name: 'audit-log' })
-    .derive({ as: 'scoped' }, () => ({ startTime: performance.now() }))
-    .onResponse(({ request, set, store, startTime }) => {
+    .derive({ as: 'global' }, () => ({ startTime: performance.now() }))
+    .onAfterResponse({ as: 'global' }, (ctx) => {
+      const { request, set, startTime } = ctx
       const url = new URL(request.url)
       if (config.excludePaths?.includes(url.pathname)) return
 
       const entry: AuditEntry = {
         method: request.method,
         path: url.pathname,
-        userId: (request as any).user?.id || null,
-        statusCode: set.status || 200,
+        userId: (ctx as { user?: { id: string } }).user?.id ?? null, // set by auth plugin if present
+        statusCode: typeof set.status === 'number' ? set.status : 200,
         duration: performance.now() - startTime,
         timestamp: new Date(),
       }
@@ -190,28 +190,32 @@ import { Elysia } from 'elysia'
 
 const requestCounts = new Map<string, { count: number; resetAt: number }>()
 
+// Single-instance demo only: per-process memory, no eviction. Use Redis for real deployments.
 export const rateLimitPlugin = new Elysia({ name: 'rate-limit' })
   .macro({
-    // @ts-ignore
-    rateLimit: {
-      beforeHandle({ headers, set }, limit: number = 60) {
-        const ip = headers['x-forwarded-for'] || 'unknown'
-        const now = Date.now()
-        const entry = requestCounts.get(ip)
+    // parameterized macro: { rateLimit: 100 } on a route or guard
+    rateLimit(limit: number) {
+      return {
+        beforeHandle({ request, server, set }) {
+          const ip = server?.requestIP(request)?.address ?? 'unknown'
+          const now = Date.now()
+          const entry = requestCounts.get(ip)
 
-        if (!entry || now > entry.resetAt) {
-          requestCounts.set(ip, { count: 1, resetAt: now + 60000 })
-          return
-        }
+          if (!entry || now > entry.resetAt) {
+            requestCounts.set(ip, { count: 1, resetAt: now + 60_000 })
+            return
+          }
 
-        entry.count++
-        if (entry.count > limit) {
-          set.status = 429
-          set.headers['Retry-After'] = String(Math.ceil((entry.resetAt - now) / 1000))
-          return { error: 'Rate limit exceeded', retryAfter: Math.ceil((entry.resetAt - now) / 1000) }
-        }
+          entry.count++
+          if (entry.count > limit) {
+            const retryAfter = Math.ceil((entry.resetAt - now) / 1000)
+            set.status = 429
+            set.headers['retry-after'] = String(retryAfter)
+            return { error: 'Rate limit exceeded', retryAfter }
+          }
+        },
       }
-    }
+    },
   })
 
 // Usage
@@ -317,7 +321,7 @@ export const errorPlugin = new Elysia({ name: 'error-handler' })
   .onError({ as: 'global' }, ({ error, code, set }) => {
     if (code === 'VALIDATION') {
       set.status = 400
-      return { success: false, code: 'VALIDATION_ERROR', details: error.validator.Errors(error.value).First() }
+      return { success: false, code: 'VALIDATION_ERROR', details: error.all }
     }
     if (code === 'NOT_FOUND') {
       set.status = 404
@@ -349,39 +353,35 @@ const app = new Elysia()
 ```typescript
 // Elysia production config
 const app = new Elysia({
-  precompile: true,          // Pre-compile handlers for faster startup
-  strictPath: true,          // Strict path matching (/users != /users/)
-  normalize: false,          // Skip path normalization in production
+  precompile: true,   // compile routes/validators at startup: slower boot, faster first requests
+  strictPath: true,   // /users and /users/ are different routes
 })
-  .use(compression())
-  .use(cors())
+  .use(cors({ origin: ['https://app.example.com'] }))
   .listen(3000)
 ```
 
-- `precompile: true` — reduces cold start by 40-60%
-- Use `compression()` plugin for gzip/brotli response encoding
-- Eden Treaty: use `$fetch` instead of `fetch` option for faster client requests
-- Bun-native: Elysia runs on Bun's HTTP server (>80k req/s)
-- Memory: monitor with `process.memoryUsage()`, set `--smol` flag in Docker
-- Rate limiting: use macro-based guard instead of middleware for better performance
+- `precompile` trades startup time for first-request latency; leave it off for serverless cold starts.
+- `normalize` (default on) strips properties not in the schema; keep it on so unexpected fields never reach handlers.
+- Response compression: usually done by the reverse proxy/CDN; community plugins exist if needed in-process.
+- Memory-constrained containers: run Bun with `--smol`.
+- Benchmark your own routes; framework micro-benchmarks rarely reflect database-bound workloads.
 
 ### Caching
 ```typescript
-// Simple in-memory cache plugin
+// Simple in-memory cache plugin (one Map per process, shared by all requests)
+const cache = new Map<string, { data: unknown; expires: number }>()
+
 export const cachePlugin = new Elysia({ name: 'cache' })
-  .derive({ as: 'scoped' }, () => {
-    const cache = new Map<string, { data: any; expires: number }>()
-    return {
-      cacheGet: (key: string) => {
-        const entry = cache.get(key)
-        if (entry && entry.expires > Date.now()) return entry.data
-        cache.delete(key)
-        return null
-      },
-      cacheSet: (key: string, data: any, ttlMs: number = 60000) => {
-        cache.set(key, { data, expires: Date.now() + ttlMs })
-      }
-    }
+  .decorate({
+    cacheGet: (key: string) => {
+      const entry = cache.get(key)
+      if (entry && entry.expires > Date.now()) return entry.data
+      cache.delete(key)
+      return null
+    },
+    cacheSet: (key: string, data: unknown, ttlMs: number = 60000) => {
+      cache.set(key, { data, expires: Date.now() + ttlMs })
+    },
   })
 ```
 
@@ -391,7 +391,7 @@ const app = createApp().listen(port)
 
 process.on('SIGTERM', async () => {
   console.log('Shutting down...')
-  app.stop()
+  await app.stop()   // stop accepting connections, let in-flight requests finish
   await db.close()
   process.exit(0)
 })
@@ -410,15 +410,12 @@ class UserService {
   async findById(id: string) { return this.db.query('SELECT * FROM users WHERE id = $1', [id]) }
 }
 
-// Register in app state
-const app = new Elysia()
-  .decorate('db', new Database(process.env.DATABASE_URL!))
-  .decorate('userService', new UserService(new Database(process.env.DATABASE_URL!)))
-  .get('/users/:id', ({ params: { id }, userService }) => userService.findById(id))
+// One shared connection pool, injected into services
+const db = new Database(process.env.DATABASE_URL!)
 
 // Plugin-scoped DI
 const userModule = new Elysia({ name: 'user-module' })
-  .decorate('userService', new UserService(new Database(process.env.DATABASE_URL!)))
+  .decorate('userService', new UserService(db))
   .get('/users/:id', ({ userService, params: { id } }) => userService.findById(id))
   .post('/users', ({ body, userService }) => userService.create(body))
 
@@ -458,16 +455,16 @@ const app = new Elysia()
 | Eden Treaty with `typeof` without export | Client can't infer types | Export `App` type from `app.ts` |
 | WebSocket in non-ws plugin | Unclear ownership | Create dedicated `realtime` plugin |
 | Heavy computation in macros | Blocks request pipeline | Offload to service layer |
-| Missing `{as: 'scoped'}` on derive | Memory leak (state persists) | Always scope per-request state |
-| Using Express middleware directly | Elysia handles middleware differently | Convert to Elysia `onRequest`/`beforeHandle` |
-| Not using `precompile: true` in prod | Slower cold starts | Enable precompile for production deployments |
-| Decorating state in base app for all modules | Memory grows with every module | Scope state to plugin via `decorate` in named plugins |
+| Expecting a plugin's hooks to apply to the parent app | Hooks are `local` by default | Set `{ as: 'scoped' }` or `{ as: 'global' }` explicitly |
+| Using Express middleware directly | Incompatible request model | Convert to Elysia `onRequest`/`beforeHandle` |
+| Unnamed plugins used many times | Hooks registered repeatedly | Give reusable plugins a `name` (and `seed` if configurable) for deduplication |
+| Per-request `derive` creating caches/clients | New object per request, no sharing | `decorate`/`state` for singletons |
 
 ## Security Considerations
-- Eden Treaty sends all appropriate CORS headers automatically
+- CORS is a server concern: configure `@elysiajs/cors` with explicit origins; Eden does not change CORS behavior
 - WebSocket: validate origin and auth token on connection
 - Guard macros for auth — never trust client-side claims
-- Rate limiting at macro level for critical endpoints (login, register)
+- Rate limiting for critical endpoints (login, register), backed by a shared store when running multiple instances
 - Content Security Policy via response headers
 
 ## Testing Strategies
@@ -497,10 +494,10 @@ Use `bun test` with `WebSocket` constructor. Test connection, message send/recei
 ## Rules
 - Eden Treaty client uses `typeof app` — export the `App` type from the main entry point.
 - Plugins are named (`new Elysia({name})`) for proper deduplication by Elysia's plugin system.
-- `as: 'scoped'` on all per-request state. `as: 'global'` only for app-wide singletons.
+- Choose hook scope deliberately: `local` (default, plugin only), `scoped` (plugin + direct parent), `global` (everything).
 - Macro names are camelCase and map to lifecycle hooks (beforeHandle, onRequest, etc).
 - WebSocket routes isolated in dedicated plugin — never mixed with HTTP routes.
-- Error handler plugin registered first in pipeline (outermost catches all).
+- Register the error handler plugin before routes; hooks only apply to routes registered after them.
 
 ## References
   - references/eden-treaty.md — Eden Treaty Client

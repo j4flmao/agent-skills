@@ -98,7 +98,6 @@ docker service create --name api \
 ### Swarm Mode with Overlay
 
 ```yaml
-version: "3.8"
 services:
   app:
     image: myapp:latest

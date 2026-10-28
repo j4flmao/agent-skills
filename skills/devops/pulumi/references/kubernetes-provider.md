@@ -136,6 +136,7 @@ const service = new k8s.core.v1.Service("nginx-svc", {
 ### ConfigMap and Secret
 ```typescript
 import * as k8s from "@pulumi/kubernetes";
+import * as pulumi from "@pulumi/pulumi";
 
 const configMap = new k8s.core.v1.ConfigMap("app-config", {
   metadata: { namespace: ns.metadata.name },
@@ -152,7 +153,7 @@ const secret = new k8s.core.v1.Secret("db-creds", {
     DB_HOST: "postgres.internal",
     DB_PORT: "5432",
     DB_USER: "app_user",
-    DB_PASSWORD: pulumi.secret("s3cur3p@ss"), // encrypted in state
+    DB_PASSWORD: new pulumi.Config().requireSecret("dbPassword"), // set via `pulumi config set --secret dbPassword`
   },
 }, { provider });
 ```
@@ -163,13 +164,13 @@ new k8s.networking.v1.Ingress("app-ingress", {
   metadata: {
     namespace: ns.metadata.name,
     annotations: {
-      "kubernetes.io/ingress.class": "nginx",
       "cert-manager.io/cluster-issuer": "letsencrypt-prod",
       "nginx.ingress.kubernetes.io/ssl-redirect": "true",
-      "nginx.ingress.kubernetes.io/rate-limit": "100r/s",
+      "nginx.ingress.kubernetes.io/limit-rps": "100",
     },
   },
   spec: {
+    ingressClassName: "nginx",
     tls: [{ hosts: ["app.example.com"], secretName: "app-tls" }],
     rules: [{
       host: "app.example.com",

@@ -1,11 +1,38 @@
 ---
 name: asset-pipeline
-description: Expert game asset pipeline — asset system lifecycle, import/cook pipeline, streaming & hot-reload, reference counting, virtual filesystem, and shader pipeline management.
+description: >
+  Use this skill when the user says 'asset pipeline', 'asset cooking', 'import pipeline', 'pak file', 'hot reload', 'shader compilation pipeline', 'asset registry'. Designs the asset pipeline: import/cook, content-addressed caching, asset registry and references, packaging, streaming throttles, hot reload and shader pipelines. Do NOT use for: runtime open-world streaming policies (use level-streaming), CI system setup (use devops skills).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, assets, cook, hot-reload, engine]
 ---
 
 # Game Asset Pipeline — Deep Engineering Guide
 
+## Purpose
 Assets are the foundation of every game: the pipeline takes 100k DCC source files and turns them into compressed, streamable, cache-friendly runtime formats — without frame spikes, without leaks, without 3-minute load screens longer than the content itself.
+
+## Agent Protocol
+
+### Trigger
+"asset pipeline", "asset cooking", "import pipeline", "pak file", "hot reload", "shader compilation pipeline", "asset registry".
+
+### Input Context
+- Engine and DCC tools in use
+- Asset count/size and target platforms
+- Build farm / CI constraints
+
+### Output Artifact
+Pipeline design and tool/runtime code. No file unless requested.
+
+### Response Format
+```
+Stage: {import | cook | pack | load | reload}
+Design: {key decisions}
+Code: {snippet}
+Cache key: {inputs hashed}
+```
 
 ## 1. The Two-Stage World: Source vs Runtime
 
@@ -89,7 +116,7 @@ Refcounting is the API: `Load` increments, `Unload` decrements. A streamed textu
 Async request goes through the VFS (see `filesystem.md`): read async → cook-on-load (decompress, decode) on a worker → upload to GPU → mark ready. Pending loads are tracked; the frame only sees ready assets.
 
 ```cpp
-AsyncLoadBBC tx = AssetManager::RequestStream(id);
+AsyncLoadHandle tx = AssetManager::RequestStream(id);
 // later: await via the job system; or poll tx.isReady()
 ```
 

@@ -1,298 +1,148 @@
-# Advanced error-handling for kotlin
+# Kotlin Backend Error Handling
 
-## 1. Executive Summary
-This document provides an exhaustive, production-grade reference for implementing error-handling in the context of kotlin. It covers architectural decisions, common pitfalls, performance tuning, and security considerations.
+Modelling, propagating, and reporting errors in Kotlin services: exceptions vs typed results, coroutine cancellation, and mapping to HTTP problem responses in Ktor and Spring.
 
-## 2. Deep Dive Principle 2
-When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. 
+## Decide: Exception or Typed Result
 
-### 2.1 Architectural Considerations
-The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+| Situation | Approach |
+|-----------|----------|
+| Programming bugs, broken invariants | Throw (`require`, `check`, `error`) and let it reach the global handler |
+| Infrastructure failure (DB down, timeout) | Exception, mapped to 5xx/503 at the edge |
+| Expected business outcome (not found, insufficient funds, validation) | Sealed result type or domain exception with a stable code |
+| Multiple validation errors to accumulate | Arrow `Either`/`zipOrAccumulate` or a list of field errors |
 
-```typescript
-// Advanced Implementation Example 2
-export class error_handlingManager_2 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+Pick one convention per codebase and apply it consistently.
 
-  private initialize(): void {
-    console.log('Initializing kotlin error-handling subsystem...');
-    // Complex setup logic here
-  }
+## Standard Library Preconditions
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for error-handling
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
+```kotlin
+fun transfer(amountCents: Long, from: Account, to: Account) {
+    require(amountCents > 0) { "amountCents must be positive, was $amountCents" }   // IllegalArgumentException
+    check(from.isActive) { "Account ${from.id} is not active" }                     // IllegalStateException
 }
 ```
 
-### 2.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. 
+## Sealed Result Types
 
-## 3. Deep Dive Principle 3
-When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. 
+```kotlin
+sealed interface PayResult {
+    data class Paid(val order: Order) : PayResult
+    data class Declined(val reason: String) : PayResult
+    data object NotFound : PayResult
+}
 
-### 3.1 Architectural Considerations
-The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 3
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class error_handling_Processor_3:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 3.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. 
-
-## 4. Deep Dive Principle 4
-When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. 
-
-### 4.1 Architectural Considerations
-The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 4
-export class error_handlingManager_4 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing kotlin error-handling subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for error-handling
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
+when (val r = payOrder(id)) {
+    is PayResult.Paid -> call.respond(HttpStatusCode.OK, r.order.toDto())
+    is PayResult.Declined -> call.respond(HttpStatusCode.PaymentRequired, problem("payment_declined", r.reason))
+    PayResult.NotFound -> call.respond(HttpStatusCode.NotFound, problem("order_not_found", "Order $id not found"))
 }
 ```
 
-### 4.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. 
+`when` over a sealed type is exhaustive, so adding a case breaks compilation at every call site that needs updating.
 
-## 5. Deep Dive Principle 5
-When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. 
+## Domain Exception Hierarchy
 
-### 5.1 Architectural Considerations
-The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 5
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class error_handling_Processor_5:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
+```kotlin
+sealed class DomainException(val code: String, message: String) : RuntimeException(message)
+class NotFoundException(resource: String, id: Any) :
+    DomainException("${resource}_not_found", "$resource $id not found")
+class ConflictException(code: String, message: String) : DomainException(code, message)
+class ValidationException(val fieldErrors: Map<String, String>) :
+    DomainException("validation_failed", "Request validation failed")
 ```
 
-### 5.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. 
+## `runCatching` and Cancellation
 
-## 6. Deep Dive Principle 6
-When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. 
+`runCatching` catches `Throwable`, including `CancellationException`. Swallowing cancellation breaks structured concurrency (the coroutine keeps running after its scope was cancelled).
 
-### 6.1 Architectural Considerations
-The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+```kotlin
+// Wrong inside suspend code
+val user = runCatching { client.fetchUser(id) }.getOrNull()
 
-```typescript
-// Advanced Implementation Example 6
-export class error_handlingManager_6 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+// Right
+suspend inline fun <T> catchingNonCancellation(block: () -> T): Result<T> =
+    try { Result.success(block()) }
+    catch (e: CancellationException) { throw e }
+    catch (e: Exception) { Result.failure(e) }
+```
 
-  private initialize(): void {
-    console.log('Initializing kotlin error-handling subsystem...');
-    // Complex setup logic here
-  }
+Also never catch `Throwable` broadly in suspend functions without rethrowing `CancellationException`.
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for error-handling
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
+## Coroutine Failure Semantics
+
+- `coroutineScope { }`: one child failing cancels siblings and rethrows — use for "all must succeed".
+- `supervisorScope { }`: child failures are independent; handle each `async` result with `try`/`await`.
+- `CoroutineExceptionHandler` only applies to root coroutines started with `launch`; it does not catch exceptions from `async` (those surface on `await`).
+- `withTimeout` throws `TimeoutCancellationException` (a `CancellationException`); use `withTimeoutOrNull` when a timeout is an expected outcome, or catch and convert it to a domain error.
+
+```kotlin
+val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default +
+    CoroutineExceptionHandler { _, e -> log.error("Unhandled background failure", e) })
+```
+
+## Ktor: StatusPages
+
+```kotlin
+@Serializable
+data class Problem(val type: String, val title: String, val status: Int, val detail: String? = null,
+                   val errors: Map<String, String>? = null)
+
+fun Application.configureErrors() = install(StatusPages) {
+    exception<ValidationException> { call, e ->
+        call.respond(HttpStatusCode.UnprocessableEntity,
+            Problem("validation_failed", "Validation failed", 422, errors = e.fieldErrors))
     }
-  }
+    exception<NotFoundException> { call, e ->
+        call.respond(HttpStatusCode.NotFound, Problem(e.code, "Not found", 404, e.message))
+    }
+    exception<ConflictException> { call, e ->
+        call.respond(HttpStatusCode.Conflict, Problem(e.code, "Conflict", 409, e.message))
+    }
+    exception<BadRequestException> { call, e ->
+        call.respond(HttpStatusCode.BadRequest, Problem("bad_request", "Malformed request", 400, e.message))
+    }
+    exception<Throwable> { call, e ->
+        call.application.log.error("Unhandled error on ${call.request.httpMethod.value} ${call.request.uri}", e)
+        call.respond(HttpStatusCode.InternalServerError, Problem("internal_error", "Internal error", 500))
+    }
 }
 ```
 
-### 6.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. 
+Respond with `Content-Type: application/problem+json` (RFC 9457) if clients expect it.
 
-## 7. Deep Dive Principle 7
-When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. 
+## Spring: ProblemDetail
 
-### 7.1 Architectural Considerations
-The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 7
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class error_handling_Processor_7:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 7.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. 
-
-## 8. Deep Dive Principle 8
-When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. 
-
-### 8.1 Architectural Considerations
-The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 8
-export class error_handlingManager_8 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing kotlin error-handling subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for error-handling
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
+```kotlin
+@RestControllerAdvice
+class ErrorHandler {
+    @ExceptionHandler(NotFoundException::class)
+    fun notFound(e: NotFoundException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.message ?: "").apply {
+            setProperty("code", e.code)
+        }
 }
 ```
 
-### 8.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. 
+Enable `spring.mvc.problemdetails.enabled=true` (or the WebFlux equivalent) for framework errors.
 
-## 9. Deep Dive Principle 9
-When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. 
+## Logging Rules
 
-### 9.1 Architectural Considerations
-The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+- Log once, at the boundary that handles the error; do not log and rethrow at each layer.
+- Include identifiers (`orderId`, `customerId`, request id via MDC); never log secrets or full payment data.
+- 4xx: log at INFO/WARN without stack trace; 5xx: ERROR with stack trace.
+- With coroutines, propagate MDC using `kotlinx-coroutines-slf4j` `MDCContext()`.
 
-```python
-# Advanced Python Implementation 9
-import asyncio
-import logging
+## Pitfalls
 
-logger = logging.getLogger(__name__)
+- `!!` in request handling → NPE becomes a 500; validate input and use typed errors.
+- Returning `null` for failures hides the reason; return a sealed result or throw.
+- Leaking exception messages from the DB driver to clients.
+- Retrying non-idempotent operations in a generic catch block.
 
-class error_handling_Processor_9:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
+## Checklist
 
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 9.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. 
-
-## 10. Deep Dive Principle 10
-When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. When dealing with kotlin, addressing error-handling requires a multi-layered approach. 
-
-### 10.1 Architectural Considerations
-The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of kotlin mean that error-handling must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 10
-export class error_handlingManager_10 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing kotlin error-handling subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for error-handling
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 10.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. A frequent mistake when implementing error-handling in kotlin is ignoring edge cases. 
-
-## 11. Conclusion
-This concludes the deep dive into error-handling for kotlin. Ensure you review the other 7 references in this category for a holistic understanding.
-
+- [ ] Clear rule: exceptions for bugs/infra, typed results or domain exceptions for business outcomes
+- [ ] `CancellationException` always rethrown
+- [ ] One global handler mapping to problem responses
+- [ ] Stable machine-readable error codes
+- [ ] Single log entry per failure, with context and request id

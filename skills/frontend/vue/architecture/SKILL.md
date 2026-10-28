@@ -137,6 +137,8 @@ interface Props { variant?: 'primary' | 'secondary'; disabled?: boolean }
 interface Emits { (e: 'click'): void }
 
 const props = withDefaults(defineProps<Props>(), { variant: 'primary' })
+// Vue 3.5+: reactive props destructure is also stable:
+// const { variant = 'primary', disabled = false } = defineProps<Props>()
 const emit = defineEmits<Emits>()
 </script>
 

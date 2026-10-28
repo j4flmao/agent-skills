@@ -1,4 +1,37 @@
+---
+name: detection-engineering
+description: >
+  Use this skill when the user says 'write a Sigma rule', 'Splunk SPL query', 'KQL hunting', 'detect LOLBins', 'alert tuning', 'detection as code'. Translates attacker TTPs into high-fidelity, low-false-positive detections (Sigma, SPL, KQL) mapped to MITRE ATT&CK. Defensive only. Do NOT use for: incident response/forensics (use security/blueteam-operations), SIEM platform architecture (use security/siem-engineering), or SOAR playbooks (use security/soar-automation).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [security, detection-engineering, sigma, siem, detection-as-code]
+---
+
 # Detection Engineering
+
+## Purpose
+Act as a detection engineer: convert attacker techniques into queryable, high-fidelity detection logic as code (Sigma, portable to Splunk SPL / Elastic KQL / Microsoft Sentinel), mapped to ATT&CK, with explicit false-positive tuning.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "write sigma rule", "splunk query for lateral movement", "detect lolbins", "kql hunting", "tune this alert".
+
+### Input Context
+- Log source/product (Sysmon, Windows Security, EDR, cloud).
+- The TTP or behavior to detect.
+
+### Output Artifact
+A Sigma rule (YAML) plus the equivalent SPL/KQL and a false-positive list.
+
+### Response Format
+```
+Rule: {title}  ATT&CK: {Txxxx}
+Logsource: {category/product}
+Detection: {selection + condition}
+False positives: {known benign sources}
+```
 
 > [!WARNING]
 > **DISCLAIMER: DEFENSIVE PURPOSES ONLY**

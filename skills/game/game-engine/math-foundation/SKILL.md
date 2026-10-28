@@ -1,11 +1,37 @@
 ---
 name: math-foundation
-description: Expert game engine math foundation — SIMD vectors/matrices, quaternions, transforms, interpolation, collision primitives, curves and numerical stability under real-time budgets.
+description: >
+  Use this skill when the user says 'game math', 'quaternion', 'SIMD math', 'transform hierarchy', 'frustum culling', 'collision primitives', 'interpolation', 'floating point precision'. Builds the engine math layer: SIMD vectors/matrices, quaternions, transforms, interpolation and curves, collision primitives and numerical stability. Do NOT use for: physics solver design (use physics-engine), shader math tutorials.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, math, simd, quaternion, engine]
 ---
 
 # Math Foundation — Deep Engineering Guide
 
+## Purpose
 Every frame pushes millions of floats through vectors, matrices, quaternions, and collision tests. Math is the substrate: correct under 16.6 ms, deterministic for netcode, and SIMD-friendly or it dies. This skill covers the core math library every engine needs.
+
+## Agent Protocol
+
+### Trigger
+"game math", "quaternion", "SIMD math", "transform hierarchy", "frustum culling", "collision primitives", "interpolation", "floating point precision".
+
+### Input Context
+- Language and SIMD targets (SSE/AVX, NEON)
+- Coordinate conventions (handedness, row/column-major)
+- Precision issue or feature needed
+
+### Output Artifact
+Math code with conventions stated explicitly. No file unless requested.
+
+### Response Format
+```
+Conventions: {handedness, matrix layout, angle units}
+Code: {snippet}
+Edge cases: {normalisation, epsilon, degeneracy}
+```
 
 ## 1. The Canonical Type Set
 
@@ -30,11 +56,12 @@ Rules:
 `float4` maps to `__m128` (SSE), `float4x4` to rows of `__m128`. Use intrinsic headers you control (or DirectXMath/Eigen/SIMD eigen) rather than accidental scalar loops.
 
 ```cpp
-struct alignas(16) float4 { float x, y, z, w; };
-// SSE: _mm_add_ps(a, b) etc.
-inline float4 FMA(float4 a, float4 b, float4 c) {
-    return _mm_fmadd_ps(a, b, c);   // a*b + c — 1 instr, no rounding split
-}
+#include <immintrin.h>
+struct alignas(16) float4 { __m128 v; };          // wrap the register type
+inline float4 operator+(float4 a, float4 b) { return { _mm_add_ps(a.v, b.v) }; }
+// FMA3 (Haswell+/Zen+, compile with -mfma or /arch:AVX2): one rounding instead of two.
+inline float4 MulAdd(float4 a, float4 b, float4 c) { return { _mm_fmadd_ps(a.v, b.v, c.v) }; }
+// NEON equivalent: vfmaq_f32(c, a, b). Note FMA changes results vs mul+add -> pick one per build for determinism.
 ```
 
 ### 2.2 Alignment & Layout
@@ -45,7 +72,7 @@ inline float4 FMA(float4 a, float4 b, float4 c) {
 
 ### 2.3 When SIMD Matters Most
 
-Matrix×Vector, quaternion×vector, AABB test packs, and any tight loop with uniform ops. At 100k transforms: SIMD mat×vec = ~4–8x over scalar.
+Matrix×Vector, quaternion×vector, AABB test packs, and any tight loop with uniform ops. Expect gains bounded by lane width (4 for SSE/NEON, 8 for AVX) and usually limited by memory bandwidth — benchmark against the scalar reference.
 
 ## 3. Quaternions: The Correct Rotation
 
@@ -56,7 +83,7 @@ Gimbal lock (order-dependent), non-unique representations, bad interpolation. Qu
 ### 3.2 The Core Ops
 
 ```cpp
-quat mul(q1, q2);        // compose: apply q2 first, then q1. ~8 mults via SIMD
+quat mul(q1, q2);        // compose: apply q2 first, then q1 (16 mul + 12 add scalar)
 vec3  rotate(q, v);      // q v q^-1  →  t=2 cross(q.xyz,v);  v + q.w*t + cross(q.xyz,t)
 quat  slerp(a, b, t);    // shortest arc, accounting for sign (a·b<0 → negate b)
 quat  nlerp(a, b, t);    // cheap approx (normalize lerp); fine for small arcs
@@ -76,14 +103,14 @@ Composing 1k quats drifts norm → normalize periodically (per-frame per-transfo
 
 ### 4.1 Transform Composition
 
-World transform = `T(parent) * R * S` (translation × rotation × scale, parent-first). Store as `Transform { pos, rot, scale }`; combine for children.
+Local matrix = `T * R * S` (column-vector convention: scale, then rotate, then translate). World = `ParentWorld * Local`. Store as `Transform { pos, rot, scale }`; non-uniform scale under rotated parents introduces shear, which a TRS struct cannot represent — avoid it or fall back to matrices.
 
 Convention decision (critical, document it):
 - **Row vectors × matrices** (D3D-style) or **column vectors** (GL style)? Pick ONE for the whole engine + renderer; document in the codebase header; mismatch = mirrored sprites.
 
 ### 4.2 Handedness
 
-- Engine convention: e.g., **right-handed, Z-up** (DOOM/Unreal) vs **Z-forward left-handed (Unity-ish)** — pick and convert at import (see `import-and-cook`).
+- Known conventions: Unreal = left-handed, Z-up; Unity = left-handed, Y-up; Godot / glTF / OpenGL = right-handed, Y-up; Blender = right-handed, Z-up. Pick one for the engine and convert at import (see `import-and-cook`).
 - All camera/projection/shadow conversions flow through one place to avoid 50 copies of the flip.
 
 ### 4.3 Fast Paths
@@ -98,7 +125,7 @@ Convention decision (critical, document it):
 
 - `a+b+c != (a+b)+c` (float non-associativity).
 - `0.1f` is not `0.1`.
-- Large + small = the small is lost (catastrophic cancellation near equal values).
+- Absorption: adding a tiny value to a huge one loses the tiny one. Catastrophic cancellation: subtracting nearly equal values destroys significant digits. Both bite with large world coordinates — use floating origin / camera-relative rendering.
 
 ### 5.2 Mitigations
 
@@ -111,7 +138,7 @@ Convention decision (critical, document it):
 
 - No `-ffast-math`, no FMA being used in some builds but not others, same `float` ops per platform.
 - Fixed-point integer math for lockstep position where feasible (see `determinism.md`).
-- Deterministic `sqrt`/`sin` implementations cross-compiler (see multiplayer netcode determinism references).
+- IEEE-754 `+ - * / sqrt` are correctly rounded and portable; `sin`/`cos`/`exp` from the C library are not — ship your own implementations for lockstep sims.
 
 ## 6. Collision Primitives
 
@@ -137,15 +164,18 @@ Collision/streaming queries:
 ### 6.3 Ray-AABB Slab (fastest shape test)
 
 ```cpp
-bool RayAABB(Ray r, AABB b, float& tmin, float& tmax) {
-    float t0 = DBL_MIN, t1 = DBL_MAX;
+// invD = 1/r.d precomputed per ray; IEEE inf handles axis-parallel rays
+// (an origin exactly on a slab plane with d==0 gives NaN — treat as edge case)
+bool RayAABB(const Ray& r, const float3& invD, const AABB& b, float& tmin, float& tmax) {
+    tmin = 0.0f;
+    tmax = std::numeric_limits<float>::infinity();
     for (int a = 0; a < 3; ++a) {
-        float inv = 1.0f / r.d[a];
-        float tNear = (b.min[a] - r.o[a]) * inv;
-        float tFar  = (b.max[a] - r.o[a]) * inv;
-        std::swap if inverted...
-        t0 = max(t0, tNear); t1 = min(t1, tFar);
-        if (t0 > t1) return false;
+        float t0 = (b.min[a] - r.o[a]) * invD[a];
+        float t1 = (b.max[a] - r.o[a]) * invD[a];
+        if (t0 > t1) std::swap(t0, t1);
+        tmin = std::max(tmin, t0);
+        tmax = std::min(tmax, t1);
+        if (tmin > tmax) return false;
     }
     return true;
 }

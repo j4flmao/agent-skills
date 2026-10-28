@@ -1,214 +1,141 @@
-# Distributed Compute Advanced Topics
+# Advanced Distributed Compute: Skew, Joins, Adaptive Execution, Autoscaling, Cost
 
-## Introduction
-Advanced Distributed Compute topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Techniques for making large distributed jobs fast and economical once the fundamentals are in place: diagnosing and fixing skew, join strategy selection, adaptive query execution, shuffle infrastructure, autoscaling, spot capacity, and Ray/Dask-specific patterns.
 
-## Advanced Architecture Patterns
+## Diagnosing a Slow Job
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+| Symptom in UI | Likely cause | Action |
+|---------------|--------------|--------|
+| One or few tasks run much longer than median | Data skew | Skew handling below |
+| High spill (memory/disk) | Partitions too large, wide aggregations | More partitions, more memory per task |
+| Long GC time | Large JVM heaps with many objects, caching too much | Tune memory, reduce cached data, use off-heap/columnar formats |
+| Huge shuffle read/write | Joins/aggregations on large data | Broadcast, pre-aggregation, bucketing |
+| Many tiny tasks | Over-partitioning, small files | Coalesce, compact input |
+| Executors idle | Too few partitions or driver bottleneck | Increase parallelism; avoid driver-side loops |
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+## Data Skew
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+Detect: compare max vs median task duration and shuffle read size; count rows per key.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+```python
+df.groupBy("customer_id").count().orderBy("count", ascending=False).show(20)
+```
 
-## Performance Optimization
+Fixes:
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+1. Spark AQE skew join (Spark 3.x):
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+```properties
+spark.sql.adaptive.enabled=true
+spark.sql.adaptive.skewJoin.enabled=true
+spark.sql.adaptive.skewJoin.skewedPartitionFactor=5
+spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes=256MB
+```
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+2. Salting hot keys manually:
 
-## Security Hardening
+```python
+from pyspark.sql import functions as F
+SALT = 16
+big = big.withColumn("salt", (F.rand(seed=7) * SALT).cast("int"))
+small = small.withColumn("salt", F.explode(F.array([F.lit(i) for i in range(SALT)])))
+joined = big.join(small, ["key", "salt"]).drop("salt")
+```
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+3. Two-phase aggregation: aggregate by `(key, salt)` first, then by `key`.
+4. Handle null or default keys separately (a common source of skew).
+5. Isolate the few hot keys and process them with a broadcast path.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+## Join Strategies
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+| Strategy | When | Notes |
+|----------|------|-------|
+| Broadcast hash join | One side small (fits in executor memory) | No shuffle of large side; Spark `spark.sql.autoBroadcastJoinThreshold` (default 10 MB) or `F.broadcast(df)` hint |
+| Shuffle hash join | Medium sides, one smaller | Hash table per partition |
+| Sort-merge join | Both large | Default in Spark for large equi-joins; sorts both sides |
+| Bucketed join | Repeated joins on same key | Tables bucketed identically avoid shuffle at join time |
+| Storage-partitioned join | Iceberg/Delta tables partitioned on join keys | Spark 3.3+ can skip shuffles when layouts match |
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+Check the physical plan (`df.explain("formatted")`) to confirm the chosen strategy.
 
-## Monitoring and Observability
+## Adaptive Query Execution (Spark)
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+AQE re-optimizes at stage boundaries using runtime statistics:
+- Coalesces small shuffle partitions (`spark.sql.adaptive.coalescePartitions.enabled`).
+- Switches sort-merge to broadcast join when a side turns out small.
+- Splits skewed partitions.
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+Set a generous initial `spark.sql.shuffle.partitions` and let AQE coalesce, or use `spark.sql.adaptive.advisoryPartitionSizeInBytes` to target partition size.
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+## Shuffle Infrastructure
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+- Dynamic allocation needs shuffle data to outlive executors: external shuffle service on YARN, or shuffle tracking (`spark.dynamicAllocation.shuffleTracking.enabled=true`) on Kubernetes.
+- Remote shuffle services (Apache Celeborn, Apache Uniffle) decouple shuffle storage from executors, improving stability with spot instances and autoscaling.
+- Fast local disks (NVMe) for shuffle spill matter more than CPU for shuffle-heavy jobs.
 
-## Scalability and Reliability
+## Autoscaling and Spot Capacity
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+| Practice | Reason |
+|----------|--------|
+| Driver/head node on on-demand capacity | Losing it fails the job |
+| Executors/workers on spot with diversified instance types | Cost savings with acceptable interruption |
+| Decommissioning support (Spark graceful decommission, migrating shuffle/cached blocks) | Reduce recompute on preemption |
+| Upper bounds on autoscaling | Cost control |
+| Checkpoint long streaming/iterative jobs | Bounded recovery time |
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+## Caching and Persistence
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+- Cache only when reused at least twice and expensive to recompute.
+- Prefer `MEMORY_AND_DISK` for large reuse; unpersist when done.
+- For iterative ML, `checkpoint()` truncates lineage to avoid ever-growing plans.
 
-## Integration and Interoperability
+## Python Performance
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+- Use native column expressions; avoid row-wise Python UDFs.
+- When Python is needed, use Arrow-based pandas UDFs / `mapInPandas` / `applyInPandas` (enable `spark.sql.execution.arrow.pyspark.enabled`).
+- Spark Connect separates client and server, useful for remote notebooks and multi-language clients.
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+## Ray-Specific Patterns
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+```python
+import ray
+ray.init()
+
+@ray.remote(num_cpus=1)
+def preprocess(batch_path: str) -> str:
+    out_path = transform(batch_path)   # write result to object storage
+    return out_path                    # return references/paths, not large objects
+
+refs = [preprocess.remote(p) for p in input_paths]
+results = ray.get(refs)
+```
+
+- Pass large data via the object store (`ray.put`) or storage paths; avoid returning huge objects repeatedly.
+- Use Ray Data for streaming batch inference across CPU preprocessing and GPU model stages (`map_batches` with actor pools).
+- Bound in-flight tasks (`ray.wait`) to avoid flooding the object store.
+- Set resource requirements (`num_gpus`, custom resources) so the scheduler places tasks correctly.
+
+## Dask-Specific Patterns
+
+- Partition sizes around 100 MB; `df.repartition(partition_size="100MB")`.
+- Use `persist()` for reuse on the cluster; avoid `compute()` on large intermediates.
+- Prefer Parquet with `pyarrow` engine and filters for pushdown.
+- Watch the dashboard task stream for long gray (communication) bars.
+
+## Cost Engineering
+
+- Measure cost per job run (cluster-hours x price) and per TB processed; track over time.
+- Right-size: many jobs are I/O-bound; more cores do not help.
+- Prune input: partition filters, column projection, incremental processing of only new partitions.
+- Use table-format compaction and clustering (Z-order, Iceberg sort orders) to reduce scanned data.
+- Consider native vectorized engines (Databricks Photon, Apache Gluten/Velox, DataFusion Comet) where supported; benchmark on your workloads.
+
+## Checklist
+
+- [ ] Task duration distribution checked for skew
+- [ ] AQE enabled; join strategies confirmed in plan
+- [ ] Salting or isolation for persistent hot keys
+- [ ] Shuffle durability compatible with autoscaling/spot
+- [ ] Python logic vectorized via Arrow
+- [ ] Caching deliberate; lineage truncated for iterative jobs
+- [ ] Cost per run tracked and input pruning applied

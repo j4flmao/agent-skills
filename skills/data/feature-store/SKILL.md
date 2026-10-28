@@ -99,7 +99,7 @@ from datetime import timedelta
 from feast import (
     Entity, FeatureView, Field, FileSource, ValueType
 )
-from feast.types import Float32, Int32, String
+from feast.types import Float32, Int32, Int64, String
 
 user = Entity(
     name="user_id",
@@ -118,7 +118,7 @@ user_features = FeatureView(
     entities=[user],
     ttl=timedelta(days=30),
     schema=[
-        Field(name="user_id", dtype=Int32),
+        Field(name="user_id", dtype=Int64),
         Field(name="total_orders_30d", dtype=Int32),
         Field(name="avg_order_value_30d", dtype=Float32),
         Field(name="days_since_last_order", dtype=Int32),
@@ -475,8 +475,10 @@ Feature Store Selection
 ### Feast Feature Definition
 ```python
 # feature_store/features.py
-from feast import Entity, FeatureView, ValueType, FeatureService
-from feast.infra.offline_stores.bigquery_source import BigQuerySource
+from datetime import timedelta
+
+from feast import BigQuerySource, Entity, FeatureView, Field, ValueType
+from feast.types import Float32, Int64, UnixTimestamp
 
 customer = Entity(
     name="customer_id",
@@ -487,10 +489,16 @@ customer = Entity(
 order_features = FeatureView(
     name="order_features",
     entities=[customer],
-    ttl="90d",
+    ttl=timedelta(days=90),
     online=True,
+    schema=[
+        Field(name="order_count", dtype=Int64),
+        Field(name="avg_order_value", dtype=Float32),
+        Field(name="last_order_date", dtype=UnixTimestamp),
+    ],
     source=BigQuerySource(
-        query="SELECT customer_id, order_count, avg_order_value, last_order_date FROM feature_store.order_aggregates"
+        query="SELECT customer_id, order_count, avg_order_value, last_order_date, event_timestamp FROM feature_store.order_aggregates",
+        timestamp_field="event_timestamp",
     ),
     tags={"team": "fraud", "tier": "critical"},
 )

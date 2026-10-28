@@ -1,214 +1,139 @@
-# Experimentation Advanced Topics
+# Advanced Experimentation: Interference, Heterogeneous Effects, Long-Term Impact, and Adaptive Designs
 
-## Introduction
-Advanced Experimentation topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Designs and analyses for situations where a standard user-randomized A/B test gives biased or incomplete answers: network and marketplace interference, switchback and cluster designs, heterogeneous treatment effects, long-term effects, ranking experiments with interleaving, and bandits. Core statistics (sequential testing, CUPED, multiple testing, delta method) are in `statistical-methods.md`; basic design in `experiment-design.md`.
 
-## Advanced Architecture Patterns
+## When Standard A/B Tests Break
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+A/B tests assume SUTVA: one unit's outcome depends only on its own assignment. Violations:
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+| Setting | Interference mechanism | Consequence |
+|---------|-----------------------|-------------|
+| Two-sided marketplaces (rides, delivery, ads auctions) | Treatment and control compete for the same supply/inventory | Effects overstated or sign-flipped |
+| Social networks, messaging | Treated users affect friends' behaviour | Spillovers bias the estimate (often toward zero) |
+| Shared caches, pricing, ranking with budgets | Shared resources | Contamination |
+| Learning systems (ML models retraining on experiment data) | Feedback loops | Control learns from treatment |
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+## Cluster-Randomized Experiments
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+Randomize groups that contain most interactions (cities, communities from graph clustering, stores, schools).
 
-## Performance Optimization
+- Analyze at the cluster level or with cluster-robust standard errors; the effective sample size is closer to the number of clusters than users.
+- Fewer, larger clusters reduce interference but increase variance; balance with stratification on pre-period metrics.
+- Graph cluster randomization uses community detection to keep most edges within clusters.
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+```python
+import statsmodels.formula.api as smf
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+model = smf.ols("metric ~ treatment + pre_metric", data=user_df).fit(
+    cov_type="cluster", cov_kwds={"groups": user_df["cluster_id"]}
+)
+print(model.summary().tables[1])
+```
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+## Switchback (Time-Split) Experiments
 
-## Security Hardening
+For marketplace-level interventions (dispatch algorithms, pricing), alternate treatment and control over time windows within a region.
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+```
+Region A: [T][C][C][T][T][C][T][C] ...   (randomized per window, e.g. 30–60 minutes)
+Region B: [C][T][T][C][C][T][C][T] ...
+```
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+- Window length must exceed the carryover time of effects (e.g. drivers repositioning); discard or model "burn-in" periods after switches.
+- Randomize the schedule (not strict alternation) to avoid confounding with time-of-day patterns, and stratify by hour/day.
+- Analyze with region × time fixed effects; use randomization inference or cluster-robust errors at the window level.
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+## Marketplace-Specific Designs
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+| Design | Idea |
+|--------|------|
+| Budget-split / supply-split | Partition supply (e.g. ad budgets, inventory) between arms so they do not compete |
+| Two-sided randomization | Randomize both buyers and sellers to estimate spillovers |
+| Geo experiments | Randomize regions (markets) for marketing or pricing; use synthetic control or time-based regression for analysis |
 
-## Monitoring and Observability
+Geo experiments with few units often rely on synthetic control or Bayesian structural time series methods; pre-register the analysis and check pre-period fit.
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+## Heterogeneous Treatment Effects (HTE)
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+Average effects can hide subgroups with opposite responses.
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+| Method | Use |
+|--------|-----|
+| Pre-registered segment analysis | A few hypothesized segments (new vs returning, platform) |
+| Interaction regression | `metric ~ treatment * segment` with multiple-testing correction |
+| Causal forests / generalized random forests | Data-driven discovery of effect heterogeneity |
+| Meta-learners (T-, S-, X-, DR-learners) | Estimate conditional average treatment effects (CATE) with ML models |
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+```python
+from econml.dml import CausalForestDML
+from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
 
-## Scalability and Reliability
+est = CausalForestDML(model_y=GradientBoostingRegressor(), model_t=GradientBoostingClassifier(),
+                      discrete_treatment=True, n_estimators=500, random_state=0)
+est.fit(Y=df["metric"], T=df["treatment"], X=df[["tenure", "sessions_pre", "platform_ios"]])
+cate = est.effect(df[["tenure", "sessions_pre", "platform_ios"]])
+```
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+Treat discovered segments as hypotheses; confirm in a follow-up experiment before targeting them. Avoid post-hoc slicing until something is significant.
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+## Long-Term Effects
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+Short tests miss novelty/primacy effects and long-run outcomes (retention, LTV).
 
-## Integration and Interoperability
+| Technique | How |
+|-----------|-----|
+| Long-running holdouts | Keep a small percentage of users without a feature (or a bundle of features) for months |
+| Novelty detection | Plot treatment effect by days since first exposure; decaying effects indicate novelty |
+| Surrogate metrics / surrogate index | Predict long-term outcomes from short-term metrics validated on historical experiments |
+| Cohort-based analysis | Compare users first exposed at different times to separate learning effects |
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+Holdouts have costs (users miss improvements) and must be protected from leakage (other features targeting holdout users).
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+## Ranking Experiments: Interleaving
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+For search and recommendation rankers, interleaving shows each user a merged list from rankers A and B and attributes clicks to the source ranker (team-draft or balanced interleaving).
 
-## DevOps and Automation
+- Much more sensitive than A/B tests for detecting ranking preference, so it is used to screen many candidates.
+- Measures preference, not business impact; confirm winners with an A/B test on business metrics.
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+## Multi-Armed Bandits and Adaptive Allocation
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+| Approach | Use | Caveat |
+|----------|-----|-------|
+| Epsilon-greedy / Thompson sampling | Optimize short-lived choices (headlines, promotions) to reduce regret | Biased effect estimates; harder inference |
+| Contextual bandits | Personalize choices by context | Needs logging of propensities for off-policy evaluation |
+| Adaptive experiments with valid inference | Allocate more traffic to promising arms while preserving inference (e.g. with inverse propensity weighting) | Complex; requires careful design |
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+Use bandits when the goal is optimization during the test, A/B tests when the goal is learning an unbiased effect for a long-term decision. Always log assignment probabilities.
 
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
+## Off-Policy Evaluation
 
-## Data Management
+Estimate how a new policy would perform using logged data from an old randomized policy:
 
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
+- Inverse propensity scoring (IPS), self-normalized IPS, doubly robust estimators.
+- Requires logged propensities and overlap (the new policy only chooses actions the old policy sometimes chose).
 
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
+## Guardrails for Advanced Designs
 
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
+- Pre-register unit of randomization, primary metric, analysis method, and decision rule.
+- Run A/A tests or simulations with the exact design (clusters, switchback schedule) to check false positive rates and power.
+- Check sample ratio mismatch at the randomization unit level.
+- Document known interference and residual bias in the readout.
 
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
+## Pitfalls
 
-## API Design and Management
+- User-level randomization for marketplace algorithm changes.
+- Switchback windows shorter than carryover effects.
+- Shipping to "the segment that won" from unplanned slicing.
+- Running bandits and then reporting their estimates as unbiased effects.
+- Holdouts quietly eroded by other launches.
 
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
+## Checklist
 
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Interference assessed before choosing the randomization unit
+- [ ] Cluster/switchback/geo designs analyzed with appropriate errors and fixed effects
+- [ ] Design validated with A/A tests or simulation
+- [ ] HTE analyses pre-registered or confirmed in follow-ups
+- [ ] Long-term effects tracked via holdouts or validated surrogates
+- [ ] Interleaving used for ranker screening, A/B for impact
+- [ ] Propensities logged for bandits and off-policy evaluation

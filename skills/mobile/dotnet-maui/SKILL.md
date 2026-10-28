@@ -93,17 +93,19 @@ Volume of platform code?
 
 6. **Platform-specific code** — Three approaches: (a) `Platforms/` folder with conditional compilation — code files in `Platforms/Android/`, `Platforms/iOS/`, etc. are compiled only for the target platform. (b) `#if ANDROID`, `#if IOS`, `#if WINDOWS`, `#if MACCATALYST` preprocessor directives for inline platform branching. (c) Platform handlers in `MauiProgram.cs` via `ConfigureMauiHandlers()` — customize native controls (e.g., remove Entry underline on Android, set border style on iOS). Map native events to MAUI events. Handler customization is the preferred approach over conditional compilation.
 
-7. **Deployment and hot reload** — `dotnet build -t:Run -f net8.0-android` builds and deploys to Android emulator. XAML Hot Reload applies XAML changes instantly during debugging on emulator/simulator (not real-time on physical device). Code signing: Android via `.csproj` properties (`AndroidSigningKeyStore`, `AndroidSigningKeyAlias`), iOS via provisioning profile in Info.plist. CI/CD: Azure DevOps or GitHub Actions with `dotnet publish` and platform-specific build steps. App Center retired — migrate to GitHub Actions or self-hosted. Test Cloud via Xamarin.UITest or Appium.
+7. **Deployment and hot reload** — `dotnet build -t:Run -f net10.0-android` builds and deploys to Android emulator. XAML Hot Reload applies XAML changes instantly during debugging on emulator/simulator (not real-time on physical device). Code signing: Android via `.csproj` properties (`AndroidSigningKeyStore`, `AndroidSigningKeyAlias`), iOS via provisioning profile in Info.plist. CI/CD: Azure DevOps or GitHub Actions with `dotnet publish` and platform-specific build steps. App Center was retired in 2025 — use GitHub Actions or Azure Pipelines. UI automation: Appium (Xamarin.UITest is end-of-life).
 
 ## Platform Compatibility
 
-| Feature | Android | iOS | Windows | macOS |
+| Feature | Android | iOS | Windows | macOS (Mac Catalyst) |
 |---------|---------|-----|---------|-------|
-| Shell navigation | Full | Full | Flyout only | Flyout only |
+| Shell navigation (flyout + tabs) | Yes | Yes | Yes | Yes |
 | XAML Hot Reload | Yes | Yes | Yes | Yes |
-| CollectionView | Full | Full | Full | Full |
-| Platform handlers | Yes | Yes | Partial | Partial |
-| .NET 8 support | Yes | Yes | Yes | Yes |
+| CollectionView | Yes | Yes | Yes | Yes |
+| Handler customization (`AppendToMapping`) | Yes | Yes | Yes | Yes |
+| Target framework moniker | `net10.0-android` | `net10.0-ios` | `net10.0-windows10.0.19041.0` | `net10.0-maccatalyst` |
+
+.NET MAUI versions are supported for 18 months; target the current release (.NET 10, LTS) for new work.
 
 ## Best Practices
 
@@ -136,7 +138,7 @@ Volume of platform code?
 ### Startup Performance
 MAUI app startup involves: native initialization, XAML parsing, Shell construction, and first-page rendering. Profile with: `dotnet-trace` (event tracing), Xamarin Profiler (legacy), or custom stopwatch logging. Key optimizations:
 
-- **AOT compilation**: Enable `<PublishAot>true</PublishAot>` in .csproj for iOS/Android (reduces JIT overhead at startup, but increases binary size ~30%). For .NET 8+ MAUI, AOT is available for iOS via `--aot`.
+- **AOT compilation**: iOS/Mac Catalyst are always AOT-compiled (no JIT on iOS). Native AOT (`<PublishAot>true</PublishAot>`) is available for iOS and Mac Catalyst (experimental in .NET 8, supported from .NET 9) and gives smaller, faster-starting apps but requires trim-safe code (compiled bindings, no unbounded reflection). On Android, use startup-tracing/profiled AOT (`<AndroidEnableProfiledAot>`, default in Release) rather than full AOT unless you measured a win.
 - **Trim assemblies**: `<TrimMode>full</TrimMode>` with linker configuration. Reduces app size but requires `[DynamicallyAccessedMembers]` attributes on types accessed via reflection.
 - **Lazy initialization**: Defer non-critical services: `Lazy<IService>` or `Task.Run(() => InitializeHeavyService())` after first frame render. Register heavy services as transient or use `Lazy<T>` wrapper.
 - **Shell caching**: Shell caches pages by default — pages remain in memory after navigation. Use `Shell.Current.CachingStrategy = CachingStrategy.RetainElement` judiciously. Prefer `CachingStrategy.RecycleElement` for memory-bound scenarios.
@@ -181,7 +183,7 @@ MAUI app startup involves: native initialization, XAML parsing, Shell constructi
 ### Project Configuration (.csproj)
 ```xml
 <PropertyGroup>
-    <TargetFrameworks>net8.0-android;net8.0-ios;net8.0-maccatalyst</TargetFrameworks>
+    <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <UseMaui>true</UseMaui>
     <SingleProject>true</SingleProject>
@@ -235,19 +237,19 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
       - name: Restore
         run: dotnet restore
       - name: Build Android
         run: |
-          dotnet build -f net8.0-android --configuration Release `
+          dotnet publish -f net10.0-android -c Release `
+            -p:AndroidKeyStore=true `
             -p:AndroidSigningKeyStore=release.keystore `
             -p:AndroidSigningKeyAlias=app-alias `
             -p:AndroidSigningKeyPass=${{ secrets.KEY_PASS }} `
             -p:AndroidSigningStorePass=${{ secrets.STORE_PASS }}
-      - name: Sign AAB
-        run: |
-          java -jar bundletool-all.jar build-bundle --modules=bin/Release/net8.0-android/*.aab
+      - name: Verify AAB signature
+        run: jarsigner -verify bin/Release/net10.0-android/publish/*-Signed.aab
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -261,7 +263,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
       - name: Install iOS provisioning
         run: |
           echo ${{ secrets.IOS_CERT }} | base64 --decode > cert.p12
@@ -270,7 +272,7 @@ jobs:
           security import cert.p12 -k temp.keychain -P ${{ secrets.CERT_PASS }}
       - name: Build iOS
         run: |
-          dotnet build -f net8.0-ios --configuration Release `
+          dotnet build -f net10.0-ios --configuration Release `
             -p:RuntimeIdentifier=ios-arm64 `
             -p:CodesignKey="Apple Distribution: Company" `
             -p:CodesignProvision="$(ls provisioning.mobileprovision)"
@@ -283,11 +285,11 @@ jobs:
 
 ### App Store & Play Store Submission
 
-**Google Play**: Build AAB with `dotnet publish -f net8.0-android -c Release`. Sign with Android keystore (`jarsigner` or MSBuild properties). Upload to Google Play Console → Internal Testing → Closed Alpha → Open Beta → Production. Use `bundletool` for AAB testing: `java -jar bundletool.jar install-apks --apks=app.aab`.
+**Google Play**: Build AAB with `dotnet publish -f net10.0-android -c Release`. Sign with Android keystore (`jarsigner` or MSBuild properties). Upload to Google Play Console → Internal Testing → Closed Alpha → Open Beta → Production. Test an AAB locally with bundletool: `java -jar bundletool.jar build-apks --bundle=app.aab --output=app.apks --connected-device` then `java -jar bundletool.jar install-apks --apks=app.apks`.
 
-**Apple App Store**: Build IPA with `dotnet publish -f net8.0-ios -c Release`. Requires Apple Developer Program membership ($99/year). Distribution via App Store Connect: Xcode Organizer → Distribute App → App Store Connect. Or use `Transporter` app for IPA upload. TestFlight for beta distribution before production release.
+**Apple App Store**: Build IPA with `dotnet publish -f net10.0-ios -c Release`. Requires Apple Developer Program membership ($99/year). Distribution via App Store Connect: Xcode Organizer → Distribute App → App Store Connect. Or use `Transporter` app for IPA upload. TestFlight for beta distribution before production release.
 
-**App Center** (retired): Migrate to GitHub Actions + App Center Distribute (still available for distribution). Alternative: Firebase App Distribution for Android beta testing, TestFlight for iOS.
+**App Center** was retired on 2025-03-31 (Distribute included). Use GitHub Actions or Azure Pipelines for builds, Firebase App Distribution for Android beta testing, TestFlight for iOS.
 
 ### Versioning Strategy
 - `ApplicationVersion` (Android): integer, auto-increment per release.
@@ -423,127 +425,3 @@ builder.Services.AddSingleton<IDeviceInfo, IosDeviceInfo>();
   - references/maui-structure.md — MAUI Project Structure
 ## Handoff
 Hand off to iOS/Android native skills when platform handler customization requires deep UIKit or Android Views API knowledge.
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
-## Rules
-- Default-deny security posture — allow only explicitly required access.
-- All inputs validated, all outputs encoded, all errors handled.
-- Defend in depth — multiple layers of security controls.
-- Fail securely — errors default to safe behavior.
-- Log security-relevant events for audit and investigation.
-- Keep dependencies updated — automate vulnerability scanning.
-- Design for observability from day one, not as an afterthought.
-- Document all architectural decisions with rationale.
-- Review code for security, performance, and correctness before merging.

@@ -5,6 +5,29 @@ description: eBPF Threat Detection, Tetragon, Falco, and Kernel Syscall Intercep
 
 # eBPF-Based Threat Detection and Kernel Instrumentation
 
+## Purpose
+Explain how eBPF enables low-overhead, high-fidelity runtime threat detection on Linux: the load/verify/JIT lifecycle, syscall interception via kprobes/tracepoints/LSM-BPF, and tools (Falco, Tetragon). Guides defenders building kernel-level detection and enforcement.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "eBPF threat detection", "Falco rules", "Tetragon", "syscall interception", "LSM BPF enforcement", "kprobe vs tracepoint".
+
+### Input Context
+- Kernel version and distro (affects BTF/CO-RE and available hooks).
+- Detection vs active blocking requirement.
+
+### Output Artifact
+Detection design, hook selection rationale, and Falco/Tetragon rule concepts.
+
+### Response Format
+```
+Hook: {kprobe|tracepoint|LSM-BPF}
+Event: {syscall/behavior}
+Action: {audit | alert | block}
+Tool: {Falco | Tetragon | libbpf}
+```
+
 Extended Berkeley Packet Filter (eBPF) revolutionized Linux observability and security by allowing sandboxed programs to run within the kernel space without requiring kernel module compilation or system reboots. This is critical for low-overhead, high-fidelity threat detection.
 
 ## eBPF Architecture

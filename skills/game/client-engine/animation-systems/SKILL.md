@@ -1,11 +1,39 @@
 ---
 name: animation-systems
-description: Expert character animation systems — skeletons, skinning, state machines, blending, root motion, IK, retargeting and animation performance budgeting.
+description: >
+  Use this skill when the user says 'animation system', 'skeletal animation', 'skinning', 'animation state machine', 'blend tree', 'root motion', 'IK', 'retargeting', 'animation compression'. Designs runtime character animation: skeleton/skinning, clip compression, state machines and blending, root motion, IK, retargeting and crowd budgets. Do NOT use for: authoring animation in DCC tools, UI/motion design (use design/motion-design), physics ragdoll solvers (use physics-engine).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, animation, skinning, ik, client-engine]
 ---
 
 # Animation Systems — Deep Engineering Guide
 
+## Purpose
 Animation makes characters feel alive. This skill covers the skeleton/skinning pipeline, animation state machines and blending, root motion, IK, retargeting and the performance budgets that keep hundreds of characters animating on 16 ms budgets.
+
+## Agent Protocol
+
+### Trigger
+"animation system", "skeletal animation", "skinning", "animation state machine", "blend tree", "root motion", "IK", "retargeting", "animation compression".
+
+### Input Context
+- Engine (custom C++, Unity, Unreal, Godot) and target platforms
+- Character count and per-frame animation budget
+- Networked or single-player (determinism needs)
+
+### Output Artifact
+Animation architecture, code for the hot path, and a budget table. No file unless requested.
+
+### Response Format
+```
+Engine: {engine}
+Pipeline: {sample -> blend -> IK -> skin}
+Budget: {N characters x bones, ms per frame}
+Code: {snippet}
+Risks: {pop, foot sliding, cost}
+```
 
 ## 1. The Animation Pipeline
 
@@ -34,14 +62,14 @@ struct Skeleton { vector<Bone> bones; /* sorted so parent < child */ };
 
 | Representation | Size/frame | Quality |
 |----------------|-----------|---------|
-| Raw (Vec3 quats float) | ~ 52 B/bone | exact |
-| Compressed quats (16-bit + smallest-three) | ~ 10 B/bone | great |
+| Raw float T/R/S (12 + 16 + 12 bytes) | 40 B/bone/key | exact |
+| Quantized (smallest-three quats, 16-bit T, constant tracks stripped) | ~6-12 B/bone/key | visually lossless with error metrics |
 | Keyframe-Lerp (only on change) | keys compressed | tuned |
 
 - Store *local* pose (per-bone, parent-relative) — the evaluator blends local, then multiplies down the chain once.
 - Interleave: a clip = array of bone channels; load once to cache.
-- **Keyframe dedup**: stationary bones (fingers) hold 1–2 keys; explode memory by 10×.
-- 16-bit compression (quantized quats) is the standard; S18Q8-style for gross.
+- **Constant/linear track reduction**: bones that do not move (fingers in a run cycle, most scale tracks) collapse to one key; keys reconstructible by interpolation within error tolerance are removed.
+- Off-the-shelf: ACL (Animation Compression Library, used by Unreal) with per-bone error thresholds measured in object space at the skin, not raw quaternion error.
 - Deterministic: same clip + same t → same pose (see `compression` ref).
 
 ## 4. Blending & The State Machine
@@ -71,7 +99,7 @@ The mask = per-bone weights (torso 1.0, hips 0.2...) — cache offsets.
 - Root bone = the actor transform. **Root motion** = the clip's translation/rotation on the root:
   - extracted, applied to the actor position, or
   - ignored (locomotion only; velocity comes from the controller).
-- Extract carefully: a walk clip with root displacement = 0.8 m/tick; the animator drives the placement.
+- Extract per frame as a delta (translation + yaw) from the sampled root track, so variable frame rates integrate correctly.
 - Blend root motion through the same blend weights (else foot-slide).
 
 ## 6. IK (Inverse Kinematics)
@@ -109,7 +137,7 @@ Per-character cost budget (skinned):
 
 ## 9. Determinism (Netcode & Replay)
 
-- The ASM must be **deterministic**: `state.time` advances by fixed or sim-driven dt; blends use the same polygon (no wall-clock).
+- The ASM must be **deterministic**: `state.time` advances by fixed or sim-driven dt; blends use the same parameters and times (no wall-clock).
 - Serialize the *state* (currentState, time, parameters), not the pose — replay reconstructs.
 
 ## 10. References
@@ -118,5 +146,5 @@ Per-character cost budget (skinned):
 - `references/animation-blending.md` — blend spaces, masks, state machine transitions, continuous blends
 - `references/clip-compression.md` — keyframe dedup, quantization, streaming clips, deterministic decode
 - `references/root-motion-and-ik.md` — root extraction, foot IK, 2-bone/CCD solving, budgets
-- `references/retargeting.md` — bone maps, scale handles, pose-local rules, merchant/furry-safe rules
+- `references/retargeting.md` — bone maps, scale handling, pose-local rules
 - `references/performance-budgeting.md` — bone counts, LOD ladder, impostors, profiler histogram

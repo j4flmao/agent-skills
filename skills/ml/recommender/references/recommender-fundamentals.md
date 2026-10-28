@@ -1,213 +1,122 @@
-# Recommender Fundamentals
+# Recommender Systems Fundamentals
 
-## Overview
-Recommender is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+Core concepts for building recommender systems: problem framing, feedback types, the main algorithm families, baselines, data splitting and the minimum evaluation needed before going online. Siblings cover matrix factorization (`cf-matrix-factorization.md`), neural models (`neural-recommender.md`), cold start (`cold-start-strategies.md`), system architecture (`recommender-architecture.md`) and metrics (`recommender-evaluation.md`).
 
-## Core Concepts
+## Problem Framing
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Recommender helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Question | Options |
+|----------|---------|
+| What is recommended? | Items (products, videos), content (articles), people, queries |
+| Where is it shown? | Home feed, "similar items", "frequently bought together", email, notifications |
+| What is the objective? | Clicks, watch time, purchases, retention, long-term satisfaction |
+| What constraints? | Inventory, freshness, diversity, business rules, fairness to suppliers |
+| Task type | Rating prediction (rare today), top-K ranking (common), next-item prediction (sessions) |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Recommender solutions. These principles help maintain code quality and reduce technical debt.
+Choose an objective that correlates with long-term value; optimizing raw clicks tends to reward clickbait.
 
-### Concept 3: Data Management
-Proper data management is essential for Recommender. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Feedback Types
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+| Type | Examples | Properties |
+|------|----------|-----------|
+| Explicit | Ratings, likes, thumbs | Sparse, biased toward engaged users |
+| Implicit | Views, clicks, purchases, dwell time | Abundant, noisy, no true negatives |
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+Implicit feedback: unobserved does not mean disliked. Training uses sampled negatives (random, popularity-weighted, or hard negatives) or weighted losses (e.g. confidence weighting in implicit ALS).
 
-## Architecture Patterns
+## Algorithm Families
 
-### Pattern 1: Standard Architecture
-The standard architecture for Recommender follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+| Family | Idea | Strengths | Weaknesses |
+|--------|------|-----------|------------|
+| Popularity / trending | Most popular items, possibly per segment | Strong baseline, cold-start friendly | Not personalized |
+| Content-based | Similarity between item features and user profile | New items, explainable | Over-specialization |
+| Neighborhood CF (item-item, user-user) | Similar items co-consumed by users | Simple, effective for "similar items" | Sparse data, popularity bias |
+| Matrix factorization (ALS, BPR) | Latent user and item vectors | Scales, good accuracy for implicit data | Cold start; static |
+| Two-tower neural retrieval | User and item encoders, dot product | Uses features, ANN-friendly | Needs data and infrastructure |
+| Sequential models (GRU4Rec, SASRec, BERT4Rec) | Next item from recent sequence | Session intent | Training complexity |
+| Learning-to-rank (GBDT, deep rankers) | Rank candidates with rich features | Combines many signals | Needs candidate generation first |
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+## Baselines First
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+```python
+import numpy as np
+import pandas as pd
 
-## Implementation Guide
+def popularity_baseline(interactions: pd.DataFrame, k: int = 10, since: pd.Timestamp | None = None) -> list[str]:
+    df = interactions if since is None else interactions[interactions["ts"] >= since]
+    return df["item_id"].value_counts().head(k).index.tolist()
+```
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+Recent-popularity and "items the user already interacted with" (re-consumption) baselines are surprisingly strong for many domains; new models must beat them offline and online.
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+## Item-Item Collaborative Filtering
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+```python
+import numpy as np
+import scipy.sparse as sp
+from sklearn.preprocessing import normalize
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+# rows = users, cols = items, values = implicit weights (e.g. 1 or log1p(count))
+R = sp.csr_matrix((weights, (user_idx, item_idx)), shape=(n_users, n_items))
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+item_vectors = normalize(R.T.tocsr(), norm="l2", axis=1)      # items x users
+similarity = item_vectors @ item_vectors.T                      # cosine, sparse items x items
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+def recommend(user: int, k: int = 10) -> np.ndarray:
+    user_row = R[user]
+    scores = np.asarray((user_row @ similarity).todense()).ravel()
+    scores[user_row.indices] = -np.inf                          # exclude already consumed
+    return np.argpartition(-scores, k)[:k]
+```
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+For large catalogues, keep only top-N neighbours per item and compute offline; libraries like `implicit` (ALS, BPR, item-kNN) handle this efficiently.
 
-## Best Practices
+## Two-Stage Architecture (Overview)
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+```
+Candidate generation (recall): hundreds-thousands of items from several sources
+   (CF, embeddings + ANN, popularity, content similarity, business rules)
+-> Ranking: score candidates with a richer model and features
+-> Re-ranking / policy: diversity, deduplication, business constraints, exploration
+-> Serve and log impressions + interactions
+```
 
-## Common Pitfalls
+Logged impressions (what was shown, in which position) are essential for training rankers and correcting bias.
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+## Data Splitting
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+| Split | Use | Caveat |
+|-------|-----|--------|
+| Random interaction split | Quick checks | Leaks future behaviour; overly optimistic |
+| Leave-last-one-out per user | Sequential recommendation | Still mixes time across users |
+| Global temporal split (train before T, test after T) | Closest to production | Users/items unseen in training appear in test |
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+Use temporal splits for model selection; report results separately for cold and warm users/items.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
+## Minimum Offline Evaluation
 
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
+- Ranking metrics at K: Recall@K, NDCG@K, MAP@K, MRR.
+- Beyond accuracy: catalogue coverage, diversity, novelty, popularity bias.
+- Compare against baselines with identical candidate pools and splits.
+- Offline gains do not guarantee online gains; validate with A/B tests (see `recommender-evaluation.md`).
 
-## Tooling Ecosystem
+## Business Rules and Constraints
 
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
+- Filter out-of-stock, already purchased (where re-purchase is unlikely), age-restricted or region-unavailable items.
+- Deduplicate near-identical items (variants).
+- Apply rules after scoring, logged so their effect is measurable.
 
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
+## Privacy
 
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
+- Interaction logs are personal data; apply retention limits and access control.
+- Avoid inferring and exposing sensitive attributes through recommendations (health, religion).
+- Offer users controls (hide item, reset history) and honour them in features.
 
-## Integration Patterns
+## Checklist
 
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Recommender concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+- [ ] Objective and surface defined; metric aligned with long-term value
+- [ ] Implicit feedback handled with appropriate negatives/weighting
+- [ ] Popularity and re-consumption baselines established
+- [ ] Temporal splits; cold vs warm results reported
+- [ ] Impressions logged with positions
+- [ ] Business filters applied after scoring and measurable
+- [ ] Privacy controls for interaction data

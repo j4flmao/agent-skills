@@ -1,298 +1,195 @@
-# Advanced testing-strategies for nestjs
+# NestJS Testing Strategies: Unit, Integration, E2E
 
-## 1. Executive Summary
-This document provides an exhaustive, production-grade reference for implementing testing-strategies in the context of nestjs. It covers architectural decisions, common pitfalls, performance tuning, and security considerations.
+NestJS ships `@nestjs/testing`, which builds a real DI container in tests so providers can be overridden. This reference covers the test pyramid for Nest apps with Jest (default) or Vitest.
 
-## 2. Deep Dive Principle 2
-When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. 
+## Test Types
 
-### 2.1 Architectural Considerations
-The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+| Level | Scope | Dependencies | Tooling |
+|-------|-------|--------------|---------|
+| Unit | One provider/class | All collaborators mocked | Jest/Vitest, `Test.createTestingModule` or plain `new` |
+| Integration | Module + real DB/broker | Testcontainers | Jest + `@testcontainers/postgresql` |
+| E2E (API) | Whole app over HTTP | Real infra in containers | Supertest |
+| Contract | Consumer/provider API | Pact broker | `@pact-foundation/pact` |
+
+## Unit Test a Service
 
 ```typescript
-// Advanced Implementation Example 2
-export class testing_strategiesManager_2 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
+// orders.service.spec.ts
+import { Test } from '@nestjs/testing';
+import { OrdersService } from './orders.service';
+import { OrderRepository } from './application/order-repository.port';
+import { PaymentGateway } from '../payments/payment-gateway';
+import { InsufficientStockError } from '../domain/errors';
 
-  private initialize(): void {
-    console.log('Initializing nestjs testing-strategies subsystem...');
-    // Complex setup logic here
-  }
+describe('OrdersService', () => {
+  let service: OrdersService;
+  const repo = { findById: jest.fn(), save: jest.fn() };
+  const payments = { charge: jest.fn() };
 
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for testing-strategies
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
+  beforeEach(async () => {
+    jest.resetAllMocks();
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        OrdersService,
+        { provide: OrderRepository, useValue: repo },
+        { provide: PaymentGateway, useValue: payments },
+      ],
+    }).compile();
+    service = moduleRef.get(OrdersService);
+  });
+
+  it('charges and saves a valid order', async () => {
+    // Arrange
+    payments.charge.mockResolvedValue({ id: 'ch_1' });
+    const input = { customerId: 'c1', items: [{ sku: 'A', qty: 1 }] };
+
+    // Act
+    const order = await service.place(input);
+
+    // Assert
+    expect(payments.charge).toHaveBeenCalledWith('c1', expect.any(Number));
+    expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ id: order.id }));
+  });
+
+  it('rejects an empty order', async () => {
+    // Arrange
+    const input = { customerId: 'c1', items: [] };
+
+    // Act / Assert
+    await expect(service.place(input)).rejects.toThrow(InsufficientStockError);
+    expect(payments.charge).not.toHaveBeenCalled();
+  });
+});
+```
+
+For pure classes with constructor injection, `new OrdersService(repo as any, payments as any)` is faster than building a module. `@golevelup/ts-jest` `createMock<T>()` auto-mocks every method.
+
+## Testing Guards, Pipes, Interceptors
+
+```typescript
+it('RolesGuard denies a user without role', () => {
+  // Arrange
+  const reflector = { getAllAndOverride: jest.fn().mockReturnValue(['admin']) } as unknown as Reflector;
+  const guard = new RolesGuard(reflector);
+  const ctx = {
+    getHandler: () => null, getClass: () => null,
+    switchToHttp: () => ({ getRequest: () => ({ user: { roles: ['user'] } }) }),
+  } as unknown as ExecutionContext;
+
+  // Act
+  const allowed = guard.canActivate(ctx);
+
+  // Assert
+  expect(allowed).toBe(false);
+});
+```
+
+## Integration Tests with Testcontainers
+
+```typescript
+import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+
+let pg: StartedPostgreSqlContainer;
+let moduleRef: TestingModule;
+
+beforeAll(async () => {
+  pg = await new PostgreSqlContainer('postgres:17-alpine').start();
+  moduleRef = await Test.createTestingModule({
+    imports: [
+      TypeOrmModule.forRoot({ type: 'postgres', url: pg.getConnectionUri(), autoLoadEntities: true, migrationsRun: true, migrations: [__dirname + '/../migrations/*.ts'] }),
+      OrdersModule,
+    ],
+  }).compile();
+}, 60_000);
+
+afterAll(async () => { await moduleRef.close(); await pg.stop(); });
+```
+
+Run real migrations rather than `synchronize: true` so tests exercise the production schema. Truncate tables between tests or wrap each test in a rolled-back transaction.
+
+## E2E with Supertest
+
+```typescript
+// test/orders.e2e-spec.ts
+import request from 'supertest';
+
+describe('Orders API (e2e)', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(PaymentGateway).useValue({ charge: jest.fn().mockResolvedValue({ id: 'ch_test' }) })
+      .overrideGuard(JwtAuthGuard).useValue({ canActivate: (ctx: ExecutionContext) => {
+        ctx.switchToHttp().getRequest().user = { id: 'u1', roles: ['user'] };
+        return true;
+      } })
+      .compile();
+
+    app = moduleRef.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true })); // mirror main.ts
+    await app.init();
+  });
+
+  afterAll(() => app.close());
+
+  it('POST /orders returns 201', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/orders')
+      .send({ items: [{ sku: 'A', qty: 1 }] })
+      .expect(201);
+    expect(res.body.id).toBeDefined();
+  });
+
+  it('POST /orders rejects unknown fields', () =>
+    request(app.getHttpServer()).post('/orders').send({ items: [], admin: true }).expect(400));
+});
+```
+
+Extract global setup (pipes, filters, prefixes) from `main.ts` into a `configureApp(app)` function and call it in both places, so E2E tests do not drift from production.
+
+Fastify adapter: `await app.getHttpAdapter().getInstance().ready()` after `init()`.
+
+## Override Options
+
+| Method | Use |
+|--------|-----|
+| `overrideProvider(X).useValue/useClass/useFactory` | Replace a service or client |
+| `overrideGuard`, `overrideInterceptor`, `overridePipe`, `overrideFilter` | Bypass cross-cutting concerns |
+| `overrideModule(M).useModule(TestM)` | Swap an entire module (Nest 10+) |
+
+## Microservices and Queues
+
+Test message handlers as plain methods with unit tests; for transport-level tests start a broker container and connect a `ClientProxy`. For BullMQ, run processors against a Redis container and await job completion with `job.waitUntilFinished(queueEvents)`.
+
+## Configuration
+
+```json
+// package.json
+"jest": {
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "src",
+  "testRegex": ".*\\.spec\\.ts$",
+  "transform": { "^.+\\.(t|j)s$": "ts-jest" },
+  "testEnvironment": "node",
+  "collectCoverageFrom": ["**/*.(t|j)s", "!**/*.module.ts", "!main.ts"]
 }
 ```
 
-### 2.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. 
+`@swc/jest` speeds up transforms considerably for large suites.
 
-## 3. Deep Dive Principle 3
-When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. 
+## Pitfalls
 
-### 3.1 Architectural Considerations
-The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
+- Mocks returning values the real dependency never returns.
+- E2E app not using the same pipes/filters as production.
+- Shared DB state between tests causing order-dependent failures.
+- Testing private methods instead of observable behavior.
+- `jest.mock` of whole modules hiding DI wiring errors; prefer provider overrides.
 
-```python
-# Advanced Python Implementation 3
-import asyncio
-import logging
+## Checklist
 
-logger = logging.getLogger(__name__)
-
-class testing_strategies_Processor_3:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 3.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. 
-
-## 4. Deep Dive Principle 4
-When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. 
-
-### 4.1 Architectural Considerations
-The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 4
-export class testing_strategiesManager_4 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs testing-strategies subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for testing-strategies
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 4.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. 
-
-## 5. Deep Dive Principle 5
-When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. 
-
-### 5.1 Architectural Considerations
-The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 5
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class testing_strategies_Processor_5:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 5.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. 
-
-## 6. Deep Dive Principle 6
-When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. 
-
-### 6.1 Architectural Considerations
-The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 6
-export class testing_strategiesManager_6 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs testing-strategies subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for testing-strategies
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 6.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. 
-
-## 7. Deep Dive Principle 7
-When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. 
-
-### 7.1 Architectural Considerations
-The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 7
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class testing_strategies_Processor_7:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 7.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. 
-
-## 8. Deep Dive Principle 8
-When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. 
-
-### 8.1 Architectural Considerations
-The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 8
-export class testing_strategiesManager_8 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs testing-strategies subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for testing-strategies
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 8.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. 
-
-## 9. Deep Dive Principle 9
-When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. 
-
-### 9.1 Architectural Considerations
-The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```python
-# Advanced Python Implementation 9
-import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
-
-class testing_strategies_Processor_9:
-    def __init__(self, config: dict):
-        self.config = config
-        self._setup()
-
-    def _setup(self):
-        logger.info(f'Setting up {self.__class__.__name__}')
-
-    async def process(self, data: dict):
-        # Simulate complex asynchronous processing
-        await asyncio.sleep(0.1)
-        return {'status': 'success', 'processed': True}
-```
-
-### 9.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. 
-
-## 10. Deep Dive Principle 10
-When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. When dealing with nestjs, addressing testing-strategies requires a multi-layered approach. 
-
-### 10.1 Architectural Considerations
-The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. The architectural constraints of nestjs mean that testing-strategies must be handled with care. We must consider the CAP theorem, latency vs throughput trade-offs, and memory usage. 
-
-```typescript
-// Advanced Implementation Example 10
-export class testing_strategiesManager_10 {
-  private state: Record<string, any> = {};
-  
-  constructor(private readonly config: any) {
-    this.initialize();
-  }
-
-  private initialize(): void {
-    console.log('Initializing nestjs testing-strategies subsystem...');
-    // Complex setup logic here
-  }
-
-  public async execute(payload: any): Promise<void> {
-    try {
-      // Core business logic for testing-strategies
-      await this.processPayload(payload);
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-}
-```
-
-### 10.2 Common Pitfalls and Mitigation
-A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. A frequent mistake when implementing testing-strategies in nestjs is ignoring edge cases. 
-
-## 11. Conclusion
-This concludes the deep dive into testing-strategies for nestjs. Ensure you review the other 7 references in this category for a holistic understanding.
-
+- [ ] Unit tests for services, guards, pipes with AAA structure
+- [ ] Edge cases: empty input, not found, conflicts, thrown errors
+- [ ] Integration tests against real DB via Testcontainers and migrations
+- [ ] E2E tests share `configureApp()` with `main.ts`
+- [ ] External HTTP/payment clients overridden, never called for real
+- [ ] Tests isolated and runnable in parallel in CI

@@ -153,31 +153,31 @@ function App() {
 
 ```typescript
 // Optimistic update pattern
-function useAddTodo() {
+function useAddTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (newTodo: Todo) => api.post('/todos', newTodo),
-    onMutate: async (newTodo) => {
+    mutationFn: (newTask: Task) => api.post('/tasks', newTask),
+    onMutate: async (newTask) => {
       // Cancel outgoing refetches to avoid overwriting optimistic update
-      await queryClient.cancelQueries({ queryKey: ['todos'] })
+      await queryClient.cancelQueries({ queryKey: ['tasks'] })
 
       // Snapshot previous value for rollback
-      const previousTodos = queryClient.getQueryData<Todo[]>(['todos'])
+      const previousTasks = queryClient.getQueryData<Task[]>(['tasks'])
 
       // Optimistically update cache
-      queryClient.setQueryData<Todo[]>(['todos'], (old = []) => [...old, newTodo])
+      queryClient.setQueryData<Task[]>(['tasks'], (old = []) => [...old, newTask])
 
-      return { previousTodos }
+      return { previousTasks }
     },
-    onError: (err, newTodo, context) => {
+    onError: (err, newTask, context) => {
       // Rollback on error
-      queryClient.setQueryData(['todos'], context?.previousTodos)
-      showToast('Failed to add todo', 'error')
+      queryClient.setQueryData(['tasks'], context?.previousTasks)
+      showToast('Failed to add task', 'error')
     },
     onSettled: () => {
       // Always refetch to ensure server consistency
-      queryClient.invalidateQueries({ queryKey: ['todos'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
     },
   })
 }
@@ -279,10 +279,10 @@ const useStockPrice = (symbol: string) => useQuery({
 ### 7. Query Key Design
 ```typescript
 // Hierarchical key structure
-['todos']                          // All todos
-['todos', todoId]                  // Single todo
-['todos', { status: 'done' }]     // Filtered todos
-['todos', todoId, 'comments']       // Comments on a todo
+['tasks']                          // All tasks
+['tasks', taskId]                  // Single task
+['tasks', { status: 'done' }]     // Filtered tasks
+['tasks', taskId, 'comments']       // Comments on a task
 ['users', userId, 'posts', postFilters]  // Nested resources
 ```
 
@@ -437,120 +437,6 @@ Does the data need to update in real-time?
 
 ## Handoff
 If data fetching requires complex WebSocket sync, optimistic offline queue with conflict resolution, or server-side data hydration beyond basic SSR, flag for senior engineer review. Otherwise implement complete fetching layer.
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
 ## Architecture Decision Trees
 
 ### Fetch Strategy Decision Tree

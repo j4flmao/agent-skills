@@ -1,310 +1,200 @@
 # Web Component Testing
 
-## Jest Environment Setup
+How to test custom elements: choosing a real-browser runner, fixtures, attribute/property reflection, events, shadow DOM and slots, form-associated elements, accessibility, visual regression and framework interop. Examples use Web Test Runner with `@open-wc/testing`; Vitest browser mode and Playwright component testing are noted as alternatives.
 
-```javascript
-// jest.config.js for web components
-module.exports = {
-  testEnvironment: 'jsdom',
-  setupFilesAfterSetup: ['./jest.setup.js'],
-  transform: {
-    '^.+\\.js$': 'babel-jest',
-  },
-}
+## Choose a Real Browser
 
-// jest.setup.js
-import 'custom-elements-polyfill'
-import 'shadow-dom-polyfill'
+| Runner | Environment | Notes |
+|---|---|---|
+| Web Test Runner (`@web/test-runner`) + `@open-wc/testing` | Real Chromium/Firefox/WebKit via Playwright | Purpose-built for web components; fixtures, a11y and snapshot helpers |
+| Vitest browser mode | Real browser via Playwright/WebdriverIO | Good if the project already uses Vitest |
+| Playwright Test | Real browsers, page-level | E2E and visual comparisons |
+| Jest/Vitest + jsdom | Simulated DOM | Supports custom elements and shadow DOM basics, but no layout/CSS computation, focus behavior is approximate, and form-associated APIs (`ElementInternals`) are incomplete — avoid for anything beyond pure logic |
+
+No polyfills are needed: custom elements and shadow DOM are supported in all evergreen browsers.
+
+## Setup (Web Test Runner)
+
+```bash
+npm i -D @web/test-runner @web/test-runner-playwright @open-wc/testing @web/test-runner-commands
+npx playwright install chromium firefox webkit
 ```
 
-## Unit Test Patterns
+```js
+// web-test-runner.config.mjs
+import { playwrightLauncher } from "@web/test-runner-playwright";
 
-```javascript
-import './my-component.js'
-
-describe('MyComponent', () => {
-  beforeEach(() => {
-    document.body.innerHTML = ''
-  })
-
-  it('renders with default properties', () => {
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
-
-    expect(el.shadowRoot).toBeTruthy()
-    expect(el.shadowRoot.querySelector('.title').textContent).toBe('Default Title')
-  })
-
-  it('reflects attribute changes', () => {
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
-
-    el.setAttribute('title', 'Custom Title')
-    expect(el.shadowRoot.querySelector('.title').textContent).toBe('Custom Title')
-  })
-
-  it('updates on property set', () => {
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
-
-    el.count = 5
-    expect(el.shadowRoot.querySelector('.count').textContent).toBe('5')
-  })
-
-  it('dispatches events on interaction', () => {
-    const handler = jest.fn()
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
-    el.addEventListener('my-event', handler)
-
-    el.shadowRoot.querySelector('button').click()
-    expect(handler).toHaveBeenCalledTimes(1)
-    expect(handler).toHaveBeenCalledWith(
-      expect.objectContaining({
-        detail: expect.objectContaining({ value: expect.any(Number) }),
-      })
-    )
-  })
-
-  it('cleans up on disconnect', () => {
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
-
-    const spy = jest.spyOn(el, 'disconnectedCallback')
-    document.body.removeChild(el)
-
-    expect(spy).toHaveBeenCalled()
-  })
-})
+export default {
+  files: "src/**/*.test.js",
+  nodeResolve: true,
+  browsers: [
+    playwrightLauncher({ product: "chromium" }),
+    playwrightLauncher({ product: "firefox" }),
+    playwrightLauncher({ product: "webkit" }),
+  ],
+};
 ```
 
-## Testing Shadow DOM
+TypeScript sources: add `@web/dev-server-esbuild` as a plugin, or test the compiled output.
 
-```javascript
-describe('Shadow DOM', () => {
-  it('encapsulates styles', () => {
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
+## Fixtures and Rendering
 
-    const parentStyle = getComputedStyle(document.body)
-    const shadowStyle = getComputedStyle(el.shadowRoot.querySelector('div'))
+```js
+import { fixture, html, expect, elementUpdated, oneEvent } from "@open-wc/testing";
+import "../src/my-counter.js";
 
-    expect(parentStyle.color).not.toBe(shadowStyle.color)
-  })
-
-  it('supports slotted content', () => {
-    const el = document.createElement('my-component')
-    el.innerHTML = '<span slot="title">Slotted Title</span>'
-    document.body.appendChild(el)
-
-    const slot = el.shadowRoot.querySelector('slot[name="title"]')
-    const assignedNodes = slot.assignedNodes()
-
-    expect(assignedNodes.length).toBe(1)
-    expect(assignedNodes[0].textContent).toBe('Slotted Title')
-  })
-
-  it('allows CSS part styling', () => {
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
-
-    const part = el.shadowRoot.querySelector('[part="button"]')
-    expect(part).toBeTruthy()
-  })
-})
+describe("my-counter", () => {
+  it("renders default state", async () => {
+    const el = await fixture(html`<my-counter></my-counter>`);
+    expect(el.shadowRoot.querySelector(".count").textContent).to.equal("0");
+  });
 ```
 
-## Testing Form Integration
+`fixture` attaches the element to the document, waits for it to render (Lit `updateComplete` when present), and cleans up after each test.
 
-```javascript
-describe('Form Associated Component', () => {
-  beforeEach(() => {
-    document.body.innerHTML = `
-      <form id="test-form">
-        <my-input name="username" value="testuser"></my-input>
-      </form>
-    `
-  })
+## Attributes and Properties
 
-  it('participates in form submission', () => {
-    const form = document.getElementById('test-form')
-    const formData = new FormData(form)
+```js
+  it("reflects attribute to property and re-renders", async () => {
+    const el = await fixture(html`<my-counter count="3"></my-counter>`);
+    expect(el.count).to.equal(3);
 
-    expect(formData.get('username')).toBe('testuser')
-  })
-
-  it('supports form validation', () => {
-    const input = document.querySelector('my-input')
-    input.setAttribute('required', '')
-
-    expect(input.checkValidity()).toBe(false)
-    input.value = 'valid'
-    expect(input.checkValidity()).toBe(true)
-  })
-
-  it('resets with form', () => {
-    const form = document.getElementById('test-form')
-    const input = document.querySelector('my-input')
-
-    input.value = 'changed'
-    form.reset()
-
-    expect(input.value).toBe('testuser')
-  })
-})
+    el.count = 5;
+    await elementUpdated(el);
+    expect(el.getAttribute("count")).to.equal("5");          // only if the property reflects
+    expect(el.shadowRoot.querySelector(".count").textContent).to.equal("5");
+  });
 ```
 
-## Accessibility Testing
+Test both directions explicitly, plus invalid values (`count="abc"`, negative numbers) and removal of the attribute.
 
-```javascript
-describe('Accessibility', () => {
-  it('has proper ARIA attributes', () => {
-    const el = document.createElement('my-button')
-    el.setAttribute('aria-label', 'Close dialog')
-    document.body.appendChild(el)
+## Events
 
-    expect(el.getAttribute('aria-label')).toBe('Close dialog')
-    expect(el.getAttribute('role')).toBe('button')
-  })
+```js
+  it("dispatches a composed change event on click", async () => {
+    const el = await fixture(html`<my-counter></my-counter>`);
+    const button = el.shadowRoot.querySelector("button");
 
-  it('supports keyboard navigation', () => {
-    const el = document.createElement('my-button')
-    document.body.appendChild(el)
-    el.focus()
+    setTimeout(() => button.click());
+    const ev = await oneEvent(el, "count-changed");
 
-    expect(document.activeElement).toBe(el)
-    expect(el.shadowRoot.activeElement).toBeTruthy()
-  })
-
-  it('maintains focus order', () => {
-    document.body.innerHTML = `
-      <my-input></my-input>
-      <my-button></my-button>
-    `
-
-    const firstInput = document.querySelector('my-input')
-    const button = document.querySelector('my-button')
-
-    firstInput.focus()
-    expect(document.activeElement).toBe(firstInput)
-
-    // Tab to next focusable element
-    button.focus()
-    expect(document.activeElement).toBe(button)
-  })
-})
+    expect(ev.detail).to.deep.equal({ value: 1 });
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;                         // crosses shadow boundaries
+  });
 ```
 
-## Performance Testing
+## Lifecycle and Cleanup
 
-```javascript
-describe('Performance', () => {
-  it('renders within time budget', () => {
-    const start = performance.now()
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
-    const duration = performance.now() - start
+Lifecycle callbacks are captured from the class at definition time, so spying on an instance method does not intercept them. Test observable effects instead:
 
-    expect(duration).toBeLessThan(50)
-  })
-
-  it('updates efficiently', () => {
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
-
-    const start = performance.now()
-    el.setAttribute('count', '100')
-    const duration = performance.now() - start
-
-    expect(duration).toBeLessThan(16)
-  })
-
-  it('handles batch updates', () => {
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
-
-    const start = performance.now()
-    el.setAttribute('a', '1')
-    el.setAttribute('b', '2')
-    el.setAttribute('c', '3')
-    const duration = performance.now() - start
-
-    expect(duration).toBeLessThan(30)
-  })
-})
+```js
+  it("removes document listeners when disconnected", async () => {
+    const el = await fixture(html`<my-dropdown open></my-dropdown>`);
+    el.remove();
+    document.body.click();                                   // would toggle if listener leaked
+    expect(el.open).to.be.true;
+  });
 ```
 
-## Cross-Framework Integration Tests
+## Shadow DOM, Slots and Parts
 
-```javascript
-describe('React Integration', () => {
-  it('wraps web component correctly', () => {
-    const { container } = render(<ReactWrapper />)
-    const wc = container.querySelector('my-component')
+```js
+  it("projects named slot content", async () => {
+    const el = await fixture(html`<my-card><span slot="title">Hello</span></my-card>`);
+    const slot = el.shadowRoot.querySelector('slot[name="title"]');
+    const assigned = slot.assignedElements();
+    expect(assigned).to.have.length(1);
+    expect(assigned[0].textContent).to.equal("Hello");
+  });
 
-    expect(wc).toBeTruthy()
-    expect(wc.getAttribute('title')).toBe('From React')
-  })
+  it("exposes a styling part", async () => {
+    const el = await fixture(html`<my-card></my-card>`);
+    expect(el.shadowRoot.querySelector('[part~="header"]')).to.exist;
+  });
 
-  it('handles events from web component', () => {
-    const handler = jest.fn()
-    const { container } = render(<ReactWrapper onEvent={handler} />)
-
-    const wc = container.querySelector('my-component')
-    wc.dispatchEvent(new CustomEvent('my-event', { detail: 'test' }))
-
-    expect(handler).toHaveBeenCalled()
-  })
-})
-
-describe('Vue Integration', () => {
-  it('mounts Vue component wrapping web component', () => {
-    const wrapper = mount(VueWrapper)
-
-    expect(wrapper.find('my-component').exists()).toBe(true)
-    expect(wrapper.find('my-component').attributes('title')).toBe('From Vue')
-  })
-})
+  it("does not leak outer styles into shadow content", async () => {
+    const el = await fixture(html`
+      <div><style>p { color: rgb(255, 0, 0); }</style><my-card></my-card></div>`);
+    const inner = el.querySelector("my-card").shadowRoot.querySelector("p");
+    expect(getComputedStyle(inner).color).not.to.equal("rgb(255, 0, 0)");
+  });
 ```
 
-## Snapshot Testing
+Computed-style assertions require a real browser.
 
-```javascript
-describe('Snapshots', () => {
-  it('matches default state', () => {
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
+## Form-Associated Elements
 
-    expect(el.shadowRoot.innerHTML).toMatchSnapshot()
-  })
+```js
+  it("participates in forms via ElementInternals", async () => {
+    const form = await fixture(html`
+      <form><my-input name="username" value="testuser" required></my-input></form>`);
+    const input = form.querySelector("my-input");
 
-  it('matches different states', () => {
-    const el = document.createElement('my-component')
-    document.body.appendChild(el)
+    expect(new FormData(form).get("username")).to.equal("testuser");
 
-    el.setAttribute('state', 'loading')
-    expect(el.shadowRoot.innerHTML).toMatchSnapshot()
+    input.value = "";
+    expect(input.checkValidity()).to.be.false;
+    expect(input.validity.valueMissing).to.be.true;
 
-    el.setAttribute('state', 'error')
-    expect(el.shadowRoot.innerHTML).toMatchSnapshot()
-
-    el.setAttribute('state', 'empty')
-    expect(el.shadowRoot.innerHTML).toMatchSnapshot()
-  })
-})
+    input.value = "changed";
+    form.reset();                                            // calls formResetCallback
+    expect(input.value).to.equal("testuser");
+  });
 ```
 
-## Key Points
+The component must declare `static formAssociated = true`, call `attachInternals()`, and implement `setFormValue`, validity via `setValidity`, and `formResetCallback`.
 
-- Always test attribute-to-property reflection
-- Verify shadow DOM encapsulation and slot behavior
-- Test form-associated elements with actual forms
-- Validate CustomEvent dispatch and capture
-- Test lifecycle callbacks (connected, disconnected, attributeChanged)
-- Verify event cleanup on disconnect to prevent memory leaks
-- Test keyboard navigation and focus management
-- Use accessibility assertions for ARIA attributes
-- Set performance budgets for render and update times
-- Test cross-framework integration with React and Vue wrappers
-- Take snapshots of shadow DOM content for regression detection
-- Test slot projection and named slot distribution
+## Keyboard and Accessibility
+
+```js
+import { sendKeys } from "@web/test-runner-commands";
+
+  it("toggles with keyboard and passes axe checks", async () => {
+    const el = await fixture(html`<my-switch label="Notifications"></my-switch>`);
+    el.focus();
+    await sendKeys({ press: "Space" });
+    expect(el.checked).to.be.true;
+    expect(el.shadowRoot.querySelector('[role="switch"]').getAttribute("aria-checked")).to.equal("true");
+    await expect(el).to.be.accessible();                    // axe-core via chai-a11y-axe
+  });
+```
+
+`sendKeys` dispatches real key presses through the browser, unlike synthetic `KeyboardEvent`s. Also test focus delegation (`delegatesFocus`), tab order across shadow roots, and visible focus styles.
+
+## Snapshots and Visual Regression
+
+```js
+  it("matches shadow DOM snapshot", async () => {
+    const el = await fixture(html`<my-card heading="A"></my-card>`);
+    await expect(el).shadowDom.to.equalSnapshot();
+  });
+});
+```
+
+Keep DOM snapshots small and stable (they break on harmless markup changes). For appearance, use visual regression in real browsers (`@web/test-runner-visual-regression`, Playwright `toHaveScreenshot`, Chromatic/Percy with Storybook).
+
+## Framework Interop
+
+| Framework | What to test |
+|---|---|
+| React 19+ | Properties set as properties (not stringified attributes) and custom events via `on<EventName>` props |
+| React ≤ 18 | Wrapper (e.g. `@lit/react` `createComponent`) maps props and events |
+| Vue | `compilerOptions.isCustomElement` configured; `.prop` modifier for complex values; events via `@event-name` |
+| Angular | `CUSTOM_ELEMENTS_SCHEMA`; property binding `[prop]` |
+
+Test interop in the consuming app's test setup with real rendering; Custom Elements Everywhere documents framework compatibility.
+
+## Performance
+
+Avoid timing assertions with fixed millisecond budgets in unit tests: they are flaky across machines. Measure render/update cost with benchmarks (e.g. Tachometer) or browser performance traces, and track regressions over time.
+
+## Checklist
+- [ ] Tests run in real browsers (at least Chromium, ideally Firefox and WebKit)
+- [ ] Attribute/property reflection both directions, including invalid values
+- [ ] Events: detail, `bubbles`, `composed`
+- [ ] Lifecycle effects tested by observable behavior
+- [ ] Slots, parts and style encapsulation verified
+- [ ] Form-associated behavior (value, validity, reset) tested in a form
+- [ ] Keyboard interaction with real key presses and axe checks
+- [ ] Visual regression for appearance; minimal DOM snapshots

@@ -1,214 +1,189 @@
-# Helm Patterns Advanced Topics
-
-## Introduction
-Advanced Helm Patterns topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# Helm Advanced Patterns
+
+Advanced chart techniques: values schemas, library charts, `tpl` and `lookup`, post-renderers, server-side apply behaviour in Helm 4, safe upgrades of immutable fields, multi-environment strategy, and supply-chain controls. Fundamentals are in `helm-patterns-fundamentals.md`; umbrella charts in `umbrella-charts.md`; security in `helm-security.md`.
+
+## 1. Values Validation with JSON Schema
+
+`values.schema.json` is validated on `install`, `upgrade`, `lint`, and `template`.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["image", "replicaCount"],
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 1 },
+    "image": {
+      "type": "object",
+      "required": ["repository"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] }
+      },
+      "additionalProperties": false
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" }
+      }
+    }
+  }
+}
+```
+
+`additionalProperties: false` catches typos (`replicacount`) that otherwise silently do nothing. Inside templates, `required "image.repository is required" .Values.image.repository` and `fail` give targeted errors for conditional rules.
+
+## 2. Library Charts
+
+Share templates across many application charts without rendering resources themselves.
+
+```yaml
+# charts/common/Chart.yaml
+apiVersion: v2
+name: common
+type: library
+version: 2.1.0
+```
+
+```yaml
+{{/* charts/common/templates/_deployment.tpl */}}
+{{- define "common.deployment" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "common.fullname" . }}
+  labels: {{- include "common.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "common.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "common.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ printf "%s:%s" .Values.image.repository (.Values.image.tag | default .Chart.AppVersion) | quote }}
+{{- end -}}
+```
+
+```yaml
+# app chart: templates/deployment.yaml
+{{ include "common.deployment" . }}
+```
+
+Version the library chart with SemVer and upgrade consumers deliberately; a library change alters every chart that uses it.
+
+## 3. `tpl`, `lookup`, and Capabilities
+
+```yaml
+# Render a value that itself contains template expressions
+data:
+  config.yaml: |
+    {{- tpl (.Values.configTemplate | toYaml) . | nindent 4 }}
+```
+
+```yaml
+# Reuse an existing generated secret on upgrade instead of regenerating it
+{{- $existing := lookup "v1" "Secret" .Release.Namespace (include "web.fullname" .) }}
+{{- $password := "" }}
+{{- if $existing }}
+{{- $password = index $existing.data "password" | b64dec }}
+{{- else }}
+{{- $password = randAlphaNum 32 }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "web.fullname" . }}
+type: Opaque
+stringData:
+  password: {{ $password | quote }}
+```
+
+- `lookup` returns an empty map during `helm template` and `--dry-run` (client mode), so rendering differs from a real install; test both paths. Prefer external secret managers over chart-generated secrets for production.
+- `.Capabilities.APIVersions.Has "policy/v1/PodDisruptionBudget"` and `.Capabilities.KubeVersion` let charts adapt to cluster versions.
+
+## 4. Post-Renderers
+
+A post-renderer receives the rendered manifests on stdin and returns modified manifests, for patches the chart does not expose (often Kustomize).
+
+```bash
+helm upgrade --install web ./charts/web --post-renderer ./kustomize-wrapper.sh
+```
+
+```bash
+#!/usr/bin/env bash
+# kustomize-wrapper.sh
+set -euo pipefail
+cat > base.yaml
+kubectl kustomize .            # kustomization.yaml lists base.yaml and patches
+```
+
+Helm 4 reworks plugins (including a WebAssembly-based plugin system) and changes how post-renderers are registered; check the Helm 4 plugin documentation before migrating scripts.
+
+## 5. Server-Side Apply and Field Ownership (Helm 4)
+
+- Helm 4 uses server-side apply by default: the API server merges and tracks field managers. Fields removed from the chart are removed from the object, fixing a class of Helm 3 drift issues.
+- Conflicts occur when another manager (HPA, `kubectl edit`, an operator) owns a field the chart also sets; resolve by not templating that field (e.g. omit `replicas` when an HPA is enabled) or by deliberately taking ownership with the conflict-forcing flag.
+- Validation is stricter: for example, duplicate environment variable names in a container are rejected under server-side apply. Lint charts against Helm 4 before upgrading CI.
+
+```yaml
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+```
+
+## 6. Changing Immutable Fields
+
+Deployment `spec.selector`, StatefulSet `volumeClaimTemplates`, and Service `clusterIP` cannot be changed in place. Options:
+- Keep selector labels stable forever (`selectorLabels` separate from general labels).
+- For required changes: create the resource under a new name, migrate traffic, delete the old one.
+- Replace-on-conflict flags (`--force-replace` in Helm 4, `--force` in Helm 3) delete and recreate the resource, which causes downtime; avoid in production.
+
+## 7. Multi-Environment Strategy
+
+```
+charts/web/                       # chart: environment-agnostic defaults
+deploy/
+├── values-common.yaml
+├── values-staging.yaml
+└── values-prod.yaml
+```
+
+- One chart version promoted across environments; only values change.
+- Deploy with GitOps (Argo CD, Flux) or Helmfile (`helmfile-deploy.md`) rather than ad hoc CLI runs.
+- Keep secrets out of values files: reference External Secrets, Sealed Secrets, or SOPS-encrypted files (helm-secrets plugin).
+
+## 8. Supply Chain
+
+- Publish charts to OCI registries; reference by version and, where tooling allows, by digest.
+- Sign charts: Helm provenance files (`helm package --sign`, `helm verify`) or Cosign/Notation signatures on OCI artifacts.
+- Scan rendered manifests in CI with policy tools (Kyverno CLI, Conftest/OPA, kube-linter, Checkov).
+- Pin image tags or digests in values; never `latest`.
+
+## 9. Testing
+
+- `helm lint --strict` and `helm template` against each environment's values in CI.
+- `helm-unittest` plugin for template assertions; chart-testing (`ct lint`, `ct install`) on kind clusters (`chart-testing.md`).
+- `helm test` hooks for in-cluster smoke tests after install.
+
+## Pitfalls
+
+- Templating fields owned by controllers (replicas with HPA, injected sidecars) causing apply conflicts.
+- Generating secrets with `randAlphaNum` without `lookup`: password changes on every upgrade.
+- Library chart updates rolled to all apps at once.
+- Relying on `lookup` output in `helm template`-based GitOps renderers where it is always empty.
+
+## Checklist
+
+- [ ] `values.schema.json` with `additionalProperties: false` for key objects.
+- [ ] Shared templates in a versioned library chart.
+- [ ] Selector labels stable; immutable-field changes planned.
+- [ ] Charts linted and tested against Helm 4 server-side apply behaviour.
+- [ ] Signed OCI charts; manifests policy-scanned in CI.
+- [ ] Secrets sourced externally, not from values files.

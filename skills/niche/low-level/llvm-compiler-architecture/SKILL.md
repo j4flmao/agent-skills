@@ -1,4 +1,37 @@
+---
+name: llvm-compiler-architecture
+description: >
+  Use this skill when the user says 'LLVM', 'LLVM IR', 'compiler backend', 'optimization pass', 'frontend/backend separation', 'SSA IR'. Explains LLVM's three-phase design, SSA-form IR, and the pass pipeline. Do NOT use for: eBPF bytecode specifics (use niche/low-level/ebpf-xdp-networking) or language-specific syntax.
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [niche, low-level, llvm, compilers, ir]
+---
+
 # LLVM Compiler Architecture
+
+## Purpose
+Explain LLVM's modular compiler architecture: the frontend/optimizer/backend three-phase split, the SSA-form LLVM IR as the common interface, and how optimization and codegen passes transform it.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "LLVM IR", "three-phase compiler", "optimization pass", "SSA form", "target backend".
+
+### Input Context
+- Source language / frontend (Clang, rustc).
+- Target architecture.
+
+### Output Artifact
+Architecture explanation and pass-pipeline guidance.
+
+### Response Format
+```
+Phase: {frontend | optimizer | backend}
+IR: {SSA, typed}
+Pass: {analysis | transform}
+```
+
 
 ## Core Mechanics
 

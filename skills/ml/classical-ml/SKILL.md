@@ -380,7 +380,7 @@ Classical ML vs rule-based: rule-based systems are fully interpretable but don't
 
 ## Performance
 
-- XGBoost vs LightGBM: LightGBM 2-4x faster training, similar accuracy. LightGBM uses histogram-based splits.
+- XGBoost vs LightGBM: both use histogram-based splits (XGBoost `tree_method="hist"` is the default since 2.0); LightGBM grows trees leaf-wise and is often faster on large data. Accuracy is usually similar; benchmark on your data.
 - CatBoost: 1.5-2x slower training but best categorical support (no encoding needed).
 - Random Forest: scales with n_estimators * max_depth. O(1) per tree, parallel by default.
 - Pipeline overhead: minimal (< 5ms per prediction for 100 features).
@@ -388,7 +388,7 @@ Classical ML vs rule-based: rule-based systems are fully interpretable but don't
 - Feature importance (permutation): O(n * T) where n = iterations, T = trees.
 - Memory: XGBoost histogram mode uses ~2x data memory. LightGBM leaf-wise growth uses ~1.5x. CatBoost uses ~3x.
 - GPU training: XGBoost GPU 3-5x speedup, LightGBM GPU 2-3x, CatBoost GPU 2-4x.
-- Inference optimization: convert to ONNX for 2-5x faster inference. Quantize to float16 for 2x memory reduction.
+- Inference optimization: convert to ONNX (skl2onnx, onnxmltools) or use Treelite/compiled predictors for lower-latency inference; measure against the native predictor.
 - Large dataset strategy: for datasets > 1M rows, use histogram-based boosting (LightGBM/XGBoost hist). For > 10M rows, use sampling or distributed training (Spark + XGBoost).
 - Feature selection reduces training time linearly. Remove features with near-zero variance or extremely low importance.
 
@@ -465,7 +465,7 @@ Classical ML vs rule-based: rule-based systems are fully interpretable but don't
 ## Implementation Patterns
 
 ### End-to-End Classification Pipeline
-`python
+```python
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -492,10 +492,10 @@ pipeline = Pipeline([
 pipeline.fit(X_train, y_train)
 cv_scores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring='f1_macro')
 print(f'CV F1: {cv_scores.mean():.3f} +/- {cv_scores.std():.3f}')
-`
+```
 
 ### XGBoost with Hyperparameter Tuning
-`python
+```python
 import xgboost as xgb
 from sklearn.model_selection import RandomizedSearchCV
 
@@ -521,7 +521,7 @@ search = RandomizedSearchCV(
     n_jobs=-1, verbose=1
 )
 search.fit(X_train, y_train, eval_set=[(X_val, y_val)])
-`
+```
 
 ## Production Considerations
 

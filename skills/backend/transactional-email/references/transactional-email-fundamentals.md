@@ -1,213 +1,130 @@
 # Transactional Email Fundamentals
 
-## Overview
-Transactional Email is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
-
-## Core Concepts
-
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Transactional Email helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
-
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Transactional Email solutions. These principles help maintain code quality and reduce technical debt.
-
-### Concept 3: Data Management
-Proper data management is essential for Transactional Email. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
-
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
-
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
-
-## Architecture Patterns
-
-### Pattern 1: Standard Architecture
-The standard architecture for Transactional Email follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
-
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
-
-## Implementation Guide
-
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
-
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Transactional Email concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+Transactional emails are messages triggered by a user's action or account state (password reset, sign-in codes, receipts, shipping updates, security alerts), as opposed to marketing/bulk email sent to a list. This reference covers the categories, a reliable sending architecture, message anatomy, provider APIs, idempotency and the core rules that keep these messages arriving. Authentication records (SPF/DKIM/DMARC), templates, analytics, compliance and testing have dedicated sibling references.
+
+## Transactional vs. Marketing
+
+| Aspect | Transactional | Marketing |
+|---|---|---|
+| Trigger | User action or account event | Campaign/schedule |
+| Consent | Implied by the relationship/service | Opt-in (per jurisdiction) |
+| Unsubscribe | Not required for purely transactional content in most laws; required once promotional content is added | Required (one-click for bulk senders at Gmail/Yahoo) |
+| Latency expectation | Seconds (OTP, reset) to minutes | Hours acceptable |
+| Infrastructure | Separate subdomain/IP pool/stream | Separate stream |
+
+Keep transactional and marketing traffic on separate sending domains or subdomains (e.g. `notify.example.com` vs. `news.example.com`) and separate provider streams, so marketing complaints do not hurt password-reset delivery.
+
+## Common Categories and Priorities
+
+| Category | Example | Priority | Notes |
+|---|---|---|---|
+| Authentication | OTP codes, magic links, password reset | Highest | Short expiry; never include the password |
+| Security alerts | New sign-in, password changed | High | Must not be suppressible by marketing opt-outs |
+| Commerce | Order confirmation, receipt, refund | High | Accurate amounts, legal info |
+| Lifecycle | Welcome, email verification | Medium | |
+| Notifications | Comment reply, mention | Medium/Low | Offer per-type preferences; batching |
+
+## Reliable Sending Architecture
+
+```
+API request (e.g. place order)
+  -> DB transaction: write order + outbox row {type: "order_confirmation", order_id, idempotency_key}
+  -> outbox relay publishes job to queue
+  -> email worker: load data, render template, call provider API with idempotency key
+  -> provider accepts (202) -> store provider message ID
+  -> provider webhooks: delivered / bounced / complained / opened -> update status, suppression list
+```
+Why:
+- **Outbox**: the email is never sent for a rolled-back transaction, and never lost if the process crashes after commit.
+- **Queue + worker**: retries with backoff on provider errors without blocking the user request.
+- **Idempotency**: retries must not send duplicates.
+
+```python
+from __future__ import annotations
+
+import logging
+
+import httpx
+
+log = logging.getLogger(__name__)
+
+
+def send_order_confirmation(client: httpx.Client, job: dict) -> str:
+    payload = {
+        "from": "Shop <orders@notify.example.com>",
+        "to": [job["recipient"]],
+        "subject": f"Order {job['order_number']} confirmed",
+        "html": job["html"],
+        "text": job["text"],
+        "tags": [{"name": "category", "value": "order_confirmation"}],
+    }
+    resp = client.post(
+        "/emails",
+        json=payload,
+        headers={"Idempotency-Key": job["idempotency_key"]},   # provider-side dedup where supported
+        timeout=10.0,
+    )
+    if resp.status_code in (429, 500, 502, 503, 504):
+        raise RuntimeError(f"Retryable provider error {resp.status_code} for job {job['id']}")
+    if resp.is_error:
+        log.error("Provider rejected email job=%s status=%s body=%s", job["id"], resp.status_code, resp.text)
+        resp.raise_for_status()
+    return resp.json()["id"]
+```
+If the provider lacks idempotency keys, record "sent" state with a unique constraint on `(event_type, entity_id)` before calling the API, and reconcile ambiguous timeouts using provider message lookup.
+
+## Message Anatomy
+
+| Part | Guidance |
+|---|---|
+| `From` | Recognizable name, address on your authenticated domain; consistent per category |
+| `Reply-To` | Monitored inbox or support address; avoid unmonitored `no-reply` when users may answer |
+| `Subject` | Specific and factual ("Your password reset code"); no marketing language |
+| HTML + plain-text parts | Always send both (`multipart/alternative`) |
+| `Message-ID` | Generated by provider or you; store for threading/support |
+| Preheader | Short summary shown in inbox preview |
+| Links | HTTPS, on your domain; tracking-domain CNAME on your domain |
+| Footer | Company name and postal address (needed if any promotional content), link to notification settings |
+
+## Security-Sensitive Emails
+- Password reset and magic links: single-use tokens, short expiry (e.g. 15–60 minutes), stored hashed, invalidated after use or password change.
+- Do not reveal whether an account exists in the UI ("If an account exists, we sent a link").
+- Rate-limit sends per user, IP and recipient address to prevent abuse (email bombing, cost).
+- Never put secrets, full card numbers or passwords in email bodies.
+- OTP codes: numeric, short-lived, attempt-limited.
+
+## Provider APIs vs. SMTP
+
+| | HTTP API | SMTP relay |
+|---|---|---|
+| Features | Templates, tags, idempotency, metadata, batch | Universal, works with legacy apps |
+| Errors | Structured JSON errors | SMTP reply codes |
+| Performance | One HTTPS request per message or batch | Persistent connections, pipelining |
+| Recommendation | Default for application code | Legacy systems, frameworks expecting SMTP |
+
+Common providers: Amazon SES, SendGrid (Twilio), Postmark, Mailgun, Resend, SparkPost (Bird), Brevo. Evaluate deliverability reputation, dedicated vs. shared IPs, message streams, webhook quality, data residency, and pricing.
+
+## Bounces, Complaints and Suppression
+- **Hard bounce** (invalid mailbox, 5xx permanent): suppress immediately.
+- **Soft bounce** (mailbox full, 4xx temporary): retry by the provider; suppress after repeated failures.
+- **Complaint** (user marked as spam via feedback loop): suppress non-critical categories for that recipient.
+- Maintain your own suppression list in addition to the provider's; check it before sending.
+- Security and legally required messages may still need to be attempted per your policy; document the exceptions.
+
+## Key Metrics
+| Metric | Meaning |
+|---|---|
+| Accepted -> delivered rate | Provider handoff success |
+| Bounce rate | List quality; keep low |
+| Complaint (spam) rate | Gmail requires bulk senders to stay below 0.3% and recommends below 0.1% |
+| Time to inbox (p95) | Critical for OTPs and resets |
+| Provider error rate | Integration health |
+
+## Checklist
+- [ ] Transactional stream/subdomain separate from marketing
+- [ ] Outbox + queue + idempotent worker
+- [ ] HTML and text parts; clear From/Reply-To/Subject
+- [ ] Security emails use short-lived, single-use, hashed tokens
+- [ ] Per-recipient and per-IP send rate limits
+- [ ] Webhooks update bounces/complaints and suppression
+- [ ] Delivery latency and failure metrics monitored

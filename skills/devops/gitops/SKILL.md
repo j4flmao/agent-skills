@@ -301,7 +301,7 @@ metadata:
 
 ### Step 5: External Secrets
 ```yaml
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: SecretStore
 metadata:
   name: aws-secrets-manager
@@ -316,7 +316,7 @@ spec:
           serviceAccountRef:
             name: my-app-sa
 ---
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: app-secrets
@@ -484,8 +484,6 @@ GitOps (pull-based): agent in cluster pulls desired state from Git. No cluster A
 - references/gitops-fundamentals.md -- Gitops Fundamentals
 - references/gitops-principles.md -- GitOps Principles
 - references/sync-strategies.md -- Sync Strategies
-- references/gitops-workflow-environments.md -- GitOps Workflow Environments
-- references/gitops-security-compliance.md -- GitOps Security and Compliance
 
 ## Handoff
 After completing this skill:

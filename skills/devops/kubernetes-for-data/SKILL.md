@@ -228,10 +228,10 @@ spec:
 ```
 
 ### Step 6: Karpenter for Elasticity
-Configure Karpenter provisioners per workload type. Set consolidation for cost. TTL for empty nodes. Node template with AMI, security group, subnet.
+Configure a Karpenter NodePool per workload type (karpenter.sh/v1). Set consolidation for cost and `expireAfter` for node rotation; the EC2NodeClass selects AMI, subnets and security groups.
 
 ```yaml
-apiVersion: karpenter.sh/v1beta1
+apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: spark-executor
@@ -245,14 +245,17 @@ spec:
       - key: karpenter.sh/capacity-type
         operator: In
         values: ["spot"]
-      - key: node.kubernetes.io/instance-type
+      - key: karpenter.k8s.aws/instance-size
         operator: In
-        values: ["c5.4xlarge", "c5.8xlarge", "m5.4xlarge"]
+        values: ["4xlarge", "8xlarge"]
       - key: karpenter.k8s.aws/instance-family
         operator: In
         values: ["c5", "c6i", "m5", "m6i"]
       nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
         name: spark-executor-class
+      expireAfter: 168h
       taints:
       - key: workload-type
         value: spark
@@ -261,20 +264,23 @@ spec:
     cpu: 4000
     memory: 16000Gi
   disruption:
-    consolidationPolicy: WhenUnderutilized
-    expireAfter: 168h
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 2m
 ---
-apiVersion: karpenter.k8s.aws/v1beta1
+apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
   name: spark-executor-class
 spec:
-  amiFamily: Bottlerocket
+  amiSelectorTerms:
+    - alias: bottlerocket@latest   # pin a version in production
   role: KarpenterNodeRole
-  subnetSelector:
-    karpenter.sh/discovery: data-cluster
-  securityGroupSelector:
-    karpenter.sh/discovery: data-cluster
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: data-cluster
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: data-cluster
   tags:
     Environment: production
     WorkloadType: spark

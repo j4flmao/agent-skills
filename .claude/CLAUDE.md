@@ -22,4 +22,4 @@ Rules in `rules/` are auto-loaded. Reference them from memory.
 - `PostToolUse` (Write|Edit → change log)
 - `SessionStart` (startup → session log)
 
-Hooks wired in `.claude/settings.json`. Scripts in `.claude/hooks/scripts/` (.sh + .ps1).
+Hooks wired in `.claude/settings.json`. Scripts in `.claude/hooks/scripts/` (`block-destructive.sh`, `log-changes.sh`, `session-start.sh`; need a POSIX shell such as Git Bash on Windows).

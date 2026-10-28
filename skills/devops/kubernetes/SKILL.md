@@ -501,8 +501,8 @@ spec:
               cpu: 100m
               memory: 300Mi
 ---
-# Karpenter provisioner (alternative)
-apiVersion: karpenter.sh/v1beta1
+# Karpenter NodePool (alternative; karpenter.sh/v1 — v1beta1 is no longer served since Karpenter 1.1)
+apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: default
@@ -520,13 +520,16 @@ spec:
           operator: In
           values: ["c", "m", "r"]
       nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
         name: default
+      expireAfter: 720h
   limits:
     cpu: 1000
     memory: 4000Gi
   disruption:
-    consolidationPolicy: WhenUnderutilized
-    expireAfter: 720h
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 1m
 ```
 
 ## Production Considerations
@@ -591,6 +594,7 @@ Procedure:
 
 ## Anti-Patterns
 
+0. **New installs of ingress-nginx**: the project was retired in March 2026 (no security fixes). Use Gateway API (`gateway.networking.k8s.io/v1` HTTPRoute) with a maintained implementation, or another maintained Ingress controller.
 1. **Running without resource limits**: Pods can consume all node resources. Always set requests + limits.
 2. **No PodDisruptionBudget for stateful workloads**: Maintenance can cause data loss. Always set PDB minAvailable.
 3. **Ignoring etcd backups**: etcd is the source of truth for cluster state. Loss = cluster loss.
@@ -685,12 +689,6 @@ spec:
 - references/ingress-controllers.md — Ingress Controller Selection and Config
 - references/namespace-management.md — Namespace Strategy and Resource Quotas
 - references/pod-lifecycle.md — Pod Lifecycle, Init Containers, and Ephemeral Containers
-- references/kubernetes-api-resources.md — API Resource Guide
-- references/kubernetes-security.md — Kubernetes Security Hardening
-- references/kubernetes-upgrades.md — Cluster Upgrade Procedures
-- references/kubernetes-backup-dr.md — etcd Backup and Disaster Recovery
-- references/kubernetes-monitoring.md — Cluster Monitoring and Alerting
-- references/kubernetes-troubleshooting.md — Cluster Troubleshooting Guide
 
 ## Handoff
 Cross-reference with `kubernetes-patterns` for application manifests. Use `helm-patterns` for chart design. Use `cilium-ebpf` for advanced networking. Use `service-mesh` for Istio/Linkerd. Use `monitoring` for Prometheus/Grafana. Use `backup-dr` for Velero. Hand off to `incident-response` for cluster incidents.

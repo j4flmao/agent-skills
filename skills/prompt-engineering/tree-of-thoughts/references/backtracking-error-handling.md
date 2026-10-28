@@ -1,458 +1,171 @@
----
-name: "Backtracking & Error Handling"
-description: >
-  Handling dead ends, API errors, and complex backtracking in prompt trees.
-version: "2.0.0"
-author: "j4flmao"
-license: "MIT"
-type: skill
-compatibility:
-  claude-code: true
-  cursor: true
-  codex: true
-  windsurf: true
-tags: ["tree-of-thoughts", "architecture", "search", "llm"]
----
+# Backtracking and Error Handling in Tree-of-Thoughts Search
 
-# Backtracking & Error Handling
+How a ToT search recovers from dead ends (backtracking) and from failures of the LLM calls themselves (timeouts, rate limits, malformed output), without losing the explored tree or overspending the budget.
 
-## Purpose
-This document provides a comprehensive guide to handling dead ends, api errors, and complex backtracking in prompt trees. It is a core reference file for the `prompt-engineering/tree-of-thoughts` skill.
+## Two Kinds of Failure
 
-## Core Principles
-1. **Systematic Exploration**: Treat prompt generation as a formal search problem.
-2. **State Isolation**: Ensure each thought node encapsulates its complete state.
-3. **Heuristic Pruning**: Aggressively prune paths that fall below confidence thresholds.
-4. **Resilience**: Handle API failures gracefully without losing the entire search tree.
-5. **Observability**: Maintain rich logs of the search graph for debugging and analysis.
+| Kind | Example | Response |
+|---|---|---|
+| Search failure (logical) | Node judged impossible, validator rejects path, depth limit hit | Backtrack: pop next-best alternative |
+| Call failure (operational) | HTTP 429/5xx, timeout, refusal, unparseable JSON | Retry bounded, then treat node as unevaluated/low score, never crash the search |
 
-## Agent Protocol
-Triggers: When a complex reasoning task is encountered.
-Input Context Required: The initial problem state, constraints, and the target goal.
-Output Artifact: The fully reasoned solution path.
-Response Formats:
-```json
-{
-  "solution": "Final computed result",
-  "path_taken": ["node_1", "node_4", "node_9"],
-  "metrics": {"nodes_explored": 14, "pruned": 5}
-}
-```
+Keep them separate in code: logical dead ends are normal search events; operational errors are counted, logged and budgeted.
 
-## Decision Matrix
-```text
-Is the problem linear? 
- |
- +-- Yes --> Use Chain of Thought
- |
- +-- No --> Does it require back-tracking?
-             |
-             +-- Yes --> Use DFS with iterative deepening
-             |
-             +-- No --> Use BFS with heuristic pruning
-```
-
-## Detailed Architectural Overview
-```text
-[Initial State]
-       |
-       v
-[Thought Generator] ---> [Thought 1] ---> [Evaluator] ---> Score: 0.8 (Keep)
-                    ---> [Thought 2] ---> [Evaluator] ---> Score: 0.2 (Prune)
-                    ---> [Thought 3] ---> [Evaluator] ---> Score: 0.9 (Keep)
-```
-
-
-### Base Tree of Thoughts Implementation Classes
+## DFS with Explicit Backtracking
 
 ```python
-import asyncio
-from typing import List, Dict, Any, Optional
+from __future__ import annotations
+
+import logging
 from dataclasses import dataclass, field
+from typing import Callable
+
+log = logging.getLogger(__name__)
+
 
 @dataclass
-class ThoughtNode:
-    """
-    Represents a single node in the Tree of Thoughts.
-    """
-    id: str
-    state: Dict[str, Any]
-    parent_id: Optional[str] = None
-    children: List['ThoughtNode'] = field(default_factory=list)
-    heuristic_score: float = 0.0
-    is_terminal: bool = False
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    
-    def add_child(self, child: 'ThoughtNode'):
-        self.children.append(child)
-        child.parent_id = self.id
+class Node:
+    steps: list[str]
+    value: float
+    children: list["Node"] = field(default_factory=list)
 
-    def get_path(self, nodes_dict: Dict[str, 'ThoughtNode']) -> List['ThoughtNode']:
-        path = [self]
-        curr = self
-        while curr.parent_id:
-            curr = nodes_dict[curr.parent_id]
-            path.append(curr)
-        return path[::-1]
 
-class BaseThoughtGenerator:
-    async def generate_thoughts(self, state: Dict[str, Any], k: int) -> List[Dict[str, Any]]:
-        raise NotImplementedError
+def dfs_solve(
+    root: Node,
+    expand: Callable[[Node], list[Node]],     # generate + evaluate children (may raise CallFailed)
+    is_solution: Callable[[Node], bool],
+    threshold: float,
+    max_depth: int,
+    max_nodes: int,
+) -> Node | None:
+    stack: list[tuple[Node, int]] = [(root, 0)]
+    visited = 0
+    while stack:
+        node, depth = stack.pop()
+        visited += 1
+        if visited > max_nodes:
+            log.warning("node budget exhausted visited=%d", visited)
+            return None
+        if is_solution(node):
+            return node
+        if depth == max_depth:
+            continue                                   # dead end by depth: backtrack
+        try:
+            children = expand(node)
+        except CallFailed as exc:
+            log.warning("expand failed depth=%d steps=%d error=%s", depth, len(node.steps), exc)
+            continue                                   # treat as dead end, keep searching
+        viable = [c for c in children if c.value >= threshold]
+        if not viable:
+            continue                                   # all children pruned: backtrack
+        # push lowest first so the best child is popped next
+        for child in sorted(viable, key=lambda c: c.value):
+            stack.append((child, depth + 1))
+    return None
 
-class BaseStateEvaluator:
-    async def evaluate_states(self, states: List[Dict[str, Any]]) -> List[float]:
-        raise NotImplementedError
 
-class TreeOfThoughts:
-    def __init__(self, generator: BaseThoughtGenerator, evaluator: BaseStateEvaluator):
-        self.generator = generator
-        self.evaluator = evaluator
-        self.nodes: Dict[str, ThoughtNode] = {}
-        
-    async def search(self, initial_state: Dict[str, Any], max_steps: int) -> Optional[ThoughtNode]:
-        pass
+class CallFailed(RuntimeError):
+    pass
 ```
 
+Backtracking is implicit: when a branch yields no viable children the loop pops the next pending sibling or ancestor alternative. Because the stack keeps unexpanded alternatives, no state is recomputed.
 
-## Advanced Algorithms and Formulations
-The heuristic evaluation function can be formally defined as:
-`H(n) = \alpha \cdot P(thought | context) + \beta \cdot E(thought)`
-Where `P` is the language model's inherent probability (or proxy confidence), and `E` is the explicit evaluator score.
+## Backtracking Policies
 
+| Policy | Behavior | When |
+|---|---|---|
+| Chronological (stack) | Return to most recent alternative | Default DFS |
+| Best-first (priority queue) | Return to globally best open node | Evaluator scores comparable across depths |
+| Threshold relaxation | If whole tree fails, rerun with lower threshold | Evaluator is conservative |
+| Restart with feedback | New root prompt includes summary of failed approaches | Failures share a cause the generator can avoid |
 
-### Extended Thought State JSON Schema
+Restart with feedback example prompt fragment:
 
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ThoughtNodeState",
-  "type": "object",
-  "properties": {
-    "thought_id": {
-      "type": "string",
-      "description": "Unique identifier for the thought node"
-    },
-    "context_window": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "role": { "type": "string", "enum": ["system", "user", "assistant", "function"] },
-          "content": { "type": "string" },
-          "tokens": { "type": "integer" }
-        },
-        "required": ["role", "content"]
-      }
-    },
-    "evaluation_metrics": {
-      "type": "object",
-      "properties": {
-        "coherence_score": { "type": "number", "minimum": 0, "maximum": 1 },
-        "factual_consistency": { "type": "number", "minimum": 0, "maximum": 1 },
-        "goal_alignment": { "type": "number", "minimum": 0, "maximum": 1 }
-      }
-    },
-    "branching_factor": { "type": "integer", "default": 3 },
-    "is_pruned": { "type": "boolean", "default": false },
-    "execution_trace": {
-      "type": "array",
-      "items": { "type": "string" }
-    }
-  },
-  "required": ["thought_id", "context_window"],
-  "additionalProperties": false
-}
+```
+Previously tried approaches that failed:
+- "multiply 4*6 first" -> remaining numbers cannot reach 0
+- "subtract 13-9 first" -> invalid intermediate
+Propose next steps that differ from these.
 ```
 
+## Retrying LLM Calls
 
-## Workflow Steps
-1. **Phase 1: Initialization**
-   1. Setup initial state.
-   2. Configure LLM parameters.
-   3. Initialize root node.
-2. **Phase 2: Generation**
-   1. Prompt LLM for `k` thoughts.
-   2. Parse outputs.
-   3. Create child nodes.
-3. **Phase 3: Evaluation**
-   1. Score each child.
-   2. Append metrics.
-   3. Sort by score.
-4. **Phase 4: Pruning**
-   1. Apply threshold.
-   2. Mark pruned nodes.
-   3. Discard from active queue.
-5. **Phase 5: Selection/Backtracking**
-   1. Select highest scoring node.
-   2. If terminal, exit.
-   3. If dead end, backtrack.
-6. **Phase 6: Finalization**
-   1. Extract optimal path.
-   2. Format output.
-   3. Log execution trace.
+```python
+import random
+import time
 
 
-## Extended Troubleshooting Guide
-
-| Symptom | Primary Cause | Mitigation Action |
-|---------|---------------|-------------------|
-| High token usage | Branching factor too high | Implement aggressive pruning algorithms, reduce `k` parameter. |
-| Context window overflow | Deep trees accumulating too much history | Summarize state at each depth layer before passing to children. |
-| Hallucinated evaluations | Weak evaluator prompt | Use few-shot examples for the evaluator LLM to anchor its scoring. |
-| Stagnant search | Heuristic scores are too uniform | Increase temperature on thought generation, penalize repetition. |
-| Dead ends hit frequently | Problem is too constrained | Allow backtracking with higher penalty, or use DFS with iterative deepening. |
-| OOM on API limits | Too many parallel requests | Implement token bucket rate limiting and batching for API calls. |
-| Slow convergence | BFS exploring too many useless states | Switch to A* or greedy Best-First Search with a strong heuristic. |
-| JSON parsing errors | LLM outputting malformed JSON | Use constrained decoding, JSON mode, or strict regex parsing with retries. |
+RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504}
 
 
-## Complete Execution Scenario
-```text
-Root --> A (0.8) --> A1 (0.9) --> Target!
-                 --> A2 (0.4) [Pruned]
-     --> B (0.5) --> B1 (0.6) [Pruned]
+def call_with_retry(call: Callable[[], str], attempts: int = 3, base: float = 1.0, cap: float = 20.0) -> str:
+    for attempt in range(1, attempts + 1):
+        try:
+            return call()
+        except ApiError as exc:
+            if exc.status not in RETRYABLE_STATUS or attempt == attempts:
+                raise CallFailed(f"status={exc.status} attempt={attempt}") from exc
+            delay = exc.retry_after or random.uniform(0, min(cap, base * 2 ** attempt))
+            time.sleep(delay)
+    raise CallFailed("unreachable")
+
+
+class ApiError(Exception):
+    def __init__(self, status: int, retry_after: float | None = None) -> None:
+        super().__init__(f"API error {status}")
+        self.status, self.retry_after = status, retry_after
 ```
 
-## Rules and Guidelines
-1. Always serialize state to prevent memory leaks.
-2. Never allow deeply nested recursion without limits.
-3. Use strict typing for all node interactions.
-4. Log every API call with its corresponding node ID.
-5. Maintain strict isolation between the generator and evaluator prompts.
+Map your SDK's exceptions to `ApiError`. Most provider SDKs already retry some errors; avoid stacking a second retry layer on top of the SDK's own retries without lowering one of them.
 
-## Reference Guides
-- [Search Architecture Patterns](references/bfs-dfs-architecture-patterns.md)
-- [Node State Management](references/thought-node-state-management.md)
-- [Performance Optimization](references/pruning-performance-optimization.md)
-- [Security Practices](references/prompt-injection-security-practices.md)
-- [Testing Strategies](references/heuristic-evaluation-testing.md)
-- [Deployment Pipelines](references/tot-agent-deployment-pipelines.md)
-- [Error Handling](references/backtracking-error-handling.md)
-- [Code Organization](references/tree-search-code-organization.md)
+Every retry counts against the search's call budget.
 
-## Handoff
-Refer to `prompt-engineering/chain-of-thought` for simpler linear reasoning tasks.
+## Malformed Output
 
-<!-- Padding for line count requirement: 0 -->
-- Concept 0: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 1 -->
-<!-- Padding for line count requirement: 2 -->
-<!-- Padding for line count requirement: 3 -->
-<!-- Padding for line count requirement: 4 -->
-<!-- Padding for line count requirement: 5 -->
-<!-- Padding for line count requirement: 6 -->
-<!-- Padding for line count requirement: 7 -->
-<!-- Padding for line count requirement: 8 -->
-<!-- Padding for line count requirement: 9 -->
-<!-- Padding for line count requirement: 10 -->
-- Concept 10: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 11 -->
-<!-- Padding for line count requirement: 12 -->
-<!-- Padding for line count requirement: 13 -->
-<!-- Padding for line count requirement: 14 -->
-<!-- Padding for line count requirement: 15 -->
-<!-- Padding for line count requirement: 16 -->
-<!-- Padding for line count requirement: 17 -->
-<!-- Padding for line count requirement: 18 -->
-<!-- Padding for line count requirement: 19 -->
-<!-- Padding for line count requirement: 20 -->
-- Concept 20: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 21 -->
-<!-- Padding for line count requirement: 22 -->
-<!-- Padding for line count requirement: 23 -->
-<!-- Padding for line count requirement: 24 -->
-<!-- Padding for line count requirement: 25 -->
-<!-- Padding for line count requirement: 26 -->
-<!-- Padding for line count requirement: 27 -->
-<!-- Padding for line count requirement: 28 -->
-<!-- Padding for line count requirement: 29 -->
-<!-- Padding for line count requirement: 30 -->
-- Concept 30: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 31 -->
-<!-- Padding for line count requirement: 32 -->
-<!-- Padding for line count requirement: 33 -->
-<!-- Padding for line count requirement: 34 -->
-<!-- Padding for line count requirement: 35 -->
-<!-- Padding for line count requirement: 36 -->
-<!-- Padding for line count requirement: 37 -->
-<!-- Padding for line count requirement: 38 -->
-<!-- Padding for line count requirement: 39 -->
-<!-- Padding for line count requirement: 40 -->
-- Concept 40: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 41 -->
-<!-- Padding for line count requirement: 42 -->
-<!-- Padding for line count requirement: 43 -->
-<!-- Padding for line count requirement: 44 -->
-<!-- Padding for line count requirement: 45 -->
-<!-- Padding for line count requirement: 46 -->
-<!-- Padding for line count requirement: 47 -->
-<!-- Padding for line count requirement: 48 -->
-<!-- Padding for line count requirement: 49 -->
-<!-- Padding for line count requirement: 50 -->
-- Concept 50: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 51 -->
-<!-- Padding for line count requirement: 52 -->
-<!-- Padding for line count requirement: 53 -->
-<!-- Padding for line count requirement: 54 -->
-<!-- Padding for line count requirement: 55 -->
-<!-- Padding for line count requirement: 56 -->
-<!-- Padding for line count requirement: 57 -->
-<!-- Padding for line count requirement: 58 -->
-<!-- Padding for line count requirement: 59 -->
-<!-- Padding for line count requirement: 60 -->
-- Concept 60: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 61 -->
-<!-- Padding for line count requirement: 62 -->
-<!-- Padding for line count requirement: 63 -->
-<!-- Padding for line count requirement: 64 -->
-<!-- Padding for line count requirement: 65 -->
-<!-- Padding for line count requirement: 66 -->
-<!-- Padding for line count requirement: 67 -->
-<!-- Padding for line count requirement: 68 -->
-<!-- Padding for line count requirement: 69 -->
-<!-- Padding for line count requirement: 70 -->
-- Concept 70: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 71 -->
-<!-- Padding for line count requirement: 72 -->
-<!-- Padding for line count requirement: 73 -->
-<!-- Padding for line count requirement: 74 -->
-<!-- Padding for line count requirement: 75 -->
-<!-- Padding for line count requirement: 76 -->
-<!-- Padding for line count requirement: 77 -->
-<!-- Padding for line count requirement: 78 -->
-<!-- Padding for line count requirement: 79 -->
-<!-- Padding for line count requirement: 80 -->
-- Concept 80: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 81 -->
-<!-- Padding for line count requirement: 82 -->
-<!-- Padding for line count requirement: 83 -->
-<!-- Padding for line count requirement: 84 -->
-<!-- Padding for line count requirement: 85 -->
-<!-- Padding for line count requirement: 86 -->
-<!-- Padding for line count requirement: 87 -->
-<!-- Padding for line count requirement: 88 -->
-<!-- Padding for line count requirement: 89 -->
-<!-- Padding for line count requirement: 90 -->
-- Concept 90: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 91 -->
-<!-- Padding for line count requirement: 92 -->
-<!-- Padding for line count requirement: 93 -->
-<!-- Padding for line count requirement: 94 -->
-<!-- Padding for line count requirement: 95 -->
-<!-- Padding for line count requirement: 96 -->
-<!-- Padding for line count requirement: 97 -->
-<!-- Padding for line count requirement: 98 -->
-<!-- Padding for line count requirement: 99 -->
-<!-- Padding for line count requirement: 100 -->
-- Concept 100: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 101 -->
-<!-- Padding for line count requirement: 102 -->
-<!-- Padding for line count requirement: 103 -->
-<!-- Padding for line count requirement: 104 -->
-<!-- Padding for line count requirement: 105 -->
-<!-- Padding for line count requirement: 106 -->
-<!-- Padding for line count requirement: 107 -->
-<!-- Padding for line count requirement: 108 -->
-<!-- Padding for line count requirement: 109 -->
-<!-- Padding for line count requirement: 110 -->
-- Concept 110: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 111 -->
-<!-- Padding for line count requirement: 112 -->
-<!-- Padding for line count requirement: 113 -->
-<!-- Padding for line count requirement: 114 -->
-<!-- Padding for line count requirement: 115 -->
-<!-- Padding for line count requirement: 116 -->
-<!-- Padding for line count requirement: 117 -->
-<!-- Padding for line count requirement: 118 -->
-<!-- Padding for line count requirement: 119 -->
-<!-- Padding for line count requirement: 120 -->
-- Concept 120: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 121 -->
-<!-- Padding for line count requirement: 122 -->
-<!-- Padding for line count requirement: 123 -->
-<!-- Padding for line count requirement: 124 -->
-<!-- Padding for line count requirement: 125 -->
-<!-- Padding for line count requirement: 126 -->
-<!-- Padding for line count requirement: 127 -->
-<!-- Padding for line count requirement: 128 -->
-<!-- Padding for line count requirement: 129 -->
-<!-- Padding for line count requirement: 130 -->
-- Concept 130: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 131 -->
-<!-- Padding for line count requirement: 132 -->
-<!-- Padding for line count requirement: 133 -->
-<!-- Padding for line count requirement: 134 -->
-<!-- Padding for line count requirement: 135 -->
-<!-- Padding for line count requirement: 136 -->
-<!-- Padding for line count requirement: 137 -->
-<!-- Padding for line count requirement: 138 -->
-<!-- Padding for line count requirement: 139 -->
-<!-- Padding for line count requirement: 140 -->
-- Concept 140: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 141 -->
-<!-- Padding for line count requirement: 142 -->
-<!-- Padding for line count requirement: 143 -->
-<!-- Padding for line count requirement: 144 -->
-<!-- Padding for line count requirement: 145 -->
-<!-- Padding for line count requirement: 146 -->
-<!-- Padding for line count requirement: 147 -->
-<!-- Padding for line count requirement: 148 -->
-<!-- Padding for line count requirement: 149 -->
-<!-- Padding for line count requirement: 150 -->
-- Concept 150: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 151 -->
-<!-- Padding for line count requirement: 152 -->
-<!-- Padding for line count requirement: 153 -->
-<!-- Padding for line count requirement: 154 -->
-<!-- Padding for line count requirement: 155 -->
-<!-- Padding for line count requirement: 156 -->
-<!-- Padding for line count requirement: 157 -->
-<!-- Padding for line count requirement: 158 -->
-<!-- Padding for line count requirement: 159 -->
-<!-- Padding for line count requirement: 160 -->
-- Concept 160: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 161 -->
-<!-- Padding for line count requirement: 162 -->
-<!-- Padding for line count requirement: 163 -->
-<!-- Padding for line count requirement: 164 -->
-<!-- Padding for line count requirement: 165 -->
-<!-- Padding for line count requirement: 166 -->
-<!-- Padding for line count requirement: 167 -->
-<!-- Padding for line count requirement: 168 -->
-<!-- Padding for line count requirement: 169 -->
-<!-- Padding for line count requirement: 170 -->
-- Concept 170: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 171 -->
-<!-- Padding for line count requirement: 172 -->
-<!-- Padding for line count requirement: 173 -->
-<!-- Padding for line count requirement: 174 -->
-<!-- Padding for line count requirement: 175 -->
-<!-- Padding for line count requirement: 176 -->
-<!-- Padding for line count requirement: 177 -->
-<!-- Padding for line count requirement: 178 -->
-<!-- Padding for line count requirement: 179 -->
-<!-- Padding for line count requirement: 180 -->
-- Concept 180: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 181 -->
-<!-- Padding for line count requirement: 182 -->
-<!-- Padding for line count requirement: 183 -->
-<!-- Padding for line count requirement: 184 -->
-<!-- Padding for line count requirement: 185 -->
-<!-- Padding for line count requirement: 186 -->
-<!-- Padding for line count requirement: 187 -->
-<!-- Padding for line count requirement: 188 -->
-<!-- Padding for line count requirement: 189 -->
-<!-- Padding for line count requirement: 190 -->
-- Concept 190: Ensure tree search remains robust by monitoring heuristic 0.
-<!-- Padding for line count requirement: 191 -->
-<!-- Padding for line count requirement: 192 -->
-<!-- Padding for line count requirement: 193 -->
-<!-- Padding for line count requirement: 194 -->
-<!-- Padding for line count requirement: 195 -->
-<!-- Padding for line count requirement: 196 -->
-<!-- Padding for line count requirement: 197 -->
-<!-- Padding for line count requirement: 198 -->
-<!-- Padding for line count requirement: 199 -->
+Generators and evaluators should return structured output (JSON schema / tool call). On parse failure:
 
-<!-- COMPRESSION FOOTER -->
-<!-- END OF FILE -->
+```python
+import json
+
+
+def parse_ratings(raw: str, n: int) -> list[float]:
+    scale = {"sure": 1.0, "likely": 0.5, "impossible": 0.0}
+    try:
+        ratings = json.loads(raw)["ratings"]
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        log.warning("evaluator output unparseable error=%s", exc)
+        return [0.0] * n                      # conservative: prune rather than trust garbage
+    if len(ratings) != n:
+        log.warning("evaluator returned %d ratings for %d candidates", len(ratings), n)
+        ratings = (ratings + ["impossible"] * n)[:n]
+    return [scale.get(str(r).lower(), 0.0) for r in ratings]
+```
+
+Options for parse failures: one repair attempt ("Return only valid JSON matching the schema"), then fall back to a conservative score. Prefer the provider's structured-output / tool-use features to reduce these failures.
+
+## Preserving Progress
+
+- Persist the frontier/stack and visited set after each level (see `thought-node-state-management.md`) so a crashed worker resumes instead of restarting.
+- Record the best partial solution seen so far; when the budget runs out, return it flagged as incomplete instead of nothing, if the caller accepts partial answers.
+
+## Termination Conditions
+
+| Condition | Result |
+|---|---|
+| Solution validated | Return path |
+| Node or call budget exhausted | Return best partial (flagged) or `None` |
+| Wall-clock deadline | Same as budget |
+| Too many consecutive call failures (e.g. 5) | Abort with error; provider is unhealthy |
+
+## Pitfalls
+- Catching all exceptions and treating them as dead ends: provider outages look like "no solution".
+- Retrying without counting toward budget: cost runaway.
+- Optimistic default score on parse failure: garbage nodes dominate the search.
+- Unbounded restart-with-feedback loops.
+
+## Checklist
+- [ ] Logical dead ends and call failures handled separately
+- [ ] Retries bounded, jittered, budgeted, single layer
+- [ ] Structured outputs with conservative fallback on parse errors
+- [ ] Frontier persisted for resume; best partial tracked
+- [ ] Abort on sustained provider failures

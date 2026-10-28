@@ -1,11 +1,8 @@
 ---
 name: backend-bulk-import
 description: >
-  Enforce bulk data import patterns including CSV/Excel parsing, file upload handling,
-  validation pipeline, progress tracking, batch processing, error reporting, rollback
-  on failure, deduplication, and background processing. NOT for real-time data ingestion
-  or streaming pipelines.
-version: "1.0.0"
+  Use this skill when the user says 'bulk import', 'CSV upload', 'Excel import', 'import pipeline', 'import validation', 'upsert from file', 'import progress', 'import error report'. Designs file-based bulk import: upload handling, streaming CSV/Excel parsing, row validation with error reports, preview/confirm flow, batched background processing with progress, deduplication and rollback. Do NOT use for: real-time or streaming ingestion (backend-data-streaming), warehouse ETL (data etl skills), report/export generation (backend-report-generation).
+version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
 compatibility:
@@ -56,10 +53,11 @@ Decision: Streaming for CSV. Chunked for Excel > 10MB. Full load for Excel < 10M
 |----------|-----------|-------------|----------------|
 | DB unique constraint | Exact | Fast (index) | Schema definition |
 | Pre-check with SELECT | Exact | Slow on large tables | Query existing values |
-| Hash-based (MD5 row hash) | Approximate | Fast | Hash + compare |
-| External dedup (Redis set) | High | Very fast | SET + EXISTS check |
+| Row content hash (SHA-256 of normalized row, stored in a unique column) | Exact on normalized content | Fast (index) | Hash + unique index |
+| External dedup (Redis set) | Exact within the set's lifetime | Very fast | `SADD` returns 0 for duplicates |
+| Bloom filter (RedisBloom `BF.ADD`) | Probabilistic: false positives possible | Very fast, small memory | Only where wrongly skipping a few unique rows is acceptable |
 
-Decision: DB unique constraint for exact dedup. Redis Bloom filter for high-volume approximate dedup.
+Decision: DB unique constraint (with `ON CONFLICT`) for exact dedup. Bloom filters only as a pre-filter, never as the final decision for business data.
 
 ## Agent Protocol
 
@@ -104,7 +102,7 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 
 ```typescript
 import multer from 'multer';
-import path from 'path';
+import { randomUUID } from 'node:crypto';
 
 const ALLOWED_MIME = [
   'text/csv',
@@ -113,10 +111,15 @@ const ALLOWED_MIME = [
 ];
 const MAX_SIZE = 50 * 1024 * 1024; // 50MB
 
+// Disk (or object storage) instead of memory: the worker streams the file later.
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: process.env.IMPORT_DIR ?? '/var/app/imports',
+    filename: (_req, _file, cb) => cb(null, randomUUID()), // never trust client file names
+  }),
   limits: { fileSize: MAX_SIZE },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
+    // mimetype is client-supplied: treat as a hint and re-validate content when parsing.
     if (!ALLOWED_MIME.includes(file.mimetype)) {
       cb(new Error('Unsupported file type. Only CSV and Excel files are allowed.'));
       return;
@@ -131,17 +134,18 @@ app.post('/api/imports/upload', upload.single('file'), async (req, res) => {
     fileName: req.file.originalname,
     fileSize: req.file.size,
     mimeType: req.file.mimetype,
+    filePath: req.file.path,
     status: 'uploaded',
   });
 
-  const buffer = req.file.buffer;
-  const parsed = await parseFile(buffer, req.file.mimetype);
-  importJob.rowCount = parsed.rows.length;
-  importJob.columnCount = parsed.headers.length;
-  importJob.preview = parsed.rows.slice(0, 5);
+  // Preview reads only the first rows; full validation runs in a background job.
+  const preview = await readPreview(req.file.path, req.file.mimetype, 5);
+  importJob.columnCount = preview.headers.length;
+  importJob.preview = preview.rows;
   await importJob.save();
+  await validationQueue.add('validate', { importId: importJob.id });
 
-  res.json({ jobId: importJob.id, preview: importJob.preview, totalRows: importJob.rowCount });
+  res.status(202).json({ jobId: importJob.id, preview: importJob.preview });
 });
 ```
 
@@ -264,7 +268,7 @@ app.post('/api/imports/:id/confirm', async (req, res) => {
   job.status = 'confirmed';
   await job.save();
 
-  await importQueue.add({
+  await importQueue.add('process', {
     importId: job.id,
     batchSize: req.body.batchSize || 500,
     importMode: job.importMode,
@@ -278,18 +282,23 @@ app.post('/api/imports/:id/confirm', async (req, res) => {
 5. **Batch Processing with Progress**: Process in batches with transaction support.
 
 ```typescript
-import Bull from 'bull';
+import { Queue, Worker } from 'bullmq';
 
-const importQueue = new Bull('import-processing', {
-  redis: { host: process.env.REDIS_HOST, port: 6379 },
-});
+const connection = { host: process.env.REDIS_HOST, port: Number(process.env.REDIS_PORT ?? 6379) };
+export const importQueue = new Queue('import-processing', { connection });
 
-importQueue.process(async (job) => {
+new Worker('import-processing', async (job) => {
   const { importId, batchSize, importMode, dedupField } = job.data;
   const importJob = await ImportJob.findById(importId);
 
   importJob.status = 'processing';
   await importJob.save();
+
+  // Replace mode: clear once, up front (or load into a staging table and swap).
+  if (importMode === 'replace') {
+    await backupTargetTable(importId);
+    await db('target_table').delete();
+  }
 
   const fileStream = createReadStream(importJob.filePath);
   const parser = fileStream.pipe(parse({ columns: true, skip_empty_lines: true }));
@@ -310,7 +319,7 @@ importQueue.process(async (job) => {
 
       importJob.processingProgress = { processed, total: importJob.rowCount, failed };
       await importJob.save();
-      await job.progress({ processed, total: importJob.rowCount, failed });
+      await job.updateProgress({ processed, total: importJob.rowCount, failed });
 
       batch = [];
     }
@@ -331,7 +340,7 @@ importQueue.process(async (job) => {
   await notifyWebhook(importJob);
 
   return { processed, failed, errors: errors.slice(0, 100) };
-});
+}, { connection, concurrency: 2 });
 
 async function processBatch(
   rows: Record<string, unknown>[],
@@ -345,27 +354,23 @@ async function processBatch(
     rows = filterDuplicates(rows, dedupField, existingValues);
   }
 
-  const db = await getConnection();
-  const trx = await db.transaction();
+  const trx = await db.transaction(); // knex
 
   try {
     switch (mode) {
       case 'insert':
+      case 'replace': // table already cleared once before the first batch
         await trx('target_table').insert(rows);
         break;
       case 'upsert':
         await trx('target_table').insert(rows).onConflict(dedupField || 'id').merge();
-        break;
-      case 'replace':
-        await trx('target_table').delete();
-        await trx('target_table').insert(rows);
         break;
     }
     await trx.commit();
     return { processed: rows.length, failed: 0, errors: [] };
   } catch (error) {
     await trx.rollback();
-    errors.push({ message: error.message, rows: rows.length });
+    errors.push({ message: (error as Error).message, rows: rows.length });
     return { processed: 0, failed: rows.length, errors };
   }
 }
@@ -539,7 +544,7 @@ async function notifyImportComplete(job: ImportJob): Promise<void> {
 
 ## Security Considerations
 
-- File validation: check MIME type + magic bytes (not extension); reject unknown types
+- File validation: do not trust extension or client MIME type. XLSX is a ZIP container (check the `PK` signature and parse it with a hardened library); CSV has no signature, so validate it by parsing (encoding, column count) and reject on failure. Cap rows, columns and cell length to stop zip bombs and memory exhaustion
 - Upload path traversal: sanitize filename; use UUID-based storage keys, never user-provided names
 - CSV injection: don't open generated CSV in Excel directly (formulas starting with =, +, -, @ can execute)
   - Mitigation: prefix dangerous-starting values with tab or single quote in CSV output
@@ -584,11 +589,10 @@ describe('Bulk Import', () => {
   });
 
   it('processes batch with transaction rollback on error', async () => {
+    // db is a mocked knex instance whose insert rejects (name NOT NULL)
     const result = await processBatch(
       [{ id: 1, name: 'Valid' }, { id: 2, name: null }],
       'insert',
-      undefined,
-      mockDb
     );
     expect(result.processed).toBe(0);
     expect(result.failed).toBe(2);
@@ -598,17 +602,22 @@ describe('Bulk Import', () => {
     const errors = [{ row: 1, column: 'email', value: 'bad', message: 'Invalid format', code: 'INVALID_EMAIL' }];
     const report = await generateErrorReport(errors, 'csv');
     expect(report.toString()).toContain('Row,Column,Value,Error,Code');
-    expect(report.toString()).toContain('1,"email","bad","Invalid format","INVALID_EMAIL"');
+    expect(report.toString()).toContain('"1","email","bad","Invalid format","INVALID_EMAIL"');
   });
 });
 ```
 
 - Test with real CSV/Excel files containing edge cases: BOM, UTF-16, emoji, null bytes, quote-escaped fields
-- Load test: 500K rows CSV, measure throughput (target > 5K rows/second)
+- Load test with a realistic large file (e.g. 500K rows) and record rows/second as a regression baseline
 - Test cancel: start import, cancel mid-way, verify no partial data committed
 - Test replace mode: verify old data is backed up before truncate, can be restored
 
 ## Rules
+- Never parse a whole large file in the HTTP request; upload, then process in a background job.
+- Validate headers before rows; collect row errors instead of failing on the first.
+- One transaction per batch (hundreds to a few thousand rows); never one transaction for a huge file unless using a staging table.
+- Database constraints are the final authority for uniqueness and integrity.
+- Replace mode only with a backup or staging-table swap.
 
 ## References
   - references/bulk-export.md — Bulk Export
@@ -621,5 +630,5 @@ describe('Bulk Import', () => {
   - references/validation-pipeline.md — Validation Pipeline
 ## Handoff
 - `backend/report-generation` — Export/import round-trip patterns
-- `data/etl` — ETL pipeline integration for bulk imports
-- `management/task-queues` — Queue management for import jobs
+- `skills/data/etl-pipeline` — ETL pipeline integration for bulk imports
+- `skills/backend/universal/background-jobs` — Queue management for import jobs

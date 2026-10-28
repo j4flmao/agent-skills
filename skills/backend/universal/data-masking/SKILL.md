@@ -347,7 +347,6 @@ async function readWithAudit(userId: string, fieldName: string): Promise<string>
   - references/data-masking-techniques.md — Data Masking Techniques
   - references/encryption-strategies.md — Encryption Strategies
   - references/masking-patterns.md — Data Masking Patterns
-  - references/pii-classification-deep.md — PII Classification Deep Dive
   - references/pii-detection.md — PII Detection
 ## Handoff
 No artifact produced unless requested.

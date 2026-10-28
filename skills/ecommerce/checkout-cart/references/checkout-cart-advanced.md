@@ -1,214 +1,129 @@
-# Checkout Cart Advanced Topics
-
-## Introduction
-Advanced Checkout Cart topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# Advanced Checkout and Cart Engineering
+
+Hard problems in production checkout systems: consistency across cart, inventory, payment and order services (sagas), quote locking and price consistency, high-traffic launches and flash sales, multi-currency and cross-border, fraud and abuse controls, headless/composable architectures, and observability. Builds on `checkout-cart-fundamentals.md`.
+
+## Distributed Checkout as a Saga
+
+In service-oriented commerce, placing an order spans services that cannot share one database transaction.
+
+```
+Orchestrator (checkout service)
+ 1. Validate & lock quote (pricing)          compensate: release quote
+ 2. Reserve inventory (inventory service)     compensate: release reservation
+ 3. Authorize payment (payment service/PSP)   compensate: void authorization
+ 4. Create order (order service)              compensate: cancel order
+ 5. Confirm reservation, emit OrderPlaced
+```
+| Rule | Why |
+|---|---|
+| Each step idempotent with a step key (`checkout_id:step`) | Safe retries after timeouts |
+| Persist saga state after each step | Resume after crash; durable workflow engines (Temporal, AWS Step Functions) help |
+| Compensations idempotent too | Can be retried |
+| Authorize, then capture after order creation/fulfillment | Void is cheaper and faster than refund |
+| Timeouts per step with a final "unknown" state check | PSP calls can succeed after a client timeout; query status before compensating |
+
+Orchestration (central coordinator) is usually clearer than choreography for checkout because the flow is linear and needs a single view of state.
+
+## Quote Locking and Price Consistency
+- Generate a **quote** (priced snapshot of lines, discounts, shipping, tax) with an ID, hash and expiry when the customer reaches the review step.
+- Place order against the quote ID; if the quote expired or inputs changed (price list, promotion end, address), reprice and ask the customer to confirm.
+- Promotions with usage limits: reserve a redemption at order placement (atomic counter or unique constraint per customer) and release on cancellation.
+
+```sql
+-- Single-use coupon per customer, enforced by the database
+CREATE TABLE coupon_redemption (
+  coupon_id   BIGINT NOT NULL,
+  customer_id BIGINT NOT NULL,
+  order_id    BIGINT NOT NULL,
+  PRIMARY KEY (coupon_id, customer_id)
+);
+-- Global usage cap
+UPDATE coupon SET used = used + 1 WHERE id = :id AND used < max_uses;
+```
+
+## Inventory at Scale
+| Technique | Use |
+|---|---|
+| Reservation records with TTL | Holds per checkout; background job or TTL index expires them |
+| Sharded/bucketed counters for hot SKUs | Split stock of one SKU into N buckets to reduce row contention |
+| Redis atomic decrement (Lua script) as a front gate, DB as source of truth | Flash sales; reconcile asynchronously |
+| Available-to-promise across locations | Ship-from-store, split shipments |
+| Oversell policy | Allow small backorder vs. strict; decided per product |
+
+```lua
+-- Redis: atomically reserve qty if available; KEYS[1]=stock key, ARGV[1]=qty
+local available = tonumber(redis.call('GET', KEYS[1]) or '0')
+local qty = tonumber(ARGV[1])
+if available >= qty then
+  redis.call('DECRBY', KEYS[1], qty)
+  return 1
+end
+return 0
+```
+Pair with a durable reservation write and periodic reconciliation, since Redis is not the system of record.
+
+## Flash Sales and Launches
+- **Virtual waiting room / queue** (e.g. Cloudflare Waiting Room, Queue-it, custom token queue) admitting users at a sustainable rate.
+- Pre-scale stateless services; warm caches for product and price data; static product pages from CDN.
+- Per-customer purchase limits and bot defenses (rate limiting, device fingerprinting, managed bot protection, CAPTCHA only as a last resort for users).
+- Degrade gracefully: disable expensive features (recommendations, real-time shipping quotes) under load via feature flags.
+- Load-test the full checkout path, including the PSP sandbox limits, before the event.
+
+## Multi-Currency and Cross-Border
+
+| Concern | Practice |
+|---|---|
+| Presentment vs. settlement currency | Show local currency; settle per PSP configuration; store both amounts and the FX rate used |
+| Price lists per market | Prefer explicit local prices (psychological pricing) over live FX conversion |
+| Taxes and duties | VAT/GST inclusive pricing; DDP vs. DAP for duties; landed-cost calculation |
+| Payment methods | Local methods (iDEAL, Pix, UPI, BLIK, Klarna/BNPL) via PSP |
+| Address formats | Country-specific fields and validation |
+| Legal | Consumer law, invoice requirements, e-invoicing mandates in some countries |
+
+## Fraud and Abuse Controls
+| Threat | Control |
+|---|---|
+| Card testing (many small auths) | Rate limits per IP/device/card BIN, PSP radar/risk scoring, require login for repeated attempts |
+| Account takeover | MFA, new-device alerts, step-up before changing address at checkout |
+| Promo abuse | Per-customer limits, device/email normalization, velocity rules |
+| Reseller bots | Queue + purchase limits + bot management |
+| Friendly fraud/chargebacks | 3-D Secure (SCA) for liability shift, clear descriptors, delivery proof |
+
+Score orders asynchronously after authorization where possible and hold high-risk orders for review before capture/fulfillment.
+
+## Composable / Headless Architecture
+
+```
+Frontends (web, app, POS) -> BFF / API gateway -> commerce services or platform APIs
+     (Shopify Storefront/Checkout, commercetools, BigCommerce, Adobe Commerce, Medusa, Saleor)
+                                   -> PSP, tax, search, CMS, OMS (fulfillment)
+```
+- Keep checkout on the platform's hosted or extensible checkout when possible (PCI scope, wallets, conversion features); customize via extensions rather than rebuilding.
+- If building custom checkout, use PSP-hosted fields/elements to keep card data out of your systems (PCI DSS SAQ A or A-EP rather than D).
+
+## Observability for Checkout
+| Signal | Use |
+|---|---|
+| Funnel metrics per step, device, market, payment method | Detect conversion drops |
+| Payment authorization rate and decline codes per PSP/method | PSP or issuer issues |
+| Latency per step (p95) | Slow tax/shipping providers |
+| Saga failures and compensations | Integration health |
+| Inventory reservation conflicts | Hot SKU contention |
+| Synthetic checkout tests (test cards) every few minutes | End-to-end alerting |
+
+Alert on conversion anomalies (sudden drop in a payment method or country), not only on errors: many checkout failures are silent (a broken button, a declined method).
+
+## Testing
+- Contract tests for PSP, tax and shipping adapters.
+- Property-based tests for money allocation and rounding.
+- Concurrency tests for coupon caps and inventory reservations.
+- Chaos tests: PSP timeouts, webhook delays/duplicates, tax service unavailability (fallback: block checkout vs. estimated tax, per legal guidance).
+
+## Checklist
+- [ ] Saga with idempotent steps and compensations; unknown-state reconciliation
+- [ ] Quotes with expiry; reprice and confirm on change
+- [ ] Database-enforced coupon and inventory limits; hot SKU strategy
+- [ ] Waiting room, purchase limits and bot defenses for launches
+- [ ] FX rate and presentment/settlement amounts stored
+- [ ] Fraud controls including card-testing defenses and SCA
+- [ ] Funnel and authorization-rate anomaly alerts plus synthetic checkouts

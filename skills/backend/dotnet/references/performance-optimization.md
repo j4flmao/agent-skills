@@ -1,968 +1,144 @@
-# Performance Optimization in .NET 8
+# Performance Optimization in ASP.NET Core and EF Core
 
-## Purpose
-This guide covers performance tuning in .NET 8, highlighting Minimal APIs, memory management, EF Core optimization, and asynchronous programming best practices.
+Measure-first performance guidance for .NET services: profiling and benchmarking tools, EF Core query efficiency, allocation reduction, async and threading pitfalls, HTTP client usage, caching and response compression. Applies to .NET 8 and later.
 
-## EF Core Query Optimization
-Avoid tracking overhead for read-only queries.
+## Measure First
 
+| Tool | Use |
+|------|-----|
+| BenchmarkDotNet | Micro-benchmarks of methods with statistical rigor and allocation stats (`[MemoryDiagnoser]`) |
+| `dotnet-counters` | Live runtime metrics: CPU, GC heap, allocation rate, thread pool queue, exceptions |
+| `dotnet-trace` + PerfView / Visual Studio / speedscope | CPU sampling and event traces |
+| `dotnet-gcdump`, `dotnet-dump` | Heap analysis, memory leaks |
+| OpenTelemetry metrics and traces | Production latency per endpoint and dependency |
+| Load testing (k6, NBomber, Bombardier) | Throughput and latency at target concurrency |
+
+```bash
+dotnet tool install -g dotnet-counters
+dotnet-counters monitor -n Orders.Api --counters System.Runtime,Microsoft.AspNetCore.Hosting
+```
 
 ```csharp
-// EF Core Optimization Example 0
-public class ProductService_0
+[MemoryDiagnoser]
+public class SerializationBenchmarks
 {
-    private readonly AppDbContext _context;
+    private readonly Order _order = Order.Sample();
 
-    public ProductService_0(AppDbContext context)
-    {
-        _context = context;
-    }
+    [Benchmark(Baseline = true)]
+    public string Reflection() => JsonSerializer.Serialize(_order);
 
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
+    [Benchmark]
+    public string SourceGenerated() => JsonSerializer.Serialize(_order, AppJsonContext.Default.Order);
 }
 ```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
+
+Run benchmarks in Release mode, never under a debugger.
+
+## EF Core Query Efficiency
+
+Database access dominates most API latency.
 
 ```csharp
-// EF Core Optimization Example 1
-public class ProductService_1
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_1(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
+// Read-only projection: no tracking, only needed columns
+var orders = await db.Orders
+    .AsNoTracking()
+    .Where(o => o.CustomerId == customerId && o.CreatedAt >= since)
+    .OrderByDescending(o => o.CreatedAt)
+    .Select(o => new OrderSummary(o.Id, o.Total, o.Status))
+    .Take(50)
+    .ToListAsync(ct);
 ```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
+
+| Problem | Fix |
+|---------|-----|
+| N+1 queries (lazy loading or per-item queries in loops) | Projection with `Select`, `Include` for needed navigations, or batch by IDs |
+| Cartesian explosion with multiple collection `Include`s | `AsSplitQuery()` or projection |
+| Tracking overhead on reads | `AsNoTracking()`; or `UseQueryTrackingBehavior(NoTracking)` as default |
+| Client-side evaluation of large sets | Keep filters translatable; check generated SQL |
+| Offset pagination on deep pages | Keyset pagination (`WHERE (CreatedAt, Id) < (@lastCreatedAt, @lastId)`) |
+| Row-by-row updates/deletes | `ExecuteUpdateAsync` / `ExecuteDeleteAsync` (set-based, .NET 7+) |
+| Many inserts | Batching is automatic in `SaveChanges`; for bulk loads use `SqlBulkCopy` or COPY |
+| Missing indexes | Read execution plans; index foreign keys and filter columns |
 
 ```csharp
-// EF Core Optimization Example 2
-public class ProductService_2
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_2(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
+await db.Orders
+    .Where(o => o.Status == OrderStatus.Pending && o.CreatedAt < cutoff)
+    .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, OrderStatus.Expired), ct);
 ```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
+
+Log SQL in development (`LogTo(Console.WriteLine, LogLevel.Information)` or the `Microsoft.EntityFrameworkCore.Database.Command` category) and inspect queries with `ToQueryString()`.
+
+Other EF Core options:
+- `AddDbContextPool<T>()` reuses context instances to cut allocation per request.
+- Compiled queries (`EF.CompileAsyncQuery`) for very hot queries.
+- Compiled models (`dotnet ef dbcontext optimize`) reduce startup for large models.
+
+## Allocation and CPU
+
+- Use `System.Text.Json` source generation (`JsonSerializerContext`) for hot types; required for Native AOT.
+- `Span<T>`, `ReadOnlySpan<char>` and `stackalloc` for parsing without substrings.
+- `ArrayPool<T>.Shared` for temporary buffers; return them in `finally`.
+- `StringBuilder` or `string.Create` instead of repeated concatenation in loops.
+- `FrozenDictionary` / `FrozenSet` (.NET 8+) for read-mostly lookup tables built at startup.
+- Avoid LINQ in the hottest loops when profiling shows allocation cost; LINQ is fine elsewhere.
+- Use `SearchValues<T>` (.NET 8+) for repeated character or substring searches.
+
+## Async and Threading
+
+| Anti-pattern | Effect | Fix |
+|--------------|--------|-----|
+| `.Result`, `.Wait()`, `GetAwaiter().GetResult()` on async code | Thread pool starvation under load | Async all the way |
+| `Task.Run` in request handlers to "make it async" | Extra thread hop, no scalability gain | Call true async APIs |
+| `async void` (except event handlers) | Unobserved exceptions crash process | Return `Task` |
+| Not passing `CancellationToken` | Work continues after client disconnects | Accept and pass `ct` everywhere |
+| Lock contention on hot paths | Throughput collapse | `ConcurrentDictionary`, partitioning, `System.Threading.Lock` (.NET 9+) for short critical sections |
+
+Thread pool starvation symptom: `dotnet-counters` shows a growing ThreadPool Queue Length and latency rises while CPU stays low.
+
+## HTTP Clients
 
 ```csharp
-// EF Core Optimization Example 3
-public class ProductService_3
+builder.Services.AddHttpClient<PaymentsClient>(c =>
 {
-    private readonly AppDbContext _context;
-
-    public ProductService_3(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
+    c.BaseAddress = new Uri(builder.Configuration["Payments:BaseUrl"]!);
+    c.Timeout = TimeSpan.FromSeconds(10);
+})
+.AddStandardResilienceHandler();   // Microsoft.Extensions.Http.Resilience
 ```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
 
-```csharp
-// EF Core Optimization Example 4
-public class ProductService_4
-{
-    private readonly AppDbContext _context;
+- Never `new HttpClient()` per request (socket exhaustion); use `IHttpClientFactory` or a long-lived client with `PooledConnectionLifetime` for DNS changes.
+- Stream large responses (`HttpCompletionOption.ResponseHeadersRead`, `ReadFromJsonAsAsyncEnumerable`).
 
-    public ProductService_4(AppDbContext context)
-    {
-        _context = context;
-    }
+## Caching and Output
 
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
+| Mechanism | Scope | Use |
+|-----------|-------|-----|
+| `IMemoryCache` | Per instance | Hot, small, rebuildable data |
+| `HybridCache` (.NET 9+, `Microsoft.Extensions.Caching.Hybrid`) | Memory + distributed, stampede protection | Default choice for application caching |
+| Output caching (`AddOutputCache`, `.CacheOutput()`) | Server-side HTTP responses | Expensive GETs with cacheable results |
+| Response caching / HTTP headers | Clients and CDNs | Public, cacheable resources |
 
-```csharp
-// EF Core Optimization Example 5
-public class ProductService_5
-{
-    private readonly AppDbContext _context;
+See `state-management.md` for cache configuration and invalidation.
 
-    public ProductService_5(AppDbContext context)
-    {
-        _context = context;
-    }
+## Response Size and Server Settings
 
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
+- Response compression (`AddResponseCompression` with Brotli/Gzip) for text responses when not already done by a reverse proxy; beware of compressing secrets over HTTPS together with attacker-controlled input (BREACH).
+- Pagination limits on all list endpoints.
+- Kestrel limits (`MaxRequestBodySize`, `MaxConcurrentConnections`) sized to protect the service.
+- Server GC is the default for ASP.NET Core; in memory-constrained containers consider `DOTNET_GCHeapHardLimit` or the newer dynamic adaptation (DATAS, default in .NET 9+ server GC) behavior.
 
-```csharp
-// EF Core Optimization Example 6
-public class ProductService_6
-{
-    private readonly AppDbContext _context;
+## Startup and Footprint
 
-    public ProductService_6(AppDbContext context)
-    {
-        _context = context;
-    }
+- ReadyToRun (`<PublishReadyToRun>true</PublishReadyToRun>`) reduces JIT at startup.
+- Native AOT for fastest startup and smallest memory where library compatibility allows.
+- Tiered PGO is on by default (.NET 8+) and improves steady-state throughput.
 
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
+## Checklist
 
-```csharp
-// EF Core Optimization Example 7
-public class ProductService_7
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_7(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 8
-public class ProductService_8
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_8(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 9
-public class ProductService_9
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_9(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 10
-public class ProductService_10
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_10(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 11
-public class ProductService_11
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_11(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 12
-public class ProductService_12
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_12(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 13
-public class ProductService_13
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_13(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 14
-public class ProductService_14
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_14(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 15
-public class ProductService_15
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_15(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 16
-public class ProductService_16
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_16(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 17
-public class ProductService_17
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_17(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 18
-public class ProductService_18
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_18(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 19
-public class ProductService_19
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_19(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 20
-public class ProductService_20
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_20(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 21
-public class ProductService_21
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_21(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 22
-public class ProductService_22
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_22(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 23
-public class ProductService_23
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_23(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 24
-public class ProductService_24
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_24(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 25
-public class ProductService_25
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_25(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 26
-public class ProductService_26
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_26(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 27
-public class ProductService_27
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_27(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 28
-public class ProductService_28
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_28(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 29
-public class ProductService_29
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_29(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 30
-public class ProductService_30
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_30(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 31
-public class ProductService_31
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_31(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 32
-public class ProductService_32
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_32(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 33
-public class ProductService_33
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_33(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 34
-public class ProductService_34
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_34(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 35
-public class ProductService_35
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_35(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 36
-public class ProductService_36
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_36(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 37
-public class ProductService_37
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_37(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 38
-public class ProductService_38
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_38(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
-
-```csharp
-// EF Core Optimization Example 39
-public class ProductService_39
-{
-    private readonly AppDbContext _context;
-
-    public ProductService_39(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<List<ProductDto>> GetActiveProductsAsync()
-    {
-        // Use AsNoTracking() for read-only scenarios to reduce memory footprint and improve performance
-        return await _context.Products
-            .AsNoTracking()
-            .Where(p => p.IsActive)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price))
-            .ToListAsync();
-    }
-}
-```
-Performance tuning also involves understanding garbage collection. By minimizing allocations (e.g., using `readonly struct` or `ref struct`), we reduce Gen 0 collections.
+- [ ] Baseline latency/throughput measured with a load test
+- [ ] Hot endpoints profiled; allocation rate checked
+- [ ] EF Core reads use projections and `AsNoTracking`; no N+1
+- [ ] Set-based updates for bulk changes; indexes verified with plans
+- [ ] No sync-over-async; cancellation tokens propagated
+- [ ] `IHttpClientFactory` with resilience handler and timeouts
+- [ ] Caching applied where measured benefit exists

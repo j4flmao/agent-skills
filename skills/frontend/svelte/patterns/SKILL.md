@@ -480,52 +480,6 @@ onMount(async () => {
 No artifact produced.
 Next skill: frontend-sveltekit if using SvelteKit.
 Carry forward: form binding patterns, transition/animate conventions, action patterns.
-## Implementation Patterns
-
-### Factory Pattern for Module Creation
-`
-function createModule<T>(config: ModuleConfig): T {
-  const dependencies = initializeDependencies(config);
-  const module = new Module(dependencies);
-  module.hooks.onInit();
-  return module as T;
-}
-`
-
-### Builder Pattern for Complex Configuration
-`
-class ConfigBuilder {
-  private config: AppConfig = new AppConfig();
-  withDatabase(url: string): ConfigBuilder { ... }
-  withCache(ttl: number): ConfigBuilder { ... }
-  withLogging(level: string): ConfigBuilder { ... }
-  build(): AppConfig { return this.config; }
-}
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Production build with optimizations enabled
-- [ ] Environment variables configured per environment
-- [ ] Health check endpoint responds correctly
-- [ ] Error tracking and monitoring integrated
-- [ ] Logging level configured (not debug in production)
-- [ ] Resource limits configured
-- [ ] Database migrations applied
-- [ ] Static assets built and served from CDN or cache
-- [ ] Feature flags toggled appropriately
-- [ ] Rollback plan documented and tested
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% | Critical | Rollback or fix |
-| p95 latency | > 500ms | Warning | Profile and optimize |
-| Uptime | < 99.9% | Critical | Investigate infrastructure |
-| Memory usage | > 80% | Warning | Check for leaks |
-| CPU usage | > 80% | Warning | Scale up or optimize |
-
 ## Architecture Decision Trees
 
 ### Reactive State Decision Tree
@@ -546,12 +500,12 @@ Is the state used in a single component?
 ```
 Does the child need to project content?
   ├── No  → Standard props-based component
-  └── Yes → Is the projected content static?
-       ├── Yes → <slot> with fallback content
-       └── No  → Named slots + slot props for dynamic content
-            Need to pass children through multiple levels?
-            ├── Yes → Svelte snippets ({#snippet}) or stores
-            └── No  → Direct slot usage with prop drilling
+  └── Yes (Svelte 5: snippets replace slots)
+       ├── Single content area → `children` prop + {@render children?.()} (fallback: {#if children}...{:else}default{/if})
+       ├── Several areas → named snippet props ({#snippet header()}...{/snippet} → {@render header()})
+       ├── Content needs data from the child → snippet with parameters ({#snippet row(item)} → {@render row(item)})
+       └── Deep pass-through → pass snippets as props or use context (setContext/getContext)
+  (Legacy <slot>/slot props only in non-runes Svelte 4 components)
 ```
 
 ## Security Considerations

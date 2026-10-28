@@ -248,7 +248,7 @@ Practice 6: Conduct periodic tabletop audits. Walk through an audit scenario wit
 
 ## Standards Alignment
 
-| Compliance Aspect | SOC2 | ISO 27001:2022 | GDPR | HIPAA | PCI DSS v4.0 |
+| Compliance Aspect | SOC2 | ISO 27001:2022 | GDPR | HIPAA | PCI DSS v4.0.1 |
 |------------------|------|---------------|------|-------|-------------|
 | Access Control | CC6.1 | A.9 | Art. 32 | 164.312(a)(1) | Req. 7 |
 | Encryption | CC6.7 | A.8 | Art. 32 | 164.312(a)(2)(iv) | Req. 4 |
@@ -522,7 +522,7 @@ Assuming the cloud provider's SOC2 certification covers your entire compliance s
 ### Anti-Pattern 5: Evidence Without Integrity
 Screenshots and PDFs without timestamps or hashes can be challenged by auditors. Every evidence artifact should be timestamped, hashed, and stored immutably. Automated collection from source systems is more credible than manual exports.
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: SOC2 Type II in 6 Months
 A SaaS startup needed SOC2 Type II for an enterprise customer within 6 months. Using an automated compliance platform, they mapped 120 controls, implemented 35 new technical controls, and automated evidence collection for 80% of controls. The internal readiness assessment at T-60 days identified 12 gaps which were remediated by T-14 days. The Type II audit passed with zero findings. Total compliance program cost: under $50K.

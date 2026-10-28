@@ -203,7 +203,8 @@ features:
 ```yaml
 - name: Deploy with rollback
   run: |
-    kubectl set image deployment/myapp app=myapp:${{ inputs.version }} --record
+    kubectl set image deployment/myapp app=myapp:${{ inputs.version }}
+    kubectl annotate deployment/myapp kubernetes.io/change-cause="deploy ${{ inputs.version }}" --overwrite
     kubectl rollout status deployment/myapp --timeout=5m || {
       echo "Deployment failed, rolling back..."
       kubectl rollout undo deployment/myapp

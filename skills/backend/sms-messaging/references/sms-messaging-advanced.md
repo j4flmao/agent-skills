@@ -1,214 +1,153 @@
-# Sms Messaging Advanced Topics
-
-## Introduction
-Advanced Sms Messaging topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# SMS Messaging Advanced: Architecture, Throughput, Failover, Webhooks and Fraud Defense
+
+Production architecture for high-volume or business-critical SMS: asynchronous sending pipeline, throughput limits and pacing, idempotency and retries without duplicates, multi-provider failover, secure webhook handling, SMS pumping fraud defense, cost control and channel fallback. Fundamentals (encoding, sender types) are in `sms-messaging-fundamentals.md`; provider abstraction code is in `sms-providers.md`.
+
+## Sending Pipeline
+
+```text
+API / domain event
+   -> validate (E.164, opt-out status, quiet hours, template render, segment count)
+   -> persist message record (status=pending, idempotency key)
+   -> enqueue (SQS, RabbitMQ, Kafka, Redis streams, background job framework)
+   -> sender workers (rate limited per sender number / provider account)
+   -> provider API (returns provider message ID)
+   -> status webhooks -> status updates -> metrics, retries or fallback
+```
+
+Never call the provider synchronously inside a user-facing request for bulk or non-urgent messages. For OTPs, sending can be synchronous but still goes through the same validation and rate-limit layer.
+
+### Message record
+
+```sql
+CREATE TABLE sms_messages (
+  id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  idempotency_key  TEXT NOT NULL,
+  to_number        TEXT NOT NULL,              -- E.164
+  template_id      TEXT NOT NULL,
+  body             TEXT NOT NULL,
+  segments         SMALLINT NOT NULL,
+  provider         TEXT,
+  provider_msg_id  TEXT,
+  status           TEXT NOT NULL CHECK (status IN ('pending','submitted','sent','delivered','undelivered','failed','suppressed')),
+  error_code       TEXT,
+  attempts         SMALLINT NOT NULL DEFAULT 0,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (idempotency_key)
+);
+CREATE INDEX ON sms_messages (provider, provider_msg_id);
+CREATE INDEX ON sms_messages (to_number, created_at);
+```
+
+Store message bodies only as long as needed; they may contain personal data.
+
+## Throughput and Pacing
+
+Throughput is constrained at several layers:
+
+| Layer | Limit example |
+|-------|---------------|
+| Provider account | API requests per second, queue length limits |
+| Sender number | Messages per second (MPS) per long code / toll-free / short code |
+| Carrier (US 10DLC) | Daily and per-minute caps by brand trust score and campaign type, per carrier |
+| Destination country | Local regulations and operator filtering |
+
+- Use a token bucket per sender (and per provider account) in the workers; segments, not messages, often count toward MPS.
+- Large campaigns: spread over time, respect quiet hours per recipient time zone, and prioritize transactional traffic (separate queues and senders for OTP/transactional vs marketing so a campaign never delays a login code).
+- Number pools: distribute load across multiple registered numbers with sticky sender (same recipient always gets the same number) to keep conversations coherent. "Snowshoeing" (spreading spam across many numbers to evade filters) violates carrier rules; pools must be within registered campaigns.
+
+## Idempotency and Retries
+
+Duplicate SMS is a visible defect (and doubles cost). Rules:
+
+- Assign an idempotency key per logical message (for example `order-shipped:{orderId}`) and enforce uniqueness in the database.
+- Retry provider API calls only when the request certainly did not create a message: connection failures before sending, `429` and `5xx` responses. A timeout after sending is ambiguous; check status by your reference before resending if the provider supports lookup, or accept the risk explicitly for OTPs.
+- Use exponential backoff with jitter and a maximum attempt count; then mark `failed` and alert.
+- Never retry on permanent errors (invalid number, opted out, landline, blocked content).
+- Status callbacks: process idempotently; ignore transitions that go backwards (`delivered` followed by a late `sent`).
+
+## Multi-Provider Failover
+
+| Strategy | Description | Caveat |
+|----------|-------------|--------|
+| Primary/secondary | Switch on provider outage (error rate or latency SLO breach) | Secondary must have registered senders for the same traffic |
+| Per-country routing | Choose provider by destination quality and price | Requires quality metrics per country |
+| Least-cost with quality floor | Cheapest provider meeting delivery-rate thresholds | Grey routes are cheap but unreliable and may violate rules |
+
+- Sender registrations (10DLC campaigns, toll-free verification, short codes, alphanumeric IDs) are often tied to a provider; failover only works if registration exists on both.
+- Use a circuit breaker per provider; health is measured from API errors and from delivery receipt rates (delivery rate dropping is an outage signal even when the API returns 200).
+- Avoid failing over within a single OTP attempt in a way that sends two codes; let the user request a resend instead, and invalidate the previous code.
+
+## Webhook Security
+
+Status and inbound webhooks are public endpoints. Validate every request:
+
+- Verify the provider's signature with its SDK helper. Example: Twilio signs requests with the `X-Twilio-Signature` header (HMAC over the full URL and POST parameters using your auth token); Vonage supports signed webhooks/JWT; AWS End User Messaging delivers events through SNS or other AWS destinations rather than public signatures.
+- Use the exact public URL (scheme, host, path, query) the provider called when verifying; reverse proxies that rewrite URLs cause false failures.
+- Return `2xx` quickly and process asynchronously; providers retry on timeouts and errors, so handlers must be idempotent.
+- Rate-limit and log rejected webhook requests.
+
+```ts
+import twilio from "twilio";
+
+export function verifyTwilio(req: { headers: Record<string, string>; body: Record<string, string> }, publicUrl: string): boolean {
+  const signature = req.headers["x-twilio-signature"] ?? "";
+  return twilio.validateRequest(process.env.TWILIO_AUTH_TOKEN!, signature, publicUrl, req.body);
+}
+```
+
+## SMS Pumping (Artificially Inflated Traffic) Defense
+
+Attackers trigger your app to send SMS (signup, OTP, "send me a link") to premium or attacker-controlled number ranges and share revenue with complicit carriers. Signs: spikes in sends to unusual countries or sequential number ranges, low verification completion rates, many requests per IP or device.
+
+| Control | Detail |
+|---------|--------|
+| Geo permissions | Allow only countries you serve, at the provider account level |
+| Rate limits | Per phone number, per IP, per device/session, per prefix range, and global per country |
+| Bot protection | CAPTCHA or proof-of-work on unauthenticated SMS triggers; managed bot detection |
+| Conversion monitoring | Alert when OTP completion rate for a country or prefix drops |
+| Provider fraud tools | Built-in fraud guards in verification products (for example Twilio Verify Fraud Guard) |
+| Spend caps | Daily budget alerts and hard caps per country |
+| Line-type checks | Block or challenge non-mobile and high-risk number types for OTP |
+
+Prefer authenticator apps or passkeys over SMS OTP where possible; SMS is vulnerable to SIM swap and interception, so treat it as a weaker factor.
+
+## Cost Control
+
+- Segment count drives cost: enforce maximum segments per template and catch UCS-2 switches.
+- Country pricing varies widely; maintain a per-country cost table and budget.
+- Suppress sends to known-bad numbers (repeated permanent failures, landlines, opted out).
+- Track cost per message type and per feature; marketing and verification typically dominate.
+
+## Channel Fallback
+
+| Channel | Use |
+|---------|-----|
+| RCS Business Messaging | Rich branded messages on supported devices and carriers (Android; iOS 18 added RCS support), falls back to SMS |
+| WhatsApp Business Platform | Popular in many countries; template approval and per-conversation pricing |
+| Push notifications | Cheapest for app users; not guaranteed delivery |
+| Email / voice | Fallback for OTP or critical alerts |
+
+Implement channel selection by user preference, availability and cost, with a single message record tracking which channel delivered.
+
+## Observability
+
+| Metric | Alert on |
+|--------|----------|
+| Submission success rate per provider | Drops below baseline |
+| Delivery rate per country, provider, sender | Sudden drop (filtering, outage) |
+| Time to delivery (p95) | OTP latency above target |
+| Queue depth and age | Backlog growth |
+| Opt-out rate per campaign | Spikes (content or targeting problem) |
+| Spend per hour per country | Unexpected spikes (fraud) |
+
+## Checklist
+
+- [ ] Asynchronous pipeline with persisted records and idempotency keys
+- [ ] Separate queues and senders for transactional vs marketing traffic
+- [ ] Per-sender pacing that respects MPS and carrier caps
+- [ ] Retries only for safe cases; permanent errors suppressed
+- [ ] Failover provider with matching sender registrations and circuit breakers
+- [ ] Webhooks signature-verified, fast, idempotent
+- [ ] Geo permissions, multi-dimensional rate limits and spend alerts against SMS pumping
+- [ ] Delivery, latency, opt-out and cost metrics monitored

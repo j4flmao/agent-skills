@@ -1,11 +1,39 @@
 ---
 name: vulkan
-description: Expert low-level GPU rendering with Vulkan - instance setup, swapchain management, render passes, command buffers, synchronization, memory management, compute shaders, and ray tracing.
+description: >
+  Use this skill when the user says 'vulkan', 'vkQueueSubmit', 'swapchain', 'render pass', 'dynamic rendering', 'pipeline barrier', 'synchronization2', 'descriptor sets', 'VMA', 'vulkan validation'. Guides explicit Vulkan rendering: instance/device setup, swapchain, dynamic rendering and render passes, pipelines, command buffers, synchronization, memory and compute/ray tracing. Do NOT use for: engine-agnostic frame-graph design (use render-graph), DirectX 12 or Metal specifics, shader art.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, vulkan, gpu, rendering, graphics]
 ---
 
 # Vulkan Deep Engineering Guide
 
+## Purpose
 Vulkan is a low-overhead, explicit GPU API. It gives fine control over every GPU step: no hidden state, no driver magic, no automatic synchronization. Performance is yours to manage - and so is every bug that comes with it.
+
+## Agent Protocol
+
+### Trigger
+"vulkan", "vkQueueSubmit", "swapchain", "render pass", "dynamic rendering", "pipeline barrier", "synchronization2", "descriptor sets", "VMA", "vulkan validation".
+
+### Input Context
+- Vulkan API version and required extensions
+- Target GPUs/platforms (desktop, Android, MoltenVK)
+- Validation layer output if debugging
+
+### Output Artifact
+C/C++ Vulkan code and a synchronization explanation. No file unless requested.
+
+### Response Format
+```
+API: Vulkan {1.x} + {extensions}
+Stage: {setup | swapchain | record | sync | memory}
+Code: {snippet}
+Sync: {src stage/access -> dst stage/access}
+Validation: {clean | messages}
+```
 
 ## 1. Vulkan & The Explicit Model
 
@@ -38,8 +66,13 @@ CommandBuffer (CPU records) -> Submit to Queue -> GPU executes -> Swapchain pres
 ### 2.1 Instance
 
 ```cpp
+VkApplicationInfo app{};
+app.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+app.apiVersion = VK_API_VERSION_1_3;   // highest version you use; 1.4 where available
+
 VkInstanceCreateInfo ci{};
 ci.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+ci.pApplicationInfo = &app;
 ci.enabledLayerCount = (uint32_t)debugLayers.size();      // "VK_LAYER_KHRONOS_validation"
 ci.ppEnabledLayerNames = debugLayers.data();
 ci.enabledExtensionCount = (uint32_t)instanceExtensions.size();
@@ -111,7 +144,9 @@ if (enableValidation) {
     msgCI.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT
                           | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
     msgCI.pfnUserCallback = debugCallback;
-    // set on instance create AND device create via pNext chain
+    // chain msgCI into VkInstanceCreateInfo::pNext to also catch create/destroy messages,
+    // then create the persistent messenger with vkCreateDebugUtilsMessengerEXT.
+    // Device layers are deprecated: enable layers on the instance only.
 }
 ```
 
@@ -123,13 +158,15 @@ if (enableValidation) {
 VkSwapchainCreateInfoKHR sci{};
 sci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 sci.surface = surface;
-sci.minImageCount = 2;          // double-buffered; 3 for triple buffering
-sci.imageFormat = VK_FORMAT_B8G8R8A8_SRGB;      // common window format
+sci.minImageCount = std::min(caps.minImageCount + 1,                 // caps from
+    caps.maxImageCount ? caps.maxImageCount : UINT32_MAX);           // vkGetPhysicalDeviceSurfaceCapabilitiesKHR
+sci.imageFormat = VK_FORMAT_B8G8R8A8_SRGB;      // pick from vkGetPhysicalDeviceSurfaceFormatsKHR
 sci.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-sci.imageExtent = { windowWidth, windowHeight };
+sci.imageExtent = caps.currentExtent;            // or clamp the window size if currentExtent is 0xFFFFFFFF
 sci.imageArrayLayers = 1;
 sci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-sci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+sci.preTransform = caps.currentTransform;        // on Android, handle rotation yourself for best performance
+sci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 sci.presentMode = VK_PRESENT_MODE_FIFO_KHR;    // vsync
 sci.clipped = VK_TRUE;
 
@@ -142,10 +179,12 @@ vkCreateSwapchainKHR(device, &sci, nullptr, &swapchain);
 
 | Mode | Description | Use case |
 |------|-------------|----------|
-| `FIFO` | Queue-based vsync (tears nothing) | Default, console-like |
-| `MAILBOX` | Triple-buffer vsync, lowest latency | Fast games, high-refresh |
-| `IMMEDIATE` | No vsync, tear possible | Benchmarking, VR head-locked |
-| `FIFO_RELAXED` | Late swap shows last frame | Rarely used |
+| `FIFO` | Vsync queue; the only mode every implementation must support | Default, mobile (power) |
+| `MAILBOX` | Vsync, newest frame replaces the queued one; no tearing, lower latency, renders unthrottled | Desktop games when supported |
+| `IMMEDIATE` | No vsync, tearing possible | Benchmarks, competitive "vsync off" option |
+| `FIFO_RELAXED` | Vsync, but a late frame is presented immediately (may tear) | Games that occasionally miss vblank |
+
+VR does not present through a window swapchain at all — use OpenXR's swapchains.
 
 ### 3.3 Image Acquire -> Render -> Present Flow
 
@@ -155,16 +194,40 @@ vkAcquireNextImageKHR(device, swapchain, UINT64_MAX,       // wait forever
                       imageAvailableSemaphore,             // signalled when image ready
                       VK_NULL_HANDLE, &imageIndex);
 
-// record + submit command buffer that renders to this image
+// record + submit: wait on imageAvailableSemaphore, signal renderFinished[imageIndex]
 vkQueueSubmit(graphicsQueue, 1, &submitInfo, frameFence);
 
-vkQueuePresentKHR(graphicsQueue, &presentInfo);  // { swapchain, imageIndex }
+// present waits on renderFinished[imageIndex]
+vkQueuePresentKHR(presentQueue, &presentInfo);  // { swapchain, imageIndex }
 ```
 
 ### 3.4 Swapchain Recreation
 
-Handle window resize: recreate swapchain (images, framebuffers, at minimum image views). Query `VK_ERROR_OUT_OF_DATE_KHR` from present/acquire and recreate.
+Recreate the swapchain (and its image views/framebuffers) when acquire or present returns `VK_ERROR_OUT_OF_DATE_KHR`, after `VK_SUBOPTIMAL_KHR` at a convenient point, and on window resize. Skip rendering while the window is minimized (extent 0x0). Pass the old swapchain in `oldSwapchain` and destroy it only after its images are no longer in use.
+
 ## 4. Render Passes & Framebuffers
+
+### 4.0 Prefer Dynamic Rendering for New Code
+
+`vkCmdBeginRendering` (core in Vulkan 1.3, `VK_KHR_dynamic_rendering` before) removes `VkRenderPass`/`VkFramebuffer` objects: attachments are passed at record time and the pipeline declares formats via `VkPipelineRenderingCreateInfo`. Vulkan 1.4 adds dynamic-rendering local reads, which covers the main remaining use of subpasses (tile-local G-buffer reads). Layout transitions are then explicit barriers. Classic render passes (below) still work and are what older Android drivers support best.
+
+```cpp
+VkRenderingAttachmentInfo color{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+color.imageView   = swapchainViews[imageIndex];
+color.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+color.loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
+color.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+color.clearValue.color = {{0.1f, 0.2f, 0.3f, 1.0f}};
+
+VkRenderingInfo ri{VK_STRUCTURE_TYPE_RENDERING_INFO};
+ri.renderArea = {{0, 0}, extent};
+ri.layerCount = 1;
+ri.colorAttachmentCount = 1;
+ri.pColorAttachments = &color;
+vkCmdBeginRendering(cmd, &ri);
+// bind pipeline, draw ...
+vkCmdEndRendering(cmd);
+```
 
 ### 4.1 Render Pass
 
@@ -204,9 +267,15 @@ Subpass 1:  lighting pass reads GBuffer via input attachment
 ```
 
 ```cpp
-VkAccessFlags  srcMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-VkAccessFlags  dstMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-// The driver handles implicit layout transitions between subpasses.
+VkSubpassDependency dep{};
+dep.srcSubpass = 0;  dep.dstSubpass = 1;
+dep.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+dep.dstStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+dep.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+dep.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+dep.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;   // lets tilers keep data on-chip
+// Layout changes between subpasses follow the VkAttachmentReference layouts;
+// the execution/memory dependency must still be declared like this.
 ```
 
 ### 4.3 Framebuffer (one per swapchain image)
@@ -251,7 +320,7 @@ gpci.layout = pipelineLayout;
 gpci.renderPass = renderPass;
 gpci.subpass = 0;
 
-vkCreateGraphicsPipelines(device, pool, 1, &gpci, nullptr, &pipeline);
+vkCreateGraphicsPipelines(device, pipelineCache, 1, &gpci, nullptr, &pipeline);
 ```
 
 **Key insight**: pipelines are immutable once created, so switching between a small set of pre-baked pipelines is cheap. Cache pipelines per unique state set.
@@ -279,7 +348,7 @@ vkCreatePipelineLayout(device, &plci, nullptr, &pipelineLayout);
 
 ### 5.3 Dynamic State
 
-Mark viewport/scissor as `VK_DYNAMIC_STATE_VIEWPORT` + `VK_DYNAMIC_STATE_SCISSOR` to change them per draw without a new pipeline.
+Mark viewport/scissor as `VK_DYNAMIC_STATE_VIEWPORT` + `VK_DYNAMIC_STATE_SCISSOR` to change them per draw without a new pipeline. Vulkan 1.3 also made cull mode, depth test/write, primitive topology and more dynamic (extended dynamic state), which shrinks the number of pipeline permutations. `VK_EXT_graphics_pipeline_library` and `VK_EXT_shader_object` further reduce compile hitches where supported.
 
 ## 6. Command Buffers & Recording
 
@@ -337,54 +406,66 @@ Vulkan never syncs for you. Five primitives:
 |-----------|-------|---------|
 | **Fence** | CPU<->GPU | CPU waits for GPU work completion |
 | **Semaphore** | GPU->GPU | Order queue submissions on different queues |
-| **Timeline Semaphore** | GPU->GPU | Ordered signal/wait across frames (extension) |
+| **Timeline Semaphore** | GPU<->GPU and CPU | 64-bit counter; wait/signal values from GPU or CPU (core 1.2) |
 | **Event** | In-batch | GPU-internal stage-to-stage wait |
 | **Pipeline Barrier** | Memory | Image/buffer layout + flush/invalidate |
 
 ### 7.1 The Classic Frame Skeleton
 
 ```cpp
-// Frame loop (double buffering)
-vkAcquireNextImageKHR(device, swapchain, UINT64_MAX,
-                      imageAvailableSem[idx], VK_NULL_HANDLE, &idx);
+// MAX_FRAMES_IN_FLIGHT (usually 2) is independent of the swapchain image count.
+// frame = CPU-side slot; imageIndex = which swapchain image we got. Do not mix them.
+uint32_t frame = frameCounter % MAX_FRAMES_IN_FLIGHT;
 
-vkWaitForFences(device, 1, &frameFences[idx], VK_TRUE, UINT64_MAX);
+vkWaitForFences(device, 1, &inFlight[frame], VK_TRUE, UINT64_MAX);   // slot reusable?
 
-recordCommandBuffer(frameBuffers[idx], imageAvailableSem[idx], renderFinishedSem[idx]);
+uint32_t imageIndex;
+VkResult acq = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX,
+                                     imageAvailable[frame], VK_NULL_HANDLE, &imageIndex);
+if (acq == VK_ERROR_OUT_OF_DATE_KHR) { recreateSwapchain(); return; }
 
-VkSubmitInfo si{};
-VkSemaphore wait[] = { imageAvailableSem[idx] };  // wait for acquire
+vkResetFences(device, 1, &inFlight[frame]);           // reset only when we will submit
+recordCommandBuffer(cmd[frame], imageIndex);
+
 VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-si.waitSemaphoreCount = 1; si.pWaitSemaphores = wait; si.pWaitDstStageMask = &waitStage;
-VkSemaphore signal[] = { renderFinishedSem[idx] };
-si.signalSemaphoreCount = 1; si.pSignalSemaphores = signal;
+VkSubmitInfo si{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+si.waitSemaphoreCount = 1;   si.pWaitSemaphores = &imageAvailable[frame];
+si.pWaitDstStageMask = &waitStage;
+si.commandBufferCount = 1;   si.pCommandBuffers = &cmd[frame];
+si.signalSemaphoreCount = 1; si.pSignalSemaphores = &renderFinished[imageIndex]; // one per image
+vkQueueSubmit(graphicsQueue, 1, &si, inFlight[frame]);
 
-vkResetFences(device, 1, &frameFences[idx]);
-vkQueueSubmit(graphicsQueue, 1, &si, frameFences[idx]);
-
-VkPresentInfoKHR pi{};
-pi.waitSemaphoreCount = 1; pi.pWaitSemaphores = signal;
-pi.swapchainCount = 1; pi.pSwapchains = &swapchain; pi.pImageIndices = &idx;
-vkQueuePresentKHR(graphicsQueue, &pi);
+VkPresentInfoKHR pi{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+pi.waitSemaphoreCount = 1; pi.pWaitSemaphores = &renderFinished[imageIndex];
+pi.swapchainCount = 1; pi.pSwapchains = &swapchain; pi.pImageIndices = &imageIndex;
+VkResult pr = vkQueuePresentKHR(presentQueue, &pi);
+if (pr == VK_ERROR_OUT_OF_DATE_KHR || pr == VK_SUBOPTIMAL_KHR) recreateSwapchain();
+++frameCounter;
 ```
 
 ### 7.2 Pipeline Barriers
 
-Needed to transition image layouts between usages:
+Barriers order execution, make writes visible, and transition image layouts. Use synchronization2 (core 1.3): stages and access masks live in each barrier.
 
 ```cpp
-VkImageMemoryBarrier barrier{};
-barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-barrier.srcAccessMask = 0;
-barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+// swapchain image: "don't care about old contents" -> color attachment
+VkImageMemoryBarrier2 b{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
+b.srcStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT; // matches acquire wait stage
+b.srcAccessMask = 0;
+b.dstStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+b.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+b.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+b.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+b.srcQueueFamilyIndex = b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+b.image = swapchainImages[imageIndex];
+b.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
-vkCmdPipelineBarrier(cmdBuffer,
-    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,              // before any work
-    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,  // before render
-    0, 0, nullptr, 0, nullptr, 1, &barrier);
+VkDependencyInfo dep{VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+dep.imageMemoryBarrierCount = 1;
+dep.pImageMemoryBarriers = &b;
+vkCmdPipelineBarrier2(cmd, &dep);
+// after rendering: COLOR_ATTACHMENT_OPTIMAL -> PRESENT_SRC_KHR
+// (src = COLOR_ATTACHMENT_OUTPUT/WRITE, dst = NONE/0)
 ```
 
 ## 8. Memory Management
@@ -411,7 +492,9 @@ vkBindBufferMemory(device, buffer, mem, 0);
 |------|----------|-------|
 | `DEVICE_LOCAL` | VRAM | GPU-only buffers/textures |
 | `HOST_VISIBLE | HOST_COHERENT` | System RAM mapped | staging, uniform upload |
-| `HOST_VISIBLE | HOST_COHERENT | DEVICE_LOCAL` | ReBAR (RX 6000+) | mapped VRAM |
+| `DEVICE_LOCAL | HOST_VISIBLE` | CPU-mappable VRAM (a 256 MB window on most discrete GPUs; all of VRAM with Resizable BAR; everything on integrated/mobile GPUs) | per-frame uniform/dynamic data written directly |
+
+In practice use the Vulkan Memory Allocator (VMA): `vmaCreateBuffer` with `VMA_MEMORY_USAGE_AUTO` and `VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT` picks a suitable type and suballocates for you.
 
 ### 8.3 Upload Pattern (Staging)
 
@@ -465,22 +548,24 @@ Compute is Vulkan's workhorse for GPU-driven rendering, particles, physics, imag
 VkComputePipelineCreateInfo cpci{};
 cpci.stage = computeStage;         // VkPipelineShaderStageCreateInfo
 cpci.layout = computePipelineLayout;
-vkCreateComputePipelines(device, pool, 1, &cpci, nullptr, &computePipeline);
+vkCreateComputePipelines(device, pipelineCache, 1, &cpci, nullptr, &computePipeline);
 
 // Dispatch
 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computeLayout, 0, 1, &ds, 0, nullptr);
-vkCmdDispatch(cmd, workgroupX, workgroupY, workgroupZ);
+vkCmdDispatch(cmd, (particleCount + 255) / 256, 1, 1);   // round up to whole workgroups
 ```
 
 ```glsl
 #version 450
 layout(local_size_x = 256) in;              // workgroup = 256 threads
-layout(std430, binding = 0) buffer Particle { vec4 pos[]; } p;
+layout(std430, binding = 0) buffer Particles { vec4 pos[]; } p;
+layout(push_constant) uniform PC { uint count; } pc;
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
-    p.pos[i] += vec4(0.01, 0.0, 0.0, 1.0);
+    if (i >= pc.count) return;                // last workgroup may be partial
+    p.pos[i].xyz += vec3(0.01, 0.0, 0.0);
 }
 ```
 
@@ -488,7 +573,7 @@ void main() {
 
 - Local size 64-256 threads is the sweet spot (GPUs schedule in warps/wavefronts).
 - Total workgroup count should exceed SM/WGP count for full occupancy.
-- Align dispatch to wave size (NVIDIA 32, AMD 64).
+- Use a multiple of the subgroup size (`VkPhysicalDeviceSubgroupProperties::subgroupSize`: 32 on NVIDIA, 32 or 64 on AMD RDNA, varies on mobile).
 
 ## 10. Render to Texture (Offscreen)
 
@@ -525,10 +610,10 @@ Use `VK_KHR_ray_tracing_pipeline` + `VK_KHR_acceleration_structure`. Building TL
 
 ```mermaid
 flowchart TD
-    A{VR / head-locked?} -->|Yes| B[IMMEDIATE]
-    A -->|No| C{Benchmark?} -->|Yes| D[IMMEDIATE]
-    C -->|No| E{Want lowest latency + no tear?} -->|Yes| F[MAILBOX]
-    E -->|No| G[FIFO vsync]
+    A{Benchmark or user chose vsync off?} -->|Yes| B[IMMEDIATE if supported]
+    A -->|No| C{Mobile / battery-bound?} -->|Yes| D[FIFO]
+    C -->|No| E{MAILBOX supported?} -->|Yes| F[MAILBOX]
+    E -->|No| G[FIFO]
 ```
 
 ### 12.2 "Which memory type for my buffer?"
@@ -560,13 +645,13 @@ flowchart TD
 
 - **Validation layers**: the #1 tool. Fix every VUID it reports.
 - **RenderDoc**: frame captures, shader inspection, GPU timing.
-- **NVIDIA Nsight / AMD RGA / RADAR**: profile passes, waves, occupancy.
-- **GPU crash dump**: `VK_KHR_driver_properties` + vendor handling.
+- **NVIDIA Nsight Graphics / AMD Radeon GPU Profiler / Arm Performance Studio / Snapdragon Profiler**: pass timings, occupancy, bandwidth.
+- **GPU crashes**: `VK_EXT_device_fault` where supported, NVIDIA Nsight Aftermath, AMD Radeon GPU Detective; add `VK_EXT_debug_utils` labels so dumps name the pass.
 - Check `VkResult` from every call in debug builds.
 
 ## 15. Production Checklist (Lead-Level Vulkan)
 
-1. Pipeline cache persisted across runs (`VK_PIPELINE_CACHE_CREATE_READ_ONLY_BIT`).
+1. Pipeline cache persisted across runs (`vkGetPipelineCacheData`; discard it if the header's vendorID/deviceID/pipelineCacheUUID no longer match).
 2. Descriptor pools sized properly; descriptor set caching.
 3. Single allocation strategy: block allocator over `vkAllocateMemory`.
 4. Command buffers per thread; secondary buffers for huge scenes.

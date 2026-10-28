@@ -490,7 +490,6 @@ Plan: identify need, define scope, estimate value, get stakeholder buy-in. Build
   - references/data-operating-model.md — Data Operating Model Reference
   - references/data-ownership.md — Data Ownership Reference
   - references/data-strategy-metrics.md — Data Strategy Metrics
-  - references/data-vision.md — Data Vision and Strategy Reference
 ## Data Strategy Checklist
 
 ### Strategy Document Review Checklist

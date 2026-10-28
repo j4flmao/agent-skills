@@ -677,15 +677,6 @@ contract PaymentStream {
 }
 ```
 
-## Performance Considerations
-
-- **Governance gas costs**: Each vote cast costs ~50-100k gas. With 10,000 voters, a single proposal cycle costs 0.5-1 ETH in gas
-- **Optimization**: Batch vote casting with EIP-712 signatures and delegated relayer
-- **Snapshot for signaling**: Off-chain voting reduces costs by 1000x for non-binding votes
-- **L2 deployment**: Deploy governance on L2 (Arbitrum/Optimism) with cross-chain message relay to L1 for execution
-- **Proposer bond recovery**: Gas for executing cancelation should be recoverable from bond
-- **Timelock gas**: A single timelock execute can cost 200k-500k gas depending on action count
-
 ## References
 - references/blockchain-management-advanced.md — Blockchain Management Advanced Topics
 - references/blockchain-management-fundamentals.md — Blockchain Management Fundamentals

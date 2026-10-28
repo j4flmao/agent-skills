@@ -7,6 +7,29 @@ description: Low-level binary analysis, decompilation theory, memory corruption 
 
 To master vulnerability research, one must profoundly understand the structural formats of executables and the low-level execution environment that governs memory safety and corruption.
 
+## Purpose
+Explain static and dynamic binary analysis — PE/ELF structure, decompilation theory, and the mechanics of memory-corruption classes together with the OS/compiler mitigations that stop them — for vulnerability research and malware analysis. Defensive and educational; not for DRM circumvention or IP theft.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "reverse engineer binary", "PE/ELF internals", "decompilation theory", "buffer overflow mechanics", "disassembly analysis".
+
+### Input Context
+- Binary format/architecture and OS.
+- Analysis goal (vuln research, malware triage, interop).
+
+### Output Artifact
+Structural/behavioral analysis plus the relevant defensive mitigation.
+
+### Response Format
+```
+Target: {binary}
+Format: {PE|ELF|Mach-O}
+Finding: {structure/behavior}
+Mitigation: {canary/PIE/RELRO/NX/ASLR}
+```
+
 ## 1. Binary Structures (PE & ELF)
 
 Executable formats (Portable Executable for Windows, Executable and Linkable Format for Unix) define how the operating system loader maps the file into memory.

@@ -1,11 +1,38 @@
 ---
 name: cocos2d
-description: Expert game development with Cocos2d-x / Cocos Creator - node tree, components, rendering (OpenGL ES/Metal/Vulkan), physics (Box2D), audio, UI, multi-platform build, and performance.
+description: >
+  Use this skill when the user says 'cocos2d', 'cocos2d-x', 'cocos creator', 'cocos game', 'cocos build'. Guides Cocos Creator 3.x / Cocos2d-x projects: node tree and components, rendering and batching, physics, UI, multi-platform builds and mobile performance. Do NOT use for: Cocos2d-x engine internals (use cocos2d-patterns), Unity/Godot/Unreal projects.
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, cocos, cocos-creator, mobile-games]
 ---
 
 # Cocos2d-x / Cocos Creator Deep Engineering Guide
 
+## Purpose
 Cocos2d is a family of open-source game frameworks for 2D (and now 3D in Creator) with strong mobile focus. Cocos2d-x is the C++ core; Cocos Creator is the full editor + scene system built on top. This guide focuses on Cocos Creator 3.x (which uses Cocos2d-x under the hood).
+
+## Agent Protocol
+
+### Trigger
+"cocos2d", "cocos2d-x", "cocos creator", "cocos game", "cocos build".
+
+### Input Context
+- Cocos Creator or Cocos2d-x version
+- Target platforms (web, iOS, Android, mini-games)
+- Game type and performance targets
+
+### Output Artifact
+TypeScript/C++ code, project settings or a performance plan. No file unless requested.
+
+### Response Format
+```
+Engine: {Cocos Creator 3.x | Cocos2d-x}
+Change: {what and why}
+Code: {snippet}
+Perf check: {draw calls, memory, FPS on target device}
+```
 
 ## 1. Engine Architecture
 
@@ -25,20 +52,20 @@ Cocos Creator 3.x
 ### 1.1 Update Order
 
 ```
-fixedUpdate()  // physics substeps (if using Box2D)
-update()       // gameplay logic per frame
-lateUpdate()   // camera, UI follow
-render()       // GPU submit
+update(dt)        // component gameplay logic per frame
+physics step      // PhysicsSystem.instance.fixedTimeStep (default 1/60), may run 0..maxSubSteps times
+lateUpdate(dt)    // camera follow, UI
+render            // pipeline submit
 ```
 
 Rules:
-- Node movement in physics: `move()` or set `RigidBody3D.velocity` in `fixedUpdate`.
-- Visual interpolation: `node.setPosition(lerp(...))` in `update()`.
+- Drive dynamic bodies through the physics API (`RigidBody.setLinearVelocity()`, `applyForce()`), not by writing node positions every frame.
+- Components have no `fixedUpdate`; for fixed-step logic listen to the physics system's step events or run your own accumulator in `update`.
 
 ## 2. The Node-Component Model
 
 ```typescript
-import { Component, _decorator } from 'cc';
+import { Component, Collider, ICollisionEvent, _decorator } from 'cc';
 const { ccclass, property } = _decorator;
 
 @ccclass('Player')
@@ -49,8 +76,14 @@ export class Player extends Component {
         // movement, animation, input
     }
 
-    onCollisionEnter(other: Collider) {
-        // physics callback
+    start() {
+        // 3D: collider events are registered, not overridden
+        this.getComponent(Collider)!.on('onCollisionEnter', this.onHit, this);
+        // 2D equivalent: collider2d.on(Contact2DType.BEGIN_CONTACT, cb, this)
+    }
+
+    private onHit(event: ICollisionEvent) {
+        // event.otherCollider, event.contacts
     }
 }
 ```
@@ -71,10 +104,10 @@ this.node.on('damage', this.onDamage, this);
 ### 2.2 Prefab Instantiation
 
 ```typescript
-import { instantiate, Prefab, resources } from 'cc';
+import { director, instantiate, Prefab } from 'cc';
 const bullet = instantiate(this.bulletPrefab);
-bullet.setPosition(this.node.worldPosition);
-director.getScene().addChild(bullet);
+director.getScene()!.addChild(bullet);
+bullet.setWorldPosition(this.node.worldPosition);
 ```
 
 Rule: cache `prefab` references via `@property(Prefab)`, never load per frame.
@@ -85,33 +118,32 @@ Rule: cache `prefab` references via `@property(Prefab)`, never load per frame.
 
 | Platform | Renderer |
 |----------|----------|
-| Desktop/Mobile (GL) | OpenGL ES 3.1+ |
+| Android / desktop GL | OpenGL ES 3 |
 | iOS / Metal devices | Metal |
 | Android Vulkan | Vulkan (via Cocos 3.x) |
-| Web | WebGL 2.0 |
+| Web | WebGL 2 (WebGL 1 fallback); WebGPU experimental in 3.8 |
 
 ### 3.2 Draw Calls & Batching
 
-- `Sprite` with the same texture/atlas: automatically batched by `SpriteBatch`/`RenderBatch`.
+- 2D renderables sharing material + texture are batched automatically; dynamic atlas merging can pack small textures at runtime. Interleaving different textures/materials in sibling order breaks batches.
 - Use texture atlases (`TexturePacker`) aggressively.
-- UI: `UIOpacity` only on dynamic nodes; static UI should be grouped under a single `Opacity` parent.
+- UI: `Mask` and `Graphics` components break batches; keep them few. Check the draw-call count in the Profiler overlay (`profiler.showStats()`).
 
 ### 3.3 Custom Rendering (Cocos Creator 3.x)
 
 ```typescript
-@ccclass('CustomEffect')
-export class CustomEffect extends RenderableComponent {
-    getRenderPipeline() { return 'Builtin'; }
-    // use this.getMaterial(0) to change uniforms
-}
+// Per-object uniform change without affecting the shared material
+const renderer = this.getComponent(MeshRenderer)!;
+renderer.getMaterialInstance(0)!.setProperty('mainColor', new Color(255, 0, 0, 255));
 ```
+Material instances break batching/instancing for that object; prefer instanced attributes for many objects.
 
 - `RenderPipeline` (Forward, Deferred) set in Project Settings.
 - 2D games use Forward renderer; 3D can opt Deferred.
 
 ## 4. Physics
 
-- Cocos Creator 3.x uses **Bullet** (3D) / **Box2D** (2D) via `physics-3d` / `physics-2d`.
+- Cocos Creator 3.x lets you pick the backend in Project Settings > Feature Cropping: 3D = Bullet (wasm, default), PhysX, cannon.js or builtin (collision only); 2D = Box2D or builtin.
 - Nodes: `Collider2D`/`Collider3D` + `RigidBody2D`/`RigidBody3D`.
 - Contact callbacks: `onBeginContact`, `onEndContact`.
 - Layers: `physicsGroup` in Project Settings.
@@ -124,7 +156,7 @@ controller.move(dir, deltaTime);
 ```
 
 - For platformers: `RigidBody2D` + `BoxCollider2D`, manual velocity control.
-- For 3D: `CharacterController3D` from `cc` (or use Box2D bullet).
+- For 3D (Cocos Creator 3.8+): add a `CapsuleCharacterController` or `BoxCharacterController` component and call `move()`; it needs the Bullet or PhysX backend.
 
 ## 5. Audio
 
@@ -145,8 +177,8 @@ controller.move(dir, deltaTime);
 | Option | Use |
 |--------|-----|
 | **TypeScript** | Primary, first-class support in Cocos Creator |
-| **C++ (Cocos2d-x)** | Engine extensions, GDExtension-like via `bindings` |
-| **Lua** | Legacy Cocos2d-x; not primary in Creator 3.x |
+| **C++** | Engine customisation and native plugins exposed to TS through JSB bindings |
+| **Lua** | Cocos2d-x only (legacy); not supported in Cocos Creator 3.x |
 
 ### 7.1 TypeScript Rules
 

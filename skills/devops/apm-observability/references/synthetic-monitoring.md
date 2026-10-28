@@ -315,7 +315,6 @@ options {
 ### Datadog Private Location
 ```yaml
 # docker-compose.yml
-version: "3.9"
 services:
   worker:
     image: gcr.io/datadoghq/synthetics-private-location-worker:latest

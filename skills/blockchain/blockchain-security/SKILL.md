@@ -426,9 +426,6 @@ invariant solvency()
   - references/incident-response.md — Blockchain Incident Response
   - references/smart-contract-security.md — Smart Contract Security
   - references/threat-modeling.md — Threat Modeling for Blockchain Systems
-  - references/blockchain-vulnerability-catalog.md — Common Blockchain Vulnerabilities Catalog
-  - references/cross-chain-security.md — Cross-Chain Security Considerations
-  - references/flash-loan-attack-patterns.md — Flash Loan Attack Patterns
 
 ## Architecture Decision Trees
 

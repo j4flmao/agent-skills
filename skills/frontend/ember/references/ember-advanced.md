@@ -1,214 +1,171 @@
-# Ember Advanced Topics
+# Ember.js Advanced Topics
 
-## Introduction
-Advanced Ember topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Advanced modern Ember: Embroider and Vite builds with code splitting, TypeScript with Glint, async state with ember-concurrency and resources, request management with WarpDrive/EmberData, rendering performance, server-side rendering with FastBoot, and incremental migration of classic apps.
 
-## Advanced Architecture Patterns
+## Build: Embroider and Vite
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+Embroider is Ember's modern build pipeline that produces standard ES modules for mainstream bundlers. Embroider with Vite is the recommended setup for new apps; classic `ember-cli` broccoli builds remain for older apps.
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+Benefits:
+- Standard tooling (Vite dev server, Rollup-based production builds).
+- Tree-shaking and route-based code splitting.
+- Static analysis of template-tag components (explicit imports make "what is used" knowable at build time).
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+Route splitting (Embroider option `splitAtRoutes`) loads each route's code on demand; combine it with template tag and explicit imports so the bundler can split correctly.
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+Migration path for existing apps: adopt Embroider in compat mode, fix addons that rely on runtime resolution, enable static flags (`staticComponents`, `staticHelpers`, `staticModifiers`) step by step, then move to Vite.
 
-## Performance Optimization
+## TypeScript and Glint
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+```gts
+// app/components/user-card.gts
+import Component from '@glimmer/component';
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+interface UserCardSignature {
+  Args: { user: { name: string; email: string }; onSelect?: (email: string) => void };
+  Blocks: { default: [] };
+  Element: HTMLElement;
+}
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+export default class UserCard extends Component<UserCardSignature> {
+  select = () => this.args.onSelect?.(this.args.user.email);
 
-## Security Hardening
+  <template>
+    <article ...attributes>
+      <h3>{{@user.name}}</h3>
+      {{yield}}
+    </article>
+  </template>
+}
+```
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+- Component signatures declare `Args`, `Blocks` and `Element` (target of `...attributes`).
+- Glint type-checks templates (`glint` CLI, editor language server); add it to CI.
+- Services are typed by registering them in the service registry declaration so `@service` injections are typed.
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+## Async State: ember-concurrency
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+Tasks give cancellation, concurrency control and derived state (`isRunning`, `last.value`).
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+```gts
+import Component from '@glimmer/component';
+import { service } from '@ember/service';
+import { restartableTask, timeout } from 'ember-concurrency';
+import { on } from '@ember/modifier';
 
-## Monitoring and Observability
+export default class SearchBox extends Component<{ Args: {} }> {
+  @service declare api: ApiService;
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+  search = restartableTask(async (term: string) => {
+    await timeout(250);                       // debounce: restartable cancels previous runs
+    return this.api.searchProducts(term);
+  });
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+  onInput = (event: Event) => {
+    this.search.perform((event.target as HTMLInputElement).value);
+  };
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+  <template>
+    <input type="search" aria-label="Search products" {{on "input" this.onInput}} />
+    {{#if this.search.isRunning}}<p>Searching…</p>{{/if}}
+    {{#each this.search.lastSuccessful.value as |p|}}<p>{{p.name}}</p>{{/each}}
+  </template>
+}
+```
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+| Modifier | Behaviour |
+|----------|-----------|
+| `task` | Unlimited concurrency |
+| `restartableTask` | Cancel previous, run latest (search-as-you-type) |
+| `dropTask` | Ignore new while running (prevent double submit) |
+| `enqueueTask` | Run sequentially |
+| `keepLatestTask` | Run current, keep only the latest queued |
 
-## Scalability and Reliability
+Tasks are cancelled automatically when their owner (component) is destroyed, preventing "set on destroyed object" errors.
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+## Resources
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+Resources tie async or subscription-based data to the lifetime of whatever consumes it, using the `ember-resources` addon.
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+```js
+import { resource, cell } from 'ember-resources';
 
-## Integration and Interoperability
+export const Clock = resource(({ on }) => {
+  const now = cell(new Date());
+  const id = setInterval(() => (now.current = new Date()), 1000);
+  on.cleanup(() => clearInterval(id));
+  return now;
+});
+```
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+Use resources for data that depends on arguments and must be cleaned up (subscriptions, intervals, WebSockets).
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+## Data Layer: WarpDrive / EmberData
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+Modern EmberData (now developed under the WarpDrive name) centres on a request manager with handlers and a cache:
 
-## DevOps and Automation
+- `store.request({ url, method })` issues requests through a handler pipeline (auth headers, retries, caching).
+- Request builders generate standard requests (e.g. JSON:API `findRecord`, `query`).
+- Legacy adapters/serializers still work in compat mode; new code should use requests.
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+Choose plain `fetch` + services for small apps; WarpDrive when you need a normalized cache, relationship handling and request deduplication.
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+## Rendering Performance
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+- Provide `key=` in `{{#each}}` for lists whose items are replaced (so DOM is reused correctly).
+- Keep tracked state granular: one tracked property per independent piece of state; avoid replacing large objects for small changes.
+- Derived data in getters is recomputed on access; cache expensive derivations with `@cached` from `@glimmer/tracking`.
+- Virtualize long lists (e.g. vertical-collection) instead of rendering thousands of rows.
+- Profile with the Ember Inspector (render performance, component tree) and browser performance tools.
 
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
+```js
+import { cached, tracked } from '@glimmer/tracking';
 
-## Data Management
+export default class Report {
+  @tracked rows = [];
 
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
+  @cached
+  get totalsByCategory() {
+    const totals = new Map();
+    for (const r of this.rows) totals.set(r.category, (totals.get(r.category) ?? 0) + r.amount);
+    return totals;
+  }
+}
+```
 
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
+## Server-Side Rendering
 
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
+FastBoot renders Ember apps on Node for first paint and SEO; prember pre-renders static routes at build time.
 
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
+- Guard browser-only APIs (`window`, `document`, `localStorage`) using the `fastboot` service's `isFastBoot`.
+- Use the shoebox to transfer data fetched on the server to the client and avoid refetching.
+- Measure whether SSR is needed; many Ember apps are authenticated dashboards where pre-rendering a shell suffices.
 
-## API Design and Management
+## Migrating Classic Code
 
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
+| Classic | Modern replacement |
+|---------|--------------------|
+| `Component.extend` / two-way bindings | Glimmer component, arguments + callbacks |
+| `computed()` | Getters over `@tracked` state (`@cached` for expensive ones) |
+| Mixins | Services, utility functions, class composition |
+| Observers | Derived state, explicit actions, resources |
+| `didInsertElement` etc. | Modifiers |
+| `.hbs` + `.js` pairs, resolver lookup | Template tag (`.gjs`/`.gts`) with imports |
+| `this.get`/`this.set` | Native property access |
 
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
+Codemods help (e.g. native-class, Glimmer component, template-tag conversion codemods). Migrate leaf components first, enable lint rules (`ember-template-lint`, `eslint-plugin-ember`) that forbid classic patterns in new code, and track remaining classic usage.
 
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
+## Testing at Scale
 
-## Quality Assurance
+- Application tests with `visit()` and mock APIs (Mirage, MSW).
+- Test ember-concurrency tasks via rendered behaviour; use `settled()` / waiters so tests wait for async work.
+- Register test waiters (`@ember/test-waiters`) for custom async code not otherwise tracked.
 
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
+## Checklist
 
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Embroider (Vite for new apps) with static flags and route splitting
+- [ ] TypeScript signatures and Glint in CI
+- [ ] ember-concurrency or resources for async UI state with cancellation
+- [ ] WarpDrive requests or service-based fetch; no new adapter/serializer customizations without need
+- [ ] Keyed lists, `@cached` derivations, virtualization for large lists
+- [ ] Classic patterns blocked by lint for new code; migration tracked

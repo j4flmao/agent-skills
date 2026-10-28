@@ -539,11 +539,11 @@ Both compile to fine-grained reactive DOM updates. SolidJS uses JSX-only with si
 ### Step 2: Component Syntax (.svelte)
 ```svelte
 <script>
-  let { variant = 'primary', disabled = false, onclick } = $props()
+  let { variant = 'primary', disabled = false, onclick, children } = $props()
 </script>
 
 <button class={variant} {disabled} {onclick}>
-  <slot />
+  {@render children?.()}
 </button>
 
 <style>

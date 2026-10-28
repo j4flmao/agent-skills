@@ -1,213 +1,137 @@
-# Gitops Advanced Fundamentals
+# GitOps Fundamentals: Principles, Repository Layout and Application Model
+
+The foundations that the advanced GitOps topics build on: OpenGitOps principles, how to structure repositories and environments, the Argo CD Application and Flux Kustomization models, and how changes are promoted. Specialized topics (ApplicationSets, sync phases, multi-cluster, secrets, DR, security) have their own references in this skill.
+
+## OpenGitOps Principles
+
+1. Declarative: desired state is expressed declaratively.
+2. Versioned and immutable: desired state is stored with full history (Git).
+3. Pulled automatically: agents pull desired state from the source.
+4. Continuously reconciled: agents observe actual state and converge it to desired state.
+
+Consequences: no `kubectl apply` from CI to production; CI builds and publishes artifacts and updates Git, the in-cluster controller applies.
+
+## Repository Strategies
+
+| Strategy | Layout | Fits |
+|---|---|---|
+| App repo + config repo | Source code repo builds images; separate config repo holds manifests | Most teams; clean audit and access control |
+| Monorepo config | One config repo for all apps and clusters | Platform-managed fleets |
+| Repo per team | Each team owns its config repo; platform repo bootstraps | Large orgs, strong team boundaries |
+| Manifests in app repo | `deploy/` folder next to code | Small teams; couples app commits to deployments |
+
+## Environment Layout (Kustomize)
+
+```
+config-repo/
+  apps/
+    payments/
+      base/
+        deployment.yaml
+        service.yaml
+        kustomization.yaml
+      overlays/
+        dev/kustomization.yaml
+        staging/kustomization.yaml
+        prod/kustomization.yaml
+  clusters/
+    prod-eu-1/
+      apps.yaml            # which apps/overlays this cluster runs
+    staging-eu-1/
+      apps.yaml
+  platform/
+    ingress-nginx/  cert-manager/  external-secrets/
+```
+
+Prefer directories per environment over branches per environment: branches drift, merges between them are error-prone, and differences are hard to review. Helm users keep a values file per environment instead of overlays.
+
+## Argo CD Application
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: payments-prod
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io      # delete resources when the Application is deleted
+spec:
+  project: payments
+  source:
+    repoURL: https://git.example.com/platform/config-repo.git
+    targetRevision: main
+    path: apps/payments/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: payments
+  syncPolicy:
+    automated:
+      prune: true          # delete resources removed from Git
+      selfHeal: true       # revert manual changes in the cluster
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff: {duration: 10s, factor: 2, maxDuration: 3m}
+```
+
+`AppProject` restricts which repos, clusters, namespaces and resource kinds an Application may use; give each team its own project.
+
+## Flux Equivalent
+
+```yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata: {name: config, namespace: flux-system}
+spec:
+  interval: 1m
+  url: https://git.example.com/platform/config-repo.git
+  ref: {branch: main}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: {name: payments-prod, namespace: flux-system}
+spec:
+  interval: 10m
+  sourceRef: {kind: GitRepository, name: config}
+  path: ./apps/payments/overlays/prod
+  prune: true
+  wait: true
+  timeout: 5m
+```
 
-## Overview
-Gitops Advanced is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+## App of Apps / Bootstrapping
 
-## Core Concepts
+A root Application points at a directory of Application manifests (or an ApplicationSet generates them), so a new cluster is bootstrapped by installing Argo CD and applying one root Application. Flux bootstraps with `flux bootstrap <provider>` which commits its own manifests to the repo.
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Gitops Advanced helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+## Promotion Model
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Gitops Advanced solutions. These principles help maintain code quality and reduce technical debt.
+```
+CI: build image → push → sign → update dev overlay image tag (PR or bot commit)
+dev healthy + tests pass → PR updates staging overlay
+staging verified → PR (approved) updates prod overlay
+```
 
-### Concept 3: Data Management
-Proper data management is essential for Gitops Advanced. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+- Promote immutable references: image digests or semver tags, never `latest`.
+- Automate PR creation (Argo CD Image Updater, Flux image automation, Renovate, or a promotion tool such as Kargo); keep human approval for prod.
+- Each promotion is a Git commit: rollback = revert commit.
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+## Drift and Health
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+- Drift: Argo CD shows `OutOfSync` when live state differs from Git; `selfHeal` reverts it. Use `ignoreDifferences` only for fields legitimately managed by controllers (e.g. HPA-managed `replicas`).
+- Health: Argo CD has built-in health checks for core kinds and supports custom Lua health checks for CRDs; Flux uses `wait`/`healthChecks` on Kustomizations.
 
-## Architecture Patterns
+## What Does Not Belong in Git
 
-### Pattern 1: Standard Architecture
-The standard architecture for Gitops Advanced follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+- Plain-text secrets (use External Secrets Operator, Sealed Secrets or SOPS; see `gitops-secrets.md`).
+- Generated status or runtime-only fields.
+- Values that change on every deploy without review (use image automation writing commits instead).
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
-
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
-
-## Implementation Guide
-
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
-
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
-
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
-
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
-
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
-
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
-
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
-
-## Best Practices
-
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
-
-## Common Pitfalls
-
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
-
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
-
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
-
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Gitops Advanced concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+## Checklist
+- [ ] Separate config repo (or clear `deploy/` boundary) with directory-per-environment
+- [ ] Applications grouped in AppProjects with least-privilege restrictions
+- [ ] Automated sync with prune and self-heal where safe
+- [ ] Immutable image references promoted via commits/PRs
+- [ ] Bootstrap via root Application / Flux bootstrap
+- [ ] No secrets in plain text

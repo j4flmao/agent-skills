@@ -1,4 +1,37 @@
+---
+name: blueteam-operations
+description: >
+  Use this skill when the user says 'incident response', 'memory forensics', 'threat hunting', 'Windows forensic artifacts', 'Volatility', 'PICERL'. Guides structured incident response, host/memory forensics, and hypothesis-driven threat hunting. Defensive only. Do NOT use for: writing SIEM detection content (use security/detection-engineering), SOC program/metrics design (use security/soc-operations), or threat-intel lifecycle (use security/threat-intelligence).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [security, blue-team, incident-response, forensics, threat-hunting]
+---
+
 # Blue Team Operations
+
+## Purpose
+Guide defenders through structured incident response (PICERL), Windows/Linux host forensics, live memory analysis, and hypothesis-driven threat hunting. Produces investigation playbooks and the exact artifacts/event IDs needed to confirm or refute a hypothesis.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "analyze memory dump", "threat hunting", "forensic artifacts", "incident response plan", "beaconing analysis".
+
+### Input Context
+- Incident type and affected platform (Windows/Linux/cloud).
+- Available telemetry (Sysmon, EDR, proxy/firewall logs).
+
+### Output Artifact
+IR playbook or hunt plan with concrete artifacts, event IDs, and tools.
+
+### Response Format
+```
+Phase: {PICERL phase}
+Artifacts: {MFT / Prefetch / Event IDs / memory plugin}
+Tooling: {Volatility, KAPE, ...}
+Next step: {action}
+```
 
 > [!WARNING]
 > **DISCLAIMER: DEFENSIVE PURPOSES ONLY**

@@ -428,7 +428,7 @@ Hand off to ml-feature-engineering for advanced feature creation. For anomaly de
 ## Implementation Patterns
 
 ### Prophet Forecasting Pipeline
-`python
+```python
 from prophet import Prophet
 from prophet.diagnostics import cross_validation, performance_metrics
 import pandas as pd
@@ -463,10 +463,10 @@ df_cv = cross_validation(
 )
 metrics = performance_metrics(df_cv, metrics=['mse', 'mae', 'mape'])
 print(metrics[['horizon', 'mse', 'mae', 'mape']].mean())
-`
+```
 
 ### LSTM Time Series Model
-`python
+```python
 import torch
 import torch.nn as nn
 
@@ -492,7 +492,7 @@ def create_sequences(data, seq_length=30):
         X.append(data[i:i + seq_length])
         y.append(data[i + seq_length])
     return torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
-`
+```
 
 ## Performance Optimization
 

@@ -1,21 +1,48 @@
 ---
 name: multiplayer-netcode
-description: Expert multiplayer netcode - transport, client prediction, server reconciliation, interpolation, lag compensation, rollback, lobbies, and replication architecture.
+description: >
+  Use this skill when the user says 'multiplayer', 'netcode', 'client prediction', 'server reconciliation', 'entity interpolation', 'rollback netcode', 'lag compensation', 'GGPO'. Gameplay-level netcode: transports, client prediction and reconciliation, interpolation, lag compensation, rollback, lobbies and replication choices. Do NOT use for: engine-internal replication architecture (use game-engine-multiplayer-netcode), server fleet scaling (use scaling-architecture).
+version: "2.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [game, netcode, multiplayer, prediction, rollback]
 ---
 
 # Multiplayer Netcode — Deep Guide
 
+## Purpose
 Building robust multiplayer requires understanding latency, jitter, bandwidth, and how to hide them. This guide covers the full stack: transport, protocol design, client-server architecture, prediction, reconciliation, interpolation, lag compensation, rollback, and scalability.
+
+## Agent Protocol
+
+### Trigger
+"multiplayer", "netcode", "client prediction", "server reconciliation", "entity interpolation", "rollback netcode", "lag compensation", "GGPO".
+
+### Input Context
+- Genre and player count
+- Engine and transport
+- Latency targets and authority model
+
+### Output Artifact
+Netcode design and code. No file unless requested.
+
+### Response Format
+```
+Model: {client-server | rollback}
+Tick/send rates: {Hz}
+Latency hiding: {technique}
+Code: {snippet}
+```
 
 ## 1. The Problem: The Network Is the Enemy
 
 ```
-Unity of correctness over the wire is bounded by RTT (round-trip time).
-Local:  editorial latency
-LAN:    1-10ms       -> near-identical
-Wifi/regional: 20-80ms
-Internet worst: 150-250ms
+Typical round-trip times (RTT):
+LAN:                 < 5 ms
+Same region:         20-60 ms
+Cross-continent:     100-200 ms (+ Wi-Fi/mobile jitter and loss)
 ```
+Every client sees the world at least RTT/2 old; netcode decides who pays for that delay (the shooter, the target, or nobody via prediction).
 
 Netcode turns "what happened at t" into "what each client believes happened at t".
 
@@ -39,7 +66,7 @@ Split messages into channels:
 - **Reliable ordered**: login, join, inventory, item drop events.
 - **Reliable unordered**: individual events with own ordering (per-entity).
 
-Reliable-UDP uses ACKs + retransmit with sequence numbers; ack a byte range, not one packet.
+Reliable-UDP: every packet carries its sequence number plus the latest received sequence and a 32-bit ack bitfield for the previous 32 packets, so each packet acknowledges many; lost reliable messages are re-sent in a later packet (not the same packet retransmitted).
 
 ### 2.3 Packet Layout
 
@@ -124,7 +151,7 @@ void OnSnapshot(tick, serverState) {
 Render other players via **interpolation**, not prediction:
 
 - Keep a buffer of the last ~100ms of received snapshots.
-- Render at `serverTime - interpolationDelay` (e.g., 100ms = RTT) → smooth motion.
+- Render at `serverTime - interpolationDelay`, where the delay covers ~2 snapshot intervals plus jitter (e.g. ~100 ms at 20 Hz snapshots) — it is independent of RTT.
 - For jitter: Jitter Buffer (smoothly delay) + lag offset.
 
 Never mix interpolation with prediction on the same entity without buffers — jerky or doubled.
@@ -133,7 +160,7 @@ Never mix interpolation with prediction on the same entity without buffers — j
 
 Server-hit detection at the *shooter's* perceived time:
 
-1. Client fires; sends fire + player's view (aim) + timestamp (in server time).
+1. Client fires; sends aim plus the server tick (and interpolation fraction) it was rendering remote players at.
 2. Server **rewinds** the world state back to the client's send time (revert positions of all dynamic objects).
 3. Raycast/sweep against rewound state → decide hit.
 4. Allow even if the target moved already since then (client was seeing the past).
@@ -155,9 +182,9 @@ Implementation notes:
 
 | Technique | Gain |
 |-----------|------|
-| Bitpack to minimum bits (position into quantized grid) | ~50% |
+| Quantize + bitpack (positions to a grid, angles to N bits, smallest-three quaternions) | large; measure per game |
 | Skip unchanged actors (only send those changed) | huge |
-| Aggregate movement (encode relative to previous) | ~30% |
+| Encode relative to the acked baseline (delta) | large for slow-changing state |
 | Interleave (send each entity at 15-30Hz instead of 60) | bandwidth/priority control |
 | Contact-rate based interest management | scalability |
 
@@ -193,9 +220,9 @@ Opposite of prediction-with-snapshots: keep a rolling buffer of the last N ticks
 
 Deterministic sim highly recommended for exact rollback.
 
-## 9. Replication & Ownership (LAZ)
+## 9. Replication & Ownership
 
-- **Ownership**: the client that owns an actor sends its transforms; others interpolate.
+- **Client ownership** (co-op, non-competitive): the owning client sends its transforms; others interpolate. Cheap but trusts the client.
 - Server **replicates**: owns authoritative state, sends to clients with policies (reliable vs unreliable).
 - **Replication manager** on server: tracks which clients have which actors ("awareness"), sends deltas.
 

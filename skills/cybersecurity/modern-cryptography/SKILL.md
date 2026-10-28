@@ -5,7 +5,30 @@ description: Modern Cryptography, ECC, ECDHE, and Post-Quantum Algorithms
 
 # Modern Cryptography: ECC, Key Exchange, and Post-Quantum Security
 
-The bedrock of secure communications (TLS, SSH, VPNs) relies on asymmetric cryptography for key exchange and digital signatures. The landscape is shifting from traditional RSA to Elliptic Curve Cryptography (ECC) and, imminently, to Post-Quantum Cryptography (PQC).
+The bedrock of secure communications (TLS, SSH, VPNs) relies on asymmetric cryptography for key exchange and digital signatures. The landscape has shifted from traditional RSA to Elliptic Curve Cryptography (ECC) and, since NIST finalized its first PQC standards in 2024, to Post-Quantum Cryptography (PQC) — increasingly deployed in hybrid mode today.
+
+## Purpose
+Explain the mechanics and correct selection of modern asymmetric cryptography — ECC/ECDHE for key exchange and forward secrecy, and NIST PQC standards for quantum resistance — so engineers pick sound algorithms, parameters, and migration (hybrid) strategies for TLS/SSH/VPN systems.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "ECC vs RSA", "ECDHE / forward secrecy", "Curve25519", "post-quantum crypto", "ML-KEM / Kyber", "hybrid key exchange", "which curve/algorithm to use".
+
+### Input Context
+- Protocol (TLS 1.3, SSH, WireGuard, custom) and constraints (bandwidth, hardware).
+- Whether quantum resistance / crypto-agility is required.
+
+### Output Artifact
+Algorithm/curve recommendation with rationale and migration guidance. No key material.
+
+### Response Format
+```
+Use case: {key exchange | signature | KEM}
+Recommend: {algorithm + parameters}
+Why: {security + performance rationale}
+PQC posture: {classical | hybrid | PQC-only}
+```
 
 ## Elliptic Curve Cryptography (ECC)
 
@@ -37,11 +60,11 @@ ECDHE is the standard key exchange mechanism in modern protocols, providing Perf
 
 Shor's algorithm, running on a sufficiently powerful quantum computer, can solve both the integer factorization problem (breaking RSA) and the ECDLP (breaking ECC) in polynomial time. PQC aims to establish algorithms resistant to both quantum and classical computers.
 
-*   **NIST Standardization**: NIST has selected algorithms to standardize for PQC.
-    *   **Key Encapsulation Mechanisms (KEMs) / Key Exchange**: Kyber (ML-KEM). Based on the Module Learning with Errors (MLWE) problem over lattices.
-    *   **Digital Signatures**: Dilithium (ML-DSA), Falcon, and SPHINCS+ (stateless hash-based).
+*   **NIST Standardization**: NIST finalized its first PQC standards in August 2024.
+    *   **Key Encapsulation Mechanisms (KEMs) / Key Exchange**: ML-KEM (FIPS 203, formerly Kyber). Based on the Module Learning with Errors (MLWE) problem over lattices.
+    *   **Digital Signatures**: ML-DSA (FIPS 204, formerly Dilithium) and SLH-DSA (FIPS 205, stateless hash-based, formerly SPHINCS+). FN-DSA (formerly Falcon) is a further lattice-based signature standard in progress.
 *   **Lattice-Based Cryptography**: The core of Kyber and Dilithium. Security is based on the hardness of problems like the Shortest Vector Problem (SVP) or Learning With Errors (LWE) in high-dimensional lattices. It's difficult to find a vector close to a given point without the "trapdoor" information.
-*   **Hybrid Key Exchange**: During the transition phase, protocols (like TLS implementations in Chrome/Cloudflare) use a hybrid approach (e.g., X25519Kyber768Draft00): performing both a classical ECDHE exchange and a PQC Kyber exchange, combining the resulting secrets. This ensures security even if the novel PQC algorithm is broken, as long as ECC remains secure against classical attacks.
+*   **Hybrid Key Exchange**: During the transition, TLS 1.3 deployments (Chrome, Cloudflare, OpenSSL) use a hybrid group — initially `X25519Kyber768Draft00`, now the standardized `X25519MLKEM768` — performing both a classical X25519 ECDHE exchange and a PQC ML-KEM encapsulation and combining the resulting secrets. This keeps the connection secure even if one algorithm is broken, as long as the other holds (defending against "harvest now, decrypt later").
 
 ## Architecture Mapping
 

@@ -643,7 +643,6 @@ Bicep/ARM templates, Azure DevOps YAML pipeline definitions, AKS config, Azure C
   - references/azure-iac.md
   - references/azure-networking.md
   - references/azure-resource-management.md
-  - references/azure-policy-guide.md
 
 ## Handoff
 Hand off to Azure when provisioning Azure-specific infrastructure or pipelines. Hand off to terraform for multi-cloud IaC. Hand off to monitoring for Azure Monitor configuration.

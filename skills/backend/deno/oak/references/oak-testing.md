@@ -1,220 +1,255 @@
 # Oak Testing
 
-## Test Setup Patterns
+Testing Oak (`jsr:@oak/oak`) applications with `Deno.test`, `@std/assert`, `@std/expect`, and Oak's built-in `testing` helpers. Three levels: middleware unit tests with mock contexts, in-process request tests through `app.handle()`, and a few end-to-end tests against a real listener.
+
+## deno.json
+
+```json
+{
+  "imports": {
+    "@oak/oak": "jsr:@oak/oak@^17",
+    "@std/assert": "jsr:@std/assert@^1",
+    "@std/expect": "jsr:@std/expect@^1",
+    "@std/testing": "jsr:@std/testing@^1",
+    "@std/dotenv": "jsr:@std/dotenv@^0.225"
+  },
+  "tasks": {
+    "test": "deno test --allow-env --allow-read=. --allow-net=127.0.0.1",
+    "test:cov": "deno test --allow-env --allow-read=. --allow-net=127.0.0.1 --coverage=cov && deno coverage cov"
+  }
+}
+```
+Pin versions you have verified; the old `deno.land/std/testing/asserts.ts` path is superseded by `@std/assert` on JSR.
+
+## App Factory with Injected Dependencies
+
+Build the app from a function so tests can pass fakes instead of real repositories.
 
 ```typescript
-// tests/helpers.ts
-import { Application } from 'oak';
-import { router } from '../src/router/index.ts';
-import { errorMiddleware } from '../src/middleware/error.ts';
+// src/app.ts
+import { Application, Router } from "@oak/oak";
+import { errorMiddleware } from "./middleware/error.ts";
+import { authMiddleware } from "./middleware/auth.ts";
+import type { OrderRepository } from "./orders/repository.ts";
 
-export function createTestApp(): Application {
+export interface Deps { orders: OrderRepository; verifyToken(token: string): Promise<string | null> }
+
+export function createApp(deps: Deps): Application {
+  const router = new Router({ prefix: "/api" });
+  router.get("/orders", async (ctx) => { ctx.response.body = { data: await deps.orders.findAll() }; });
+  router.post("/orders", async (ctx) => {
+    const body = await ctx.request.body.json();
+    if (!body?.customerId || !Array.isArray(body.items) || body.items.length === 0) {
+      ctx.response.status = 400;
+      ctx.response.body = { success: false, error: { code: "VALIDATION" } };
+      return;
+    }
+    ctx.response.status = 201;
+    ctx.response.body = await deps.orders.save(body);
+  });
+
   const app = new Application();
   app.use(errorMiddleware);
+  app.use(authMiddleware(deps.verifyToken));
   app.use(router.routes());
   app.use(router.allowedMethods());
   return app;
 }
 ```
 
-## Integration Tests with HTTP
+## In-Memory Fake Repository
+
+```typescript
+// tests/fakes.ts
+import type { Order, OrderRepository } from "../src/orders/repository.ts";
+
+export class InMemoryOrderRepository implements OrderRepository {
+  #orders = new Map<string, Order>();
+  findAll() { return Promise.resolve([...this.#orders.values()]); }
+  findById(id: string) { return Promise.resolve(this.#orders.get(id) ?? null); }
+  save(input: Omit<Order, "id" | "status">) {
+    const order: Order = { ...input, id: crypto.randomUUID(), status: "PENDING" };
+    this.#orders.set(order.id, order);
+    return Promise.resolve(order);
+  }
+}
+
+export const fakeVerify = (token: string) => Promise.resolve(token === "valid-token" ? "user-1" : null);
+```
+
+## In-Process Request Tests with app.handle()
+
+`app.handle(request)` runs the full middleware stack and returns a `Response` without opening a socket: fast, no port allocation, no `--allow-net` needed.
 
 ```typescript
 // tests/orders_test.ts
-import { createTestApp } from './helpers.ts';
-import { assertEquals, assertExists } from 'std/testing/asserts.ts';
+import { assertEquals, assertExists } from "@std/assert";
+import { createApp } from "../src/app.ts";
+import { fakeVerify, InMemoryOrderRepository } from "./fakes.ts";
 
-Deno.test('POST /api/orders creates order', async () => {
-  const app = createTestApp();
-  const listener = app.listen({ port: 0 });
-  const port = (await listener).port;
+function setup() {
+  const app = createApp({ orders: new InMemoryOrderRepository(), verifyToken: fakeVerify });
+  const call = async (path: string, init: RequestInit = {}) => {
+    const headers = new Headers(init.headers);
+    if (!headers.has("authorization")) headers.set("authorization", "Bearer valid-token");
+    const res = await app.handle(new Request(`http://localhost${path}`, { ...init, headers }));
+    if (!res) throw new Error(`No response for ${path}`);
+    return res;
+  };
+  return { call };
+}
 
-  const res = await fetch(`http://localhost:${port}/api/orders`, {
-    method: 'POST',
-    body: JSON.stringify({
-      customerId: 'cust-123',
-      items: [{ sku: 'PROD-1', quantity: 2, price: 29.99 }],
-    }),
-    headers: { 'Content-Type': 'application/json' },
+Deno.test("POST /api/orders creates an order", async () => {
+  // Arrange
+  const { call } = setup();
+  const payload = { customerId: "cust-123", items: [{ sku: "PROD-1", quantity: 2 }] };
+
+  // Act
+  const res = await call("/api/orders", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
   });
 
+  // Assert
   assertEquals(res.status, 201);
   const body = await res.json();
   assertExists(body.id);
-  assertEquals(body.customerId, 'cust-123');
-
-  listener.close();
-});
-```
-
-## SuperDeno Testing
-
-```typescript
-// tests/superdeno_test.ts
-import { superdeno } from 'https://deno.land/x/superdeno@v4.8.0/mod.ts';
-import { createTestApp } from './helpers.ts';
-
-Deno.test('superdeno: GET /api/orders', async () => {
-  const app = createTestApp();
-  await superdeno(app.handle.bind(app))
-    .get('/api/orders')
-    .expect('Content-Type', /json/)
-    .expect(200)
-    .expect((res) => {
-      assertEquals(Array.isArray(res.body.data), true);
-    });
+  assertEquals(body.status, "PENDING");
 });
 
-Deno.test('superdeno: POST validation', async () => {
-  const app = createTestApp();
-  await superdeno(app.handle.bind(app))
-    .post('/api/orders')
-    .send({})
-    .expect(400)
-    .expect((res) => {
-      assertEquals(res.body.error.code, 'VALIDATION');
-    });
-});
-```
-
-## Mocking Dependencies
-
-```typescript
-// tests/mocks.ts
-export class MockOrderRepository {
-  private orders: Map<string, unknown> = new Map();
-
-  async findAll() {
-    return Array.from(this.orders.values());
-  }
-
-  async findById(id: string) {
-    return this.orders.get(id) || null;
-  }
-
-  async save(order: unknown) {
-    const id = crypto.randomUUID();
-    this.orders.set(id, { ...order, id });
-    return this.orders.get(id);
-  }
-
-  reset() {
-    this.orders.clear();
-  }
-}
-```
-
-## Testing Auth Middleware
-
-```typescript
-// tests/auth_test.ts
-Deno.test('auth middleware rejects missing token', async () => {
-  const app = createTestApp();
-  const listener = app.listen({ port: 0 });
-  const port = (await listener).port;
-
-  const res = await fetch(`http://localhost:${port}/api/orders`, {
-    headers: { 'Content-Type': 'application/json' },
+Deno.test("POST /api/orders rejects empty items", async () => {
+  const { call } = setup();
+  const res = await call("/api/orders", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ customerId: "cust-123", items: [] }),
   });
-
-  assertEquals(res.status, 401);
-  listener.close();
+  assertEquals(res.status, 400);
+  assertEquals((await res.json()).error.code, "VALIDATION");
 });
 
-Deno.test('auth middleware rejects invalid token', async () => {
-  const app = createTestApp();
-  const listener = app.listen({ port: 0 });
-  const port = (await listener).port;
-
-  const res = await fetch(`http://localhost:${port}/api/orders`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer invalid-token',
-    },
-  });
-
-  assertEquals(res.status, 401);
-  listener.close();
+Deno.test("auth: missing and invalid tokens return 401", async (t) => {
+  const { call } = setup();
+  for (const auth of ["", "Bearer invalid-token"]) {
+    await t.step(`authorization="${auth}"`, async () => {
+      const res = await call("/api/orders", { headers: { authorization: auth } });
+      assertEquals(res.status, 401);
+      await res.body?.cancel(); // always consume or cancel bodies to avoid leak errors
+    });
+  }
 });
-```
 
-## Testing Error Handling
-
-```typescript
-// tests/error_test.ts
-Deno.test('error middleware catches thrown errors', async () => {
-  const app = createTestApp();
-  const listener = app.listen({ port: 0 });
-  const port = (await listener).port;
-
-  const res = await fetch(`http://localhost:${port}/api/orders/invalid-id`);
+Deno.test("unknown route returns the standard error envelope", async () => {
+  const res = await setup().call("/does-not-exist");
   assertEquals(res.status, 404);
-
-  listener.close();
-});
-
-Deno.test('error middleware returns consistent format', async () => {
-  const app = createTestApp();
-  const listener = app.listen({ port: 0 });
-  const port = (await listener).port;
-
-  const res = await fetch(`http://localhost:${port}/not-found-path`);
   const body = await res.json();
-
-  assertEquals(res.status, 404);
-  assertEquals(body.error.code, 'NOT_FOUND');
   assertEquals(body.success, false);
-
-  listener.close();
+  assertEquals(body.error.code, "NOT_FOUND");
 });
 ```
 
-## Test Fixtures
+## Middleware Unit Tests with Mock Context
 
 ```typescript
-// tests/fixtures.ts
-export const validOrderPayload = {
-  customerId: 'cust-123',
-  items: [
-    { sku: 'PROD-1', quantity: 2, price: 29.99 },
-    { sku: 'PROD-2', quantity: 1, price: 49.99 },
-  ],
-};
+// tests/error_middleware_test.ts
+import { testing } from "@oak/oak";
+import { assertEquals } from "@std/assert";
+import { errorMiddleware } from "../src/middleware/error.ts";
 
-export const invalidOrderPayload = {
-  customerId: '',
-  items: [],
-};
+Deno.test("errorMiddleware maps thrown HttpError to JSON", async () => {
+  const ctx = testing.createMockContext({ path: "/api/orders/x" });
+  const next = () => Promise.reject(Object.assign(new Error("not found"), { status: 404 }));
 
-export const expectedOrderResponse = {
-  id: expect(String),
-  customerId: 'cust-123',
-  status: 'PENDING',
-  items: expect(Array),
-  totalAmount: expect(Number),
-};
+  await errorMiddleware(ctx, next);
+
+  assertEquals(ctx.response.status, 404);
+  assertEquals((ctx.response.body as { success: boolean }).success, false);
+});
+
+Deno.test("errorMiddleware passes through on success", async () => {
+  const ctx = testing.createMockContext();
+  await errorMiddleware(ctx, testing.createMockNext());
+  assertEquals(ctx.response.status, 404); // Oak default when nothing set a body
+});
 ```
 
-## Test Configuration
+## Spies and Stubs
 
 ```typescript
-// tests/config.ts
-import { load } from 'std/dotenv/mod.ts';
+import { assertSpyCalls, spy } from "@std/testing/mock";
+import { FakeTime } from "@std/testing/time";
 
-// Load test env before any imports
-await load({ envPath: '.env.test', export: true });
+Deno.test("verifyToken is called once per request", async () => {
+  const verify = spy((_t: string) => Promise.resolve("user-1"));
+  const app = createApp({ orders: new InMemoryOrderRepository(), verifyToken: verify });
+  const res = await app.handle(new Request("http://localhost/api/orders", {
+    headers: { authorization: "Bearer x" },
+  }));
+  await res?.body?.cancel();
+  assertSpyCalls(verify, 1);
+});
 
-export const testConfig = {
-  port: parseInt(Deno.env.get('TEST_PORT') || '0'),
-  database: Deno.env.get('TEST_DATABASE_URL') || ':memory:',
-};
+Deno.test("token expiry uses fake clock", () => {
+  using time = new FakeTime(new Date("2026-01-01T00:00:00Z"));
+  time.tick(3_600_000);
+  // assert expiry logic against Date.now()
+});
 ```
 
-## Run Tests
+## End-to-End Against a Real Listener
+
+Use sparingly (TLS, streaming, SSE, WebSocket). Wait for the `listen` event to learn the port, and abort to stop.
+
+```typescript
+Deno.test("e2e: server answers over TCP", async () => {
+  const app = createApp({ orders: new InMemoryOrderRepository(), verifyToken: fakeVerify });
+  const controller = new AbortController();
+  const listening = new Promise<number>((resolve) =>
+    app.addEventListener("listen", (e) => resolve(e.port), { once: true })
+  );
+  const done = app.listen({ hostname: "127.0.0.1", port: 0, signal: controller.signal });
+  const port = await listening;
+
+  const res = await fetch(`http://127.0.0.1:${port}/api/orders`, {
+    headers: { authorization: "Bearer valid-token" },
+  });
+  assertEquals(res.status, 200);
+  await res.body?.cancel();
+
+  controller.abort();
+  await done;
+});
+```
+
+## Test Environment
+
+```typescript
+// tests/env.ts — import first in tests that read env
+import { load } from "@std/dotenv";
+await load({ envPath: ".env.test", export: true });
+```
+Never point tests at production credentials; keep `.env.test` values fake.
+
+## Running
 
 ```bash
-deno test --allow-net --allow-read --allow-env
-deno test --coverage  # Generate coverage
-deno test --watch     # Watch mode
-deno test --filter "auth"  # Run auth tests only
+deno task test
+deno test --filter "auth"          # by name
+deno test --watch
+deno test --parallel               # files run in parallel workers
+deno task test:cov                 # coverage report (also: deno coverage cov --lcov > cov.lcov)
 ```
+
+## Pitfalls
+- `app.listen()` returns a promise that resolves when the server closes, not a listener object; use the `listen` event and an `AbortSignal`.
+- Unconsumed response bodies trigger Deno's resource sanitizer failures.
+- Real timers/intervals left running fail the op sanitizer; use `FakeTime` or clear them.
+- Shared module-level state between tests makes order matter; build a fresh app per test.
+
+## Checklist
+- [ ] App built via factory with injectable dependencies
+- [ ] Most tests use `app.handle()`; few use real sockets
+- [ ] Error envelope, validation and auth paths covered
+- [ ] Bodies consumed or cancelled
+- [ ] Minimal `--allow-*` permissions in the test task

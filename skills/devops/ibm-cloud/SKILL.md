@@ -431,12 +431,8 @@ resource "ibm_en_destination" "pagerduty" {
 - Ignoring IBM Cloud Secrets Manager — plaintext API keys in code.
 
 ## References
-  - references/iks-kubernetes.md — IKS Cluster and Worker Pool Management
-  - references/ibm-vpc-networking.md — VPC, Subnets, ACLs, Security Groups
   - references/ibm-cloud-advanced.md — IBM Cloud Advanced Topics
   - references/ibm-cloud-fundamentals.md — IBM Cloud Fundamentals
-  - references/ibm-satellite.md — Satellite for Hybrid Deployments
-  - references/ibm-cos.md — Cloud Object Storage Configuration
 ## Handoff
 - `devops-kubernetes` for workload deployment on IKS clusters.
 - `devops-terraform` for Terraform state and module patterns for IBM Cloud.

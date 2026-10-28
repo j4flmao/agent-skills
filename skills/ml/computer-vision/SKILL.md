@@ -267,7 +267,7 @@ def configure_training(model, config):
     )
 
     # Mixed precision
-    scaler = torch.cuda.amp.GradScaler() if config["mixed_precision"] else None
+    scaler = torch.amp.GradScaler("cuda") if config["mixed_precision"] else None  # not needed for bf16
 
     return criterion, optimizer, scheduler, scaler
 ```
@@ -452,7 +452,7 @@ Hand off to ml-experiment-tracking for training runs. For model deployment on ed
 ## Implementation Patterns
 
 ### Transfer Learning for Classification
-`python
+```python
 import tensorflow as tf
 from tensorflow.keras.applications import EfficientNetB0
 from tensorflow.keras import layers, Model
@@ -477,10 +477,10 @@ model.compile(
     loss='categorical_crossentropy',
     metrics=['accuracy']
 )
-`
+```
 
 ### YOLO Training Setup (PyTorch)
-`python
+```python
 import torch
 from ultralytics import YOLO
 
@@ -497,7 +497,7 @@ results = model.train(
 )
 metrics = model.val()
 print(f'mAP50: {metrics.box.map50:.4f}, mAP50-95: {metrics.box.map:.4f}')
-`
+```
 
 ## Performance Optimization
 

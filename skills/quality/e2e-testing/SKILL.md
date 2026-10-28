@@ -1,7 +1,7 @@
 ---
-name: quality-e2e-testing
+name: e2e-testing
 description: >
-  Use this skill when setting up E2E testing, end-to-end tests, Playwright, Cypress, browser tests, user flow tests, or integration tests. This skill enforces: framework selection (Playwright preferred), page object model, test isolation, parallel execution, CI integration, and visual assertions. Do NOT use for: unit testing, API-only tests, or performance/load testing.
+  Use this skill when the user says 'set up e2e tests', 'playwright vs cypress', 'page object model', 'e2e project structure', 'e2e CI pipeline', 'browser tests for user flows'. It implements an E2E suite: framework selection, project layout, page objects, isolation and API seeding, parallel/sharded CI runs and screenshot assertions, with Playwright as the default for new projects. Do NOT use for: E2E strategy, flakiness policy and journey selection (use quality-e2e-testing), deep Playwright-specific APIs (use qa-e2e-playwright), unit tests (use quality/unit-testing), API-only or contract tests (use quality/integration-testing, quality/contract-testing), load testing.
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -60,7 +60,7 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions. Compr
 ## Workflow
 
 ### Step 1: Framework Selection
-Playwright: cross-browser (Chromium, Firefox, WebKit), native async, network mocking, visual diffing, codegen, auto-wait. Cypress: easier debugging, time-travel, rich interactive runner, but Chromium-only + flakier cross-browser. Selenium: last resort — only if legacy compatibility required. Recommendation: Playwright for new projects.
+Playwright: cross-browser (Chromium, Firefox, WebKit), native async, network mocking, visual diffing, codegen, auto-wait. Cypress: excellent interactive runner with time-travel debugging and component testing; runs Chrome-family browsers, Firefox and (experimental) WebKit, but executes inside the browser, so multi-tab, multi-origin and native-event scenarios are harder. Selenium: last resort — only if legacy compatibility required. Recommendation: Playwright for new projects.
 
 ### Step 2: Project Setup
 ```bash
@@ -71,12 +71,14 @@ Directory structure: `e2e/` with `pages/` (page objects), `fixtures/` (test data
 
 ### Step 3: Page Object Model
 ```typescript
+import type { Page } from "@playwright/test";
+
 export class LoginPage {
-  constructor(private page: Page) {}
+  constructor(private readonly page: Page) {}
   async goto() { await this.page.goto("/login"); }
-  async fillEmail(email: string) { await this.page.fill('[data-testid="email"]', email); }
-  async fillPassword(password: string) { await this.page.fill('[data-testid="password"]', password); }
-  async submit() { await this.page.click('[data-testid="submit"]'); }
+  async fillEmail(email: string) { await this.page.getByLabel("Email").fill(email); }
+  async fillPassword(password: string) { await this.page.getByLabel("Password").fill(password); }
+  async submit() { await this.page.getByRole("button", { name: "Sign in" }).click(); }
   async login(email: string, password: string) {
     await this.fillEmail(email);
     await this.fillPassword(password);
@@ -211,6 +213,7 @@ export class CheckoutPage {
 ### API Mocking in E2E Tests
 ```typescript
 test("should handle payment failure gracefully", async ({ page }) => {
+  const checkoutPage = new CheckoutPage(page);
   await page.route("**/api/payments", async (route) => {
     await route.fulfill({
       status: 402,
@@ -230,7 +233,7 @@ test("should handle payment failure gracefully", async ({ page }) => {
 ### Playwright Global Setup for Auth
 ```typescript
 // e2e/global-setup.ts
-import { FullConfig } from "@playwright/test";
+import { chromium, type FullConfig } from "@playwright/test";
 
 async function globalSetup(config: FullConfig) {
   const { baseURL, storageState } = config.projects[0].use;
@@ -244,7 +247,10 @@ async function globalSetup(config: FullConfig) {
   await page.context().storageState({ path: storageState as string });
   await browser.close();
 }
+
+export default globalSetup;
 ```
+Newer Playwright versions also support a `setup` project with `dependencies` (see qa-e2e-playwright), which gives traces and fixtures for the login step; prefer it for new suites.
 
 ## CI Pipeline Configuration
 
@@ -262,6 +268,10 @@ jobs:
   e2e:
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     services:
       postgres:
         image: postgres:16
@@ -273,7 +283,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright browsers
@@ -295,13 +305,13 @@ jobs:
 ## E2E Testing Anti-Patterns
 
 ### Anti-Pattern: Using CSS Classes for Selectors
-CSS classes change frequently for styling and are not reliable test targets. Use `data-testid` attributes that are stable across styling changes. Never use text content for selectors (breaks with i18n). Never use XPath (brittle to DOM structure changes).
+CSS classes change frequently for styling and are not reliable test targets. Prefer user-facing locators (`getByRole` with accessible name, `getByLabel`) — they double as an accessibility check; use `data-testid` where no stable accessible name exists or copy changes per locale. Avoid XPath and deep CSS chains (brittle to DOM structure changes).
 
 ### Anti-Pattern: Tests Dependent on Order
 E2E tests that depend on state created by previous tests are fragile and hard to debug. Each test must set up its own state (via API seeding or UI actions). Use `test.describe.serial` only when absolutely necessary (and document why).
 
 ### Anti-Pattern: Waiting with Fixed Timeouts
-Using `page.waitForTimeout(3000)` creates flaky tests that either waste time or fail intermittently. Use auto-waiting locators (`page.getByText('...')`, `page.waitForSelector`, `page.waitForResponse`). Playwright automatically waits for elements to be visible, enabled, and stable.
+Using `page.waitForTimeout(3000)` creates flaky tests that either waste time or fail intermittently. Use web-first assertions (`await expect(locator).toBeVisible()`) and `page.waitForResponse` for specific network events. Playwright automatically waits for elements to be visible, enabled, and stable.
 
 ### Anti-Pattern: Testing Everything as E2E
 Writing E2E tests for every single feature creates a slow, brittle, expensive test suite. Use E2E for critical user journeys only (happy path through main workflows). Test edge cases and error paths at lower levels (unit, integration).
@@ -324,12 +334,11 @@ E2E tests that cover too many steps in a single test are hard to debug when they
 
 ## Performance Considerations
 
-- E2E test execution: 10-60 seconds per test depending on complexity. Target suite completion < 20 minutes.
-- Parallelization: sharding across N workers gives near-linear speedup. 4 shards = 4x faster.
-- Playwright retries: 1-2 retries for CI. Each retry adds 1x execution time. Target zero flaky tests.
-- API seeding: 50-200ms per API call for test data setup. Batch seeding calls for faster setup.
-- Visual snapshot comparison: 200-500ms per screenshot comparison.
-- CI resource: each worker needs ~1GB RAM for Playwright browser. Budget accordingly.
+- Keep the full suite short enough to gate merges (many teams target under ~15–20 minutes); prune or move non-critical journeys to nightly runs.
+- Sharding scales roughly linearly until setup time (install, app start, seeding) dominates — measure per-shard overhead.
+- Retries multiply runtime for failing tests; treat every retried-then-passed test as a flake to fix.
+- Seed data through APIs in parallel (`Promise.all`) instead of through the UI.
+- Browsers are memory-hungry; size CI runners and `workers` from observed memory use, not CPU count alone.
 
 ## E2E Test Data Strategy
 
@@ -340,8 +349,8 @@ import { APIRequestContext } from "@playwright/test";
 export async function seedTestData(request: APIRequestContext) {
   const user = await request.post("/api/test/users", {
     data: {
-      email: `e2e_${Date.now()}@example.com`,
-      password: "testpass123",
+      email: `e2e_${crypto.randomUUID()}@example.com`,
+      password: process.env.E2E_SEED_PASSWORD,
       role: "customer",
     },
   });
@@ -355,9 +364,14 @@ export async function seedTestData(request: APIRequestContext) {
   return { userId, token, productId };
 }
 
-export async function cleanupTestData(request: APIRequestContext, userId: string) {
-  await request.delete(`/api/test/users/${userId}`);
-  await request.delete(`/api/test/products/test-only`);
+export async function cleanupTestData(request: APIRequestContext, ids: { userId: string; productId: string }) {
+  const responses = await Promise.all([
+    request.delete(`/api/test/users/${ids.userId}`),
+    request.delete(`/api/test/products/${ids.productId}`),
+  ]);
+  for (const res of responses) {
+    if (!res.ok()) throw new Error(`Test data cleanup failed: ${res.url()} -> ${res.status()}`);
+  }
 }
 ```
 
@@ -365,6 +379,8 @@ export async function cleanupTestData(request: APIRequestContext, userId: string
 
 ```typescript
 // playwright.config.ts — mobile project
+import { defineConfig, devices } from "@playwright/test";
+
 export default defineConfig({
   projects: [
     {
@@ -373,37 +389,31 @@ export default defineConfig({
     },
     {
       name: "chromium-mobile",
-      use: {
-        ...devices["Pixel 5"],
-        isMobile: true,
-      },
+      use: { ...devices["Pixel 5"] },
     },
     {
       name: "safari-mobile",
-      use: {
-        ...devices["iPhone 13"],
-        isMobile: true,
-      },
+      use: { ...devices["iPhone 13"] }, // WebKit engine; device descriptors already set isMobile/hasTouch
     },
   ],
 });
 ```
 
 ## Rules
-- data-testid attributes for selectors — never CSS classes or text content
+- Role/label locators first, `data-testid` as fallback — never styling CSS classes
 - One assertion per test (logical assertion — not literal expect call)
 - Page objects expose business actions, not UI implementations
 - Tests are independent and parallelizable by default
 - Global setup for auth — per-test setup for data
-- Never use `page.waitFor` — use auto-waiting locators
-- Screenshot diff threshold: 0.2 (prevent false positives)
+- Never use `page.waitForTimeout` for synchronization — use web-first assertions
+- Screenshot comparisons: keep the default per-pixel `threshold` (0.2) and tune `maxDiffPixels`/`maxDiffPixelRatio` per page
 - Retry flaky tests in CI, but flag and fix them
 - API seed data before test, clean up after test — never share test state
 - Run E2E tests against dedicated test environment with controlled data
 - Tag tests by layer: @smoke, @regression, @visual for selective execution
 - Mock external services at the network level — never rely on real third-party APIs
 - Target mobile + desktop viewports in CI — responsive E2E coverage
-- E2E suite must complete in under 20 minutes — optimize or prune
+- Keep the merge-gating suite fast (shard, prune, move secondary journeys to nightly)
 
 ## References
   - references/cypress-guide.md — Cypress Guide
@@ -416,130 +426,6 @@ export default defineConfig({
 `quality-visual-testing` for visual regression setup alongside E2E tests.
 `quality-contract-testing` for API contract verification.
 Carry forward: test config, page objects, CI pipeline config.
-## Implementation Patterns
-
-### Observer Pattern for Event Handling
-`
-interface EventObserver<T> {
-  onEvent(event: T): Promise<void>;
-}
-
-class EventBus<T> {
-  private observers: Set<EventObserver<T>> = new Set();
-  subscribe(observer: EventObserver<T>): void {
-    this.observers.add(observer);
-  }
-  unsubscribe(observer: EventObserver<T>): void {
-    this.observers.delete(observer);
-  }
-  async emit(event: T): Promise<void> {
-    const results = Array.from(this.observers).map(o => o.onEvent(event));
-    await Promise.allSettled(results);
-  }
-}
-`
-
-### Configuration-Driven Approach
-`
-config:
-  defaults:
-    timeout: 30s
-    retryCount: 3
-  overrides:
-    production:
-      timeout: 60s
-      retryCount: 5
-    development:
-      timeout: 300s
-      retryCount: 1
-`
-
-## Production Considerations
-
-### Deployment Checklist
-- [ ] Configuration validated against schema before startup
-- [ ] Health check endpoints registered and monitored
-- [ ] Graceful shutdown with draining period (30s timeout)
-- [ ] Resource limits configured (CPU, memory, file descriptors)
-- [ ] Log level set appropriate for environment
-- [ ] Metrics endpoint secured and exposed
-- [ ] Rate limiting configured per-tier
-- [ ] TLS certificates valid and auto-renewing
-- [ ] Database migrations run as separate deployment step
-- [ ] Feature flags ready for gradual rollout
-
-### Monitoring and Alerting
-| Metric | Threshold | Severity | Action |
-|--------|-----------|----------|--------|
-| Error rate | > 1% over 5min | Critical | Page on-call |
-| p99 latency | > 2s over 5min | Warning | Investigate |
-| Throughput drop | > 50% over 1min | Critical | Check upstream |
-| Queue depth | > 1000 over 1min | Warning | Scale consumers |
-| Disk usage | > 85% | Warning | Clean or expand |
-| Memory usage | > 90% heap | Critical | Restart or scale |
-
-## Anti-Patterns
-
-| Anti-Pattern | Symptom | Root Cause | Solution |
-|-------------|---------|------------|----------|
-| Premature optimization | Complex code for no measured benefit | Guessing instead of profiling | Measure first, optimize based on data |
-| Copy-paste reuse | Duplicate code across codebase | Lack of abstraction | Extract shared logic into libraries |
-| Gold-plating | Features with no current requirement | Over-engineering | YAGNI — build what's needed now |
-| Magical thinking | Assumptions without validation | Skipping error handling | Handle all failure modes explicitly |
-
-## Performance Optimization
-
-### Caching Strategy
-Cache hierarchy: L1 (in-memory local) → L2 (distributed Redis/Memcached) → L3 (CDN/Edge).
-Cache invalidation: TTL-based (simple, stale), event-based (complex, fresh), write-through (consistent, higher write latency), write-behind (fast writes, eventual consistency).
-
-### Resource Pooling
-- Database connections: Pool of reusable connections (HikariCP, pgBouncer)
-- HTTP connections: Keep-alive + connection pooling for external calls
-- Thread pool: Bounded thread pools for async task execution
-
-### Profiling Methodology
-1. Establish baseline with production traffic profile
-2. Profile CPU with sampling profiler (pprof, perf, async-profiler)
-3. Profile memory with heap dumps and allocation tracking
-4. Profile I/O with strace/perf trace for syscall analysis
-5. Profile latency with distributed tracing (OpenTelemetry)
-6. Identify bottleneck, formulate hypothesis, implement fix
-7. Re-profile to verify improvement, repeat
-
-## Security Considerations
-
-### Threat Modeling (STRIDE)
-- Spoofing: Identity validation, authentication
-- Tampering: Integrity checks, digital signatures
-- Repudiation: Audit logs, non-repudiation
-- Information disclosure: Encryption, access control
-- Denial of service: Rate limiting, resource quotas
-- Elevation of privilege: Principle of least privilege
-
-### Supply Chain Security
-- Dependency scanning: Snyk, Dependabot, Trivy
-- SBOM generation: CycloneDX or SPDX format
-- Signed commits: GPG or SSH commit signing
-- Artifact verification: Checksum validation, signature verification
-
-### Secrets Management
-- Secrets never in code — always in secrets manager (Vault, AWS Secrets Manager)
-- Rotation policy: Rotate database credentials every 90 days
-- Access audit: Log every secrets access, alert on anomalies
-- Encryption at rest and in transit for all secrets
-- Principle of least privilege: each service gets only its own secrets
-
-## Rules
-- Default-deny security posture — allow only explicitly required access.
-- All inputs validated, all outputs encoded, all errors handled.
-- Defend in depth — multiple layers of security controls.
-- Fail securely — errors default to safe behavior.
-- Log security-relevant events for audit and investigation.
-- Keep dependencies updated — automate vulnerability scanning.
-- Design for observability from day one, not as an afterthought.
-- Document all architectural decisions with rationale.
-- Review code for security, performance, and correctness before merging.
 ## Architecture Decision Trees
 
 ### Framework Selection

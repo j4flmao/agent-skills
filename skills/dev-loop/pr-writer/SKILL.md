@@ -34,6 +34,17 @@ Exact user phrases: "write PR", "pull request", "PR description", "PR template",
 ### Output Artifact
 Pull request with title following convention, structured description, and review guidance.
 
+### Response Format
+```
+Title: {type(scope): imperative summary}
+## What
+## Why (Closes #{issue})
+## How
+## Testing
+## Risks / Rollback
+## Screenshots (UI only)
+```
+
 ### Completion Criteria
 - [ ] PR title follows Conventional Commits format
 - [ ] Description includes what, why, and how
@@ -259,7 +270,7 @@ reviewer_etiquette:
 | Practice | Rationale |
 |----------|-----------|
 | Fill out the template | Consistent structure speeds review |
-| Keep PR under 400 lines | Research shows review effectiveness drops sharply after 400 lines |
+| Keep PR under ~400 changed lines | The SmartBear/Cisco code review study found defect detection falls off when reviewers inspect more than roughly 200–400 lines at a time |
 | One PR = one concern | Easier to review, revert, and understand |
 | Screenshots for UI | Visual context that code cannot convey |
 | Link issues | Traceability from code to requirement |
@@ -312,8 +323,8 @@ Hotfix tag: v2.0.1
 ## References
   - references/pr-writer-advanced.md — PR Writer Advanced Topics
   - references/pr-writer-fundamentals.md — PR Writer Fundamentals
-  - references/pr-writer-templates.md — PR Templates Reference
-  - references/pr-writer-workflow.md — PR Workflow Reference
+  - references/pr-templates.md — PR Templates
+  - references/pr-review-workflow.md — PR Review Workflow
 ## Handoff
 Hand off to `dev-loop-code-review` for PR review. Hand off to `dev-loop-changelog-generator` for release note generation from PR.
 

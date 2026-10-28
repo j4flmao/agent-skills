@@ -481,7 +481,6 @@ ENTRYPOINT ["/app"]
 ### YAML: Docker Compose for Dev Environment
 
 ```yaml
-version: "3.9"
 services:
   app:
     build:

@@ -1,214 +1,125 @@
-# Internal Developer Platform Advanced Topics
-
-## Introduction
-Advanced Internal Developer Platform topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
-
-## Advanced Architecture Patterns
-
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
-
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
-
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
-
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
-
-## Performance Optimization
-
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
-
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
-
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
-
-## Security Hardening
-
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
-
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
-
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
-
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
-
-## Monitoring and Observability
-
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
-
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
-
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
-
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
-
-## Scalability and Reliability
-
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
-
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
-
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
-
-## Integration and Interoperability
-
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
-
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
-
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
-
-## DevOps and Automation
-
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
-
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
-
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
-
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
-
-## Data Management
-
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
-
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
-
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
-
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
-
-## API Design and Management
-
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+# Internal Developer Platform: Advanced Topics
+
+Advanced design topics for mature platforms: platform orchestration and workload specifications, environment management including ephemeral environments, multi-tenancy, guardrails with policy as code, Backstage at scale (new backend system, permissions, catalog performance), platform APIs, and versioning golden paths. Fundamentals are in `internal-developer-platform-fundamentals.md`.
+
+## Platform Orchestration
+
+Developers should describe **what** a workload needs; the platform decides **how** per environment.
+
+| Approach | Tooling examples | Notes |
+|----------|------------------|-------|
+| Workload spec + orchestrator | Score spec (`score.yaml`) with score-k8s/score-compose, Humanitec Platform Orchestrator | Environment-agnostic workload definition, resources resolved by drivers |
+| Kubernetes-native composition | Crossplane XRDs/Compositions, KRO (Kube Resource Orchestrator) | Platform APIs as CRDs; GitOps-friendly |
+| Promise-based framework | Kratix | Platform "promises" fulfilled by pipelines across clusters |
+| Template-only | Backstage scaffolder + Terraform modules | Simple start; drift after day 1 unless templates stay updatable |
+
+### Score Example
+
+```yaml
+# score.yaml
+apiVersion: score.dev/v1b1
+metadata:
+  name: orders-api
+containers:
+  main:
+    image: .
+    variables:
+      DB_URL: postgres://${resources.db.username}:${resources.db.password}@${resources.db.host}:${resources.db.port}/${resources.db.name}
+service:
+  ports:
+    http: { port: 80, targetPort: 8080 }
+resources:
+  db:
+    type: postgres
+  route:
+    type: route
+    params: { host: orders.example.com, path: /, port: 80 }
+```
+
+The same file renders to Docker Compose locally (`score-compose`) and Kubernetes manifests in clusters (`score-k8s`), with platform-defined provisioners mapping `type: postgres` to a container locally and a managed database in production.
+
+### Platform API with Crossplane (v2)
+
+```yaml
+apiVersion: platform.acme.io/v1alpha1
+kind: Database
+metadata:
+  name: orders-db
+  namespace: team-orders
+spec:
+  engine: postgres
+  size: small
+```
+
+The XRD defines allowed parameters (size enum, engine versions); compositions encode the organisation's defaults (encryption, backups, network, tags). See the `crossplane` skill for composition details.
+
+## Environment Management
+
+| Environment type | Purpose | Implementation notes |
+|------------------|---------|----------------------|
+| Local | Inner loop | Compose/Score, Tilt, Skaffold, dev containers |
+| Ephemeral preview (per PR) | Review and integration tests | Namespaces or vclusters per PR, seeded data, TTL cleanup |
+| Shared dev/staging | Integration with other teams | Stable versions of dependencies |
+| Production | Customers | Strict policies, progressive delivery |
+
+Ephemeral environment rules:
+- Create on PR open, destroy on merge/close and after a TTL.
+- Use lightweight dependencies (shared database server with per-environment schemas, or mocked external services) to control cost.
+- Seed deterministic test data; never copy production PII.
+- Track cost per environment and enforce quotas.
+
+## Multi-Tenancy
+
+| Model | Isolation | Trade-off |
+|-------|-----------|-----------|
+| Namespace per team/app | Soft (RBAC, NetworkPolicy, ResourceQuota, Pod Security Admission) | Cheap; shared control plane and node risks |
+| Virtual clusters (vcluster) | Separate API server per tenant on shared nodes | Tenants can install CRDs; more overhead |
+| Cluster per team/environment | Strong | Higher cost; fleet management needed |
+| Cloud account/project per team | Strong blast-radius isolation | Requires landing zone automation |
+
+Baseline per tenant: RBAC bound to team groups from the IdP, default-deny NetworkPolicies, quotas and limit ranges, separate secrets scopes, cost labels.
+
+## Guardrails: Policy as Code
+
+- Admission control: Kyverno or OPA Gatekeeper (or Kubernetes ValidatingAdmissionPolicy with CEL) to enforce required labels, image registries, resource limits, no privileged pods.
+- IaC checks before apply: Conftest/OPA, Checkov, tfsec-style rules in pipelines.
+- Prefer **mutating defaults** (add labels, default resources) and clear error messages over silent rejection.
+- Run policies in audit mode first, measure violations, then enforce.
+
+## Backstage at Scale
+
+- **New backend system**: plugins and modules are installed with `backend.add(import('@backstage/plugin-...'))`; the legacy backend system is deprecated. Migrate custom plugins to `createBackendPlugin`/`createBackendModule`.
+- **Frontend**: the new frontend system (extensions, blueprints) is progressing; check plugin compatibility before migrating.
+- **Catalog performance**: prefer entity providers (pull from GitHub org discovery, cloud APIs, IdP) over thousands of manually registered locations; tune processing intervals; run multiple backend replicas with a shared Postgres.
+- **Permissions framework**: define policies (`PermissionPolicy`) to restrict template execution, entity visibility and actions by ownership or group; enable it before opening the portal widely.
+- **Scaffolder**: custom actions for internal APIs; templates call the platform API rather than writing infrastructure directly, so day-2 changes go through the same API.
+- **Upgrades**: Backstage releases monthly; use `backstage-cli versions:bump` regularly to avoid painful jumps.
+
+## Day-2 Operations of Golden Paths
+
+Templates create code once; services then drift. Strategies:
+- Keep shared logic in versioned libraries, base images, reusable CI workflows and Helm charts, not copied into each repo.
+- Use update tooling (Renovate presets, template update tools such as Cruft/Copier for cookiecutter-style templates) to propagate changes.
+- Track golden path version per service in the catalog; scorecards flag outdated versions.
+
+## Platform APIs and Versioning
+
+- Version platform APIs (CRD versions, API paths). Support N-1 versions with migration guides and automated migration PRs.
+- Publish a changelog and deprecation policy; announce in the portal.
+- Treat breaking changes like product changes: pilot with a few teams first.
+
+## Measuring Platform Value
+
+- Cost to serve vs time saved: hours saved per golden path use multiplied by usage.
+- Lead time and change failure rate for teams on vs off golden paths (beware selection bias).
+- Platform reliability: SLOs for the platform's own APIs, CI and CD (the platform is production for developers).
+
+## Checklist
+
+- [ ] Developer intent captured in a workload spec or platform API, not raw infrastructure
+- [ ] Ephemeral environments with TTL, quotas and synthetic data
+- [ ] Tenant isolation model chosen and baseline controls automated
+- [ ] Policies rolled out audit-first with actionable messages
+- [ ] Backstage on the new backend system with permissions enabled
+- [ ] Golden path changes propagate to existing services
+- [ ] Platform has SLOs, versioned APIs and a deprecation policy

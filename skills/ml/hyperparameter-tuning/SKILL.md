@@ -180,7 +180,8 @@ from optuna.samplers import TPESampler
 from optuna.pruners import MedianPruner
 import xgboost as xgb
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import StratifiedKFold
+import numpy as np
 
 def objective(trial):
     params = {
@@ -195,21 +196,25 @@ def objective(trial):
         "eval_metric": "logloss",
         "random_state": 42 + trial.number,
     }
-    model = xgb.XGBClassifier(**params, use_label_encoder=False)
+    model = xgb.XGBClassifier(**params)
 
-    score = cross_val_score(model, X_train, y_train, cv=3, scoring="roc_auc", n_jobs=-1).mean()
-
-    for epoch in range(10):
-        trial.report(score, epoch)
+    # Report the running CV mean after each fold so the pruner can stop bad trials early
+    cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+    fold_scores = []
+    for fold, (tr_idx, va_idx) in enumerate(cv.split(X_train, y_train)):
+        model.fit(X_train[tr_idx], y_train[tr_idx])
+        proba = model.predict_proba(X_train[va_idx])[:, 1]
+        fold_scores.append(roc_auc_score(y_train[va_idx], proba))
+        trial.report(float(np.mean(fold_scores)), fold)
         if trial.should_prune():
             raise optuna.TrialPruned()
 
-    return score
+    return float(np.mean(fold_scores))
 
 study = optuna.create_study(
     direction="maximize",
     sampler=TPESampler(n_startup_trials=10, seed=42),
-    pruner=MedianPruner(n_startup_trials=10, n_warmup_steps=5, n_min_trials=3),
+    pruner=MedianPruner(n_startup_trials=10, n_warmup_steps=1, n_min_trials=3),
     storage="sqlite:///optimization.db",
     study_name="xgboost_tuning",
     load_if_exists=True,
@@ -266,7 +271,7 @@ results = tuner.fit()
 ```
 
 ### Step 5: Distributed Execution
-Local multi-core: n_jobs=-1. Dask distributed: wrap Optuna with DaskStorage. Ray distributed: tune.run(resources_per_trial). Kubernetes: each trial as K8s job. Fault tolerance: checkpoint to shared filesystem.
+Local multi-core: n_jobs=-1. Dask distributed: wrap Optuna with DaskStorage. Ray distributed: `tune.Tuner(tune.with_resources(trainable, {"cpu": 2, "gpu": 1}), ...)` (`tune.run` is the legacy API). Kubernetes: each trial as K8s job. Fault tolerance: checkpoint to shared filesystem.
 
 ```python
 # Optuna distributed with PostgreSQL

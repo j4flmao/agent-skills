@@ -1,214 +1,152 @@
-# Time Series Advanced Topics
+# Time Series Advanced: Global Models, Hierarchies, Probabilistic Forecasts, and Foundation Models
 
-## Introduction
-Advanced Time Series topics cover production-grade implementations, performance optimization, security hardening, and operational excellence. This reference builds on fundamentals.
+Techniques for forecasting at scale and under uncertainty: global models across many series, hierarchical reconciliation, probabilistic and quantile forecasting, conformal prediction intervals, pretrained time series foundation models, and production monitoring. Fundamentals (baselines, backtesting, metrics) are in `time-series-fundamentals.md`.
 
-## Advanced Architecture Patterns
+## Local vs Global Models
 
-### Microservices Architecture
-Decompose monoliths into independent services with bounded contexts. Each service owns its data and communicates via well-defined APIs. Implement service discovery and API gateways.
+| Approach | Description | Strengths | Weaknesses |
+|----------|-------------|-----------|-----------|
+| Local | One model per series (ARIMA, ETS per SKU) | Interpretable, captures series-specific patterns | Weak for short/new series, many models to manage |
+| Global | One model trained on many series (gradient boosting, N-BEATS/N-HiTS, TFT, DeepAR) | Shares patterns, handles cold starts with covariates, scales | Needs feature engineering and normalization; can underfit idiosyncratic series |
 
-### Event Sourcing and CQRS
-Event sourcing captures all changes as an immutable event log. CQRS separates read and write models. These patterns enable auditability and optimize different access patterns.
+Global gradient-boosted models with lag/calendar features are strong, practical baselines for large retail/demand datasets.
 
-### Saga Pattern
-For distributed transactions, use the saga pattern with choreography or orchestration. Implement compensating transactions for rollback. Ensure eventual consistency.
+```python
+import lightgbm as lgb
+from mlforecast import MLForecast
+from mlforecast.lag_transforms import RollingMean
 
-### Strangler Fig Pattern
-Incrementally migrate legacy systems by routing functionality to new implementations. This reduces risk and allows gradual migration without big-bang releases.
+mlf = MLForecast(
+    models=[lgb.LGBMRegressor(n_estimators=500, learning_rate=0.05, objective="tweedie")],
+    freq="D",
+    lags=[7, 14, 28],
+    lag_transforms={7: [RollingMean(window_size=7)], 28: [RollingMean(window_size=28)]},
+    date_features=["dayofweek", "month"],
+)
+mlf.fit(train_df, static_features=["store_type"])   # columns: unique_id, ds, y, exogenous...
+preds = mlf.predict(h=28, X_df=future_exog)
+```
 
-## Performance Optimization
+- Tweedie or Poisson objectives suit non-negative, zero-inflated demand.
+- Normalize targets per series (scaling by series mean) when magnitudes vary widely.
+- Recursive multi-step forecasting compounds error; direct strategies (one model per horizon) or horizon-aware models avoid this at higher cost.
 
-### Profiling and Benchmarking
-Use profiling tools to identify bottlenecks in CPU, memory, I/O, and network. Establish performance baselines and track regressions. Benchmark before and after optimizations.
+## Hierarchical and Grouped Forecasting
 
-### Database Optimization
-Advanced database optimization includes query plan analysis, index tuning, partitioning, sharding, and denormalization. Use connection pooling and prepared statements.
+Forecasts often must be coherent across aggregation levels (SKU → category → total; store → region → country).
 
-### Caching Strategies
-Implement multi-tier caching: local cache, distributed cache, and CDN. Use cache-aside, read-through, write-through, and write-behind patterns. Set appropriate eviction policies.
+| Method | Idea |
+|--------|------|
+| Bottom-up | Forecast leaves, sum upward; noisy at the bottom |
+| Top-down | Forecast total, split by historical or forecast proportions |
+| Middle-out | Forecast a middle level, aggregate up and split down |
+| Optimal reconciliation (MinT) | Forecast all levels independently, then reconcile using an estimate of the forecast error covariance |
 
-## Security Hardening
+```python
+from hierarchicalforecast.core import HierarchicalReconciliation
+from hierarchicalforecast.methods import BottomUp, MinTrace
 
-### Authentication and Authorization
-Implement multi-factor authentication, OAuth 2.0 / OIDC for authorization, and RBAC/ABAC for fine-grained access control. Use short-lived tokens and refresh token rotation.
+hrec = HierarchicalReconciliation(reconcilers=[BottomUp(), MinTrace(method="mint_shrink")])
+reconciled = hrec.reconcile(Y_hat_df=base_forecasts, Y_df=fitted_insample, S=S_df, tags=tags)
+```
 
-### Data Protection
-Encrypt data at rest and in transit. Use key management services for encryption keys. Implement data masking for sensitive data in non-production environments.
+MinT-style reconciliation frequently improves accuracy at all levels compared with any single-level approach; validate on backtests for your hierarchy.
 
-### Network Security
-Implement defense in depth: firewalls, WAF, DDoS protection, network segmentation, and zero-trust networking. Use private endpoints for cloud services.
+## Probabilistic Forecasting
 
-### Secrets Management
-Store secrets in dedicated vault services (HashiCorp Vault, AWS Secrets Manager). Never hardcode secrets. Rotate credentials regularly. Audit secret access.
+Decisions (inventory, staffing, capacity) depend on uncertainty, not just point forecasts.
 
-## Monitoring and Observability
+| Approach | Examples |
+|----------|---------|
+| Parametric distributions | DeepAR (negative binomial, Student-t outputs), ETS/ARIMA prediction intervals |
+| Quantile regression | LightGBM `objective="quantile"`, quantile heads in neural models (TFT, MQ-CNN) |
+| Sample paths | Monte Carlo simulation from fitted models for path-dependent decisions |
+| Conformal prediction | Distribution-free intervals calibrated on backtest residuals |
 
-### Metrics and Alerting
-Define SLOs, SLIs, and error budgets. Implement multi-window alerting to reduce alert fatigue. Use burn rate alerts for timely incident detection.
+```python
+quantile_models = {
+    q: lgb.LGBMRegressor(objective="quantile", alpha=q, n_estimators=500)
+    for q in (0.1, 0.5, 0.9)
+}
+```
 
-### Distributed Tracing
-Implement end-to-end tracing across service boundaries using OpenTelemetry. Trace every request from ingress to egress. Use trace IDs for correlation.
+Evaluate with pinball loss per quantile and interval **coverage** (share of actuals inside the 80% interval should be close to 80%) plus interval width.
 
-### Logging Strategy
-Implement structured logging with consistent schemas. Use log levels appropriately. Centralize logs for search and correlation. Set appropriate retention policies.
+### Conformal Intervals for Time Series
 
-### Incident Response
-Establish incident severity levels and response SLAs. Create runbooks for common incidents. Conduct post-mortems and implement preventive actions.
+Split/rolling conformal methods use residuals from rolling backtests to build intervals with approximate coverage guarantees, adapting over time (e.g. adaptive conformal inference) when the series is non-stationary.
 
-## Scalability and Reliability
+```python
+from statsforecast.utils import ConformalIntervals
 
-### Horizontal Scaling
-Design stateless services for horizontal scaling. Use load balancers for distribution. Implement session affinity only when necessary. Use auto-scaling groups.
+sf = StatsForecast(models=[AutoETS(season_length=7)], freq="D")
+fc = sf.forecast(df=train, h=28, level=[80, 95],
+                 prediction_intervals=ConformalIntervals(h=28, n_windows=5))
+```
 
-### Disaster Recovery
-Define RPO and RTO targets. Implement backup and restore procedures. Use multi-region deployment for critical workloads. Test DR procedures regularly.
+Coverage guarantees assume exchangeability, which time series violate; treat conformal intervals as well-calibrated approximations and monitor realized coverage.
 
-### Circuit Breaker Pattern
-Protect downstream services with circuit breakers. Implement fallback mechanisms, bulkheads, and timeouts. Use resilience frameworks like Hystrix or Resilience4j.
+## Foundation Models for Time Series
 
-## Integration and Interoperability
+Pretrained models forecast new series zero-shot or with light fine-tuning:
 
-### API Gateway Pattern
-Use API gateways for request routing, rate limiting, authentication, and aggregation. Implement API versioning for backward compatibility. Use OpenAPI for documentation.
+| Model family | Provider | Notes |
+|--------------|----------|------|
+| Chronos / Chronos-Bolt | Amazon | Tokenizes scaled values; probabilistic outputs |
+| TimesFM | Google Research | Decoder-only, patch-based |
+| Moirai | Salesforce | Any-variate, multiple frequencies |
+| Lag-Llama, TimeGPT (API), others | Various | Varying licenses and access models |
 
-### Message Brokers
-Choose appropriate message brokers based on use case: Kafka for event streaming, RabbitMQ for task queues, SQS for simple queuing. Implement dead letter queues for failures.
+```python
+import torch
+from chronos import BaseChronosPipeline
 
-### Service Mesh
-Implement service mesh for observability, traffic management, and security at the service mesh layer. Use Istio, Linkerd, or Consul Connect for service mesh capabilities.
+pipeline = BaseChronosPipeline.from_pretrained("amazon/chronos-bolt-small", device_map="cpu", dtype=torch.float32)
+quantiles, mean = pipeline.predict_quantiles(context=torch.tensor(history), prediction_length=28,
+                                             quantile_levels=[0.1, 0.5, 0.9])
+```
 
-## DevOps and Automation
+Guidance:
+- Benchmark against seasonal naive, ETS, and a tuned global GBM on your own rolling backtests; zero-shot performance varies widely by domain.
+- They are most attractive for many short or new series and for quick baselines.
+- Check licenses, model size and inference cost, and whether exogenous covariates are supported (support is limited or model-specific).
+- API names change between package releases; pin versions.
 
-### Infrastructure as Code
-Manage infrastructure with Terraform, Pulumi, or CloudFormation. Use modules for reusable components. Implement infrastructure testing and validation.
+## Exogenous Variables and Scenarios
 
-### CI/CD Pipeline
-Implement CI/CD with automated testing, security scanning, and deployment. Use feature flags for controlled rollouts. Implement canary deployments and blue-green deployments.
+- Separate **known-future** covariates (calendar, planned promotions, prices) from **unknown-future** ones (weather, competitor actions) that themselves need forecasts.
+- Scenario forecasting: rerun with alternative covariate paths (price A vs B) to support decisions; validate that the model actually responds causally plausibly (elasticities), otherwise treat it as correlation only.
 
-### Configuration Management
-Use configuration management tools for consistent environments. Externalize configuration from code. Implement feature flags for runtime behavior control.
+## Anomalies and Regime Changes
 
-## Key Points
-- Apply advanced patterns for production-grade implementations
-- Optimize performance based on measured bottlenecks and profiling
-- Implement comprehensive security controls following defense in depth
-- Establish monitoring and alerting with SLO-based approaches
-- Plan for scalability, reliability, and disaster recovery
-- Automate everything: testing, deployment, infrastructure, operations
-- Document architecture decisions and operational runbooks
-- Conduct regular incident reviews and post-mortems
-- Implement progressive delivery for safe deployments
-- Continuously improve based on production feedback and metrics
+- Clean training targets of one-off anomalies or model them with flags; do not let a single outage distort seasonality estimates.
+- Detect regime changes with change-point methods and retrain or reweight recent data.
+- Forecast reconciliation with human overrides: log overrides and measure their value (forecast value added) against the statistical forecast.
 
-## Data Management
+## Production Monitoring
 
-### Data Modeling
-Design data models for performance and maintainability. Use normalization for consistency, denormalization for read performance. Implement proper indexing strategies.
+| Monitor | Purpose |
+|---------|---------|
+| Rolling WAPE/MASE vs baseline | Detect degradation |
+| Bias over recent windows | Systematic drift |
+| Interval coverage | Calibration of uncertainty |
+| Input freshness and completeness | Data pipeline health |
+| Share of series with fallback forecasts | Robustness |
 
-### Data Migration
-Plan database migrations with backward compatibility. Use migration tools with version control. Implement rollback procedures. Test migrations in staging first.
+Retrain on a schedule aligned with data drift (weekly/monthly) and on triggers (bias beyond threshold); keep a fallback (seasonal naive or last good model) for series where the main model fails.
 
-### Backup and Recovery
-Implement automated backup schedules. Test recovery procedures regularly. Use point-in-time recovery for databases. Store backups in separate regions.
+## Pitfalls
 
-### Data Archival
-Archive old data based on retention policies. Use tiered storage for cost optimization. Implement purging for data beyond retention. Maintain archive indexes.
+- Global models leaking future information through target encoding or normalization computed on the full series.
+- Reconciling with methods that assume unbiased base forecasts when they are biased.
+- Reporting only point accuracy for decisions that depend on tails.
+- Adopting foundation models without domain backtests.
 
-## API Design and Management
+## Checklist
 
-### RESTful API Design
-Design REST APIs with resource-oriented URLs. Use proper HTTP methods and status codes. Implement pagination, filtering, and sorting. Version APIs for evolution.
-
-### GraphQL API Design
-Design GraphQL schemas with clear types and relationships. Implement data loaders for batching. Use persisted queries for optimization. Monitor query complexity.
-
-### API Security
-Implement rate limiting, authentication, and authorization. Use API keys, OAuth, or JWT. Validate and sanitize all inputs. Monitor for abuse patterns.
-
-## Quality Assurance
-
-### Code Quality
-Use static analysis tools for code quality. Enforce coding standards with linters. Measure and track code complexity. Refactor regularly to reduce technical debt.
-
-### Security Testing
-Conduct SAST, DAST, and dependency scanning. Perform penetration testing regularly. Implement security review process. Use software bill of materials (SBOM).
-
-### Chaos Engineering
-Inject failures in controlled environments to test resilience. Test failure modes and recovery procedures. Build confidence in system robustness.
-
-## Operational Excellence
-
-### Runbooks
-Create runbooks for common operational tasks and incidents. Include troubleshooting guides and escalation procedures. Keep runbooks up to date with system changes.
-
-### Capacity Planning
-Monitor resource utilization trends. Plan capacity based on growth projections. Use auto-scaling for variable demand. Conduct load testing for peak scenarios.
-
-### Change Management
-Implement change advisory board for significant changes. Use change windows for production modifications. Document change plans and rollback procedures.
-
-## Cloud and Infrastructure
-
-### Cloud Provider Selection
-Choose cloud providers based on service offerings, pricing, and compliance requirements. Consider multi-cloud for redundancy. Evaluate total cost of ownership.
-
-### Container Orchestration
-Use Kubernetes or Nomad for container orchestration. Define resource requests and limits. Implement pod autoscaling. Use namespaces for isolation.
-
-### Serverless Computing
-Adopt serverless for event-driven workloads. Use functions for stateless processing. Consider cold start latency. Monitor execution duration and costs.
-
-## Cost Management and Optimization
-
-### Cloud Cost Optimization
-Monitor cloud spending with cost allocation tags and budgets. Use reserved instances and savings plans for predictable workloads. Implement auto-scaling to match demand. Right-size resources regularly.
-
-### License and Vendor Management
-Track software licenses and avoid over-provisioning. Negotiate enterprise agreements for volume discounts. Evaluate open-source alternatives to reduce licensing costs. Audit usage for compliance.
-
-### FinOps Practices
-Establish FinOps culture with cross-functional cost governance. Implement showback/chargeback for team accountability. Use unit economics to measure cost per transaction. Optimize continuously.
-
-## Team Collaboration and Process
-
-### Cross-Functional Teams
-Organize teams around business capabilities with end-to-end ownership. Include all disciplines: development, operations, security, and product. Foster blameless culture and psychological safety.
-
-### Agile at Scale
-Apply SAFe, LeSS, or Scrum of Scrums for multi-team coordination. Use ART (Agile Release Trains) for aligned iteration. Implement PI planning for cross-team dependency management.
-
-### DevOps Culture
-Break down silos between development and operations. Share on-call responsibilities across the team. Implement ChatOps for operational transparency. Measure DORA metrics for improvement.
-
-## Data Privacy and Compliance
-
-### Privacy by Design
-Implement privacy controls as default system behavior. Minimize data collection to what is necessary. Provide user data access and deletion mechanisms. Conduct privacy impact assessments.
-
-### Regulatory Frameworks
-Achieve and maintain compliance with GDPR, CCPA, HIPAA, SOC 2, PCI DSS, and SOX. Map controls to regulatory requirements. Automate compliance evidence collection where possible.
-
-### Data Residency and Sovereignty
-Store and process data in required geographic regions. Implement data classification for cross-border transfers. Use regional cloud deployments. Respect data localization laws.
-
-## Emerging Technologies and Trends
-
-### AI and Machine Learning Integration
-Incorporate ML models for predictive analytics, anomaly detection, and automation. Use MLOps for model lifecycle management. Evaluate LLMs for natural language interfaces and code generation.
-
-### Edge Computing
-Deploy compute closer to data sources for reduced latency. Use edge devices for real-time processing. Implement offline-first architectures. Manage distributed edge deployments centrally.
-
-### Platform Engineering
-Build internal developer platforms (IDP) for self-service infrastructure. Use backstage or similar for developer portals. Provide golden paths for common workflows. Abstract complexity from developers.
-
-## Key Points (Continued)
-- Implement cost governance with FinOps practices and continuous optimization
-- Foster cross-functional collaboration and DevOps culture for operational excellence
-- Design for privacy compliance from the start with privacy by design principles
-- Stay current with emerging technologies while managing adoption risk
-- Automate compliance evidence collection for regulatory audits
-- Build internal developer platforms to accelerate delivery and reduce cognitive load
-- Measure and improve using DORA metrics and team health surveys
-- Balance innovation with stability through proper governance and risk management
+- [ ] Local vs global approach chosen via backtests against baselines
+- [ ] Hierarchy coherence handled with reconciliation where required
+- [ ] Probabilistic forecasts evaluated with pinball loss and coverage
+- [ ] Conformal or model-based intervals monitored for realized coverage
+- [ ] Foundation models benchmarked, versions pinned, licenses checked
+- [ ] Monitoring of accuracy, bias, coverage, and fallbacks in production

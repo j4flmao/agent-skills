@@ -118,7 +118,7 @@ value frequency, type inference.
 Review and adjust before production deployment.
 
 Validation: run as checkpoint in CI pipeline.
-`great_expectations checkpoint run orders_checkpoint`.
+`python -m data_quality.run_checks --suite orders` (GX 1.x is Python-API only; the old `great_expectations checkpoint run` CLI was removed).
 Block pipeline on critical expectation failures.
 
 Data docs: auto-generated HTML documentation.
@@ -330,7 +330,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Great Expectations Validation
-        run: great_expectations checkpoint run orders_checkpoint
+        run: python -m data_quality.run_checks --suite orders
       - name: dbt Test Suite
         run: dbt test --select tag:critical --store_failures
       - name: Soda Scan
@@ -338,7 +338,7 @@ jobs:
       - name: Upload Quality Report
         if: always()
         run: |
-          aws s3 sync great_expectations/uncommitted/data_docs/ s3://ge-data-docs/
+          aws s3 sync gx/uncommitted/data_docs/ s3://ge-data-docs/
       - name: Block Pipeline on Failure
         if: failure()
         run: |
@@ -455,30 +455,35 @@ Data Quality Framework
 
 ### Great Expectations Checkpoint
 ```python
-# data_quality/ge_checkpoint.py
-import great_expectations as ge
-from great_expectations.core.batch import RuntimeBatchRequest
+# data_quality/gx_checkpoint.py  (GX Core 1.x API)
+import great_expectations as gx
+import pandas as pd
 
 class DataQualityPipeline:
-    def __init__(self, context_path: str = "./great_expectations"):
-        self.context = ge.get_context(context_root_dir=context_path)
+    def __init__(self, project_root: str = "./gx"):
+        self.context = gx.get_context(mode="file", project_root_dir=project_root)
 
-    def run_checks(self, df, suite_name: str, datasource_name: str):
-        batch_request = RuntimeBatchRequest(
-            datasource_name=datasource_name,
-            data_connector_name="default_runtime_data_connector_name",
-            data_asset_name=suite_name,
-            runtime_parameters={"batch_data": df},
-            batch_identifiers={"default_identifier_name": "pipeline_run"},
+    def build(self, name: str) -> gx.ValidationDefinition:
+        source = self.context.data_sources.add_pandas(name=f"{name}_pandas")
+        asset = source.add_dataframe_asset(name=name)
+        batch_def = asset.add_batch_definition_whole_dataframe(f"{name}_batch")
+        suite = self.context.suites.add(gx.ExpectationSuite(name=f"{name}_suite"))
+        suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column="order_id"))
+        suite.add_expectation(gx.expectations.ExpectColumnValuesToBeUnique(column="order_id"))
+        suite.add_expectation(
+            gx.expectations.ExpectColumnValuesToBeBetween(column="amount", min_value=0, max_value=1_000_000)
         )
-        validator = self.context.get_validator(
-            batch_request=batch_request,
-            expectation_suite_name=suite_name,
+        return self.context.validation_definitions.add(
+            gx.ValidationDefinition(name=f"{name}_validation", data=batch_def, suite=suite)
         )
-        results = validator.validate()
-        validator.save_expectation_suite(discard_failed_expectations=False)
+
+    def run_checks(self, df: pd.DataFrame, validation: gx.ValidationDefinition):
+        results = validation.run(batch_parameters={"dataframe": df})
+        if not results.success:
+            raise ValueError(f"Data quality failed for {validation.name}: {results.statistics}")
         return results
 ```
+Older guides use `RuntimeBatchRequest` / `get_validator`; those 0.x APIs were removed in GX 1.0.
 
 ### dbt Quality Tests
 ```yaml
@@ -532,7 +537,7 @@ models:
 
 - **Partitioned validation**: Run quality checks per partition; only validate new/modified partitions.
 - **Sampling**: Use stratified sampling for very large tables (10M+ rows); validate 100% only for critical columns.
-- **Parallel validation**: Run table-level checks in parallel (Dask/Spark) for 5x faster quality runs.
+- **Parallel validation**: Run table-level checks in parallel (Dask/Spark) to shorten quality runs.
 - **Caching expectations**: Cache compiled expectations to avoid re-parsing suite definitions on each run.
 - **Incremental checks**: Validate only changed rows using CDC streams instead of full table scans.
 

@@ -1,213 +1,117 @@
-# Multi Tenant Fundamentals
+# Multi-Tenant Fundamentals: Tenancy Models and Tenant Context
 
-## Overview
-Multi Tenant is a critical discipline within GENERAL that focuses on delivering reliable, scalable, and maintainable solutions. This reference covers fundamental concepts, architectural patterns, and best practices.
+The foundations of a multi-tenant SaaS: the deployment models (silo, pool, bridge), how a request is bound to a tenant, how tenant context propagates through services and jobs, and how the data layer enforces it. Deeper material: `multi-tenant-architecture.md`, `tenant-isolation.md`, `tenant-provisioning.md`, `tenant-lifecycle.md`.
 
-## Core Concepts
+## Tenancy Models
 
-### Concept 1: Architecture Patterns
-Understanding the core architectural patterns for Multi Tenant helps in designing systems that are maintainable, scalable, and resilient. Key patterns include layered architecture, hexagonal architecture, and event-driven architecture.
+| Model | Compute | Data | Isolation | Cost per tenant | Ops effort |
+|---|---|---|---|---|---|
+| Silo | Dedicated stack per tenant | Dedicated DB/account | Strongest | Highest | Highest (N deployments) |
+| Pool | Shared | Shared tables with `tenant_id` | Logical (code + DB policies) | Lowest | Lowest |
+| Bridge (hybrid) | Shared compute | Schema or DB per tenant | Medium | Medium | Medium |
+| Tiered | Pool for small tenants, silo for enterprise | Mixed | Per tier | Per tier | Needs both paths |
 
-### Concept 2: Design Principles
-Apply SOLID principles, DRY (Don't Repeat Yourself), and YAGNI (You Aren't Gonna Need It) when designing Multi Tenant solutions. These principles help maintain code quality and reduce technical debt.
+Choose by compliance requirements, tenant size distribution, noisy-neighbor tolerance and team capacity. Most products start pooled and offer silo for top-tier customers.
 
-### Concept 3: Data Management
-Proper data management is essential for Multi Tenant. This includes data modeling, storage strategies, caching, and data lifecycle management. Choose appropriate data stores based on access patterns.
+## Tenant Identification
 
-### Concept 4: Security Fundamentals
-Security should be integrated from the start. Implement authentication, authorization, encryption, and audit logging. Follow the principle of least privilege for all components.
+| Source | Example | Notes |
+|---|---|---|
+| Token claim | `tenant_id` / `org_id` claim in an OIDC access token | Preferred: authenticated and signed |
+| Subdomain | `acme.app.example.com` | Map to tenant, then verify user belongs to it |
+| Path | `/t/acme/...` | Same verification |
+| Header | `X-Tenant-ID` | Only from trusted internal callers; never trust from browsers |
 
-### Concept 5: Observability
-Implement comprehensive observability including logging, metrics, tracing, and alerting. This enables rapid issue detection, debugging, and performance optimization.
+Rule: the tenant is derived from authenticated identity (or verified against it), never taken from user-controlled input alone.
 
-## Architecture Patterns
+## Request Flow
 
-### Pattern 1: Standard Architecture
-The standard architecture for Multi Tenant follows established GENERAL conventions and best practices. It consists of well-defined layers with clear separation of concerns.
+```
+request → authenticate (JWT) → resolve tenant (claim / subdomain) → verify membership
+       → set tenant context (request-scoped) → authorize action within tenant
+       → data access filtered by tenant → response
+```
 
-### Pattern 2: Scalable Architecture
-For production deployments, implement horizontal scaling, load balancing, and fault tolerance. Use containerization and orchestration for deployment flexibility.
+## Request-Scoped Context (TypeScript, AsyncLocalStorage)
 
-### Pattern 3: Event-Driven Architecture
-Event-driven patterns enable loose coupling and asynchronous processing. Use message queues, event buses, or stream processors for reliable event handling.
+```ts
+import { AsyncLocalStorage } from "node:async_hooks";
+import type { Request, Response, NextFunction } from "express";
 
-## Implementation Guide
+type TenantContext = { tenantId: string; userId: string; tier: "free" | "pro" | "enterprise" };
+const als = new AsyncLocalStorage<TenantContext>();
 
-### Step 1: Requirements Analysis
-Gather functional and non-functional requirements. Define success criteria, performance targets, and SLAs before starting implementation.
+export function tenantMiddleware(req: Request, res: Response, next: NextFunction) {
+  const claims = req.auth;                       // set by JWT verification middleware
+  if (!claims?.tenant_id) {
+    res.status(401).json({ error: { code: "TENANT_MISSING" } });
+    return;
+  }
+  als.run({ tenantId: claims.tenant_id, userId: claims.sub, tier: claims.tier }, next);
+}
 
-### Step 2: Technology Selection
-Choose appropriate technologies based on requirements, team expertise, and ecosystem compatibility. Consider managed services for reduced operational overhead.
+export function currentTenant(): TenantContext {
+  const ctx = als.getStore();
+  if (!ctx) throw new Error("tenant context missing: called outside a tenant-scoped request");
+  return ctx;
+}
+```
 
-### Step 3: Development Setup
-Set up development environment with proper tooling: version control, CI/CD, linters, formatters, and testing frameworks. Establish coding standards and conventions.
+Fail closed: code paths without tenant context throw instead of defaulting to "all tenants".
 
-### Step 4: Implementation
-Follow agile development practices with iterative delivery. Write tests alongside implementation. Document code and architecture decisions.
+## Propagation Beyond the Request
 
-### Step 5: Testing Strategy
-Implement comprehensive testing at all levels: unit tests, integration tests, end-to-end tests, and performance tests. Automate testing in CI/CD pipeline.
+| Channel | Carry tenant via |
+|---|---|
+| Service-to-service HTTP/gRPC | Forward the user token (or a token exchange result); internal header only between authenticated services |
+| Messages/events | `tenant_id` attribute in the envelope; consumers restore context before processing |
+| Background jobs | `tenant_id` in the job payload; worker sets context per job |
+| Logs/traces/metrics | `tenant_id` as log field and trace attribute (W3C baggage for propagation; avoid as metric label if tenants are many) |
+| Caches | Tenant prefix in every key: `t:{tenantId}:user:{id}` |
+| Object storage | Tenant prefix: `s3://bucket/tenants/{tenantId}/...` |
 
-### Step 6: Deployment
-Use infrastructure as code for consistent deployments. Implement blue-green or canary deployment strategies for zero-downtime releases. Automate rollback procedures.
+## Data Layer Enforcement (PostgreSQL Row-Level Security)
 
-### Step 7: Monitoring and Operations
-Set up monitoring dashboards, alerting rules, and incident response procedures. Establish on-call rotations and runbooks for common issues.
+```sql
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoices FORCE ROW LEVEL SECURITY;          -- applies to table owner too
 
-## Best Practices
+CREATE POLICY tenant_isolation ON invoices
+  USING (tenant_id = current_setting('app.tenant_id')::bigint)
+  WITH CHECK (tenant_id = current_setting('app.tenant_id')::bigint);
 
-| Practice | Description | Priority |
-|----------|-------------|----------|
-| Design First | Plan architecture before implementation | High |
-| Test Early | Validate assumptions with prototypes | High |
-| Document | Maintain clear documentation | Medium |
-| Monitor | Implement observability from day one | High |
-| Iterate | Use feedback loops for improvement | Medium |
-| Secure | Integrate security from the start | High |
-| Automate | Automate repetitive tasks | Medium |
+CREATE INDEX ON invoices (tenant_id, created_at DESC);
+```
 
-## Common Pitfalls
+Application sets the setting per transaction (so pooled connections never leak it):
 
-### Pitfall 1: Over-Engineering
-Avoid adding complexity before it's needed. Start with simple solutions and evolve based on requirements. Premature abstraction adds maintenance burden.
+```sql
+BEGIN;
+SELECT set_config('app.tenant_id', $1, true);   -- true = local to this transaction
+SELECT * FROM invoices WHERE status = 'open';   -- RLS adds the tenant filter
+COMMIT;
+```
 
-### Pitfall 2: Neglecting Testing
-Insufficient testing leads to production issues and regressions. Invest in automated testing from the start. Maintain test coverage goals.
+The application database role must not have `BYPASSRLS` and must not be a superuser. `current_setting` without a value raises an error, which keeps it fail-closed.
 
-### Pitfall 3: Ignoring Security
-Security vulnerabilities can have serious consequences. Conduct security reviews, penetration testing, and dependency scanning regularly.
+Additional guards:
+- Composite foreign keys including `tenant_id` prevent cross-tenant references: `FOREIGN KEY (tenant_id, customer_id) REFERENCES customers (tenant_id, id)`.
+- Unique constraints scoped by tenant: `UNIQUE (tenant_id, email)`.
 
-### Pitfall 4: Poor Monitoring
-Without proper monitoring, issues go undetected until users report them. Implement comprehensive observability and proactive alerting.
-
-### Pitfall 5: Documentation Debt
-Undocumented systems become hard to maintain and onboard. Document architecture decisions, APIs, and operational procedures.
-
-## Tooling Ecosystem
-
-### Development Tools
-- Integrated development environments and editors
-- Version control systems and collaboration platforms
-- Package managers and dependency management
-- Build tools and task runners
-- Testing frameworks and coverage tools
-
-### Deployment Tools
-- Containerization platforms (Docker, Podman)
-- Orchestration systems (Kubernetes, Nomad)
-- CI/CD platforms (GitHub Actions, GitLab CI, Jenkins)
-- Infrastructure as Code tools (Terraform, Pulumi)
-- Configuration management (Ansible, Chef, Puppet)
-
-### Monitoring Tools
-- Application performance monitoring (Datadog, New Relic)
-- Log aggregation (ELK, Loki, Splunk)
-- Metrics and alerting (Prometheus, Grafana)
-- Distributed tracing (Jaeger, Zipkin, OpenTelemetry)
-- Uptime monitoring (Pingdom, StatusCake)
-
-## Integration Patterns
-
-### API Integration
-Design RESTful or GraphQL APIs for service communication. Use OpenAPI/Swagger for documentation. Implement API versioning for backward compatibility.
-
-### Message Queue Integration
-Use message queues for asynchronous communication. Choose appropriate queue technology (RabbitMQ, Kafka, SQS) based on throughput and durability requirements.
-
-### Database Integration
-Connect to databases using connection pooling for performance. Use ORMs or query builders for type safety. Implement migration strategies for schema changes.
-
-## Performance Optimization
-
-### Caching Strategies
-Implement multi-level caching: application cache, distributed cache (Redis, Memcached), and CDN caching. Set appropriate TTLs and invalidation strategies.
-
-### Query Optimization
-Optimize database queries with proper indexing, query planning, and connection pooling. Use read replicas for read-heavy workloads.
-
-### Resource Optimization
-Right-size compute resources based on workload. Use auto-scaling for variable demand. Implement resource limits and quotas.
-
-## Key Points
-- Understand core Multi Tenant concepts before implementation
-- Follow GENERAL best practices and conventions
-- Implement monitoring and observability from day one
-- Document architecture decisions and rationale
-- Test thoroughly with realistic scenarios
-- Integrate security throughout the development lifecycle
-- Plan for scalability and performance from the start
-- Establish clear operational procedures and runbooks
-- Invest in automation for testing, deployment, and operations
-- Continuously learn and adapt to evolving technologies
-
-## Testing Strategy
-
-### Unit Testing
-Write unit tests for individual components and functions. Use mocking for external dependencies. Aim for high code coverage on business logic. Run tests on every commit.
-
-### Integration Testing
-Test component interactions with real dependencies. Use test containers for database testing. Verify API contracts with consumer-driven contract tests.
-
-### End-to-End Testing
-Test complete user workflows in production-like environments. Use headless browsers for UI testing. Run smoke tests after every deployment.
-
-### Performance Testing
-Conduct load testing, stress testing, and endurance testing. Establish performance baselines. Test with production-scale data volumes. Identify bottlenecks.
-
-## Deployment Strategies
-
-### Blue-Green Deployment
-Maintain two identical environments (blue and green). Route traffic to one while updating the other. Switch traffic after validation. Enables instant rollback.
-
-### Canary Deployment
-Gradually route a small percentage of traffic to new version. Monitor for errors and performance issues. Increase traffic gradually. Rollback automatically on issues.
-
-### Feature Flags
-Deploy code behind feature flags for controlled rollouts. Enable features for specific user segments. Use feature flags for A/B testing. Remove flags after validation.
-
-### Rolling Deployment
-Update instances one at a time or in batches. Maintain service availability throughout. Monitor health of updated instances. Rollback by redeploying previous version.
-
-## Configuration Management
-
-### Environment Configuration
-Use environment variables for configuration. Maintain separate configurations for dev, staging, and production. Use configuration files with environment overrides.
-
-### Secret Management
-Store secrets in dedicated vault services. Never commit secrets to version control. Use service identities for automated access. Rotate secrets on schedule.
-
-### Feature Toggles
-Implement feature toggle system for runtime configuration. Use toggle categories: release, experiment, ops, permission. Clean up toggles after stabilization.
-
-## Error Handling Patterns
-
-### Retry Pattern
-Implement retry with exponential backoff and jitter for transient failures. Set maximum retry attempts and total timeout. Use circuit breaker for non-transient failures.
-
-### Dead Letter Queue
-Route failed messages to a dead letter queue for analysis. Implement reprocessing mechanisms. Monitor DLQ depth for systemic issues. Set alerts on DLQ growth.
-
-### Graceful Degradation
-Design systems to degrade gracefully under failure. Provide degraded but functional experiences. Cache critical data for offline scenarios. Communicate degradation to users.
-
-## Compliance and Governance
-
-### Regulatory Compliance
-Understand applicable regulations (GDPR, HIPAA, SOC 2, PCI DSS). Implement required controls. Maintain compliance documentation. Conduct regular audits.
-
-### Data Governance
-Implement data classification, retention policies, and access controls. Track data lineage for auditability. Monitor data quality continuously. Assign data ownership.
-
-### Audit Logging
-Log all access to sensitive data and systems. Maintain immutable audit trails. Implement log integrity verification. Retain logs per compliance requirements.
-
-## Team and Process
-
-### Agile Practices
-Implement sprints with regular retrospectives. Use backlog refinement and sprint planning. Maintain definition of done. Track velocity for capacity planning.
-
-### Code Review
-Require code reviews for all changes. Use pull request templates for consistency. Implement automated checks before review. Foster constructive feedback culture.
-
-### Knowledge Sharing
-Document decisions in architectural decision records. Conduct tech talks and brown bag sessions. Maintain onboarding documentation. Encourage cross-team collaboration.
+## Tenant Metadata
+
+Keep a tenant registry (control plane) with: tenant ID, status (active, suspended, deleting), tier, region/residency, deployment model (pool/silo + shard location), limits and feature flags. Resolve routing and limits from it, cached with short TTL.
+
+## Testing Isolation
+
+- Automated tests that create two tenants and assert every API endpoint denies cross-tenant access (IDs from tenant A used with tenant B's token).
+- Tests that run queries without tenant context and expect errors.
+- Periodic audit queries in production for rows whose foreign keys cross tenants.
+
+## Checklist
+- [ ] Tenancy model chosen per tier with documented rationale
+- [ ] Tenant derived from authenticated identity and verified
+- [ ] Request-scoped context that fails closed
+- [ ] Tenant propagated through messages, jobs, caches, storage and telemetry
+- [ ] Database enforcement (RLS or per-tenant DB) plus tenant-scoped keys and constraints
+- [ ] Cross-tenant access tests in CI

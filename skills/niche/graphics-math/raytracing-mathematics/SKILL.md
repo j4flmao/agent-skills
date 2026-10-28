@@ -1,4 +1,37 @@
+---
+name: raytracing-mathematics
+description: >
+  Use this skill when the user says 'raytracing math', 'ray-sphere intersection', 'BVH', 'ray-triangle', 'path tracing math', 'acceleration structure'. Explains the geometry and acceleration structures behind ray tracing. Do NOT use for: GPU compute setup (use niche/graphics-math/webgpu-compute-shaders) or game render pipelines (use game/game-engine/render-graph).
+version: "1.0.0"
+author: "j4flmao"
+license: "MIT"
+tags: [niche, graphics, raytracing, math, geometry]
+---
+
 # Raytracing Mathematics
+
+## Purpose
+Explain the core mathematics of ray tracing: parametric ray equations, ray-primitive intersection (sphere, triangle), and acceleration structures (BVH) that make tracing tractable.
+
+## Agent Protocol
+
+### Trigger
+User phrases: "ray-sphere intersection", "BVH traversal", "ray-triangle test", "path tracing math".
+
+### Input Context
+- Primitive types and scene scale.
+- Precision/perf constraints.
+
+### Output Artifact
+Derivations and intersection/accel-structure guidance.
+
+### Response Format
+```
+Problem: {intersection / traversal}
+Formula: {P(t)=O+tD, discriminant, ...}
+Accel: {BVH / grid}
+```
+
 
 ## Core Mechanics
 

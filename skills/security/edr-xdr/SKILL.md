@@ -394,12 +394,10 @@ A SaaS company using Microsoft 365 Defender (XDR) detected a low-confidence EDR 
   - references/detection-engineering.md -- Detection Engineering
   - references/edr-deployment.md -- EDR Deployment
   - references/edr-detection-rules.md -- EDR Detection Rule Patterns
-  - references/edr-detection-engineering.md -- EDR Detection Engineering Reference
   - references/edr-platforms.md -- EDR/XDR Platform Comparison
   - references/edr-xdr-advanced.md -- EDR/XDR Advanced Topics
   - references/edr-xdr-fundamentals.md -- EDR/XDR Fundamentals
   - references/incident-investigation.md -- EDR Incident Investigation
-  - references/xdr-correlation-analytics.md -- XDR Correlation and Analytics Reference
 ## Handoff
 Alerts flow to siem-engineering for correlation. Investigation results feed threat-intelligence for IoC extraction.
 ## Implementation Patterns

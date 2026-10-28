@@ -429,7 +429,7 @@ process.env.DATABASE_URL
 - Remix supports CSS Modules, Tailwind, CSS-in-JS, and plain CSS
 - Global styles in `app/root.tsx` via `links` export
 - Route-level styles via `links` export for code-split CSS
-- Use Tailwind with `@tailwind base; @tailwind components; @tailwind utilities` in root CSS
+- Tailwind v4: `@import "tailwindcss";` in the root CSS with the `@tailwindcss/vite` plugin (v3 used `@tailwind base; @tailwind components; @tailwind utilities;`)
 
 ## Testing Strategies
 

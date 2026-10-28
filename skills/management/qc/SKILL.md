@@ -145,7 +145,7 @@ linters-settings:
 - Lint passes (zero errors)
 - Tests pass (unit + integration)
 - Code coverage meets threshold
-- No TODOs or FIXMEs without ticket reference
+- No FIXME or to-do comments without a ticket reference
 - No commented-out code
 - No secrets or credentials in code
 - Error handling covers all paths
@@ -175,10 +175,18 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for accurate new-code detection
+      - uses: actions/setup-node@v4
+      - run: npm ci
       - run: npm run lint
       - run: npm run test -- --coverage
       - run: npm audit --audit-level=high
-      - uses: sonarsource/sonarqube-scan-action@v2
+      - uses: sonarsource/sonarqube-scan-action@v6   # pin the current major; check releases
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 ```
 
 ### Step 7: Quality Dashboard Setup
@@ -382,13 +390,19 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run test -- --coverage
-      - uses: sonarsource/sonarqube-quality-gate-action@v2
+      - uses: sonarsource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      - uses: sonarsource/sonarqube-quality-gate-action@v1   # reads the scan's report-task.txt; fails the job if the gate fails
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
       - run: npm audit --audit-level=high
 ```
 
-## Case Studies
+## Case Studies (illustrative scenarios — figures are examples, not sourced benchmarks)
 
 ### Case Study 1: Fintech Startup — From Quality Crisis to Consistent Delivery
 A 40-person fintech startup faced frequent production incidents due to untested code, high complexity, and unchecked dependencies. They implemented quality gates in CI: 80% coverage, zero lint errors, zero critical dependencies, complexity < 15. After 3 months, production incidents dropped 70%. After 6 months, deployment frequency doubled. Key success factor: executive sponsorship made gates non-negotiable.
@@ -407,7 +421,7 @@ An open-source project with 500+ contributors needed consistent quality across P
 - Quality gates are non-negotiable for production deployments — no manual override
 - Coverage thresholds apply to new code, not just overall — prevent regression
 - Complexity limits vary by language (10 for most, 15 for Go error handling)
-- Technical debt must be tracked in a register, not scattered across TODOs
+- Technical debt must be tracked in a register, not scattered across code comments
 - Peer review checklist must pass before merge — automate checks where possible
 - Quality metrics must be visible to the whole team (dashboard, CI badge)
 - One quality gate exception requires a documented justification and remediation date
