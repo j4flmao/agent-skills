@@ -632,5 +632,19 @@ Staffing for average volume fails during incidents or campaigns. Build in 30% ca
   - references/soc-structure.md — SOC Structure
   - references/threat-hunting.md — Threat Hunting in SOC
   - references/triage-procedures.md — Alert Triage Procedures
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../soar-automation/references/playbook-development.md` — Playbook Development Guide
+- `../soar-automation/references/soar-automation-advanced.md` — SOAR Automation Advanced Topics
+- `../soar-automation/references/soar-automation-fundamentals.md` — SOAR Automation Fundamentals
+- `../soar-automation/references/soar-case-management-schema.md` — SOAR Automation: Case Management Schema & Workflow Architecture
+- `../soar-automation/references/soar-integrations.md` — SOAR Integration Patterns
+- `../soar-automation/references/soar-platforms.md` — SOAR Platforms
+- `../soar-automation/references/soar-playbooks.md` — SOAR Playbook Patterns
+- `../soar-automation/references/soar-response-orchestration.md` — SOAR Automation: Automated Response Orchestration Architecture
+- `../soar-automation/references/triage-automation.md` — Automated Triage
+
 ## Handoff
 Output artifacts can be handed to devops-monitoring for SIEM integration, or management for org planning.

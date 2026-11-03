@@ -587,5 +587,11 @@ Use PHPUnit 10+ with Pest for BDD-style tests. Use `vfsStream` for filesystem mo
   - references/php-routing.md — Routing Patterns
   - references/php-security.md — PHP Security
   - references/psr-standards.md — PSR Standards Reference
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/code-organization.md` — Code Organization
+
 ## Handoff
 Hand off to `backend/php/laravel/SKILL.md` for Laravel-specific patterns or `backend/universal/api-response/SKILL.md` for API response formatting.

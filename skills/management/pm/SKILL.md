@@ -546,6 +546,17 @@ Dependency Health Check:
   - references/pm-fundamentals.md — Pm Fundamentals
   - references/risk-register-template.md — Risk Register Template
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../product/feature-prioritization/references/feature-prioritization-advanced.md` — Feature Prioritization Advanced Topics
+- `../../product/feature-prioritization/references/feature-prioritization-fundamentals.md` — Feature Prioritization Fundamentals
+- `../../product/feature-prioritization/references/prioritization-frameworks.md` — Prioritization Frameworks
+- `../../product/feature-prioritization/references/prioritization-matrix.md` — Prioritization Matrix
+- `../../product/feature-prioritization/references/prioritization-stakeholder-management.md` — Prioritization Stakeholder Management
+- `../../product/feature-prioritization/references/roadmap-planning.md` — Roadmap Planning
+- `../../product/feature-prioritization/references/scoring-models.md` — Scoring Models
+
 ## Handoff
 After completing this skill:
 - Next skill: **ba** — to elaborate requirements for planned stories

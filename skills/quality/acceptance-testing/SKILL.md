@@ -456,6 +456,18 @@ metrics:
   - references/business-scenarios.md — Business Scenario Testing
   - references/gherkin-best-practices.md — Gherkin Best Practices
   - references/uat-process.md — User Acceptance Testing (UAT) Process
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../exploratory-testing/references/charter-design.md` — Charter Design
+- `../exploratory-testing/references/exploratory-session.md` — Session-Based Testing
+- `../exploratory-testing/references/exploratory-testing-advanced.md` — Exploratory Testing Advanced Topics
+- `../exploratory-testing/references/exploratory-testing-fundamentals.md` — Exploratory Testing Fundamentals
+- `../exploratory-testing/references/session-based.md` — Session-Based Test Management (SBTM)
+- `../exploratory-testing/references/test-heuristics-catalog.md` — Test Heuristics Catalog
+- `../exploratory-testing/references/test-heuristics.md` — Test Heuristics
+
 ## Handoff
 After acceptance testing completion, hand off to:
 - `quality-regression-testing` — for regression suite updates from accepted changes

@@ -68,7 +68,7 @@ Challenge period: 7 days (mainnet), ~1 hour (testnet/op-sepolia).
 | **Gas model** | L1 calldata cost + L2 execution cost |
 | **Sequencer** | Centralized (fast confirm), forced inclusion via L1 |
 
-Stylus (upcoming): WASM-based contracts in Rust/C/C++ — 10-100x faster than EVM.
+Stylus (upcoming): WASM-based contracts in Rust/C/C++ — Offchain Labs claims 10-100x cheaper compute than EVM for compute-heavy code.
 
 ```
 User Tx ──► Sequencer ──► Nitro Node ──► Inbox (L1)

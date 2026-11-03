@@ -473,6 +473,18 @@ Use `httpx.AsyncClient` with ASGI transport for integration tests. Use `pytest-a
   - references/fastapi-websocket.md — FastAPI WebSocket and Real-Time Patterns
   - references/middleware-background.md — Middleware, Background Tasks, and WebSockets in FastAPI
   - references/testing-debugging.md — Testing and Debugging FastAPI Applications
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/code-organization.md` — Code Organization & DDD in Python
+- `../references/deployment-pipelines.md` — Deployment Pipelines for Python
+- `../references/error-handling.md` — Error Handling & Observability in Python
+- `../references/performance-optimization.md` — Performance Optimization in Python
+- `../references/security-best-practices.md` — Security Best Practices for Python Backends
+- `../references/state-management.md` — State Management in Python Backends
+- `../references/testing-strategies.md` — Testing Strategies in Python
+
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test FastAPI with pytest.

@@ -557,5 +557,18 @@ Use `@nestjs/testing` for unit tests. Use `supertest` with `createNestApplicatio
   - references/nestjs-deployment.md — NestJS Deployment
   - references/nestjs-modules.md — NestJS Modules Deep Dive
   - references/nestjs-testing.md — NestJS Testing
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/architecture-patterns.md` — NestJS Architecture Patterns: Modules, DI, and Layering
+- `../references/code-organization.md` — NestJS Code Organization: Folders, DTOs, Config, and Monorepos
+- `../references/deployment-pipelines.md` — NestJS Deployment Pipelines: Build, Container, CI/CD, Runtime
+- `../references/error-handling.md` — NestJS Error Handling: Exceptions, Filters, and Problem Details
+- `../references/performance-optimization.md` — NestJS Performance Optimization
+- `../references/security-best-practices.md` — NestJS Security Best Practices
+- `../references/state-management.md` — NestJS State Management: Stateless Services, Request Context, Caches, Sessions
+- `../references/testing-strategies.md` — NestJS Testing Strategies: Unit, Integration, E2E
+
 ## Handoff
 Hand off to `backend/nestjs/patterns/SKILL.md` for NestJS-specific patterns or `backend/universal/api-response/SKILL.md` for API response formatting.

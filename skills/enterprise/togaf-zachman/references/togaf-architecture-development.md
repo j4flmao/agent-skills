@@ -677,3 +677,4 @@ adm_risk_management:
     contingency_plan: "Actions if risk materializes"
     owner: "Responsible person"
     review_date: "YYYY-MM-DD"
+```

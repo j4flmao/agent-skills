@@ -4,7 +4,7 @@ Real-world technical specification examples for different feature types.
 
 ## Example 1: REST API — Payment Processing
 
-```markdown
+````markdown
 # Technical Specification: Payment Processing API
 
 ## System Context
@@ -219,7 +219,7 @@ All errors return:
 
 ## Example 2: Frontend Feature — Document Editor
 
-```markdown
+````markdown
 # Technical Specification: Rich Text Document Editor
 
 ## System Context
@@ -339,4 +339,4 @@ Save document content.
 | Integration | Autosave flow, collaboration sync, offline queue | Playwright |
 | Visual | Editor renders consistently across browsers | Chromatic |
 | Performance | Typing latency, memory usage with 100KB document | Lighthouse CI |
-```
+`````

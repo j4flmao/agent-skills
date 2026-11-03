@@ -543,3 +543,19 @@ What aspect of agent behavior to observe?
 
 - **Sampled reasoning trace storage**: Store full reasoning traces for 1% of sessions. Store abbreviated traces (metadata only) for the rest. Reconstruct full trace on demand via log aggregation.
 - **Async cost computation**: Compute cost asynchronously via message queue. Don't block the main agent loop for cost tracking. Batch cost entries for efficient storage.
+
+## References
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../error-recovery/references/chaos-testing-agents.md` — Chaos Testing for Agent Harnesses
+- `../error-recovery/references/checkpoint-recovery.md` — Checkpoint and Resume for Long-Running Agents
+- `../error-recovery/references/dead-letter-processing.md` — Dead-Letter Processing for Agent Tasks
+- `../error-recovery/references/error-budget-management.md` — Error Budget Management for Agent Services
+- `../error-recovery/references/error-taxonomy-classification.md` — Error Taxonomy and Classification for Agent Systems
+- `../error-recovery/references/fallback-chain-patterns.md` — Fallback Chain Patterns for Agents
+- `../error-recovery/references/graceful-degradation.md` — Graceful Degradation for Agent Products
+- `../error-recovery/references/retry-strategies.md` — Retry Strategies for Agent Harnesses
+- `../evaluation-testing/references/eval-dataset-management.md` — Evaluation Dataset Management for LLM and Agent Systems
+- `../evaluation-testing/references/hallucination-scoring.md` — Hallucination Scoring for LLM Outputs

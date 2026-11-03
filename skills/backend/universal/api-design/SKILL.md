@@ -902,6 +902,32 @@ async function fetchFromService(url: string): Promise<unknown> {
   - references/graphql-conventions.md — GraphQL Conventions
   - references/rest-conventions.md — REST API Conventions
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../api-gateway/references/apache-apisix.md` — Apache APISIX Gateway Configuration
+- `../api-gateway/references/api-gateway-advanced.md` — API Gateway Advanced Patterns
+- `../api-gateway/references/api-gateway-deployment.md` — API Gateway Deployment Patterns
+- `../api-gateway/references/api-gateway-fundamentals.md` — API Gateway Fundamentals
+- `../api-gateway/references/aws-api-gateway.md` — AWS API Gateway
+- `../api-gateway/references/azure-api-management.md` — Azure API Management
+- `../api-gateway/references/deployment.md` — Gateway Configuration as Code and Safe Rollouts
+- `../api-gateway/references/envoy-gateway.md` — Envoy Gateway Configuration
+- `../api-gateway/references/envoy_base.md` — Envoy Core Model: Listeners, Filters, Clusters, and xDS
+- `../api-gateway/references/gateway-comparison.md` — API Gateway Comparison
+- `../api-gateway/references/gateway-observability.md` — API Gateway Observability
+- `../api-gateway/references/gateway-patterns.md` — API Gateway Patterns
+- `../api-gateway/references/gateway-testing.md` — API Gateway Testing
+- `../api-gateway/references/gql_fed.md` — GraphQL Federation at the Gateway
+- `../api-gateway/references/kong-config.md` — Kong Gateway Configuration
+- `../api-gateway/references/nginx-config.md` — Nginx / OpenResty Gateway Configuration
+- `../api-gateway/references/observability.md` — Gateway Tracing and Access Logs with OpenTelemetry
+- `../api-gateway/references/performance.md` — API Gateway Performance Tuning
+- `../api-gateway/references/rate_limiting.md` — Rate Limiting at the API Gateway
+- `../api-gateway/references/routing_strategies.md` — Traffic Routing Strategies with the Kubernetes Gateway API
+- `../api-gateway/references/security_auth.md` — Authentication and Authorization at the API Gateway
+- `../api-gateway/references/spring-cloud-gateway.md` — Spring Cloud Gateway
+
 ## Handoff
 No artifact produced unless requested.
 Next skill: backend-database-patterns — design the data layer for these APIs.

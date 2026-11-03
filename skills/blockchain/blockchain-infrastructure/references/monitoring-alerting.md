@@ -462,7 +462,7 @@ export default {
 ## Runbook Template
 
 ### Node Sync Issue Runbook
-```markdown
+````markdown
 # Node Sync Issue Runbook
 
 ## Symptoms
@@ -502,4 +502,4 @@ journalctl -u geth --since "1 hour ago" | grep -i error
 ## Escalation
 - If node does not catch up in 30 minutes, restore from snapshot
 - If P2P port is unreachable, check firewall / security group rules
-```
+````

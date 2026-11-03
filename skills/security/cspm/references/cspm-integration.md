@@ -87,6 +87,7 @@ def poll_security_hub():
     
     if splunk_events:
         send_to_splunk_hec(splunk_events, "https://splunk.example.com:8088", "YOUR-HEC-TOKEN")
+```
 
 ### Splunk Queries for CSPM Data
 ```spl

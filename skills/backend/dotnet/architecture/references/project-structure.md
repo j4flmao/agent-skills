@@ -104,6 +104,7 @@ YourApp.sln
     │
     └── YourApp.ArchTests/
         └── ArchitectureTests.cs  (NetArchTest)
+```
 
 ## Dependency Rules (per layer)
 

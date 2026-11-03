@@ -115,7 +115,7 @@ subgraphs:
 - All services are already or will be built as GraphQL APIs
 - You have multiple teams that should own independent domains
 - You need automatic query planning and entity resolution
-- Performance at scale is critical (Apollo Router is 10x faster)
+- Performance at scale is critical (Apollo Router, written in Rust, has far lower overhead than the Node.js gateway per Apollo's benchmarks)
 - You want schema registry, change checks, and field usage analytics
 - Your organization follows DDD / bounded context patterns
 

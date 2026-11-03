@@ -504,6 +504,12 @@ export const useAuthStore = defineStore('auth', () => {
   - references/vue-optimization.md
   - references/vue-testing.md
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../testing/references/cypress-component.md` — Cypress Component Testing for Vue
+- `../testing/references/vitest.md` — Vue Testing with Vitest
+
 ## Handoff
 Next skill: vue-nuxt (if using Nuxt) or frontend-testing.
 Carry forward: component organization, composable patterns, Pinia store structure.

@@ -5,7 +5,7 @@
 ### bun install
 
 ```bash
-# Install dependencies (10-30x faster than npm)
+# Install dependencies (typically much faster than npm; benchmark your own lockfile)
 bun install
 
 # Install specific package

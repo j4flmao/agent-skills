@@ -73,3 +73,32 @@ flowchart TD
     N --> O[Validate against Bottlenecks]
     O --> P[Finalize Architecture Blueprint]
 ```
+
+## References
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../planning/solution-architecture/references/adr-template.md` — ADR-{number}: {title}
+- `../../planning/solution-architecture/references/api-architecture-strategy.md` — API Architecture Strategy
+- `../../planning/solution-architecture/references/architecture-debt-management.md` — Architecture Debt Management
+- `../../planning/solution-architecture/references/architecture-decision-framework.md` — Architecture Decision Framework
+- `../../planning/solution-architecture/references/architecture-evaluation-methods.md` — Architecture Evaluation Methods
+- `../../planning/solution-architecture/references/architecture-fitness-functions.md` — Architecture Fitness Functions
+- `../../planning/solution-architecture/references/architecture-leadership.md` — Architecture Leadership
+- `../../planning/solution-architecture/references/architecture-metrics.md` — Architecture Metrics
+- `../../planning/solution-architecture/references/architecture-modernization.md` — Architecture Modernization
+- `../../planning/solution-architecture/references/architecture-patterns-catalog.md` — Architecture Patterns Catalog
+- `../../planning/solution-architecture/references/architecture-review-checklist.md` — Architecture Review Checklist
+- `../../planning/solution-architecture/references/architecture-risk-quantification.md` — Architecture Risk Quantification
+- `../../planning/solution-architecture/references/c4-model-visualization.md` — C4 Model for Architecture Visualization
+- `../../planning/solution-architecture/references/domain-modeling-guide.md` — Domain Modeling Guide for Solution Architects
+- `../../planning/solution-architecture/references/reference-architectures.md` — Reference Architectures for Solution Architects
+- `../../planning/solution-architecture/references/security-architecture-guide.md` — Security Architecture Guide
+- `../../planning/solution-architecture/references/solution-arch-templates.md` — Solution Architecture Templates
+- `../../planning/solution-architecture/references/solution-architecture-advanced.md` — Solution Architecture Advanced Topics
+- `../../planning/solution-architecture/references/solution-architecture-fundamentals.md` — Solution Architecture Fundamentals
+- `../../planning/solution-architecture/references/startup-vs-enterprise-architecture.md` — Startup vs Enterprise Architecture
+- `../../planning/solution-architecture/references/system-design-methodology.md` — System Design Methodology for Solution Architects
+- `../../planning/solution-architecture/references/technology-radar.md` — Technology Radar for Solution Architects
+- `../../planning/solution-architecture/references/trade-off-analysis.md` — Trade-off Analysis for Solution Architecture

@@ -686,7 +686,6 @@ Write anti-patterns:
 ├── Frequent updates to same row
 │   └── Creates many tombstones (read overhead)
 ```
-```
 
 ### Compaction Strategies
 

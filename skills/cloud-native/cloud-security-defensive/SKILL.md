@@ -128,3 +128,16 @@ ORDER BY eventTime DESC;
 
 ## References
 - Related skills: `skills/cloud-native/cloud-security-offensive/SKILL.md`, `skills/devops/vault/SKILL.md`, `skills/devops/policy-as-code/SKILL.md`.
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../security/cspm/references/automated-remediation.md` — Automated Remediation for CSPM
+- `../../security/cspm/references/ciem-permissions.md` — CIEM — Cloud Infrastructure Entitlement Management
+- `../../security/cspm/references/compliance-frameworks.md` — Compliance Frameworks for CSPM
+- `../../security/cspm/references/cspm-advanced.md` — CSPM Advanced Topics
+- `../../security/cspm/references/cspm-drift-detection.md` — CSPM: Cloud Configuration Drift Detection & Remediation Engine
+- `../../security/cspm/references/cspm-fundamentals.md` — CSPM Fundamentals
+- `../../security/cspm/references/cspm-integration.md` — CSPM Integration
+- `../../security/cspm/references/cspm-platforms.md` — CSPM Platforms
+- `../../security/cspm/references/cspm-scanning-architecture.md` — CSPM: Scanning Architecture & Multi-Account Strategy

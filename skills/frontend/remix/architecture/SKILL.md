@@ -798,6 +798,15 @@ Catch boundary for expected errors (404, 403). Error boundary for unexpected err
 - references/remix-sessions-auth.md — Remix Sessions and Authentication
 - references/remix-caching-strategies.md — Remix Caching Strategies
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/code-organization.md` — Code Organization
+- `../references/deployment-pipelines.md` — Deployment Pipelines
+- `../references/performance-optimization.md` — Performance Optimization
+- `../references/security-best-practices.md` — Security Best Practices
+- `../references/testing-strategies.md` — Testing Strategies
+
 ## Handoff
 No artifact produced.
 Next skill: frontend-remix-patterns for form validation, error boundaries, SEO, caching, optimistic UI.

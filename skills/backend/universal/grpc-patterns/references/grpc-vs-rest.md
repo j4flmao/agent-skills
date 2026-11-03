@@ -11,7 +11,7 @@
 | Code gen | Built-in (protoc) | Manual or OpenAPI generators |
 | Browser support | No (needs gRPC-web) | Native |
 | Human-readable | No (binary) | Yes (JSON) |
-| Performance | 5-10x faster | Baseline |
+| Performance | Usually lower latency and smaller payloads (Protobuf + HTTP/2); measure for your workload | Baseline |
 | Payload size | ~30% of JSON | Baseline |
 | Tooling | Limited debugging | Rich (curl, Postman, browsers) |
 | Caching | Not natively cacheable | HTTP caching (ETag, Cache-Control) |

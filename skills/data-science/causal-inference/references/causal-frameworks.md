@@ -332,4 +332,3 @@ class LinearSCM:
 | Instrumental Variables | Unobserved confounders, valid instrument | IV estimator |
 | Difference-in-Differences | Panel data, parallel trends | (Y₁_treat - Y₀_treat) - (Y₁_ctrl - Y₀_ctrl) |
 | Regression Discontinuity | Deterministic cutoff | lim↓(E[Y|X=c]) - lim↑(E[Y|X=c]) |
-```

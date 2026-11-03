@@ -166,3 +166,24 @@ graph.invoke({"task": "...", "draft": "", "feedback": "", "passed": False, "atte
 - Wang et al., "Plan-and-Solve Prompting" (ACL 2023).
 - Anthropic, "Building effective agents" (Dec 2024) — workflow vs agent taxonomy.
 - LangGraph documentation: StateGraph, checkpointers, interrupts.
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../harness-engineering/agent-legibility/references/agent-optimized-readmes.md` — Agent-Optimized READMEs
+- `../../harness-engineering/agent-legibility/references/agents-md-design.md` — AGENTS.md Design Reference
+- `../../harness-engineering/agent-legibility/references/codebase-navigation-hints.md` — Codebase Navigation Hints for Agents
+- `../../harness-engineering/agent-legibility/references/convention-constraint-files.md` — Convention and Constraint Files Reference
+- `../../harness-engineering/agent-legibility/references/progressive-context-disclosure.md` — Progressive Context Disclosure for Agents
+- `../../harness-engineering/agent-legibility/references/repo-native-instructions.md` — Repository-Native Instructions Reference
+- `../../harness-engineering/agent-legibility/references/structured-documentation.md` — Structured Documentation Reference
+- `../../harness-engineering/agent-legibility/references/workspace-configuration.md` — Workspace Configuration for Coding Agents
+- `../../harness-engineering/feedback-loops/references/automated-validation-hooks.md` — Automated Validation Hooks
+- `../../harness-engineering/feedback-loops/references/continuous-improvement-loops.md` — Continuous Improvement Loops for Agents
+- `../../harness-engineering/feedback-loops/references/correction-trigger-mechanisms.md` — Correction Trigger Mechanisms
+- `../../harness-engineering/feedback-loops/references/hitl-checkpoint-design.md` — Human-in-the-Loop (HITL) Checkpoint Design
+- `../../harness-engineering/feedback-loops/references/implement-verify-fix-cycles.md` — Implement-Verify-Fix (IVF) Cycles
+- `../../harness-engineering/feedback-loops/references/output-verification-layers.md` — Output Verification Layers
+- `../../harness-engineering/feedback-loops/references/quality-gate-frameworks.md` — Quality Gate Frameworks for Agent Work
+- `../../harness-engineering/feedback-loops/references/reflection-patterns.md` — Reflection Patterns
+- `../../harness-engineering/feedforward-controls/references/anticipatory-error-prevention.md` — Anticipatory Error Prevention (Feedforward Controls)

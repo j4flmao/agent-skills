@@ -260,7 +260,7 @@ enum Role {
 
 ## Documentation Skeleton
 
-```markdown
+````markdown
 # docs/architecture/decisions/README.md
 # Architecture Decision Records
 
@@ -290,7 +290,7 @@ Why is this a good/bad decision?
 ## Index
 | ADR | Title | Status |
 |-----|-------|--------|
-```
+````
 
 ## Key Points
 

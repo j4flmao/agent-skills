@@ -690,5 +690,18 @@ spec:
 - references/namespace-management.md — Namespace Strategy and Resource Quotas
 - references/pod-lifecycle.md — Pod Lifecycle, Init Containers, and Ephemeral Containers
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../kubernetes-patterns/references/k8s-operations.md` — Kubernetes Operations Reference
+- `../kubernetes-patterns/references/k8s-resources.md` — Kubernetes Core Resources Reference
+- `../kubernetes-patterns/references/k8s-scheduling.md` — Kubernetes Scheduling
+- `../kubernetes-patterns/references/k8s-stateful-workloads.md` — Kubernetes Stateful Workloads
+- `../kubernetes-patterns/references/kubernetes-patterns-advanced.md` — Kubernetes Patterns: Advanced Policy, Admission, and Workload Hardening
+- `../kubernetes-patterns/references/kubernetes-patterns-fundamentals.md` — Kubernetes Design Patterns: Fundamentals
+- `../kubernetes-patterns/references/operator-pattern.md` — Kubernetes Advanced Patterns: The Operator
+- `../kubernetes-patterns/references/scheduling-placement.md` — Kubernetes Scheduling and Pod Placement
+- `../kubernetes-patterns/references/sidecar-injection.md` — Kubernetes Patterns: Sidecar Injection
+
 ## Handoff
 Cross-reference with `kubernetes-patterns` for application manifests. Use `helm-patterns` for chart design. Use `cilium-ebpf` for advanced networking. Use `service-mesh` for Istio/Linkerd. Use `monitoring` for Prometheus/Grafana. Use `backup-dr` for Velero. Hand off to `incident-response` for cluster incidents.

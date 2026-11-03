@@ -326,4 +326,4 @@ class PolicyEngine {
 | Pre-filter by role (RBAC first) | Skip ABAC for 80% of requests | Two-phase check |
 | Policy indexing by resource type | O(n) → O(1) policy lookup | Memory for index |
 | Batch policy evaluation | 1 DB call vs N | Complexity |
-| WASM-based policy engine | 10x faster than HTTP sidecar | Deployment complexity |
+| WASM-based policy engine | No network hop, so lower latency than an HTTP sidecar | Deployment complexity |

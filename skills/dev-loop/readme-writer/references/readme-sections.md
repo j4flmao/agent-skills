@@ -99,7 +99,7 @@ Explain the problem it solves and who should use it.}
 
 ### Getting Started
 
-```markdown
+````markdown
 ## Getting Started
 
 ### Installation
@@ -132,7 +132,7 @@ npm run dev
 Your server will be running at http://localhost:3000.
 
 > **First time?** See the [Quickstart Guide](docs/quickstart.md) for a step-by-step walkthrough.
-```
+````
 
 ### Configuration
 
@@ -155,7 +155,7 @@ All configuration is through environment variables. Copy `.env.example` to `.env
 
 ### Testing
 
-```markdown
+````markdown
 ## Testing
 
 ```bash
@@ -185,11 +185,11 @@ npm run test:e2e
 | Unit | `src/**/__tests__/` | Isolated function/class tests |
 | Integration | `test/integration/` | Service-level tests with DB |
 | E2E | `test/e2e/` | Full flow from API to database |
-```
+````
 
 ### Deployment
 
-```markdown
+````markdown
 ## Deployment
 
 ### Docker
@@ -220,7 +220,7 @@ Deployments are automated through GitHub Actions:
 |-------------|--------|---------|
 | Staging | `main` | Push |
 | Production | `release/*` | PR merged |
-```
+````
 
 ### Architecture
 
@@ -253,7 +253,7 @@ See [docs/architecture.md](docs/architecture.md) for detailed decision records.
 
 ### Project Structure
 
-```markdown
+````markdown
 ## Project Structure
 
 ```
@@ -275,7 +275,7 @@ src/
 │   └── database.ts    # Database configuration
 ├── main.ts            # Application entry point
 └── app.module.ts      # Root module
-```
+````
 
 ## README Writing Rules
 

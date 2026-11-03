@@ -338,3 +338,4 @@ playbook:
         - action: whitelist_location
           duration: 7d
         - action: notify_manager
+```

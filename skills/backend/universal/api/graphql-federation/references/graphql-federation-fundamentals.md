@@ -413,7 +413,7 @@ jobs:
 
 | Aspect | Apollo Router (Rust) | Apollo Gateway (Node.js) |
 |--------|---------------------|--------------------------|
-| Performance | ~10x faster, 1ms overhead | ~10ms overhead per request |
+| Performance | Much lower per-request overhead (Rust) | Higher overhead (Node.js) |
 | Configuration | YAML file | Programmatic (JS/TS) |
 | Extensibility | Rhai scripting, native plugins | Node.js middleware |
 | Startup | Instant | Schema fetch on boot |

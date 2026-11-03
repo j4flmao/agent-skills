@@ -75,7 +75,7 @@ Ethereum interaction type:
 ```
 Node requirements:
 ├── Mainnet, most popular → geth (Go) — reference implementation
-├── High performance, sync speed → reth (Rust) — 2-3x faster sync
+├── High performance, sync speed → reth (Rust) — typically faster sync (staged sync); benchmark on your hardware
 ├── Enterprise, .NET ecosystem → Nethermind (C#) — good monitoring
 ├── Archival node, optimized storage → Erigon (Go) — 50% less storage
 └── Lightweight, embedded → reth or custom Go light client
@@ -375,7 +375,7 @@ func (api *EthAPI) Call(args TransactionArgs, blockNrOrHash *rpc.BlockNumberOrHa
 // - Staged pipeline enables parallel execution
 // - Memory-mapped database (redb) reduces IO
 // - Static dispatch for EVM (no interpreter overhead)
-// - 2-3x faster initial sync
+// - Faster initial sync in most published comparisons (hardware-dependent)
 ```
 
 ## Security Considerations

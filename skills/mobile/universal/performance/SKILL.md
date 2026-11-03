@@ -762,6 +762,27 @@ Push notification: 0 background network, push wakes app only when needed
   - references/startup.md — Mobile Startup
   - references/mobile-performance-monitoring.md — Mobile Performance Monitoring
   - references/mobile-performance-bundle-optimization.md — Mobile Performance Bundle Optimization
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../mobile-performance/references/app_startup.md` — App Startup Performance (Android and iOS)
+- `../mobile-performance/references/battery_life.md` — Battery Life and Energy Efficiency
+- `../mobile-performance/references/concurrency.md` — Concurrency for Responsive Mobile Apps
+- `../mobile-performance/references/cpu_profiling.md` — CPU Profiling on Mobile
+- `../mobile-performance/references/graphics_arch.md` — Mobile Graphics Architecture
+- `../mobile-performance/references/memory_tracing.md` — Memory Tracing and Leak Detection
+- `../mobile-performance/references/network_optimization.md` — Mobile Network Optimization
+- `../mobile-performance/references/ref1_architecture.md` — Mobile Performance Architecture: Budgets, Structure, Observability
+- `../mobile-performance/references/ref2_schemas.md` — Mobile Performance Data Schemas
+- `../mobile-performance/references/ref3_flows.md` — Mobile Performance Investigation Flows
+- `../mobile-performance/references/ref4_tuning.md` — Build and Runtime Tuning for Mobile Apps
+- `../mobile-performance/references/ref5_security.md` — Security Features and Their Performance Cost on Mobile
+- `../mobile-performance/references/ref6_apis.md` — Platform Performance APIs Reference
+- `../mobile-performance/references/ref7_testing.md` — Mobile Performance Testing
+- `../mobile-performance/references/ref8_deployment.md` — Performance-Safe Release and Field Monitoring
+- `../mobile-performance/references/ui_pipeline.md` — UI Rendering Pipeline and Jank
+
 ## Handoff
 
 Hand off to stack-specific skill for implementation fixes.

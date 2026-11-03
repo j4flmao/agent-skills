@@ -150,3 +150,12 @@ Re-run the adversarial suite on every prompt, model, or tool change.
 - Hines et al., "Defending Against Indirect Prompt Injection Attacks With Spotlighting" (Microsoft, 2024).
 - Debenedetti et al., "Defeating Prompt Injections by Design" (CaMeL, 2025).
 - Inan et al., "Llama Guard" (2023); NVIDIA NeMo Guardrails documentation; OWASP Top 10 for LLM Applications 2025.
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../../harness-engineering/guardrails-safety/references/content-filtering-layers.md` — Content Filtering Layers
+- `../../../harness-engineering/guardrails-safety/references/guardrail-monitoring-alerting.md` — Guardrail Monitoring and Alerting
+- `../../../harness-engineering/guardrails-safety/references/guardrail-testing-validation.md` — Guardrail Testing and Validation
+- `../../../harness-engineering/guardrails-safety/references/output-guardrail-patterns.md` — Output Guardrail Patterns
+- `../../../harness-engineering/guardrails-safety/references/policy-enforcement-engines.md` — Policy Enforcement Engines

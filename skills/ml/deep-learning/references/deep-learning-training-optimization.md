@@ -385,7 +385,7 @@ class CheckpointedModel(nn.Module):
 | AdamW + decoupled WD | 1x | 4x | Best for transformers | LLaMA, GPT, BERT |
 | AdaFactor | 1x | 2x (factorized) | Good, saves memory | Memory-constrained |
 | Lion | 1x | 1x (momentum) | Fast, less memory | Emerging, promising |
-| Sophia | 1x | 4x | 2x faster than Adam | Large models |
+| Sophia | 1x | 4x | ~2x fewer steps than Adam in the Sophia paper; not consistently reproduced | Large models |
 | LAMB | 1x | 4x | Good for large batch | Large batch training |
 | Shampoo | 1x | O(d^2) | Best for ill-conditioned | Small models |
 

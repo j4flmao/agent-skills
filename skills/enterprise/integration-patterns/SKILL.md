@@ -531,5 +531,11 @@ Messages fail, go to DLQ, but nobody monitors it. DLQ messages accumulate and ev
   - references/event-driven-integration.md -- Event-Driven Integration
   - references/api-gateway-patterns.md -- API Gateway Patterns
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/enterprise-integration-patterns_ref_1.md` — Enterprise Integration Patterns: Messaging & Event Streaming
+- `../references/enterprise-integration-patterns_ref_2.md` — Enterprise Integration Patterns: Distributed Transactions & APIs
+
 ## Handoff
 For monitoring integration SLAs, hand off to `enterprise-sla-management`. For data governance across integrations, hand off to `enterprise-data-governance`.

@@ -503,6 +503,20 @@ const client = new PaymentServiceClient('payment-service:443', channelCredential
   - references/microservices-communication.md — Microservices Communication
   - references/microservices-observability.md — Microservices Observability
   - references/microservices-testing.md — Microservices Testing
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../saga-patterns/references/choreography-vs-orchestration.md` — Choreography vs Orchestration
+- `../saga-patterns/references/compensating-transactions.md` — Compensating Transactions
+- `../saga-patterns/references/saga-observability.md` — Saga Observability
+- `../saga-patterns/references/saga-orchestration-choreography.md` — Saga Orchestration vs Choreography
+- `../saga-patterns/references/saga-orchestration.md` — Saga Orchestration Patterns
+- `../saga-patterns/references/saga-rollback-compensation.md` — Saga Rollback and Compensation
+- `../saga-patterns/references/saga-state-management.md` — Saga State Management
+- `../saga-patterns/references/saga-testing.md` — Saga Testing
+- `../saga-patterns/references/saga-timeout-handling.md` — Saga Timeout Handling
+
 ## Handoff
 Hand off to `devops/containerization/SKILL.md` for container orchestration setup. Hand off to `backend/universal/event-driven/SKILL.md` for detailed event-driven patterns. Hand off to `backend/universal/database-patterns/SKILL.md` for data consistency strategies.
 - Review code for security, performance, and correctness before merging.

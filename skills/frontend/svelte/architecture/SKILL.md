@@ -631,6 +631,14 @@ For global state, use $state class instances in a module `.svelte.js` file: `exp
 - references/svelte-5-runes-deep-dive.md — Svelte 5 Runes Deep Dive
 - references/svelte-performance-optimization.md — Svelte Performance Optimization
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/code-organization.md` — Svelte Code Organization
+- `../references/deployment-pipelines.md` — Svelte Deployment Pipelines
+- `../references/error-handling.md` — Svelte Error Handling
+- `../references/testing-strategies.md` — Svelte Testing Strategies
+
 ## Handoff
 No artifact produced.
 Next skill: frontend-svelte-patterns for forms, animations, actions, data fetching.

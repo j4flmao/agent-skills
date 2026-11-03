@@ -81,3 +81,26 @@ flowchart TD
     style RS fill:#bbf,stroke:#333,stroke-width:2px
     style RP fill:#bfb,stroke:#333,stroke-width:2px
 ```
+
+## References
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../security/zero-trust/references/cert-rotation.md` — Zero Trust: Certificate Rotation
+- `../../security/zero-trust/references/continuous-verification.md` — Continuous Verification
+- `../../security/zero-trust/references/core-principles.md` — Zero Trust Core Principles
+- `../../security/zero-trust/references/identity-first-security.md` — Identity-First Security
+- `../../security/zero-trust/references/jwt-flows.md` — Zero Trust: JWT Authentication Flows
+- `../../security/zero-trust/references/microsegmentation.md` — Network Microsegmentation
+- `../../security/zero-trust/references/mtls-config.md` — Zero Trust: Mutual TLS (mTLS)
+- `../../security/zero-trust/references/oauth2-schemas.md` — Zero Trust: OAuth2 & OIDC Schemas
+- `../../security/zero-trust/references/pki-management.md` — Zero Trust: PKI Management
+- `../../security/zero-trust/references/policies.md` — Zero Trust: Policy Engines & OPA
+- `../../security/zero-trust/references/token-introspection.md` — Zero Trust: Token Introspection
+- `../../security/zero-trust/references/trust-store.md` — Zero Trust: Trust Stores and CA Bundles
+- `../../security/zero-trust/references/zero-trust-advanced.md` — Zero Trust Advanced Topics
+- `../../security/zero-trust/references/zero-trust-fundamentals.md` — Zero Trust Fundamentals
+- `../../security/zero-trust/references/zt-access-proxy.md` — Zero Trust Access Proxy
+- `../../security/zero-trust/references/zt-deployment-architecture.md` — Zero Trust: ZTA Deployment Architecture & Migration Strategy
+- `../../security/zero-trust/references/zt-policy-decision-framework.md` — Zero Trust: Policy Decision Framework Architecture

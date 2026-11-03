@@ -6,7 +6,7 @@ A well-structured Product Requirements Document is the single source of truth fo
 
 ## Complete PRD Template
 
-```markdown
+````markdown
 # Product Requirements Document: {Project Name}
 
 | Metadata | Value |
@@ -368,7 +368,7 @@ Integration Requirements      | None    | 5-10     | 15-25
 Analytics / Reporting         | None    | Section  | Detailed section
 Rollout Plan                  | Brief   | Detailed | Multi-phase
 Open Questions                | 3-5     | 5-10     | 10-20
-```
+````
 
 ## PRD Review Checklist
 

@@ -279,7 +279,7 @@ h_t = Hutchinson_diag_Hessian(θ_t)              # diagonal Hessian estimate
 
 ρ = clipping threshold (typically 1). The gradient is divided by the curvature estimate, giving larger steps in low-curvature regions and smaller steps in high-curvature regions — like a second-order method but O(d) per step.
 
-Sophia achieves 2x faster pretraining of LLMs compared to Adam.
+The Sophia paper (Liu et al., 2023) reports ~2x fewer pretraining steps than Adam on GPT-2-scale models; later independent comparisons found smaller or no gains.
 
 **Comparison of Adaptive Methods:**
 

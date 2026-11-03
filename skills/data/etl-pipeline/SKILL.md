@@ -570,6 +570,19 @@ jobs:
   - references/etl-pipeline-design.md — ETL Pipeline Design
   - references/nifi-mage-patterns.md — Apache NiFi and Mage.ai ETL Patterns
   - references/pipeline-monitoring.md — Pipeline Monitoring
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../data-etl-pipeline/references/api_reference.md` — ETL Orchestration API Reference (Airflow 3, Dagster, dbt)
+- `../data-etl-pipeline/references/architecture_patterns.md` — ETL/ELT Architecture Patterns
+- `../data-etl-pipeline/references/configuration_guide.md` — ETL Pipeline Configuration Guide
+- `../data-etl-pipeline/references/deployment_strategies.md` — ETL Pipeline Deployment Strategies
+- `../data-etl-pipeline/references/integration_guide.md` — ETL Source Integration Guide
+- `../data-etl-pipeline/references/performance_tuning.md` — ETL Performance Tuning
+- `../data-etl-pipeline/references/security_best_practices.md` — ETL Pipeline Security Best Practices
+- `../data-etl-pipeline/references/troubleshooting_guide.md` — ETL Pipeline Troubleshooting Guide
+
 ## Handoff
 `data-data-quality` for validation rules and data contract enforcement
 `data-data-warehouse` for target schema design and optimization

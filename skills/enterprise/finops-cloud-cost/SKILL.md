@@ -100,3 +100,8 @@ Define one or two unit metrics tied to revenue drivers: cost per 1k requests, pe
 ## References
 - `skills/enterprise/cost-governance/SKILL.md` — budget governance and approvals
 - `skills/devops/finops/SKILL.md` — FinOps tooling in delivery pipelines
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/finops_optimization.md` — FinOps: Cloud Financial Operations & Optimization

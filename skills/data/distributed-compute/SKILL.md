@@ -446,6 +446,18 @@ spec:
 ## References
 Coming soon.
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../data-distributed-compute/references/api_reference.md` — Distributed Compute API Reference
+- `../data-distributed-compute/references/architecture_patterns.md` — Distributed Compute Architecture Patterns
+- `../data-distributed-compute/references/configuration_guide.md` — Distributed Compute Configuration Guide
+- `../data-distributed-compute/references/deployment_strategies.md` — Distributed Compute Deployment Strategies
+- `../data-distributed-compute/references/integration_guide.md` — Distributed Compute Integration Guide
+- `../data-distributed-compute/references/performance_tuning.md` — Distributed Compute Performance Tuning
+- `../data-distributed-compute/references/security_best_practices.md` — Distributed Compute Security Best Practices
+- `../data-distributed-compute/references/troubleshooting_guide.md` — Distributed Compute Troubleshooting Guide
+
 ## Architecture Decision Trees
 
 ```

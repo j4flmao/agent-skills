@@ -106,7 +106,7 @@ function template() {
 | Per component output | <0.5kB |
 | Initial JS (no SvelteKit) | <10kB |
 | Hydration | Not needed (no VDOM) |
-| Bundle comparison | 5-10x smaller than React |
+| Bundle comparison | Smaller runtime than React for small apps; the gap narrows as apps grow |
 
 ## Resource Hints
 

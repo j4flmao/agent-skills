@@ -6,12 +6,12 @@
 
 | Feature | Node.js | Bun |
 |---------|---------|-----|
-| Package manager | npm/pnpm/yarn | bun (built-in, 10-30x faster) |
+| Package manager | npm/pnpm/yarn | bun (built-in; Bun reports large install speedups, verify on your project) |
 | Test runner | Jest/Vitest | bun test (built-in, Jest-compatible) |
 | Bundler | esbuild/webpack/rollup | bun build (built-in) |
 | TypeScript | tsc/swc | Native transpilation (no install needed) |
 | JSX/TSX | Requires config | Native support |
-| SQLite | better-sqlite3 (npm) | bun:sqlite (built-in, 4-6x faster) |
+| SQLite | better-sqlite3 (npm) | bun:sqlite (built-in; Bun reports it faster than better-sqlite3) |
 | .env | dotenv (npm) | Auto-loaded |
 | Watch mode | nodemon/tsx --watch | bun --watch |
 | Shell scripts | shelljs/exec | Bun.shell (template literals) |

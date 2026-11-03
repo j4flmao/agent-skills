@@ -160,3 +160,15 @@ One trace per run, one span per node and per LLM/tool call, tagged with `thread_
 - [Communication Protocols](references/communication-protocols.md) — blackboard vs actor model.
 - [Human-in-the-Loop](references/human-in-the-loop.md) — checkpoint-based approval flows.
 - LangGraph docs (persistence, human-in-the-loop, multi-agent); Model Context Protocol and A2A specifications.
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../harness-engineering/multi-agent-coordination/references/consensus-coordination.md` — Consensus and Agreement in Multi-Agent LLM Systems
+- `../../harness-engineering/multi-agent-coordination/references/dag-task-decomposition.md` — DAG-Based Task Decomposition Reference Guide
+- `../../harness-engineering/multi-agent-coordination/references/failure-rate-mitigation.md` — Failure Mitigation in Multi-Agent Systems
+- `../../harness-engineering/multi-agent-coordination/references/inter-agent-protocols.md` — Inter-Agent Communication Protocols Reference Guide
+- `../../harness-engineering/multi-agent-coordination/references/orchestrator-patterns.md` — Orchestrator Patterns Reference Guide
+- `../../harness-engineering/multi-agent-coordination/references/role-specialization-patterns.md` — Role Specialization Patterns for Agent Teams
+- `../../harness-engineering/multi-agent-coordination/references/state-sharing-mechanisms.md` — State Sharing Mechanisms for Multi-Agent Systems
+- `../../harness-engineering/multi-agent-coordination/references/supervisor-worker-hierarchies.md` — Supervisor-Worker Hierarchies Reference Guide

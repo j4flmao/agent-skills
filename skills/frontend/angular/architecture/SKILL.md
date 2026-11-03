@@ -476,6 +476,18 @@ angular_testing:
   - references/standalone-components.md — Angular Standalone Components
   - references/angular-micro-frontends.md — Angular Micro-Frontends Reference
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../angular-architecture/references/advanced_patterns.md` — Advanced Angular Patterns
+- `../angular-architecture/references/component_lifecycle.md` — Component Lifecycle & Memory Management
+- `../angular-architecture/references/core_concepts.md` — Angular Core Concepts
+- `../angular-architecture/references/performance_optimization.md` — Performance Optimization
+- `../angular-architecture/references/routing_and_navigation.md` — Routing & Navigation Architecture
+- `../angular-architecture/references/security_guidelines.md` — Security Guidelines
+- `../angular-architecture/references/state_management.md` — State Management Architecture
+- `../angular-architecture/references/testing_strategies.md` — Testing Strategies
+
 ## Handoff
 No artifact produced.
 Next skill: angular-patterns — DI, interceptors, guards, NgRx vs Signal Store.

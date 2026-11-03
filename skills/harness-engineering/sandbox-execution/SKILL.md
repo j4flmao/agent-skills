@@ -594,3 +594,15 @@ When to create snapshots?
 - **Sandbox pooling with warm starts**: Pre-create sandboxes with common dependencies pre-loaded. Reduces startup time from seconds to milliseconds. Refresh pool asynchronously when below threshold.
 - **Copy-on-write filesystem**: Use overlayfs or similar for sandbox filesystems. Multiple sandboxes share a base layer. Only modified files consume additional space.
 - **Snapshot-based fast restore**: Use MicroVM snapshots for near-instant sandbox restoration. Snapshot the base OS + runtime, restore in <100ms.
+
+## References
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../architectural-constraints/references/compliance-governance-standards.md` — Compliance & Governance Standards
+- `../architectural-constraints/references/dependency-isolation-strategies.md` — Dependency Isolation Strategies
+- `../architectural-constraints/references/fault-tolerance-redundancy.md` — Fault Tolerance & Redundancy
+- `../architectural-constraints/references/performance-sla-boundaries.md` — Performance SLA Boundaries
+- `../architectural-constraints/references/security-isolation-protocols.md` — Security Isolation Protocols
+- `../architectural-constraints/references/state-consistency-guarantees.md` — State Consistency Guarantees

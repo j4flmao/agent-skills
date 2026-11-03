@@ -487,6 +487,17 @@ watcher->setFuture(future);
   - references/qt-performance.md — Qt Performance Reference
   - references/qt-qml-guide.md — Qt QML Guide Reference
   - references/qt-setup.md — Qt Setup Reference
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../kde/references/kde-advanced.md` — KDE Advanced Topics
+- `../kde/references/kde-dev-setup.md` — KDE Dev Setup Reference
+- `../kde/references/kde-development.md` — KDE Development Reference
+- `../kde/references/kde-framework.md` — KDE Frameworks Reference
+- `../kde/references/kde-fundamentals.md` — KDE Fundamentals
+- `../kde/references/kirigami-guide.md` — Kirigami Guide Reference
+
 ## Handoff
 Hand off to `design-accessibility` for Qt accessibility testing.
 ## Architecture Decision Trees

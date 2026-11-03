@@ -153,3 +153,12 @@ Rules: upsert by `subject_key` so a new preference replaces the old one; store p
 - Packer et al., "MemGPT: Towards LLMs as Operating Systems" (2023) — tiered memory paging.
 - Park et al., "Generative Agents" (UIST 2023) — recency/importance/relevance retrieval scoring.
 - Liu et al., "Lost in the Middle" (TACL 2024) — position effects in long contexts.
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../../harness-engineering/context-engineering/references/context-drift-mitigation.md` — Context Drift Mitigation
+- `../../../harness-engineering/context-engineering/references/dynamic-injection-patterns.md` — Dynamic Injection Patterns
+- `../../../harness-engineering/context-engineering/references/memory-retrieval-architectures.md` — Memory Retrieval Architectures
+- `../../../harness-engineering/context-engineering/references/priority-scoring-algorithms.md` — Priority Scoring Algorithms
+- `../../../harness-engineering/context-engineering/references/prompt-token-optimization.md` — Prompt Token Optimization

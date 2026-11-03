@@ -490,5 +490,15 @@ Use `#[tokio::test]` for async tests. Use `mockall` or manual mock traits for re
   - references/testing-benchmarking.md — Testing and Benchmarking
   - references/trait-design.md — Trait Design Patterns
   - references/workspace-layout.md — Workspace Layout
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/code-organization.md` — Rust Backend Code Organization
+- `../references/deployment-pipelines.md` — Rust Backend Deployment Pipelines
+- `../references/error-handling.md` — Rust Backend Error Handling
+- `../references/performance-optimization.md` — Rust Backend Performance Optimization
+- `../references/testing-strategies.md` — Rust Backend Testing Strategies
+
 ## Handoff
 Hand off to `backend/rust/patterns/SKILL.md` for Rust-specific patterns or `backend/universal/api-response/SKILL.md` for API response formatting.

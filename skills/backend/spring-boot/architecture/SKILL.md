@@ -449,6 +449,18 @@ Primary DB is relational (JPA/JDBC)?
   - references/spring-boot-security.md — Spring Boot Security
   - references/spring-boot-testing.md — Spring Boot Testing
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/architecture-patterns.md` — Architecture Patterns in Spring Boot 3
+- `../references/code-organization.md` — Code Organization in Spring Boot
+- `../references/deployment-pipelines.md` — Deployment Pipelines in Spring Boot
+- `../references/error-handling.md` — Error Handling in Spring Boot
+- `../references/performance-optimization.md` — Performance Optimization in Spring Boot
+- `../references/security-best-practices.md` — Security Best Practices in Spring Boot
+- `../references/state-management.md` — State Management in Spring Boot
+- `../references/testing-strategies.md` — Testing Strategies in Spring Boot
+
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test Spring Boot.

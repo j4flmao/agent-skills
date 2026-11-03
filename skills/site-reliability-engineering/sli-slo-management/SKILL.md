@@ -136,3 +136,12 @@ The policy is agreed by product and engineering leadership in advance; automatio
 - `../references/slo_definitions.md`
 - `../references/promql_rules.md`
 - `../references/sla_calculations.md`
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/capacity_planning.md` — Capacity Planning
+- `../references/disaster_recovery.md` — Disaster Recovery (DR)
+- `../references/incident_management.md` — Incident Management
+- `../references/on_call.md` — On-Call and Alerting
+- `../references/toil_reduction.md` — Toil Reduction

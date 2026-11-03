@@ -376,6 +376,13 @@ interface OrderCancelled {
   - references/event-sourcing-testing.md — Event Sourcing Testing
   - references/event-store-patterns.md — Event Store Patterns
   - references/event-versioning.md — Event Versioning
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../../system-design/event-sourcing/references/cqrs-architecture.md` — CQRS and Event Sourcing Architecture
+- `../../../system-design/event-sourcing/references/snapshotting-strategies.md` — Event Sourcing: Snapshotting Strategies
+
 ## Handoff
 No artifact produced.
 Next skill: cqrs-patterns — to separate read/write models for event-sourced aggregates.

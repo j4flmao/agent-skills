@@ -435,6 +435,18 @@ Use `WebApplicationFactory<T>` for integration tests. Use `Testcontainers` for S
   - references/dotnet-microservices.md — .NET Microservices
   - references/dotnet-testing-architecture.md — Architecture Testing
   - references/project-structure.md — Project Structure Reference
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/code-organization.md` — Code Organization in ASP.NET Core (.NET 8/10)
+- `../references/deployment-pipelines.md` — Deployment Pipelines for ASP.NET Core Services
+- `../references/error-handling.md` — Error Handling in ASP.NET Core: ProblemDetails, IExceptionHandler, Result Types
+- `../references/performance-optimization.md` — Performance Optimization in ASP.NET Core and EF Core
+- `../references/security-best-practices.md` — Security Best Practices for ASP.NET Core APIs
+- `../references/state-management.md` — State Management in ASP.NET Core: Caching, Sessions and Distributed State
+- `../references/testing-strategies.md` — Testing Strategies for ASP.NET Core Services
+
 ## Handoff
 Hand off to `backend/dotnet/patterns/SKILL.md` for MediatR pipelines, result pattern, and EF Core patterns.
 ## Implementation Patterns

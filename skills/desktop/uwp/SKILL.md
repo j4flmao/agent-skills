@@ -430,6 +430,17 @@ builder.Show();
   - references/uwp-deployment.md — UWP Deployment Reference
   - references/uwp-fundamentals.md — UWP Fundamentals
   - references/uwp-lifecycle.md — UWP App Lifecycle Reference
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../winui3/references/winui3-advanced.md` — WinUI 3 Advanced Topics
+- `../winui3/references/winui3-architecture.md` — WinUI 3 Architecture Reference
+- `../winui3/references/winui3-controls.md` — WinUI 3 Controls Reference
+- `../winui3/references/winui3-deployment.md` — WinUI 3 Deployment Reference
+- `../winui3/references/winui3-fundamentals.md` — WinUI 3 Fundamentals
+- `../winui3/references/winui3-setup.md` — WinUI 3 Setup Reference
+
 ## Handoff
 For WinUI 3 / Windows App SDK migration there is no dedicated skill yet; use the notes in `../winui3/references/` and the UWP vs WinUI 3 table below. Hand off to `design-accessibility` for UIA/Narrator testing.
 ## Architecture Decision Trees

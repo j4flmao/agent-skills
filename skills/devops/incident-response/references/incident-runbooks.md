@@ -2,7 +2,7 @@
 
 ## Runbook Template
 
-```markdown
+````markdown
 # Runbook: {Service Name}
 
 ## Overview
@@ -120,4 +120,4 @@ Duration: {Xmin}
 Root cause: {summary}
 Postmortem scheduled: {date/time}
 Full timeline to follow.
-```
+````

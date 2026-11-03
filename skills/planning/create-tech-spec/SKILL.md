@@ -613,6 +613,18 @@ The spec describes one solution as if it's the only option. No mention of altern
   - references/tech-spec-template.md — Technical Specification Template
   - references/tech-spec-templates.md — Technical Specification Templates
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../create-adr/references/adr-architecture-evolution.md` — ADR and Architecture Evolution
+- `../create-adr/references/adr-best-practices.md` — ADR Best Practices
+- `../create-adr/references/adr-decision-capture.md` — ADR Decision Capture
+- `../create-adr/references/adr-examples.md` — ADR Examples
+- `../create-adr/references/adr-template.md` — ADR-{NNN}: {Decision Title}
+- `../create-adr/references/adr-workflow.md` — ADR Workflow
+- `../create-adr/references/create-adr-advanced.md` — ADR Advanced Topics
+- `../create-adr/references/create-adr-fundamentals.md` — ADR Fundamentals
+
 ## Handoff
 Output: `docs/specs/{feature-name}-spec.md`
 Next skill: stack-specific implementation skill

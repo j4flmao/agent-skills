@@ -402,6 +402,17 @@ Relational vs NoSQL: relational databases provide ACID transactions, strong cons
   - references/query-optimization.md — Query Optimization
   - references/relational-database-query-optimization.md — Query Optimization Deep Dive
   - references/relational-database-high-availability.md — High Availability Reference
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../data-replication/references/conflict-resolution.md` — Conflict Resolution Reference
+- `../data-replication/references/replication-cdc-vs-etl.md` — Replication Strategies: CDC vs ETL
+- `../data-replication/references/replication-monitoring.md` — Replication Monitoring
+- `../data-replication/references/replication-performance.md` — Replication Performance Reference
+- `../data-replication/references/replication-security.md` — Data Replication Security
+- `../data-replication/references/replication-tools.md` — Replication Tools
+
 ## Architecture Decision Trees
 
 ```

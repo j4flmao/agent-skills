@@ -562,3 +562,15 @@ Compliance requirement?
   - references/s3-compatible.md — S3-Compatible Storage
   - references/s3-compatible-configs.md — S3-Compatible Configuration Examples
   - references/storage-deployment-guide.md — Storage Deployment Guide
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../data-distributed-storage/references/api_reference.md` — Distributed Storage API Reference
+- `../data-distributed-storage/references/architecture_patterns.md` — Distributed Storage Architecture Patterns
+- `../data-distributed-storage/references/configuration_guide.md` — Distributed Storage Configuration Guide
+- `../data-distributed-storage/references/deployment_strategies.md` — Distributed Storage Deployment Strategies
+- `../data-distributed-storage/references/integration_guide.md` — Distributed Storage Integration Guide
+- `../data-distributed-storage/references/performance_tuning.md` — Distributed Storage Performance Tuning
+- `../data-distributed-storage/references/security_best_practices.md` — Distributed Storage Security Best Practices
+- `../data-distributed-storage/references/troubleshooting_guide.md` — Distributed Storage Troubleshooting Guide

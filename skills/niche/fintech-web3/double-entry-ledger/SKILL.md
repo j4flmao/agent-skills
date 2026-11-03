@@ -70,3 +70,17 @@ flowchart TD
     D -->|"Yes (0)"| E["Commit Transaction"]
     D -->|"No (!=0)"| F["Rollback Transaction"]
 ```
+
+## References
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../../backend/fintech-patterns/references/double-entry-ledger.md` — Double-Entry Ledger
+- `../../../backend/fintech-patterns/references/fintech-patterns-advanced.md` — Fintech Patterns: Advanced Topics
+- `../../../backend/fintech-patterns/references/fintech-patterns-fundamentals.md` — Fintech Engineering Fundamentals
+- `../../../backend/fintech-patterns/references/fraud-detection.md` — Fraud Detection
+- `../../../backend/fintech-patterns/references/kyc-aml.md` — KYC and AML
+- `../../../backend/fintech-patterns/references/payment-orchestration.md` — Payment Orchestration
+- `../../../backend/fintech-patterns/references/reconciliation.md` — Reconciliation
+- `../../../backend/fintech-patterns/references/transaction-processing.md` — Transaction Processing

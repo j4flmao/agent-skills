@@ -129,7 +129,7 @@ bun x eslint .
 
 | Feature | Node.js | Bun |
 |---------|---------|-----|
-| Package manager | npm/pnpm/yarn | bun (3-10x faster) |
+| Package manager | npm/pnpm/yarn | bun (much faster installs per Bun's own benchmarks; measure on your repo) |
 | Test runner | Jest/Vitest | Built-in bun:test |
 | Bundler | esbuild/webpack | Built-in bun build |
 | SQLite | better-sqlite3 | Built-in bun:sqlite |

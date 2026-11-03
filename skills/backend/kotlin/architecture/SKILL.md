@@ -584,5 +584,17 @@ Request-scoped operations with cleanup?
   - references/kotlin-testing.md — Kotlin Testing Guide
   - references/ktor-setup.md — Ktor Setup Guide
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/architecture-patterns.md` — Kotlin Backend Architecture Patterns
+- `../references/code-organization.md` — Kotlin Backend Code Organization
+- `../references/deployment-pipelines.md` — Kotlin Service Build and Deployment Pipelines
+- `../references/error-handling.md` — Kotlin Backend Error Handling
+- `../references/performance-optimization.md` — Kotlin Backend Performance Optimization
+- `../references/security-best-practices.md` — Kotlin Backend Security Best Practices
+- `../references/state-management.md` — State Management in Kotlin Services
+- `../references/testing-strategies.md` — Kotlin Backend Testing Strategies
+
 ## Handoff
 Hand off to `backend/kotlin/patterns/SKILL.md` for Kotlin-specific backend patterns.

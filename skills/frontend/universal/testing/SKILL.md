@@ -506,6 +506,13 @@ Mocking too many dependencies creates tests that pass but don't test real behavi
   - references/testing-library-guide.md — Testing Library Guide
   - references/testing-patterns.md — Testing Patterns
   - references/testing-tools.md — Testing Tools Guide
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../react/testing/references/cypress-e2e.md` — Cypress End-to-End Testing
+- `../../react/testing/references/jest-rtl.md` — Jest and React Testing Library Patterns
+
 ## Handoff
 No artifact produced.
 Next skill: {framework}-architecture or code-review.

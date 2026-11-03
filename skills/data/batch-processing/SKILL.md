@@ -518,6 +518,18 @@ JOIN salted_customers c ON o.customer_id = c.customer_id AND o.salt = c.salt;
 ## References
 Coming soon.
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../data-batch-processing/references/api_reference.md` — Batch Processing API Reference: PySpark DataFrame and Spark SQL
+- `../data-batch-processing/references/architecture_patterns.md` — Batch Processing Architecture Patterns
+- `../data-batch-processing/references/configuration_guide.md` — Spark Batch Job Configuration Guide
+- `../data-batch-processing/references/deployment_strategies.md` — Deploying Batch Jobs: Platforms, Packaging and Release Process
+- `../data-batch-processing/references/integration_guide.md` — Integrating Batch Jobs with Orchestrators, Catalogs and Downstream Tools
+- `../data-batch-processing/references/performance_tuning.md` — Spark Batch Performance Tuning
+- `../data-batch-processing/references/security_best_practices.md` — Security Best Practices for Batch Data Pipelines
+- `../data-batch-processing/references/troubleshooting_guide.md` — Troubleshooting Spark Batch Jobs
+
 ## Handoff
 `data-distributed-compute` for Spark/Ray/Dask cluster tuning
 `data-data-catalog` for registering batch tables and lineage

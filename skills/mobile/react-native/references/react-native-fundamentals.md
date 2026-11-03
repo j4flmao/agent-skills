@@ -34,7 +34,7 @@ Expo: managed workflow with OTA updates, built-in APIs, EAS Build. Bare: full na
 Simple key-value storage (limited to ~6MB). Async, not encrypted. Use for non-sensitive preferences only. Migrate to MMKV for larger storage needs. `@react-native-async-storage/async-storage` is the standard package.
 
 ### MMKV
-Fast key-value storage from WeChat (used in production). Synchronous reads, 30x faster than AsyncStorage. Supports encryption and shared instances between processes. Preferred for large data and performance-critical storage.
+Fast key-value storage from WeChat (used in production). Synchronous reads, reported by the library as ~30x faster than AsyncStorage. Supports encryption and shared instances between processes. Preferred for large data and performance-critical storage.
 
 ### WatermelonDB
 SQLite-based relational DB for React Native. Lazy loading (only fetch visible records). Reactive queries via `observe()`. Sync adapter for offline-first with server. Best for complex local data (lists, nested relationships).

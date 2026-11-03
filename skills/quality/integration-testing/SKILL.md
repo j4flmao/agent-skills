@@ -413,6 +413,18 @@ Hardcoded ports, hosts, or credentials prevent parallel test execution. Use `wit
 - references/messaging-testing.md — Message Queue Integration Testing
 - references/test-containers.md — TestContainers Patterns
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../backend/universal/testing/references/integration-test-patterns.md` — Integration Test Patterns
+- `../../backend/universal/testing/references/mocking-fakes.md` — Mocking and Test Doubles
+- `../../backend/universal/testing/references/mocking-strategies.md` — Mocking Strategies
+- `../../backend/universal/testing/references/test-naming-coverage.md` — Test Naming and Coverage
+- `../../backend/universal/testing/references/test-pyramid.md` — Test Pyramid
+- `../../backend/universal/testing/references/testing-contract.md` — Contract Testing
+- `../../backend/universal/testing/references/testing-integration.md` — Integration Testing
+- `../../backend/universal/testing/references/testing-property-based.md` — Property-Based Testing
+
 ## Handoff
 After integration testing, hand off to:
 - `quality-e2e-testing` — for end-to-end validation of complete workflows

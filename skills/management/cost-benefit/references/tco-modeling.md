@@ -74,7 +74,6 @@ Delta: Cloud saves $198,000 (12.6%) over 3 years
 | **Internal Support (0.5 FTE)** | $80,000 | $82,000 | $84,000 | $246,000 |
 | **Annual Escalation (5%)** | $0 | $6,000 | $6,300 | $12,300 |
 | **Total Buy TCO** | **$355,000** | **$223,000** | **$225,300** | **$803,300** |
-```
 
 ### Build vs Buy Decision
 

@@ -533,6 +533,19 @@ slos:
   - references/observability-fundamentals.md — Observability Fundamentals
   - references/observability-maturity.md — Observability Maturity Model
   - references/otel-guide.md — OpenTelemetry Setup per Stack
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../backend/universal/observability/references/business-metrics.md` — Business Metrics Reference
+- `../../backend/universal/observability/references/cost-of-observability.md` — Cost of Observability Reference
+- `../../backend/universal/observability/references/distributed-tracing.md` — Distributed Tracing Reference
+- `../../backend/universal/observability/references/observability-alerting.md` — Observability Alerting
+- `../../backend/universal/observability/references/observability-cost-optimization.md` — Observability Cost Optimization
+- `../../backend/universal/observability/references/observability-pillars.md` — Observability Pillars: Traces, Metrics, Logs
+- `../../backend/universal/observability/references/observability-setup.md` — Backend Observability
+- `../../backend/universal/observability/references/otel-setup.md` — OpenTelemetry SDK Setup Guide
+
 ## Handoff
 After completing this skill:
 - Next skill: **performance-profiler** — using observability data to find bottlenecks

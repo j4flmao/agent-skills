@@ -159,3 +159,10 @@ def handle_refund(raw_args: dict[str, Any], user_id: str) -> tuple[str, bool]:
 - Anthropic docs: Tool use (tool_use / tool_result, `is_error`).
 - OpenAI docs: Function calling and Structured Outputs (`strict: true`).
 - Repo rule: `.claude/rules/mcp-server-design.md` for MCP-exposed tools.
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../../../harness-engineering/tool-orchestration/references/idempotency-patterns.md` — Idempotency Patterns
+- `../../../harness-engineering/tool-orchestration/references/tool-error-handling.md` — Tool Error Handling in Agent Harnesses
+- `../../../harness-engineering/tool-orchestration/references/tool-version-compatibility.md` — Tool Versioning and Compatibility in Agent Harnesses

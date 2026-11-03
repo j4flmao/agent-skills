@@ -417,6 +417,18 @@ Impact: DAU +45%, support tickets -30%
   - references/usability-testing-guide.md — Usability Testing Guide
   - references/ux-research-advanced.md — UX Research Advanced Topics
   - references/ux-research-fundamentals.md — UX Research Fundamentals
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../prototyping/references/handoff-workflow.md` — Developer Handoff Workflow Reference
+- `../prototyping/references/handoff.md` — Developer Handoff
+- `../prototyping/references/interactive-prototypes.md` — Interactive Prototypes
+- `../prototyping/references/prototyping-advanced.md` — Prototyping Advanced Topics
+- `../prototyping/references/prototyping-fidelity.md` — Prototyping Fidelity
+- `../prototyping/references/prototyping-fundamentals.md` — Prototyping Fundamentals
+- `../prototyping/references/prototyping-tools.md` — Prototyping Tools Reference
+
 ## Handoff
 `design-prototyping` for interactive prototypes based on research insights.
 Carry forward: research findings, persona profiles, journey maps.

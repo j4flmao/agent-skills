@@ -158,3 +158,13 @@ python -c "from airflow.models import DagBag; db = DagBag('dags/', include_examp
 ## References
 - Related skills: `../etl-pipeline/SKILL.md` (pipeline architecture), `../data-pipeline-cicd/SKILL.md`, `../data-quality/SKILL.md`.
 - Apache Airflow 3 upgrade guide and public interface docs; Astronomer Cosmos docs; dbt docs (`dbt build`, data tests, state selection).
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../workflow-orchestration/references/airflow-architecture.md` — Airflow Architecture Reference
+- `../workflow-orchestration/references/airflow-best-practices.md` — Airflow Best Practices
+- `../workflow-orchestration/references/dagster-deep-guide.md` — Dagster Deep Guide
+- `../workflow-orchestration/references/dagster-prefect.md` — Dagster and Prefect Reference
+- `../workflow-orchestration/references/data-pipeline-monitoring.md` — Data Pipeline Monitoring
+- `../workflow-orchestration/references/temporal-workflows.md` — Temporal Workflows

@@ -1,6 +1,6 @@
 # README Template
 
-```markdown
+````markdown
 # Project Name
 
 > One-line tagline explaining what problem this solves.
@@ -103,4 +103,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 MIT © Author
-```
+````

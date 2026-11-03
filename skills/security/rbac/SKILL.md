@@ -121,3 +121,17 @@ Request -> Valid Token -> Role Admin -> Allow Action
 ## Handoff
 Refer to auth skill.
 <!-- compression footer -->
+
+## References
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../iam-governance/references/access-certification.md` — Access Certification
+- `../iam-governance/references/iam-governance-advanced.md` — IAM Governance Advanced Topics
+- `../iam-governance/references/iam-governance-fundamentals.md` — IAM Governance Fundamentals
+- `../iam-governance/references/iam-policy-as-code.md` — IAM Policy as Code
+- `../iam-governance/references/identity-lifecycle.md` — Identity Lifecycle Management
+- `../iam-governance/references/privileged-access-management.md` — Privileged Access Management (PAM)
+- `../iam-governance/references/privileged-access.md` — Privileged Access Management (PAM)
+- `../iam-governance/references/sso-federation.md` — SSO and Federation

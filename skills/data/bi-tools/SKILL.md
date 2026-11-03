@@ -451,6 +451,19 @@ Key question: centralized vs decentralized?
   - references/lookml-examples.md — LookML Examples
   - references/semantic-layer-patterns.md — Semantic Layer Patterns
   - references/tool-selection.md — BI Tool Selection
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../data-bi-tools/references/api_reference.md` — BI Tools API Reference (Superset, Metabase, Looker, Power BI, Tableau)
+- `../data-bi-tools/references/architecture_patterns.md` — BI Architecture Patterns
+- `../data-bi-tools/references/configuration_guide.md` — BI Tools Configuration Guide
+- `../data-bi-tools/references/deployment_strategies.md` — BI Platform Deployment Strategies
+- `../data-bi-tools/references/integration_guide.md` — BI Tools Integration Guide
+- `../data-bi-tools/references/performance_tuning.md` — BI Performance Tuning
+- `../data-bi-tools/references/security_best_practices.md` — BI Security Best Practices
+- `../data-bi-tools/references/troubleshooting_guide.md` — BI Troubleshooting Guide
+
 ## Architecture Decision Trees
 
 ```

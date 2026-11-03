@@ -402,6 +402,19 @@ class Order {
   - references/pattern-relationships.md — Pattern Relationships & Selection Reference
   - references/selection-decision-tree.md — Pattern Selection Decision Tree
   - references/testing-patterns.md — Testing Design Patterns
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../oop-principles/references/composition-vs-inheritance.md` — Composition over Inheritance
+- `../oop-principles/references/cpp_vtables_theory.md` — C++ Virtual Dispatch: vtables and vptrs
+- `../oop-principles/references/grasp-patterns.md` — GRASP Patterns
+- `../oop-principles/references/object_memory_layout.md` — C++ Object Memory Layout and Inheritance
+- `../oop-principles/references/oop-solid.md` — OOP SOLID Principles
+- `../oop-principles/references/principles-reference.md` — Principles Reference
+- `../oop-principles/references/solid-deep-dive.md` — SOLID Deep Dive
+- `../oop-principles/references/solid-examples.md` — SOLID Code Examples
+
 ## Handoff
 Hand off to `backend/universal/microservices/SKILL.md` if distributed system patterns need implementation details. Hand off to `backend/universal/clean-architecture/SKILL.md` if structuring the entire application. Hand off to `backend/universal/event-driven/SKILL.md` if event-driven patterns need elaboration.
 - Review code for security, performance, and correctness before merging.

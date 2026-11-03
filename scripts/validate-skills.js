@@ -29,6 +29,8 @@ const PLACEHOLDER = /\bTODO\b|\bFIXME\b|lorem ipsum/i;
 
 const errors = [];
 const warnings = [];
+const linkedReferences = new Set();
+const referenceFiles = [];
 const toPosix = (p) => path.relative(root, p).split(path.sep).join("/");
 
 function walk(dir, visit) {
@@ -65,6 +67,7 @@ function checkReferenceLinks(file, text) {
     const ref = match[1];
     const target = ref.startsWith("skills/") ? path.join(root, ref) : path.resolve(dir, ref);
     if (!fs.existsSync(target)) errors.push(toPosix(file) + ": broken reference link '" + ref + "'");
+    else linkedReferences.add(path.normalize(target));
   }
 }
 
@@ -82,10 +85,27 @@ function checkSkill(file) {
   checkReferenceLinks(file, text);
 }
 
+// CommonMark: a fence is ``` or ~~~ indented at most 3 spaces; it closes on the same
+// character with at least the same length and no info string.
+function unclosedFenceLine(lines) {
+  let open = null;
+  let openedAt = -1;
+  lines.forEach((line, index) => {
+    const match = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (!match) return;
+    const [, fence, info] = match;
+    if (open === null) { open = fence; openedAt = index; }
+    else if (fence[0] === open[0] && fence.length >= open.length && info.trim() === "") open = null;
+  });
+  return open === null ? -1 : openedAt;
+}
+
 function checkContent(file) {
   const rel = toPosix(file);
   const text = fs.readFileSync(file, "utf8");
   const lines = text.split(/\r?\n/);
+  const fenceLine = unclosedFenceLine(lines);
+  if (fenceLine >= 0) errors.push(rel + ":" + (fenceLine + 1) + ": unclosed code fence");
   for (const [pattern, label] of DEPRECATED_PATTERNS) {
     const lineIndex = lines.findIndex((line) => pattern.test(line) && !MIGRATION_NOTE.test(line));
     if (lineIndex >= 0) errors.push(rel + ":" + (lineIndex + 1) + ": " + label);
@@ -115,10 +135,20 @@ let referenceCount = 0;
 walk(skillsDir, (file, name) => {
   if (!name.endsWith(".md")) return;
   if (name === "SKILL.md") { skillCount += 1; checkSkill(file); }
-  else if (path.basename(path.dirname(file)) === "references") referenceCount += 1;
+  else if (path.basename(path.dirname(file)) === "references") { referenceCount += 1; referenceFiles.push(file); }
   checkContent(file);
 });
 const routeCount = ROUTING_FILES.reduce((sum, file) => sum + checkRouting(file), 0);
+const lockFile = path.join(root, "skills-lock.json");
+if (fs.existsSync(lockFile)) {
+  const lock = JSON.parse(fs.readFileSync(lockFile, "utf8"));
+  if (lock.total_skills !== skillCount) errors.push("skills-lock.json: total_skills is " + lock.total_skills + " but skills/ has " + skillCount + " SKILL.md files (regenerate the lock file)");
+}
+// A reference is reachable when its parent folder is a skill or some SKILL.md links to it.
+for (const file of referenceFiles) {
+  const ownedBySkill = fs.existsSync(path.join(path.dirname(path.dirname(file)), "SKILL.md"));
+  if (!ownedBySkill && !linkedReferences.has(path.normalize(file))) errors.push(toPosix(file) + ": orphan reference (no parent SKILL.md and not linked from any SKILL.md)");
+}
 
 if (warnings.length) console.warn(warnings.map((w) => "WARN: " + w).join("\n"));
 if (errors.length) {

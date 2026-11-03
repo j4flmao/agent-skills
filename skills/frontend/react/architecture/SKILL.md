@@ -877,6 +877,20 @@ The React Compiler automatically memoizes components and hooks, eliminating manu
 - references/react-server-components.md — React Server Components
 - references/react-compiler-optimizations.md — React Compiler Optimizations
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../patterns/references/context-hooks.md` — React Context and Custom Hooks
+- `../patterns/references/render-performance.md` — React Render Performance Optimization
+- `../references/architecture-patterns.md` — React Architecture Patterns: Comprehensive Guide
+- `../references/code-organization.md` — React Code Organization and Architecture
+- `../references/deployment-pipelines.md` — React Deployment Pipelines & CI/CD
+- `../references/error-handling.md` — React Error Handling and Resilience
+- `../references/performance-optimization.md` — React Performance Optimization Strategies
+- `../references/security-best-practices.md` — React Security Best Practices
+- `../references/state-management.md` — Advanced State Management in React
+- `../references/testing-strategies.md` — React Testing Strategies
+
 ## Handoff
 No artifact produced.
 Next skill: react-nextjs (if using Next.js) or frontend-testing.

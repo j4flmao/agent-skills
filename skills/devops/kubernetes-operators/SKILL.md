@@ -863,5 +863,16 @@ func init() {
 - references/operator-sdk-guide.md — Operator SDK Guide
 - references/testing-operators.md — Operator Testing
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../crossplane/references/composition-functions.md` — Crossplane Composition Functions
+- `../crossplane/references/composition-patterns.md` — Crossplane Composition Patterns (Pipeline Mode + function-patch-and-transform)
+- `../crossplane/references/crossplane-advanced.md` — Crossplane Advanced Topics
+- `../crossplane/references/crossplane-fundamentals.md` — Crossplane Fundamentals
+- `../crossplane/references/enterprise-patterns.md` — Crossplane Enterprise Patterns
+- `../crossplane/references/package-management.md` — Crossplane Package Management
+- `../crossplane/references/provider-architecture.md` — Crossplane Provider Architecture
+
 ## Handoff
 Related skills: kubernetes-patterns (K8s resource patterns), helm-patterns (Helm chart design), gitops-advanced (GitOps with custom operators), policy-as-code (admission webhooks integration), monitoring (operator metrics and dashboards).

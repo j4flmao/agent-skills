@@ -199,7 +199,7 @@ end
 ### Fastlane (Phoenix 1.7+)
 Phoenix 1.7+ enables `Phoenix.LiveView.Stream` for efficient list diffs:
 ```elixir
-# 10x faster than traditional assigns for large lists
+# Avoids keeping large lists in server memory and re-diffing them
 {:ok, stream(socket, :orders, Orders.list_orders())}
 
 def handle_info({:new_order, order}, socket) do

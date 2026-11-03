@@ -788,6 +788,18 @@ final class OrderViewModelTests: XCTestCase {
 - `references/mobile-architecture-patterns.md` — Mobile Architecture Patterns
 - `references/mvvm-mvi.md` — MVVM vs MVI
 
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../references/architecture-patterns.md` — Mobile Architecture Patterns
+- `../references/code-organization.md` — Mobile Code Organization
+- `../references/deployment-pipelines.md` — Mobile Deployment Pipelines
+- `../references/error-handling.md` — Mobile Error Handling
+- `../references/performance-optimization.md` — Mobile Performance Optimization
+- `../references/security-best-practices.md` — Mobile Security Best Practices
+- `../references/state-management.md` — Mobile State Management
+- `../references/testing-strategies.md` — Mobile Testing Strategies
+
 ## Handoff
 After architecture selection, hand off to:
 - `mobile/universal/testing` — Architecture testability, unit testing patterns

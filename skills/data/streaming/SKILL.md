@@ -561,6 +561,25 @@ Both provide incremental materialized views on streaming data using PostgreSQL-c
   - references/streaming-architecture.md — Streaming Architecture
   - references/streaming-databases.md — Streaming Databases
   - references/streaming-monitoring.md — Streaming Monitoring
+
+### Shared References
+Additional reference material for this skill, stored outside its own `references/` folder.
+
+- `../cdc-patterns/references/cdc-methods.md` — CDC Methods Reference
+- `../cdc-patterns/references/cdc-performance.md` — CDC Performance Optimization
+- `../cdc-patterns/references/cdc-schema-evolution.md` — CDC Schema Evolution
+- `../cdc-patterns/references/debezium-deep.md` — Debezium Deep Dive Reference
+- `../cdc-patterns/references/kafka-connect-cdc.md` — Kafka Connect CDC Reference
+- `../cdc-patterns/references/kafka-connect.md` — Kafka Connect Reference
+- `../data-streaming/references/api_reference.md` — Kafka Client API Reference: Producer, Consumer, Admin, Streams
+- `../data-streaming/references/architecture_patterns.md` — Streaming Architecture Patterns
+- `../data-streaming/references/configuration_guide.md` — Kafka Broker and Topic Configuration Guide
+- `../data-streaming/references/deployment_strategies.md` — Deploying Streaming Platforms: Kafka and Flink
+- `../data-streaming/references/integration_guide.md` — Streaming Integration: Kafka Connect, Debezium, and Schema Registry
+- `../data-streaming/references/performance_tuning.md` — Streaming Performance Tuning: Kafka, Flink, and Spark Structured Streaming
+- `../data-streaming/references/security_best_practices.md` — Streaming Platform Security
+- `../data-streaming/references/troubleshooting_guide.md` — Streaming Pipeline Troubleshooting Guide
+
 ## Handoff
 `data-data-warehouse` for streaming data landing in the warehouse
 `data-etl-pipeline` for batch processing of streamed data

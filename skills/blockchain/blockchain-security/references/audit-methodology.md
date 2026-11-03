@@ -163,7 +163,7 @@ forge test --match-invariant -vvv
 | **Informational** | Style, documentation, minor optimization | Typos, NatSpec missing, unused imports |
 
 ### Finding Template
-```markdown
+````markdown
 ## [H-01] Reentrancy in `withdraw()` Allows Draining Pool
 
 **Severity**: Critical
@@ -212,7 +212,7 @@ Using OpenZeppelin's `ReentrancyGuard` is recommended.
 -       balances[msg.sender] = 0;
     }
 ```
-```
+````
 
 ### Post-Audit Verification
 - [ ] Each finding is addressed (fixed, acknowledged, or disputed)
