@@ -64,10 +64,13 @@
     ".windsurf/"
   ],
   "scripts": {
-    "validate": "npm run validate:governance && npm run validate:skills",
+    "validate": "npm run validate:governance && npm run validate:skills && npm run docs:check",
     "lint": "node scripts/validate-skills.js",
     "validate:governance": "node scripts/validate-agent-governance.js",
-    "validate:skills": "node scripts/validate-skills.js"
+    "validate:skills": "node scripts/validate-skills.js",
+    "docs": "node scripts/generate-docs.js",
+    "docs:check": "node scripts/generate-docs.js --check",
+    "pack": "node scripts/pack-skills.js"
   },
   "skillCount": 641
 }

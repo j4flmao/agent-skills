@@ -139,6 +139,49 @@ walk(skillsDir, (file, name) => {
   checkContent(file);
 });
 const routeCount = ROUTING_FILES.reduce((sum, file) => sum + checkRouting(file), 0);
+// Guides: install commands must name real skills, and relative links/anchors must resolve.
+const skillNameSet = new Set();
+walk(skillsDir, (file, name) => {
+  if (name !== "SKILL.md") return;
+  const match = /^name:\s*"?([^"\r\n]+)"?/m.exec(fs.readFileSync(file, "utf8"));
+  if (match) skillNameSet.add(match[1].trim());
+});
+const slug = (heading) => heading.trim().toLowerCase().replace(/[^\w\- ]+/g, "").replace(/ /g, "-");
+const anchorsOf = new Map();
+function anchors(file) {
+  if (!anchorsOf.has(file)) {
+    const set = new Set();
+    for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+      const match = /^#{1,6}\s+(.+?)\s*$/.exec(line);
+      if (match) set.add(slug(match[1].replace(/`/g, "")));
+    }
+    anchorsOf.set(file, set);
+  }
+  return anchorsOf.get(file);
+}
+const guideFiles = [path.join(root, "README.md")];
+const advisorDir = path.join(root, "skill-advisor");
+if (fs.existsSync(advisorDir)) walk(advisorDir, (file, name) => { if (name.endsWith(".md")) guideFiles.push(file); });
+let guideCommands = 0;
+for (const file of guideFiles) {
+  const rel = toPosix(file);
+  const text = fs.readFileSync(file, "utf8");
+  for (const line of text.split(/\r?\n/)) {
+    if (!/npx skills add j4flmao\/agent-skills/.test(line)) continue;
+    guideCommands += 1;
+    if (/--bundle\b/.test(line)) errors.push(rel + ": the skills CLI has no --bundle flag: " + line.trim());
+    for (const match of line.matchAll(/--skill\s+(\S+)/g)) {
+      if (match[1] !== "..." && !skillNameSet.has(match[1])) errors.push(rel + ": install command names unknown skill '" + match[1] + "'");
+    }
+  }
+  for (const match of stripCodeFences(text).matchAll(/\]\((?!https?:|mailto:)([^)\s]*)\)/g)) {
+    const [target, anchor] = decodeURI(match[1]).split("#");
+    const resolved = target ? path.resolve(path.dirname(file), target) : file;
+    if (!fs.existsSync(resolved)) { errors.push(rel + ": broken link '" + match[1] + "'"); continue; }
+    if (anchor && resolved.endsWith(".md") && !anchors(resolved).has(anchor)) errors.push(rel + ": missing anchor '" + match[1] + "'");
+  }
+}
+
 const lockFile = path.join(root, "skills-lock.json");
 if (fs.existsSync(lockFile)) {
   const lock = JSON.parse(fs.readFileSync(lockFile, "utf8"));

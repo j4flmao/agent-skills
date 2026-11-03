@@ -26,6 +26,8 @@ jobs:
         run: npm run validate:governance
       - name: Skills (structure, descriptions, routing targets, reference links, deprecated APIs)
         run: npm run validate:skills
+      - name: Generated docs are up to date (README, master summary, skill-advisor)
+        run: npm run docs:check
 
   links:
     # External links rot independently of PRs, so this job reports but does not block.

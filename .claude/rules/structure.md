@@ -23,9 +23,11 @@ agent-skills/
 │   ├── data-science/ (4)  fundamental-truths/ (4)  prompt-engineering/ (4)  seo/ (4)
 │   ├── site-reliability-engineering/ (4)  system-design/ (4)  web/ (4)  playbooks/ (3)
 │   └── tools/ (3)  harness-engineering/ (2)  quality-assurance/ (2)  aspirational/ (1)
-├── bundles/         bundle-definitions.json (all bundles) + one <bundle>.json per published bundle
+├── skill-advisor/   Skill Combination Advisor: README (index), bundles.md, custom-bundles.md, recipes.md, tracks/*.md (19 tracks)
+├── bundles/         bundle-definitions.json — single source of truth for all bundles
 ├── docs/            agent-reliability-spec.md, agent-governance-matrix.md, skills-master-summary.md
-└── scripts/         validate-agent-governance.js (npm run validate:governance)
+├── reports/         research reports (English)
+└── scripts/         validators (npm run validate), generate-docs.js (npm run docs), pack-skills.js
 ```
 Total: 641 SKILL.md + 3,942 reference files + 4 Claude Code skills + 3 hook scripts | 8 agent configs.
 Full per-category skill list: see the Quick Map in `routing.md`.

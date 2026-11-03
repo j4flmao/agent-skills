@@ -1,173 +1,198 @@
-# Visual Testing Fundamentals
+# Diff Algorithms, Failure Modes, and Threshold Math
 
-## Overview
-Visual testing verifies that the user interface renders correctly by comparing screenshots against baselines. It catches visual regressions that functional tests miss: CSS changes, layout shifts, font changes, color mismatches, responsive breakpoint issues, and cross-browser rendering differences.
+Scope: how screenshot comparators decide "changed", where each algorithm fails, and how to pick tolerances from measured noise. Environment pinning and page freezing live in `screenshot-comparison.md`; tool pricing and selection live in `visual-regression-tools.md`. Facts are current as of late 2026; unverified items are labeled.
 
-## Core Concepts
+## 1. Two Independent Knobs
 
-### Concept 1: Visual Regression Testing
-Compare screenshots of UI components across versions. A baseline screenshot is captured when the UI is known to be correct. Subsequent tests compare new screenshots against the baseline. Differences are flagged as potential regressions for human review.
+Every pixel comparator answers two separate questions. Mixing them up is the most common tuning mistake.
 
-### Concept 2: Baseline Management
-Baselines are the "truth" — correct renderings to compare against. Store baselines in version control alongside test code. Update baselines when visual changes are intentional. Strategies: per-component baselines, per-page baselines, per-viewport baselines.
+| Knob | Question it answers | Playwright name | Default |
+|---|---|---|---|
+| Per-pixel color tolerance | Is this one pixel different enough to count? | `threshold` (0 strict … 1 lax) | `0.2` |
+| Image-level count tolerance | How many counted pixels are acceptable? | `maxDiffPixels` (count) / `maxDiffPixelRatio` (0–1) | **unset** |
 
-### Concept 3: Diff Thresholds
-Not all pixel differences are bugs. Anti-aliasing, font rendering, and OS-level differences cause minor pixel variations. Set thresholds: max diff pixels (e.g., 100 pixels), max diff ratio (e.g., 0.1%), and color difference tolerance (e.g., 0.2 on a 0-1 scale).
+- With `maxDiffPixels` and `maxDiffPixelRatio` unset, a single pixel over `threshold` fails `toHaveScreenshot`.
+- pixelmatch's README states that `threshold` "is not a percentage of the image". To tolerate a share of pixels, compare the returned mismatch count to `width * height` yourself.
+- Rule: tune `threshold` for **color noise**, tune `maxDiffPixels` for **count noise**. Never use one to compensate for the other.
+  - Lowering `threshold` turns anti-aliasing (AA) and gamma noise into counted pixels.
+  - Raising `maxDiff*` hides small, localized real regressions.
 
-### Concept 4: Screenshot Strategies
-- **Full page**: Capture entire scrollable page. Good for comprehensive checks. Slow for long pages.
-- **Viewport**: Capture visible area at specific viewport sizes. Good for responsive testing.
-- **Element**: Capture specific component or element. Fast, focused, good for component libraries.
-- **Story**: Capture individual component states from Storybook. Excellent for design system testing.
+## 2. Algorithms Compared
 
-## Framework Comparison
+| Algorithm / mode | Color model | Catches well | Fails on | Use when |
+|---|---|---|---|---|
+| pixelmatch (Playwright default comparator) | Upstream README: OKLab with HyAB distance; older versions and secondary sources: YIQ (see §3) | Color, position, and obvious text changes | 1px lines and glyph stems that look like AA; blur/shadow gradients; subpixel layout shifts where every edge moves | Default for a pinned single-environment suite |
+| odiff (Zig + SIMD, Node API `odiff-bin`) | YIQ NTSC + AA detection | Same differences as pixelmatch on equal inputs | Does not reduce flakiness, only time | Large suites bottlenecked on diff time; `playwright-odiff` adds `toHaveScreenshotOdiff` |
+| Playwright `comparator: "ssim-cie94"` | CIE94, default threshold `0.01` | Filters Chromium's nondeterministic AA | **Experimental**, absent from the public API page | Only if Chromium AA noise dominates and an unstable option is acceptable |
+| DSSIM / multi-scale SSIM | L\*a\*b\*, linear-light scaling | Gradients, photographic content | Compresses small high-contrast changes (one wrong digit) into tiny scores; scores not comparable across tools or DSSIM versions | Image content, not text-heavy UI |
+| Chromatic `diffThreshold` | Hosted | Defaults to `0.063` (0 = exact color, 1 = any color) | No published false-positive rate | Keep the default |
+| Argos | Hosted, two diff passes, AA detection on | Ignores AA-only pixels | Docs cited via search summary | Hosted review with deterministic pixel diffing |
+| Applitools match levels | "Visual AI" | See §4 | No published FP/FN rates | Layout level for i18n and cross-environment runs |
 
-| Feature | Playwright | Cypress + Percy | Chromatic | Applitools | Loki |
-|---------|-----------|----------------|-----------|------------|------|
-| Integration | Built-in | Plugin | Storybook | SDK | Standalone |
-| Hosting | Self-hosted | Percy Cloud | Chromatic Cloud | Applitools Cloud | Self-hosted |
-| Pricing | Free (OSS) | Freemium | Freemium | Paid | Free |
-| Diff detection | Pixel comparison | Smart (Percy CSS) | Smart (Chromatic) | AI-powered (Eyes) | Pixel comparison |
-| Cross-browser | Yes (Chromium, FF, WebKit) | Limited | Limited | Yes | Chromium only |
-| Responsive testing | Built-in viewports | Manual screenshots | Built-in | Built-in | Manual |
-| Baseline storage | Git LFS / file system | Percy Cloud | Chromatic | Applitools | File system |
-| CI integration | Native | GitHub/GitLab | GitHub/GitLab | GitHub/GitLab | GitHub Actions |
-| Best for | Full project visual testing | E2E + visual | Design system / Storybook | Enterprise visual AI | Open-source projects |
+### pixelmatch defaults (upstream README)
 
-## Implementation Guide
+```js
+// pixelmatch options and their upstream defaults
+const options = {
+  threshold: 0.1,          // per-pixel color tolerance (Playwright overrides to 0.2)
+  includeAA: false,        // AA pixels are detected and NOT counted
+  alpha: 0.1,              // opacity of the unchanged image in the diff output
+  aaColor: [255, 255, 0],  // AA pixels drawn yellow in the diff
+  diffColor: [255, 0, 0],  // counted pixels drawn red
+  diffMask: false,         // draw the diff over a transparent background
+};
+// Newer options: diffColorAlt, checkerboard (true), windowSize (Infinity), ignoreMask.
+// Inputs must have identical dimensions; the CLI handles PNG only.
+```
 
-### Step 1: Set Up Playwright Screenshot Tests
-```typescript
-// tests/visual/homepage.spec.ts
-import { test, expect } from '@playwright/test';
+AA detection uses Vyšniauskas (2009), "anti-aliased pixel and intensity slope detector".
 
-test.describe('Homepage visual regression', () => {
-  test('homepage matches baseline — desktop', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    await expect(page).toHaveSapshot('homepage-desktop.png', {
-      maxDiffPixels: 200,
-      threshold: 0.2,
-    });
+### odiff benchmarks (README, single-threaded)
+
+| Input | odiff | pixelmatch | ImageMagick |
+|---|---|---|---|
+| Cypress full page | 1.168 s | 7.712 s | 8.881 s |
+| 8K image | 1.951 s | 10.614 s | 9.326 s |
+
+The README states the produced diffs were identical. odiff also offers `ignoreRegions`, `outputDiffMask`, `failOnLayoutDiff`, `reduceRamUsage`, `diffOverlay`, `captureDiffLines`, and compares PNG/JPEG/WebP/TIFF, including across formats.
+
+### DSSIM specifics
+
+- Output is `1/SSIM − 1`: 0 means identical, the range is unbounded.
+- The README gives no pass/fail thresholds.
+- Correlation with TID2013 human ratings (v3.2): Spearman −0.84 to −0.95 depending on distortion class.
+- Single-scale SSIM is biased toward differences smaller than its Gaussian kernel.
+- Color-profile mismatches can make identical pixels compare as different.
+
+## 3. Open Conflict: YIQ vs OKLab
+
+- The current pixelmatch README describes OKLab with HyAB distance (Ottosson 2020; Abasi et al. 2019).
+- odiff's README and several secondary sources still describe pixelmatch-style comparison as YIQ.
+- Playwright vendors its own pixelmatch copy. Whether it uses YIQ or OKLab/HyAB is **unverified**, so Playwright's `threshold: 0.2` cannot be mapped onto upstream's `0.1`.
+- Likely explanation: a pixelmatch v7 change. Also unverified.
+- Practical consequence: never port a `threshold` value between tools. Re-measure noise (§6) after switching comparator or upgrading Playwright.
+
+## 4. Applitools Match Levels
+
+| Level | Checks | Ignores | Fit |
+|---|---|---|---|
+| Exact | Pixel by pixel | Nothing | Docs: "not recommended for ordinary verification purposes" |
+| Strict | Text, font, color, graphic, position changes a human would notice | Software/hardware rendering differences | One browser/OS, mostly static content |
+| Ignore Colors | Strict minus color | Color | Theme-agnostic checks |
+| Layout | Relative positions of text, images, buttons, columns; appear/disappear/move | Text content, graphics, color, style | Dynamic content, localization, cross-environment against one baseline |
+| Dynamic | Text against patterns (dates, emails, URLs, numbers, currency) | Pattern-matching values | Web only; default for Web tests on recent SDKs; admins can change team default |
+
+"Content" no longer appears on the current page; treat it as legacy or removed. Applitools publishes no quantitative false-positive or false-negative rates; "Visual AI" accuracy claims are marketing until independently measured.
+
+## 5. Mobile Tolerance Knobs (same two-knob logic)
+
+| Tool | Knob | Meaning |
+|---|---|---|
+| Roborazzi | `changeThreshold` | Fraction of differing pixels (count knob) |
+| Roborazzi | `SimpleImageComparator(maxDistance, vShift, hShift)` | Color distance plus shift tolerance for AA |
+| swift-snapshot-testing | `precision` / `perceptualPrecision` | Teams use `perceptualPrecision` ≈ 0.98 to absorb GPU AA, shadow, blur; exact semantics and defaults unverified |
+| Shot | `shot { tolerance = 0.1 }` | Percent; recommended mainly for Compose cross-device variance |
+| Alchemist | `diffThreshold` | Default `0.0` |
+| Paparazzi 2.0.0-alpha04 | max-percent-diff | Can overwrite snapshots when the threshold is reached (changelog) |
+
+Host-rendered (JVM, `flutter test`) tools are deterministic on the same JDK and fonts: keep tolerance at or near zero. Small tolerances are justified mainly for GPU or device rendering. Setup details live in `visual-test-setup.md`.
+
+## 6. Threshold Math
+
+### Why ratios are dangerous
+
+A ratio scales with screenshot area; a regression does not.
+
+```text
+allowed_pixels = width × height × maxDiffPixelRatio
+
+1280 × 800   × 0.01 =  10,240 px   (viewport shot)
+1280 × 4000  × 0.01 =  51,200 px   (full-page shot)
+```
+
+51,200 pixels is enough to hide a whole changed button or a line of text. A missing 2px focus ring around a 120×40 button changes roughly 2 × (124 + 44) ≈ 336 pixels (illustrative arithmetic, not a measured figure): invisible under any common ratio, visible under a small absolute count.
+
+### Decision rules
+
+1. Pinned container, single environment: keep `threshold` at the default (0.2 in Playwright, about 0.1 in raw pixelmatch), leave AA detection on, set a **small absolute** `maxDiffPixels` (tens of pixels) from measured noise.
+2. Cross-environment comparison (different OS/GPU on purpose): a ratio, or a layout-level comparator, is acceptable. Label those suites as low-sensitivity.
+3. Prefer per-snapshot overrides over suite-wide changes. One noisy chart should not loosen every button test.
+4. Raise tolerances gradually and only after confirming the flagged pixels are edges or text AA, not a 1px border.
+5. Never set `threshold` near 1. It hides lost focus rings and 1px borders.
+
+### Measure your noise floor
+
+No reliable published flake-rate data exists for web visual suites; practitioner sources say most failures are AA, subpixel layout, or hinting differences, without rates. Measure your own:
+
+```ts
+// scripts/noise-floor.ts — run INSIDE the pinned Playwright container
+// Captures each target N times, diffs every capture against the first,
+// and prints the max mismatched-pixel count per target.
+import { chromium } from 'playwright';
+import { PNG } from 'pngjs';
+import pixelmatch from 'pixelmatch';
+
+const RUNS = 20;
+const targets = [
+  { name: 'dashboard', url: 'http://localhost:3000/dashboard' },
+  { name: 'settings', url: 'http://localhost:3000/settings' },
+];
+
+async function capture(url: string): Promise<PNG> {
+  const browser = await chromium.launch({
+    args: ['--font-render-hinting=none', '--disable-lcd-text', '--force-color-profile=srgb'],
   });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+    await page.clock.setFixedTime(new Date('2026-01-15T10:00:00Z'));
+    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.evaluate(() => document.fonts.ready);
+    return PNG.sync.read(await page.screenshot({ animations: 'disabled', caret: 'hide' }));
+  } finally {
+    await browser.close();
+  }
+}
 
-  test('homepage matches baseline — mobile', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    await expect(page).toHaveSapshot('homepage-mobile.png', {
-      maxDiffPixels: 200,
-      threshold: 0.2,
-    });
-  });
-
-  test('login form matches baseline', async ({ page }) => {
-    await page.goto('/login');
-    await page.waitForSelector('[data-testid="login-form"]');
-    const form = page.locator('[data-testid="login-form"]');
-    await expect(form).toHaveSapshot('login-form.png');
-  });
-});
+for (const t of targets) {
+  const first = await capture(t.url);
+  const counts: number[] = [];
+  for (let i = 1; i < RUNS; i++) {
+    const next = await capture(t.url);
+    if (next.width !== first.width || next.height !== first.height) {
+      throw new Error(`Size changed for ${t.name}: ${first.width}x${first.height} -> ${next.width}x${next.height}`);
+    }
+    counts.push(pixelmatch(first.data, next.data, null, first.width, first.height, { threshold: 0.1 }));
+  }
+  console.log(`${t.name}: max=${Math.max(...counts)} counts=${counts.join(',')}`);
+}
 ```
 
-### Step 2: Playwright Visual Test Configuration
-```typescript
-// playwright.config.ts
-import { defineConfig } from '@playwright/test';
-export default defineConfig({
-  snapshotDir: './visual-snapshots',
-  expect: {
-    toHaveScreenshot: {
-      maxDiffPixels: 500,
-      threshold: 0.2,
-      animations: 'disabled',
-      scale: 'device',
-    },
-  },
-  projects: [
-    {
-      name: 'chromium',
-      use: { browserName: 'chromium', viewport: { width: 1280, height: 720 } },
-    },
-    {
-      name: 'firefox',
-      use: { browserName: 'firefox', viewport: { width: 1280, height: 720 } },
-    },
-  ],
-});
-```
+- Set `maxDiffPixels` just above the observed maximum (for example max + a small margin).
+- A target whose maximum is far above the others has a determinism bug: fix it (see `screenshot-comparison.md`) instead of raising its tolerance.
+- Re-run after any environment change: Docker tag, Playwright version, CPU architecture, GPU/SwiftShader availability.
+- Note: the script uses raw pixelmatch with `threshold: 0.1`; Playwright's internal comparator may differ (§3). For exact parity, run `npx playwright test --repeat-each=20` against existing baselines and read the reported diff counts from failures.
 
-### Step 3: CI Integration
-```yaml
-name: Visual Regression Tests
-on: [pull_request]
+## 7. Failure Mode Catalogue
 
-jobs:
-  visual:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: npm ci
-      - name: Install Playwright
-        run: npx playwright install --with-deps chromium
-      - name: Generate screenshots
-        run: npx playwright test --project=chromium
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: visual-diffs
-          path: test-results/
-```
+| Symptom | Likely cause | Fix (in order) |
+|---|---|---|
+| Every edge pixel flagged, large count | Subpixel layout shift (font metrics, DPR, zoom) | Pin fonts and `deviceScaleFactor`; check font load timing |
+| Text edges flagged with red/blue fringes | LCD subpixel AA on one machine | `--disable-lcd-text`; capture only in the container |
+| Rounded corners and soft shadows flagged | AA/shadow rasterization varies per run or GPU | Pin GPU/SwiftShader backend; then small `maxDiffPixels` |
+| Real 1px border change passes | `threshold` too lax or ratio too large | Lower `maxDiff*`; switch ratio to absolute |
+| Wrong digit passes SSIM-based check | SSIM compresses small high-contrast areas | Use pixel diff for text-heavy UI |
+| Diff only in gradient region | pixelmatch AA detection weak on gradients | Mask or crop the gradient; consider SSIM for that region only |
+| Same images, "different" result between tools | Different color model / threshold semantics | Re-measure per tool; never port values |
+| Identical-looking images fail | Color-profile mismatch | `--force-color-profile=srgb`; consistent PNG pipeline |
 
-## Baseline Management
+Semantic or "AI" comparison cuts pixel noise but adds model false negatives (missed subtle defects) and false positives. No academic study measures FP/FN of pixelmatch vs SSIM vs visual AI on the same web defect set. For vision-model judging evidence, see `visual-testing-advanced.md`.
 
-### When to Update Baselines
-- New feature adds or changes UI
-- Design system update (button styles, spacing, typography)
-- Intentional layout change
-- Content update (accepted with stakeholders)
+## 8. Checklist
 
-### Baseline Update Workflow
-```bash
-# Update baselines locally
-npx playwright test --update-snapshots
-
-# Verify changes are intentional
-# Review diff images in test-results/
-
-# Commit new baselines
-git add visual-snapshots/
-git commit -m "test(visual): update baselines for new header design"
-```
-
-## Best Practices
-- Use element-level screenshots (not full page) for component-focused testing
-- Disable animations and transitions for consistent screenshots
-- Set appropriate diff thresholds based on your tolerance for false positives
-- Test at multiple viewport sizes for responsive design coverage
-- Store baselines in version control alongside test code
-- Review visual diffs manually before accepting new baselines
-- Run visual tests in CI on every PR but only fail on meaningful differences
-- Use data-testid attributes to mask dynamic content (dates, user names, ads)
-- Combine visual testing with functional assertions for comprehensive coverage
-
-## Common Pitfalls
-- High false positive rate from dynamic content (dates, timers, ads)
-- Baselines that are never updated (accumulate outdated references)
-- Full-page screenshots for every test (slow, high false positives)
-- Ignoring anti-aliasing differences between operating systems
-- Testing on headless vs headed browser (rendering differences)
-- No element isolation — testing pages with too many dynamic elements
-- Running visual tests on every commit (expensive, can be slower)
-- Not masking dynamic content (counters, timestamps, user-specific data)
-
-## Key Points
-- Visual testing catches CSS/layout bugs that functional tests miss
-- Playwright has built-in screenshot comparison (no third-party needed)
-- Use element-level screenshots for component-focused testing
-- Set appropriate diff thresholds to balance sensitivity and false positives
-- Store baselines in version control; update intentionally
-- Mask dynamic content with data-testid or fixed values
-- Test at multiple viewports for responsive design confidence
-- Disable animations for consistent screenshots
+- [ ] `threshold` left at tool default unless measured color noise demands otherwise.
+- [ ] `maxDiffPixels` absolute, derived from a 20-run noise measurement in the pinned container.
+- [ ] No `maxDiffPixelRatio` on full-page shots of a single-environment suite.
+- [ ] AA detection on (`includeAA: false` in pixelmatch semantics).
+- [ ] Per-snapshot overrides documented with the measured reason.
+- [ ] Experimental `ssim-cie94` only with an explicit "unstable API" note.
+- [ ] Noise floor re-measured after every environment bump.

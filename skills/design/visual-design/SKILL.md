@@ -1,7 +1,7 @@
 ---
 name: design-visual-design
 description: >
-  Use when the user asks about visual design, color theory, typography, layout, visual hierarchy, spacing, proportion, or UI aesthetics. Do NOT use for: design systems (design-design-systems), UX research (design-ux-research), or prototyping (design-prototyping).
+  Use when the user asks about visual design, color theory, typography, layout, visual hierarchy, spacing, proportion, or UI aesthetics, or wants a UI that does not look AI-generated or generic. Do NOT use for: design systems (design-design-systems), UX research (design-ux-research), or prototyping (design-prototyping).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -21,7 +21,7 @@ Apply visual design principles — color theory, typography, layout grids, spaci
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: "visual design", "color theory", "typography", "layout", "visual hierarchy", "spacing", "proportion", "UI aesthetics", "make it look better", "design polish", "visual polish".
+Exact user phrases: "visual design", "color theory", "typography", "layout", "visual hierarchy", "spacing", "proportion", "UI aesthetics", "make it look better", "design polish", "visual polish", "looks AI-generated", "generic AI look", "vibe-coded UI", "make it not look like AI made it".
 
 ### Input Context
 - Product type (dashboard, marketing site, mobile app, data-heavy tool)
@@ -268,6 +268,51 @@ Z-Pattern Layout: For minimal or center-focused layouts (landing pages, marketin
 - Text spacing: Ensure layouts don't break when users override text spacing (WCAG 1.4.12)
 - Reduced motion: Test all animations reduce gracefully via `prefers-reduced-motion`
 - Focus order: Visual order matches DOM/tab order for logical navigation
+
+## Avoiding the Generic AI Look
+
+Code generators converge on the same defaults, so AI-built UIs are recognizable at a glance. None of these choices is wrong on its own; the problem is using them by default, all together, without a reason tied to the product. Treat every item below as "allowed only with a stated reason".
+
+### Telltale Signs
+
+| Sign | What it looks like | Do instead |
+|------|--------------------|------------|
+| Purple-to-blue gradients | Hero backgrounds, buttons, and headline text filled with an indigo/violet → blue gradient (`from-purple-500 to-blue-500`, `bg-clip-text`) | Use the brand's solid primary color; reserve gradients for one deliberate surface, if any |
+| Emoji in headings | "🚀 Fast", "✨ Features", "🔒 Secure" as section titles or bullet icons | Plain text headings; if icons are needed, one consistent icon set at one size |
+| Shadow + large radius on every card | Every container is `rounded-2xl shadow-lg`, cards nested in cards | Separate with spacing and 1px borders first; shadows only for elevated layers (menu, modal, toast), max 3 levels |
+| Unexamined Inter / system default | Inter (or Geist/system-ui) for everything at default weights, no type scale | Choose a typeface for the product's voice, pair at most two families, define a type scale with 5–6 steps |
+| Centered hero with two buttons | Big centered headline, subtitle, "Get Started" + "Learn More", then a 3-column feature grid of icon cards | Lead with the product itself: a screenshot, live demo, or the primary task; left-aligned layouts read faster |
+| Glassmorphism and glow | `backdrop-blur` panels, neon glows, blurred color blobs behind content | Flat surfaces with clear contrast; effects only where they explain depth |
+| Uniform everything | Same padding, same card, same icon size on every section, so nothing has emphasis | Vary scale and density on purpose: one dominant element per screen |
+| Filler copy and stats | "Lightning fast", "Seamless experience", "10k+ happy users", placeholder testimonials | Real product copy and real numbers, or leave the section out |
+| Over-animation | Fade-up on every element on scroll, hover-scale on every card | Motion only for state changes and feedback; respect `prefers-reduced-motion` |
+| The "tasteful" second wave | Cream/off-white background with a terracotta accent, small uppercase eyebrow label above every heading, "→" on every button | Same rule: these replaced the purple gradient as the new default, so they need a reason too |
+
+This list is a moving target. Models converge on whatever the most common "good-looking" output is ("distributional convergence"), so banning one default pushes them to the next. Check results against the reference, not just against this table.
+
+### Process: Reference → Tokens → Numbers
+
+1. **Start from a reference, not a prompt.** Before generating any UI, collect 1–3 screenshots of products the target users already trust (same domain, same density). Give them to the agent with what to take from each: "layout density from A, type from B". Never start from "make a modern landing page".
+2. **Extract tokens from the reference.** Write the system down before any component code:
+   - Color: 1 primary, 1 accent at most, a neutral ramp (9–11 steps), semantic success/warning/error.
+   - Type: families, scale (e.g. 12/14/16/20/24/32), weights, line heights.
+   - Space: base unit (4px) and the allowed steps (4/8/12/16/24/32/48/64).
+   - Radius: 2–3 values (e.g. 4/8/12), applied by component type, not everywhere.
+   - Elevation: borders by default, shadows for at most 3 layers.
+3. **Generate against the tokens only.** Instruct the agent that every color, size, and spacing value must come from the token list; arbitrary values (`[13px]`, raw hex) are a review failure.
+4. **Fix with numbers, never adjectives.** Review the screenshot of the result and request changes as measurable deltas:
+   - Bad: "make it cleaner", "more modern", "make it pop".
+   - Good: "card padding 24px → 16px", "H1 48px/700 → 36px/600", "remove shadow from list cards, add 1px border neutral-200", "section gap 96px → 64px".
+5. **Compare side by side.** Put the reference and the result next to each other at the same viewport width; list the remaining differences as numbers and iterate. Lock the approved state with visual regression tests (see `quality/visual-testing`).
+
+### Review Checklist
+- [ ] A reference screenshot exists and is linked in the PR/task
+- [ ] Token list written before components; no arbitrary values in the diff
+- [ ] No purple/blue gradient, emoji heading, or glow unless justified in writing
+- [ ] Shadows used on ≤ 3 elevation layers; most cards use border or spacing
+- [ ] Typeface chosen on purpose, with a defined scale
+- [ ] Hero shows the product or primary task, not just a slogan and two buttons
+- [ ] Every requested change in review is expressed as a number
 
 ## Common Pitfalls
 

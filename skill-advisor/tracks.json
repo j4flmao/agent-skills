@@ -1,0 +1,905 @@
+{
+  "$comment": "Skill Combination Advisor tracks. Paths are relative to skills/ and accept * wildcards (matching across folders). Edit, then run: npm run docs",
+  "levels": {
+    "1": {
+      "title": "Level 1 — Essentials",
+      "hint": "Install these first. They cover the everyday work of this role and rarely conflict."
+    },
+    "2": {
+      "title": "Level 2 — Professional",
+      "hint": "Add when the project grows: production concerns, scaling and team workflows."
+    },
+    "3": {
+      "title": "Level 3 — Specialist",
+      "hint": "Add one at a time, only for the problem in front of you. These are deep and narrow."
+    }
+  },
+  "groups": [
+    {
+      "title": "Build products",
+      "tracks": [
+        "frontend",
+        "backend",
+        "fullstack",
+        "mobile",
+        "desktop",
+        "design-ux"
+      ]
+    },
+    {
+      "title": "Run and secure systems",
+      "tracks": [
+        "devops-platform",
+        "sre",
+        "security",
+        "quality"
+      ]
+    },
+    {
+      "title": "Data and AI",
+      "tracks": [
+        "data-engineering",
+        "ml-ai",
+        "ai-agents"
+      ]
+    },
+    {
+      "title": "Specialized engineering",
+      "tracks": [
+        "systems",
+        "game",
+        "blockchain",
+        "architecture"
+      ]
+    },
+    {
+      "title": "Product and people",
+      "tracks": [
+        "product",
+        "management"
+      ]
+    }
+  ],
+  "tracks": [
+    {
+      "id": "frontend",
+      "title": "Frontend Engineer",
+      "who": "You build web UIs with React, Vue, Angular, Svelte or similar.",
+      "levels": {
+        "1": [
+          "frontend/universal/typescript-patterns",
+          "frontend/universal/patterns",
+          "frontend/universal/state-management",
+          "frontend/universal/data-fetching",
+          "frontend/universal/form-handling",
+          "frontend/universal/accessibility",
+          "frontend/universal/testing",
+          "frontend/universal/css-strategy"
+        ],
+        "2": [
+          "frontend/universal/performance",
+          "frontend/universal/rendering-strategies",
+          "frontend/universal/design-system",
+          "frontend/universal/tailwind-css",
+          "frontend/universal/authentication",
+          "frontend/universal/error-handling",
+          "frontend/universal/security",
+          "frontend/universal/responsive-design",
+          "frontend/universal/internationalization",
+          "frontend/universal/image-optimization",
+          "frontend/universal/bundler-tools"
+        ],
+        "3": [
+          "frontend/universal/microfrontend",
+          "frontend/advanced-architecture/*",
+          "frontend/react/react-fiber",
+          "frontend/nextjs/internals",
+          "frontend/architecture/webgpu-webgl",
+          "frontend/universal/pwa",
+          "frontend/universal/storybook",
+          "quality/visual-testing",
+          "design/visual-design"
+        ]
+      },
+      "bundles": [
+        "frontend-foundations",
+        "frontend-frameworks",
+        "frontend-only",
+        "design-ux"
+      ],
+      "combineWith": [
+        "design-ux",
+        "quality",
+        "backend"
+      ],
+      "watchOut": "Pick exactly one framework skill set (for example `frontend/react/*` or `frontend/vue/*`); several framework skills at once dilute routing."
+    },
+    {
+      "id": "backend",
+      "title": "Backend Engineer",
+      "who": "You build APIs and services in any language.",
+      "levels": {
+        "1": [
+          "backend/universal/api-design",
+          "backend/universal/api-response",
+          "backend/universal/database-patterns",
+          "backend/universal/auth-patterns",
+          "backend/universal/structured-logging",
+          "backend/universal/clean-architecture",
+          "quality/unit-testing",
+          "quality/integration-testing"
+        ],
+        "2": [
+          "backend/universal/caching",
+          "backend/universal/background-jobs",
+          "backend/universal/message-queue",
+          "backend/universal/idempotency",
+          "backend/universal/rate-limiting",
+          "backend/universal/resilience-patterns",
+          "backend/universal/authorization",
+          "backend/universal/api-versioning",
+          "backend/universal/openapi-documentation",
+          "backend/universal/file-storage",
+          "backend/universal/webhooks",
+          "backend/universal/multi-tenancy"
+        ],
+        "3": [
+          "backend/universal/microservices",
+          "backend/universal/event-driven",
+          "backend/universal/cqrs-patterns",
+          "backend/universal/event-sourcing",
+          "backend/universal/transactional-outbox",
+          "backend/universal/distributed-locking",
+          "backend/universal/grpc-patterns",
+          "backend/universal/graphql-patterns",
+          "backend/universal/api/graphql-federation",
+          "backend/universal/concurrency"
+        ]
+      },
+      "bundles": [
+        "backend-patterns",
+        "backend-capabilities",
+        "backend-stacks",
+        "access-control",
+        "backend-only"
+      ],
+      "combineWith": [
+        "devops-platform",
+        "data-engineering",
+        "architecture"
+      ],
+      "watchOut": "Add one stack folder only (for example `backend/nestjs/*` or `backend/go/*`). `backend-stacks` holds every framework and is meant for polyglot teams."
+    },
+    {
+      "id": "fullstack",
+      "title": "Full-Stack Product Team",
+      "who": "One team owns UI, API, database and deployment.",
+      "levels": {
+        "1": [
+          "core/master-orchestrator",
+          "core/project-init",
+          "planning/create-tech-spec",
+          "backend/universal/api-design",
+          "backend/universal/database-patterns",
+          "backend/universal/auth-patterns",
+          "frontend/universal/state-management",
+          "frontend/universal/data-fetching",
+          "devops/docker-patterns"
+        ],
+        "2": [
+          "devops/github-actions",
+          "devops/cicd-pipeline",
+          "quality/e2e-testing",
+          "quality/integration-testing",
+          "frontend/universal/design-system",
+          "backend/universal/caching",
+          "backend/universal/background-jobs",
+          "dev-loop/code-review",
+          "dev-loop/pr-writer"
+        ],
+        "3": [
+          "devops/observability",
+          "devops/progressive-delivery",
+          "backend/universal/feature-flags",
+          "frontend/universal/performance",
+          "security/api-security",
+          "devops/database-migration"
+        ]
+      },
+      "bundles": [
+        "fullstack-nestjs-react",
+        "fullstack-golang-vue",
+        "fullstack-rust-angular",
+        "fullstack-dotnet-react",
+        "fullstack-nodejs-react",
+        "fullstack-elysia-react",
+        "fullstack-rails-svelte"
+      ],
+      "combineWith": [
+        "frontend",
+        "backend",
+        "devops-platform"
+      ],
+      "watchOut": "The `fullstack-*` bundles are broad (216–225 skills). Start from Level 1–2 here plus your stack folders, and move to a full bundle only if the agent keeps missing skills."
+    },
+    {
+      "id": "mobile",
+      "title": "Mobile Engineer",
+      "who": "You ship iOS, Android or cross-platform apps.",
+      "levels": {
+        "1": [
+          "mobile/universal/patterns",
+          "mobile/universal/networking",
+          "mobile/universal/storage",
+          "mobile/universal/testing",
+          "mobile/universal/security",
+          "mobile/universal/performance"
+        ],
+        "2": [
+          "mobile/universal/deployment",
+          "mobile/universal/push-notifications",
+          "mobile/universal/deep-linking",
+          "mobile/universal/offline-first",
+          "mobile/universal/crash-reporting",
+          "mobile/universal/analytics",
+          "mobile/universal/in-app-purchase",
+          "mobile/mobile-localization"
+        ],
+        "3": [
+          "mobile/universal/biometrics",
+          "mobile/universal/map-location",
+          "mobile/universal/camera-media",
+          "mobile/universal/ar-vr",
+          "mobile/mobile-widgets",
+          "mobile/cross-platform/*",
+          "quality/visual-testing"
+        ]
+      },
+      "bundles": [
+        "mobile-ios",
+        "mobile-android",
+        "mobile-flutter",
+        "mobile-react-native",
+        "mobile-cross-platform"
+      ],
+      "combineWith": [
+        "backend",
+        "quality",
+        "design-ux"
+      ],
+      "watchOut": "Add one platform skill: `mobile/ios`, `mobile/android`, `mobile/flutter`, `mobile/react-native`, `mobile/kotlin-multiplatform`, `mobile/ionic-capacitor` or `mobile/dotnet-maui`."
+    },
+    {
+      "id": "desktop",
+      "title": "Desktop App Engineer",
+      "who": "You build native or cross-platform desktop applications.",
+      "levels": {
+        "1": [
+          "desktop/electron",
+          "desktop/tauri"
+        ],
+        "2": [
+          "desktop/qt",
+          "desktop/gtk",
+          "desktop/wpf",
+          "desktop/winforms",
+          "desktop/uwp",
+          "desktop/swiftui",
+          "desktop/appkit",
+          "desktop/gnome"
+        ],
+        "3": [
+          "frontend/universal/security",
+          "dev-loop/performance-profiler",
+          "devops/github-actions"
+        ]
+      },
+      "bundles": [
+        "desktop-all"
+      ],
+      "combineWith": [
+        "frontend",
+        "quality"
+      ],
+      "watchOut": "Level 1 and 2 are alternatives: install the one toolkit you ship with. WinUI 3 and KDE are covered inside `desktop/uwp` and `desktop/qt` references."
+    },
+    {
+      "id": "devops-platform",
+      "title": "DevOps & Platform Engineer",
+      "who": "You own CI/CD, infrastructure as code, Kubernetes and the internal platform.",
+      "levels": {
+        "1": [
+          "devops/docker-patterns",
+          "devops/cicd-pipeline",
+          "devops/github-actions",
+          "devops/terraform",
+          "devops/kubernetes",
+          "devops/helm-patterns",
+          "devops/observability"
+        ],
+        "2": [
+          "devops/gitops",
+          "devops/argo-cd",
+          "devops/vault",
+          "devops/kubernetes-autoscaling",
+          "devops/policy-as-code",
+          "devops/progressive-delivery",
+          "devops/service-mesh",
+          "devops/dependency-management",
+          "devops/monorepo",
+          "devops/database-migration"
+        ],
+        "3": [
+          "devops/platform-engineering",
+          "devops/internal-developer-platform",
+          "devops/kubernetes-operators",
+          "devops/gitops-advanced",
+          "devops/cilium-ebpf",
+          "devops/pulumi",
+          "devops/finops",
+          "devops/cloud-migration",
+          "devops/cloud-architecture"
+        ]
+      },
+      "bundles": [
+        "kubernetes-platform",
+        "infra-foundations",
+        "serverless-edge",
+        "devops-only",
+        "infra-cloud",
+        "cloud-architecture"
+      ],
+      "combineWith": [
+        "sre",
+        "security",
+        "backend"
+      ],
+      "watchOut": "Add only the cloud you run on (`devops/aws`, `devops/azure`, `devops/gcp`, `devops/hetzner`, …). `devops/chaos-engineering` and `site-reliability-engineering/chaos-engineering` overlap: keep one."
+    },
+    {
+      "id": "sre",
+      "title": "Site Reliability Engineer",
+      "who": "You own uptime, SLOs, incidents and capacity.",
+      "levels": {
+        "1": [
+          "devops/sre-practices",
+          "site-reliability-engineering/sli-slo-management",
+          "devops/incident-response",
+          "devops/observability",
+          "devops/monitoring",
+          "management/alerting"
+        ],
+        "2": [
+          "devops/opentelemetry",
+          "devops/apm-observability",
+          "site-reliability-engineering/observability-scaling",
+          "devops/backup-dr",
+          "enterprise/high-availability",
+          "enterprise/capacity-planning",
+          "enterprise/sla-management"
+        ],
+        "3": [
+          "site-reliability-engineering/chaos-engineering",
+          "enterprise/business-continuity",
+          "devops/kubernetes-internals",
+          "personas/devops-sre-engineer"
+        ]
+      },
+      "bundles": [
+        "sre-reliability",
+        "kubernetes-platform"
+      ],
+      "combineWith": [
+        "devops-platform",
+        "security"
+      ],
+      "watchOut": "`devops/incident-response` and `site-reliability-engineering/incident-response` overlap: keep the SRE one if you run formal postmortems, otherwise the DevOps one."
+    },
+    {
+      "id": "data-engineering",
+      "title": "Data Engineer",
+      "who": "You build pipelines, warehouses, lakes and streaming systems.",
+      "levels": {
+        "1": [
+          "data/etl-pipeline",
+          "data/data-warehouse",
+          "data/dimensional-modeling",
+          "data/data-quality",
+          "data/relational-database",
+          "data/streaming"
+        ],
+        "2": [
+          "data/data-lakehouse",
+          "data/data-lake",
+          "data/batch-processing",
+          "data/distributed-compute",
+          "data/data-formats",
+          "data/schema-registry",
+          "data/data-contracts",
+          "data/data-observability",
+          "data/data-lineage",
+          "data/data-testing",
+          "data/data-pipeline-cicd"
+        ],
+        "3": [
+          "data/data-mesh",
+          "data/data-platform",
+          "data/data-catalog",
+          "data/data-strategy",
+          "data/data-virtualization",
+          "data/reverse-etl",
+          "data/data-clean-room",
+          "data/data-cost-optimization",
+          "data/data-engineering/*",
+          "architecture/databases/*"
+        ]
+      },
+      "bundles": [
+        "data-engineering",
+        "data-platform"
+      ],
+      "combineWith": [
+        "ml-ai",
+        "backend"
+      ],
+      "watchOut": "`data/etl-pipeline` (Airflow/dbt general) and `data/etl-pipelines` (orchestration focus) overlap; start with the first."
+    },
+    {
+      "id": "ml-ai",
+      "title": "ML & AI Engineer",
+      "who": "You train, evaluate and serve models, or build LLM applications.",
+      "levels": {
+        "1": [
+          "ml/classical-ml",
+          "ml/deep-learning",
+          "ml/model-evaluation",
+          "ml/feature-engineering",
+          "prompt-engineering/few-shot-prompting",
+          "prompt-engineering/chain-of-thought"
+        ],
+        "2": [
+          "ml/model-serving",
+          "ml/inference-optimization",
+          "ml/experiment-tracking",
+          "devops/mlops",
+          "ai/llm-engineering/rag-architecture",
+          "prompt-engineering/rag-design",
+          "data/vector-databases",
+          "ai/llm-finetuning",
+          "data-science/experimentation"
+        ],
+        "3": [
+          "ai/llm-engineering/kv-cache",
+          "ai/llm-engineering/model-quantization",
+          "hardware-acceleration/flash-attention",
+          "hardware-acceleration/paged-attention",
+          "hardware-acceleration/distributed-training",
+          "ml/model-interpretability",
+          "ai/genai-vision"
+        ]
+      },
+      "bundles": [
+        "ml-engineering",
+        "ai-engineering",
+        "gpu-hpc"
+      ],
+      "combineWith": [
+        "ai-agents",
+        "data-engineering"
+      ],
+      "watchOut": "Keep GPU kernel skills (`hardware-acceleration/*`) out unless you write kernels or tune serving; they trigger on generic performance questions."
+    },
+    {
+      "id": "ai-agents",
+      "title": "AI Agent Builder",
+      "who": "You build tool-using LLM agents, multi-agent systems and their harnesses.",
+      "levels": {
+        "1": [
+          "ai/ai-agents",
+          "ai/ai-agents/core-architectures",
+          "ai/ai-agents/tool-calling-principles",
+          "ai/agentic-workflows",
+          "prompt-engineering/chain-of-thought"
+        ],
+        "2": [
+          "ai/ai-agents/memory-systems",
+          "ai/multi-agent-systems",
+          "ai/ai-agents/multi-agent-topology",
+          "harness-engineering/agent-observability",
+          "harness-engineering/sandbox-execution",
+          "ai/llm-engineering/rag-architecture"
+        ],
+        "3": [
+          "rnd/ai-agents/*",
+          "rnd/security/adversarial-prompting",
+          "rnd/security/ai-defense-mechanisms",
+          "prompt-engineering/tree-of-thoughts",
+          "planning/agent-*",
+          "personas/ai-architect"
+        ]
+      },
+      "bundles": [
+        "ai-agents",
+        "ai-engineering"
+      ],
+      "combineWith": [
+        "ml-ai",
+        "backend",
+        "security"
+      ],
+      "watchOut": "Read the repo rule `.claude/rules/agent-persona-design.md` with this track: it sets the tool-count and human-in-the-loop rules these skills assume."
+    },
+    {
+      "id": "security",
+      "title": "Security Engineer",
+      "who": "You secure applications, cloud and operations.",
+      "levels": {
+        "1": [
+          "security/threat-modeling",
+          "security/sast-dast",
+          "security/secrets-management",
+          "security/api-security",
+          "security/devsecops",
+          "cybersecurity/owasp-web-security"
+        ],
+        "2": [
+          "security/container-security",
+          "security/sbom",
+          "security/data-security",
+          "security/rbac",
+          "security/abac",
+          "cybersecurity/zero-trust-identity",
+          "cybersecurity/modern-cryptography",
+          "cloud-native/cloud-security-defensive"
+        ],
+        "3": [
+          "security/soc-operations",
+          "security/siem-engineering",
+          "security/detection-engineering",
+          "security/edr-xdr",
+          "security/threat-intelligence",
+          "security/blueteam-operations",
+          "security/purpleteam-collaboration",
+          "security/redteam-operations",
+          "cybersecurity/red-team-pentest"
+        ]
+      },
+      "bundles": [
+        "security-all",
+        "soc-all",
+        "access-control",
+        "advanced-security-bundle"
+      ],
+      "combineWith": [
+        "devops-platform",
+        "backend"
+      ],
+      "watchOut": "Offensive skills (`advanced-security-bundle`) are educational and defensive in intent; install them only for authorized testing teams."
+    },
+    {
+      "id": "blockchain",
+      "title": "Blockchain & Web3 Engineer",
+      "who": "You write smart contracts, dApps or blockchain infrastructure.",
+      "levels": {
+        "1": [
+          "blockchain/blockchain-core",
+          "blockchain/blockchain-application",
+          "blockchain/blockchain-testing",
+          "blockchain/blockchain-security",
+          "blockchain/smart-contract-security"
+        ],
+        "2": [
+          "blockchain/blockchain-ethereum",
+          "blockchain/blockchain-web3",
+          "blockchain/blockchain-patterns",
+          "blockchain/blockchain-defi",
+          "blockchain/blockchain-infrastructure",
+          "blockchain/blockchain-data-indexing"
+        ],
+        "3": [
+          "blockchain/blockchain-zk",
+          "blockchain/zero-knowledge-proofs",
+          "blockchain/blockchain-cross-chain",
+          "blockchain/blockchain-solana",
+          "blockchain/blockchain-bitcoin",
+          "blockchain/blockchain-cryptography",
+          "personas/smart-contract-auditor"
+        ]
+      },
+      "bundles": [
+        "blockchain-all",
+        "fintech-payments"
+      ],
+      "combineWith": [
+        "security",
+        "frontend"
+      ],
+      "watchOut": "`blockchain/blockchain-defi` and `blockchain/defi-protocols` overlap, as do `blockchain-zk` and `zero-knowledge-proofs`; keep the `blockchain-*` versions unless you need the shorter ones."
+    },
+    {
+      "id": "game",
+      "title": "Game Developer",
+      "who": "You build games, engines or game servers.",
+      "levels": {
+        "1": [
+          "game/game-engine/patterns",
+          "game/ecs-architecture",
+          "game/game-development/physics-engine",
+          "game/client-engine/input-systems"
+        ],
+        "2": [
+          "game/game-engine/memory-management",
+          "game/game-engine/job-system",
+          "game/game-engine/render-graph",
+          "game/game-engine/asset-pipeline",
+          "game/game-engine/math-foundation",
+          "game/client-engine/animation-systems",
+          "game/client-engine/audio-engine",
+          "game/client-engine/level-streaming",
+          "game/multiplayer-netcode"
+        ],
+        "3": [
+          "game/game-server/*",
+          "game/game-development/vulkan",
+          "game/game-engine/platform-abstraction",
+          "niche/graphics-math/*",
+          "personas/lead-tech-game-engine"
+        ]
+      },
+      "bundles": [
+        "game-development",
+        "game-server"
+      ],
+      "combineWith": [
+        "systems",
+        "backend"
+      ],
+      "watchOut": "Add one engine skill: `game/unity` (+ `game/game-development/unity-csharp`), `game/unreal`, `game/godot` (+ `godot-gdscript`) or `game/cocos2d`. Read `.claude/rules/game-engine-guidelines.md`."
+    },
+    {
+      "id": "systems",
+      "title": "Systems & Embedded Engineer",
+      "who": "You write low-level, embedded, kernel or performance-critical code.",
+      "levels": {
+        "1": [
+          "languages/c",
+          "languages/cpp",
+          "languages/rust",
+          "low-level/cpu-architecture",
+          "system-design/core-algorithms"
+        ],
+        "2": [
+          "low-level/compiler-design",
+          "low-level/kernel-development",
+          "low-level/network-protocols",
+          "low-level/ebpf-engineering",
+          "embedded-systems/rtos",
+          "embedded-systems/bare-metal-rust",
+          "embedded-systems/c-cpp-patterns",
+          "embedded-systems/iot-protocols"
+        ],
+        "3": [
+          "niche/hft/*",
+          "niche/low-level/*",
+          "languages/assembly",
+          "embedded-systems/edge-ai",
+          "hardware-acceleration/cuda-programming",
+          "quantum-computing/qubits-and-gates"
+        ]
+      },
+      "bundles": [
+        "systems-programming",
+        "embedded-iot",
+        "languages",
+        "quantum-computing"
+      ],
+      "combineWith": [
+        "game",
+        "ml-ai"
+      ],
+      "watchOut": "Read `.claude/rules/misra-c-standards.md` and `.claude/rules/ebpf-safety-rules.md` with this track."
+    },
+    {
+      "id": "architecture",
+      "title": "Software & Solution Architect",
+      "who": "You design systems, write ADRs and govern architecture.",
+      "levels": {
+        "1": [
+          "planning/create-tech-spec",
+          "system-design/database-sharding",
+          "system-design/distributed-consensus",
+          "backend/universal/microservices",
+          "backend/universal/event-driven",
+          "architecture/system-design/domain-driven-design"
+        ],
+        "2": [
+          "architecture/system-design/microservices-patterns",
+          "architecture/event-driven",
+          "architecture/crdts",
+          "architecture/databases/*",
+          "backend/universal/cqrs-patterns",
+          "backend/universal/event-sourcing",
+          "backend/universal/resilience-patterns",
+          "devops/cloud-architecture",
+          "enterprise/integration-patterns"
+        ],
+        "3": [
+          "enterprise/architecture-governance",
+          "enterprise/togaf-zachman",
+          "enterprise/legacy-migration",
+          "enterprise/multi-tenant",
+          "architecture/micro-frontends",
+          "personas/system-architect"
+        ]
+      },
+      "bundles": [
+        "architecture-system-design",
+        "enterprise",
+        "backend-patterns"
+      ],
+      "combineWith": [
+        "backend",
+        "devops-platform"
+      ],
+      "watchOut": "Pair with `.claude/rules/solution-architecture.md` for the pattern catalog and ADR template."
+    },
+    {
+      "id": "product",
+      "title": "Product Manager & Planner",
+      "who": "You define what to build: research, specs, roadmaps and growth.",
+      "levels": {
+        "1": [
+          "planning/create-brief",
+          "planning/create-prd",
+          "planning/create-story",
+          "planning/create-roadmap",
+          "product/user-research",
+          "management/pm"
+        ],
+        "2": [
+          "product/analytics",
+          "product/ab-testing",
+          "product/onboarding-flow",
+          "product/pricing-strategy",
+          "product/go-to-market",
+          "product/customer-journey",
+          "product/persona-development",
+          "management/okr-kpi",
+          "planning/market-analysis"
+        ],
+        "3": [
+          "product/growth-engineering",
+          "data-science/experimentation",
+          "data-science/causal-inference",
+          "planning/create-pitch-deck",
+          "planning/cost-benefit",
+          "planning/bpmn-modeling",
+          "personas/product-manager"
+        ]
+      },
+      "bundles": [
+        "product-growth",
+        "planning-docs",
+        "management-only"
+      ],
+      "combineWith": [
+        "design-ux",
+        "management"
+      ],
+      "watchOut": "These skills write documents; pair them with one engineering track so specs stay buildable."
+    },
+    {
+      "id": "management",
+      "title": "Engineering Manager & Delivery Lead",
+      "who": "You run teams, delivery, risk and stakeholders.",
+      "levels": {
+        "1": [
+          "management/agile-scrum-kanban",
+          "management/sprint-retro",
+          "management/stakeholder",
+          "management/risk-management",
+          "management/team-rules"
+        ],
+        "2": [
+          "management/hiring",
+          "management/team-topology",
+          "management/change-management",
+          "management/okr-kpi",
+          "management/cost-benefit",
+          "dev-loop/tech-debt-tracker"
+        ],
+        "3": [
+          "enterprise/itil-service-mgmt",
+          "enterprise/vendor-management",
+          "enterprise/release-engineering",
+          "enterprise/compliance-audit",
+          "enterprise/cost-governance"
+        ]
+      },
+      "bundles": [
+        "management-only",
+        "enterprise"
+      ],
+      "combineWith": [
+        "product",
+        "quality"
+      ],
+      "watchOut": "`management/agile-scrum` and `management/agile-scrum-kanban` overlap; keep `agile-scrum-kanban`."
+    },
+    {
+      "id": "quality",
+      "title": "QA & Test Engineer",
+      "who": "You own test strategy, automation and release confidence.",
+      "levels": {
+        "1": [
+          "quality/unit-testing",
+          "quality/integration-testing",
+          "quality/quality-e2e-testing",
+          "quality/regression-testing",
+          "quality/smoke-testing"
+        ],
+        "2": [
+          "quality/contract-testing",
+          "quality/load-testing",
+          "quality/property-based-testing",
+          "quality/acceptance-testing",
+          "quality/visual-testing",
+          "frontend/universal/testing",
+          "mobile/universal/testing"
+        ],
+        "3": [
+          "quality-assurance/testing-strategies/*",
+          "planning/bdd-atdd",
+          "management/qa",
+          "management/qc",
+          "personas/qa-architect"
+        ]
+      },
+      "bundles": [
+        "quality-testing"
+      ],
+      "combineWith": [
+        "frontend",
+        "backend",
+        "mobile"
+      ],
+      "watchOut": "`quality/e2e-testing` and `quality/quality-e2e-testing` overlap; keep `quality-e2e-testing`."
+    },
+    {
+      "id": "design-ux",
+      "title": "Designer & Design Engineer",
+      "who": "You design interfaces and build design systems.",
+      "levels": {
+        "1": [
+          "design/visual-design",
+          "design/accessibility",
+          "design/design-systems",
+          "frontend/universal/design-system"
+        ],
+        "2": [
+          "design/ux-research",
+          "design/information-architecture",
+          "design/motion-design",
+          "design/brand-identity",
+          "frontend/universal/theming",
+          "frontend/universal/animation",
+          "frontend/universal/accessibility"
+        ],
+        "3": [
+          "quality/visual-testing",
+          "product/user-research",
+          "product/persona-development",
+          "frontend/universal/storybook"
+        ]
+      },
+      "bundles": [
+        "design-ux"
+      ],
+      "combineWith": [
+        "frontend",
+        "product"
+      ],
+      "watchOut": "Use `design/visual-design` section \"Avoiding the Generic AI Look\" whenever an agent builds UI."
+    }
+  ]
+}

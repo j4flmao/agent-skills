@@ -47,18 +47,28 @@ function collectSkills(dir) {
   }
 }
 collectSkills(path.join(root, "skills"));
-for (const file of fs.readdirSync(path.join(root, "bundles")).filter((name) => name.endsWith(".json"))) {
-  try {
-    const value = JSON.parse(fs.readFileSync(path.join(root, "bundles", file), "utf8"));
-    const definitions = Array.isArray(value) ? value : [value];
-    for (const definition of definitions) {
-      if (!definition.name || !Array.isArray(definition.skills)) failures.push("bundles/" + file + ": invalid shape");
-      if (Array.isArray(definition.skills) && new Set(definition.skills).size !== definition.skills.length) failures.push("bundles/" + file + ": duplicate skill");
-      for (const skill of definition.skills || []) {
-        if (!skillNames.has(skill)) failures.push("bundles/" + file + ": " + definition.name + " references unknown skill '" + skill + "'");
-      }
+// bundles/bundle-definitions.json is the single source of truth for bundles.
+const bundled = new Set();
+for (const file of fs.readdirSync(path.join(root, "bundles")).filter((name) => name !== "bundle-definitions.json")) {
+  failures.push("bundles/" + file + ": unexpected file; define every bundle in bundles/bundle-definitions.json");
+}
+try {
+  const definitions = JSON.parse(read("bundles/bundle-definitions.json") || "[]");
+  if (!Array.isArray(definitions)) throw new Error("expected an array of bundles");
+  const bundleNames = new Set();
+  for (const definition of definitions) {
+    if (!definition.name || !definition.description || !Array.isArray(definition.skills)) { failures.push("bundles/bundle-definitions.json: invalid bundle shape"); continue; }
+    if (bundleNames.has(definition.name)) failures.push("bundles/bundle-definitions.json: duplicate bundle '" + definition.name + "'");
+    bundleNames.add(definition.name);
+    if (new Set(definition.skills).size !== definition.skills.length) failures.push("bundles/bundle-definitions.json: " + definition.name + " lists a skill twice");
+    for (const skill of definition.skills) {
+      if (!skillNames.has(skill)) failures.push("bundles/bundle-definitions.json: " + definition.name + " references unknown skill '" + skill + "'");
+      bundled.add(skill);
     }
-  } catch (error) { failures.push("bundles/" + file + ": invalid JSON (" + error.message + ")"); }
+  }
+} catch (error) { failures.push("bundles/bundle-definitions.json: invalid JSON (" + error.message + ")"); }
+for (const [name, relative] of skillNames) {
+  if (!bundled.has(name)) failures.push(relative + ": skill '" + name + "' is not in any bundle");
 }
 if (failures.length) { console.error(failures.map((x) => "FAIL: " + x).join("\n")); process.exit(1); }
 console.log("Agent governance validation passed (" + profiles.length + " profiles, " + skillNames.size + " skills, bundle JSON and skill names validated).");
