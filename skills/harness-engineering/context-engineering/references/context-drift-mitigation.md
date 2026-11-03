@@ -196,7 +196,7 @@ if __name__ == "__main__":
 ---
 
 ## Handoff & Related References
-- Sliding Window Implementations: [sliding-window-implementations.md](sliding-window-implementations.md)
+- Sliding Window Implementations: sliding-window-implementations.md
 - Prompt Token Optimization: [prompt-token-optimization.md](prompt-token-optimization.md)
 
 <!-- COMPRESSION FOOTER -->

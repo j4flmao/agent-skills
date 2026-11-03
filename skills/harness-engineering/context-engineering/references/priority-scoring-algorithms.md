@@ -246,8 +246,8 @@ if __name__ == "__main__":
 ---
 
 ## Handoff & Related References
-- Context Compression Strategies: [context-compression-strategies.md](context-compression-strategies.md)
-- Sliding Window Implementations: [sliding-window-implementations.md](sliding-window-implementations.md)
+- Context Compression Strategies: context-compression-strategies.md
+- Sliding Window Implementations: sliding-window-implementations.md
 
 <!-- COMPRESSION FOOTER -->
 <!--

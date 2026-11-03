@@ -839,7 +839,7 @@ function evaluateOutput(
 ---
 
 ## Handoff & Related References
-- Input Guardrail Patterns: [input-guardrail-patterns.md](input-guardrail-patterns.md)
+- Input Guardrail Patterns: input-guardrail-patterns.md
 - Content Filtering Layers: [content-filtering-layers.md](content-filtering-layers.md)
 - Guardrail Testing & Validation: [guardrail-testing-validation.md](guardrail-testing-validation.md)
 

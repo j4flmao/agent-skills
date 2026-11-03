@@ -174,4 +174,4 @@ Feature: Discount Application
 - Specification by Example: How Successful Teams Deliver the Right Software — Gojko Adzic (2011)
 - Bridging the Communication Gap: Specification by Example and Agile Acceptance Testing — Gojko Adzic
 - Cucumber Book: Behaviour-Driven Development for Testers and Developers — Matt Wynne & Aslak Hellesøy
-- https://specificationbyexample.com/
+- Gojko Adzic, *Specification by Example* (Manning, 2011)

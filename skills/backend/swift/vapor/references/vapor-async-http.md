@@ -1060,9 +1060,9 @@ func list(req: Request) async throws -> [OrderResponse] {
 
 ## References
 
-- Vapor HTTP Documentation: https://docs.vapor.codes/basics/routes/
-- Vapor Middleware: https://docs.vapor.codes/basics/middleware/
+- Vapor HTTP Documentation: https://docs.vapor.codes/basics/routing/
+- Vapor Middleware: https://docs.vapor.codes/advanced/middleware/
 - Vapor WebSocket: https://docs.vapor.codes/advanced/websockets/
 - Vapor Client: https://docs.vapor.codes/basics/client/
-- Vapor Testing: https://docs.vapor.codes/testing/getting-started/
+- Vapor Testing: https://docs.vapor.codes/advanced/testing/
 - Vapor GitHub: https://github.com/vapor/vapor

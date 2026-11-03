@@ -290,7 +290,7 @@ Prover:         GPU-accelerated, multi-node
 ## References
 
 - ZK Rollup design patterns: https://blog.matter-labs.io/zk-rollup-design-3ac235cb9c69
-- Scroll architecture: https://scroll.io/design
-- StarkNet arch: https://docs.starknet.io/documentation/architecture_and_concepts/
-- zkSync Era docs: https://era.zksync.io/docs/
+- Scroll architecture: https://docs.scroll.io/
+- StarkNet arch: https://docs.starknet.io/
+- zkSync Era docs: https://docs.zksync.io/
 - EIP-4844: https://eips.ethereum.org/EIPS/eip-4844

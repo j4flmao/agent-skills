@@ -183,7 +183,7 @@ if __name__ == "__main__":
 
 ## Handoff & Related References
 - Performance SLA Boundaries: [performance-sla-boundaries.md](performance-sla-boundaries.md)
-- Resource Allocation Limits: [resource-allocation-limits.md](resource-allocation-limits.md)
+- Resource Allocation Limits: resource-allocation-limits.md
 
 <!-- COMPRESSION FOOTER -->
 <!--

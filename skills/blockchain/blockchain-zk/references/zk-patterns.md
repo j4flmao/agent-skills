@@ -404,12 +404,12 @@ Solidity verifier contract → verify proof on EVM
 
 ## References
 
-- Tornado Cash: https://tornado.cash/
+- Tornado Cash (mixer; OFAC-sanctioned 2022, delisted 2025; study the design, check legal status before use)
 - Railgun: https://railgun.org/
 - zkPass: https://zkpass.org/
 - Polygon ID: https://polygon.technology/polygon-id
-- Sismo: https://www.sismo.io/
+- Sismo (ZK attestation badges; project sunset in 2024)
 - MACI: https://maci.pse.dev/
-- Dark Forest: https://darkforest.eth/
+- Dark Forest: https://zkga.me/
 - EZKL: https://ezkl.xyz/
 - ZKML survey: https://zkml.org/

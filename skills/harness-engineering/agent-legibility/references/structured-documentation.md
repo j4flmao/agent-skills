@@ -1031,40 +1031,40 @@ Create a `docs/INDEX.md` that serves as a documentation map:
 # Documentation Index
 
 ## Quick Links
-- [Getting Started](./getting-started.md)
-- [Architecture Overview](./architecture.md)
-- [API Reference](./api/README.md)
-- [Contributing Guide](../CONTRIBUTING.md)
+- Getting Started
+- Architecture Overview
+- API Reference
+- Contributing Guide
 
 ## By Topic
 
 ### Setup & Configuration
 | Document | Description | Audience |
 |----------|-------------|----------|
-| [Getting Started](./getting-started.md) | First-time setup guide | New developers |
-| [Environment Variables](./env-vars.md) | Required env config | All developers |
-| [Docker Setup](./docker.md) | Container configuration | DevOps |
+| Getting Started | First-time setup guide | New developers |
+| Environment Variables | Required env config | All developers |
+| Docker Setup | Container configuration | DevOps |
 
 ### Architecture
 | Document | Description | Audience |
 |----------|-------------|----------|
-| [Architecture Overview](./architecture.md) | System design | All developers |
-| [Data Model](./data-model.md) | Database schema | Backend |
-| [API Design](./api-design.md) | API conventions | Backend |
+| Architecture Overview | System design | All developers |
+| Data Model | Database schema | Backend |
+| API Design | API conventions | Backend |
 
 ### Decision Records
 | ID | Title | Status |
 |----|-------|--------|
-| [ADR-0001](./adr/0001-app-router.md) | Use App Router | Accepted |
-| [ADR-0002](./adr/0002-postgres.md) | Use PostgreSQL | Accepted |
-| [ADR-0003](./adr/0003-prisma.md) | Use Prisma ORM | Accepted |
+| ADR-0001 | Use App Router | Accepted |
+| ADR-0002 | Use PostgreSQL | Accepted |
+| ADR-0003 | Use Prisma ORM | Accepted |
 
 ### API Reference
 | Endpoint Group | Document | Version |
 |----------------|----------|---------|
-| Authentication | [Auth API](./api/auth.md) | v2.1 |
-| Users | [Users API](./api/users.md) | v2.0 |
-| Orders | [Orders API](./api/orders.md) | v1.5 |
+| Authentication | Auth API | v2.1 |
+| Users | Users API | v2.0 |
+| Orders | Orders API | v1.5 |
 ```
 
 ### 9.2 Auto-Generated Documentation Index

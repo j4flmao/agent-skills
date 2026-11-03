@@ -273,7 +273,7 @@ if __name__ == "__main__":
 ---
 
 ## Handoff & Related References
-- Context Compression Strategies: [context-compression-strategies.md](context-compression-strategies.md)
+- Context Compression Strategies: context-compression-strategies.md
 - Memory Retrieval Architectures: [memory-retrieval-architectures.md](memory-retrieval-architectures.md)
 
 <!-- COMPRESSION FOOTER -->

@@ -171,4 +171,4 @@ Proposed (TO-BE) — Add 1 picker:
 - Flowable Documentation — https://www.flowable.com/open-source/docs
 - Temporal Documentation — https://docs.temporal.io/
 - DMN Specification — OMG (https://www.omg.org/spec/DMN/)
-- Workflow Management Coalition — https://www.wfmc.org/
+- Workflow Management Coalition (XPDL standards body; website no longer reliably online)

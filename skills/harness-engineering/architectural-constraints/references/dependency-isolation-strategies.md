@@ -109,7 +109,7 @@ if __name__ == "__main__":
 ---
 
 ## Handoff & Related References
-- Network Topology Restrictions: [network-topology-restrictions.md](network-topology-restrictions.md)
+- Network Topology Restrictions: network-topology-restrictions.md
 - Security Isolation Protocols: [security-isolation-protocols.md](security-isolation-protocols.md)
 
 <!-- COMPRESSION FOOTER -->

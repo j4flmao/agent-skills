@@ -804,7 +804,7 @@ for epoch in range(num_epochs):
 ```
 
 ## References
-- PyTorch DDP Documentation: https://pytorch.org/docs/stable/ddp.html
+- PyTorch DDP Documentation: https://docs.pytorch.org/docs/stable/notes/ddp.html
 - PyTorch FSDP Documentation: https://pytorch.org/docs/stable/fsdp.html
 - DeepSpeed Documentation: https://www.deepspeed.ai/
 - Shoeybi et al. "Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism" (2019)

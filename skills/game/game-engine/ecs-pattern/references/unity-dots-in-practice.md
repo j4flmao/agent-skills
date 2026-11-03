@@ -217,5 +217,5 @@ Systems:
 
 - Unity DOTS manual: https://docs.unity3d.com/Packages/com.unity.entities@1.0/
 - Unity DOTS samples: https://github.com/Unity-Technologies/EntityComponentSystemSamples
-- DOTS Motion: https://github.com/Unity-Technologies/dots-motion
+- ECS samples: https://github.com/Unity-Technologies/EntityComponentSystemSamples
 - Burst documentation: https://docs.unity3d.com/Packages/com.unity.burst@1.8/

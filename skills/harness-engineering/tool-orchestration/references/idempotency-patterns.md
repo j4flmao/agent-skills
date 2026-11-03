@@ -780,8 +780,8 @@ if __name__ == "__main__":
 
 ## Handoff & Related References
 - Tool Error Handling: [tool-error-handling.md](tool-error-handling.md)
-- Tool Schema Definitions: [tool-schema-definitions.md](tool-schema-definitions.md)
-- MCP Protocol Patterns: [mcp-protocol-patterns.md](mcp-protocol-patterns.md)
+- Tool Schema Definitions: tool-schema-definitions.md
+- MCP Protocol Patterns: mcp-protocol-patterns.md
 
 <!-- COMPRESSION FOOTER -->
 <!--

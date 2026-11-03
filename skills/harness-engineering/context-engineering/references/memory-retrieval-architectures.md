@@ -206,7 +206,7 @@ if __name__ == "__main__":
 
 ## Handoff & Related References
 - Dynamic Injection Patterns: [dynamic-injection-patterns.md](dynamic-injection-patterns.md)
-- Persistent State Management: [persistent-state-management.md](persistent-state-management.md)
+- Persistent State Management: persistent-state-management.md
 
 <!-- COMPRESSION FOOTER -->
 <!--

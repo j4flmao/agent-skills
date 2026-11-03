@@ -135,12 +135,10 @@ curl -X POST https://<relay>/relay/v1/builder/blocks \
 ### Relay Types
 | Relay          | URL (mainnet)                              | Operator     | Notes                            |
 |----------------|--------------------------------------------|--------------|----------------------------------|
-| Flashbots      | https://boost-relay-flashbots.net          | Flashbots    | Highest market share, open       |
+| Flashbots      | https://boost-relay.flashbots.net          | Flashbots    | Highest market share, open       |
 | Agnostic       | https://agnostic-relay.net                 | Agnostic     | Low latency, permissionless      |
 | UltraSound     | https://relay.ultrasound.money             | UltraSound   | Focus on high value payouts      |
 | Aestus         | https://aestus.live                        | Aestus       | Neutral, reliable                |
-| Eden Network   | https://relay.edennetwork.io               | Eden         | OFA-integrated relay             |
-| Manifold       | https://relay.manifoldfinance.com          | Manifold     | MEV-Share compatible             |
 
 ### Relay Health Monitoring
 ```bash

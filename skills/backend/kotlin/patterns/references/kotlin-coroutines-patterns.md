@@ -1262,8 +1262,8 @@ class NetworkService {
 ## References
 
 - Kotlin Coroutines Guide: https://kotlinlang.org/docs/coroutines-guide.html
-- Structured Concurrency: https://kotlinlang.org/docs/structured-concurrency.html
+- Structured Concurrency: https://kotlinlang.org/docs/coroutines-basics.html
 - Coroutine Context: https://kotlinlang.org/docs/reference/coroutines/coroutine-context-and-dispatchers.html
 - Kotlin Flows: https://kotlinlang.org/docs/flow.html
 - Coroutines Testing: https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-test/
-- Ktor Coroutines: https://ktor.io/docs/advanced.html#coroutines
+- Ktor Coroutines: https://ktor.io/docs/welcome.html

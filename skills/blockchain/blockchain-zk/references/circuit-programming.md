@@ -315,7 +315,7 @@ Circuit
 
 ## References
 
-- Circom 2.0: https://docs.circom.io/
+- Circom 2.0: https://github.com/iden3/circom
 - Noir Language: https://noir-lang.org/
 - Halo2 Book: https://zcash.github.io/halo2/
 - Barretenberg: https://github.com/AztecProtocol/barretenberg

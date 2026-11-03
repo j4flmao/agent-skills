@@ -117,14 +117,14 @@ When using SvelteKit, remember that `$state` and other runes are evaluated on th
 - USE TypeScript for enhanced developer experience and type safety.
 
 ## Reference Guides
-- [Architecture Patterns](references/architecture-patterns.md)
-- [State Management](references/state-management.md)
-- [Performance Optimization](references/performance-optimization.md)
-- [Security Best Practices](references/security-best-practices.md)
-- [Testing Strategies](references/testing-strategies.md)
-- [Deployment Pipelines](references/deployment-pipelines.md)
-- [Error Handling](references/error-handling.md)
-- [Code Organization](references/code-organization.md)
+- Architecture Patterns
+- State Management
+- Performance Optimization
+- Security Best Practices
+- [Testing Strategies](testing-strategies.md)
+- [Deployment Pipelines](deployment-pipelines.md)
+- [Error Handling](error-handling.md)
+- [Code Organization](code-organization.md)
 
 ## Handoff
 Refer to the overarching `frontend` skill for UI composition standards.

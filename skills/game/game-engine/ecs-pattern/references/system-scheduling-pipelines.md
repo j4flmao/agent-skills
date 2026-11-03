@@ -194,6 +194,6 @@ app.add_systems(Render, sync_render_system);
 
 ## Further Reading
 
-- Flecs: https://www.flecs.dev/flecs/docs.html#system-Phases
+- Flecs: https://www.flecs.dev/flecs/
 - Bevy scheduler internals: https://docs.rs/bevy_ecs/0.12.0/bevy_ecs/schedule/index.html
-- Unity DOTS job system: https://docs.unity3d.com/Packages/com.unity.entities@1.0/manual/jobs.html
+- Unity DOTS job system: https://docs.unity3d.com/Packages/com.unity.entities@1.3/manual/index.html

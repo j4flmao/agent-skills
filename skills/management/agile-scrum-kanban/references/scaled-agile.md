@@ -136,4 +136,4 @@
 - SAFe Framework — https://scaledagileframework.com/
 - LeSS Framework — https://less.works/
 - Nexus Guide — https://scrum.org/nexus
-- Scrum@Scale Guide — https://scrumatscale.org/
+- Scrum@Scale Guide — https://www.scrumatscale.com/

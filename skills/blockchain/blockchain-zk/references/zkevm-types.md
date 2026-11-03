@@ -234,6 +234,6 @@ higher the latency.
 
 - Vitalik's zkEVM Types: https://vitalik.eth.limo/general/2022/08/04/zkevm.html
 - Polygon zkEVM docs: https://wiki.polygon.technology/docs/zkEVM/
-- Scroll design doc: https://scroll.io/design
-- zkSync Era docs: https://era.zksync.io/docs/
+- Scroll design doc: https://docs.scroll.io/
+- zkSync Era docs: https://docs.zksync.io/
 - StarkNet architecture: https://docs.starknet.io/

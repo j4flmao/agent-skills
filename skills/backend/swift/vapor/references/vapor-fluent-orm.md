@@ -1032,5 +1032,5 @@ struct OrderService {
 - Fluent Documentation: https://docs.vapor.codes/fluent/overview/
 - Fluent GitHub: https://github.com/vapor/fluent
 - Fluent Kit GitHub: https://github.com/vapor/fluent-kit
-- Database Drivers: https://docs.vapor.codes/fluent/database/
+- Database Drivers: https://docs.vapor.codes/fluent/overview/
 - Advanced Fluent: https://docs.vapor.codes/fluent/advanced/

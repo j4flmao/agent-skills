@@ -222,4 +222,4 @@ Next iteration or next feature
 - Specification by Example — Gojko Adzic (2011)
 - Example Mapping — Matt Wynne (Cucumber)
 - https://cucumber.io/docs/bdd/
-- https://specificationbyexample.com/
+- Gojko Adzic, *Specification by Example* (Manning, 2011)

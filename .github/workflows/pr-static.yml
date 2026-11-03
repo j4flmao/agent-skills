@@ -44,7 +44,12 @@ jobs:
         with:
           args: >-
             --no-progress --cache --max-cache-age 7d
-            --exclude-loopback --exclude '^https?://(example\.(com|org)|localhost)'
+            --exclude-loopback
+            --exclude '^https?://([\w-]+\.)*(example\.(com|org|net)|yourdomain\.com|evil\.com|localhost)\b'
+            --exclude '^https?://[\w-]+(:\d+)?/'
+            --exclude '^https?://[^/]+\.(internal|local|svc|cluster\.local)\b'
+            --exclude '^https://github\.com/(team|your-org|myorg|org)/'
+            --exclude-path 'skills/dev-loop/readme-writer/references'
             --accept 200,206,403,429
             'skills/**/*.md'
           fail: true

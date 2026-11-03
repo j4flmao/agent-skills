@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
 ## Handoff & Related References
 - Fault Tolerance and Redundancy: [fault-tolerance-redundancy.md](fault-tolerance-redundancy.md)
-- Network Topology Restrictions: [network-topology-restrictions.md](network-topology-restrictions.md)
+- Network Topology Restrictions: network-topology-restrictions.md
 
 <!-- COMPRESSION FOOTER -->
 <!--

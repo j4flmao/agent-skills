@@ -171,6 +171,6 @@ RETURN o;
 ```
 
 ## References
-- Neo4j graph modeling guide: https://neo4j.com/developer/graph-data-modeling/
+- Neo4j graph modeling guide: https://neo4j.com/docs/getting-started/data-modeling/
 - RDF 1.1 primer: https://www.w3.org/TR/rdf11-primer/
 - Graph traversal patterns: https://neo4j.com/docs/getting-started/cypher/

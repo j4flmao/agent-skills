@@ -228,5 +228,5 @@ Real-world overhead differences are usually under 2x at scale — choose based o
 
 - EnTT: https://github.com/skypjack/entt
 - Flecs: https://www.flecs.dev/flecs/
-- Flecs guide: https://www.flecs.dev/flecs/docs.html
+- Flecs guide: https://www.flecs.dev/flecs/
 - EnTT wiki: https://github.com/skypjack/entt/wiki

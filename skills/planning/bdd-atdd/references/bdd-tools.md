@@ -284,7 +284,7 @@ cucumber --format json --out reports/cucumber.json
 
 ## References
 - Cucumber Documentation — https://cucumber.io/docs/
-- SpecFlow Documentation — https://docs.specflow.org/
+- Reqnroll Documentation (SpecFlow successor; SpecFlow is end-of-life) — https://docs.reqnroll.net/
 - Behave Documentation — https://behave.readthedocs.io/
 - Karate Documentation — https://github.com/karatelabs/karate
 - Gauge Documentation — https://docs.gauge.org/

@@ -497,5 +497,5 @@ CALL apoc.periodic.commit(
 - Cypher Execution Plans: https://neo4j.com/docs/cypher-manual/current/execution-plans/
 - Gremlin Query Optimization: https://tinkerpop.apache.org/docs/current/reference/#traversal-strategies
 - Neptune Query Optimization: https://docs.aws.amazon.com/neptune/latest/userguide/gremlin-query-hints.html
-- JanusGraph Configuration: https://docs.janusgraph.org/operations/configure/
+- JanusGraph Configuration: https://docs.janusgraph.org/configs/configuration-reference/
 - APOC Procedures: https://neo4j.com/docs/apoc/current/
