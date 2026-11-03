@@ -165,7 +165,7 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run npm audit
         run: npm audit --audit-level=high
 ```

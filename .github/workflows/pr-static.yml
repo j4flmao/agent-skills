@@ -1,0 +1,52 @@
+# Phase 0 evals: free, deterministic checks on every push and pull request.
+name: pr-static
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-static-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Governance (profiles, skill names, bundles)
+        run: npm run validate:governance
+      - name: Skills (structure, descriptions, routing targets, reference links, deprecated APIs)
+        run: npm run validate:skills
+
+  links:
+    # External links rot independently of PRs, so this job reports but does not block.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .lycheecache
+          key: lychee-${{ github.sha }}
+          restore-keys: lychee-
+      - name: Check external links in skills
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress --cache --max-cache-age 7d
+            --exclude-loopback --exclude '^https?://(example\.(com|org)|localhost)'
+            --accept 200,206,403,429
+            'skills/**/*.md'
+          fail: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

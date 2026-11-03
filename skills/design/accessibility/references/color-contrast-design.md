@@ -85,7 +85,7 @@ jobs:
   contrast:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
       - run: npm ci
       - run: npm run build

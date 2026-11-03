@@ -2,19 +2,12 @@
 name: consul
 description: >
   Use this skill when the user says 'consul', 'hashicorp consul',
-  'consul agent', 'consul server', 'consul client', 'consul cluster',
-  'consul datacenter', 'consul service discovery', 'consul DNS',
-  'consul catalog', 'consul health check', 'consul KV', 'consul
-  sessions', 'consul ACL', 'consul token', 'consul policy', 'consul
-  role', 'consul connect', 'consul service mesh', 'consul intention',
-  'consul envoy', 'consul mesh gateway', 'consul ingress gateway',
-  'consul terminating gateway', 'consul tree', 'consul federation',
-  'consul admin partition', 'consul namespace', 'consul gossip',
-  'consul raft', 'consul snapshot', 'consul backup', 'consul upgrade',
-  'consul k8s', 'consul helm', 'consul terraform', 'consul
-  consul-template', 'consul ESM', 'consul NIA', 'consul Terraform
-  sync', 'service discovery', 'service mesh', 'consul service
-  registration'.
+  'consul cluster', 'consul service discovery', 'consul DNS',
+  'consul health check', 'consul KV', 'consul ACL', 'consul connect',
+  'consul service mesh', 'consul intention', 'mesh gateway',
+  'consul federation', 'admin partition', 'consul raft',
+  'consul snapshot', 'consul on kubernetes', 'consul-template',
+  'consul-terraform-sync', 'consul ESM'.
   Covers: HashiCorp Consul service discovery, health checking, KV store,
   sessions and leader election, ACLs and security, Connect service mesh
   (mTLS, intentions, Envoy), federation across datacenters, snapshots and

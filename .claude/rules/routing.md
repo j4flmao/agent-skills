@@ -96,7 +96,7 @@ file-storage/s3/object-store    → backend/universal/file-storage
 feature-flag/toggle/canary      → backend/universal/feature-flags
 i18n/internationalization       → backend/universal/internationalization
 logging/structured-log/json     → backend/universal/structured-logging
-observability/telemetry/tracing → backend/universal/observability
+observability/telemetry/tracing → devops/observability
 resilience/circuit-breaker      → backend/universal/resilience-patterns
 openapi/swagger                 → backend/universal/openapi-documentation
 contract-testing/pact           → backend/universal/contract-testing
@@ -191,7 +191,7 @@ kde/kde-plasma                  → desktop/qt
 
 review/debug/refactor           → dev-loop/
 docker/k8s/terraform            → devops/
-api-gateway/kong/nginx-gateway  → backend/universal/api-gateway
+api-gateway/kong/nginx-gateway  → backend/universal/api-design
 grpc/protobuf                   → backend/universal/grpc-patterns
 websocket/socket-io             → backend/universal/websocket-patterns
 kafka/rabbitmq/mq               → backend/universal/message-queue
@@ -251,7 +251,7 @@ growth-engineering/plg/activation → product/growth-engineering
 pricing-strategy/monetization   → product/pricing-strategy
 go-to-market/gtm/product-launch → product/go-to-market
 onboarding-flow/activation      → product/onboarding-flow
-prioritization/rice/kano        → product/feature-prioritization
+prioritization/rice/kano        → management/pm
 customer-journey/journey-map/service-blueprint/touchpoint   → product/customer-journey
 persona/user-persona/empathy-map/persona-creation           → product/persona-development
 ai/llm/prompt-engineering       → prompt-engineering/
@@ -269,11 +269,11 @@ ai-cost-optimization/token-efficiency → ml/inference-optimization
 langchain/llamaindex            → ai/agentic-workflows
 mcp/model-context-protocol      → ai/ai-agents/tool-calling-principles
 ai-observability/langsmith/wandb → harness-engineering/agent-observability
-solution-architecture/high-level-design/system-design → planning/solution-architecture
+solution-architecture/high-level-design/system-design → planning/create-tech-spec
 
 cqrs/command-query/cqrs-pattern   → backend/universal/cqrs-patterns
 event-sourcing/event-store/append-only-log → backend/universal/event-sourcing
-saga/choreography-saga/orchestration-saga/compensation → backend/universal/saga-patterns
+saga/choreography-saga/orchestration-saga/compensation → backend/universal/transactional-outbox
 transactional-outbox/outbox-pattern/reliable-event-publishing/dual-write → backend/universal/transactional-outbox
 
 sast/dast/static-analysis       → security/sast-dast
@@ -289,24 +289,24 @@ webrtc/real-time/media-streaming/sfu → backend/web-real-time
 data-security/encryption-at-rest → security/data-security
 soc/soc-operations/security-operations-center   → security/soc-operations
 siem/correlation-rules/log-ingestion/splunk     → security/siem-engineering
-soar/playbook-automation/incident-automation    → security/soar-automation
+soar/playbook-automation/incident-automation    → security/soc-operations
 threat-intelligence/cti/ioc/ttp/mitre-attack    → security/threat-intelligence
 edr/xdr/endpoint-detection/crowdstrike          → security/edr-xdr
-zero-trust/zta/beyondcorp/never-trust               → security/zero-trust
-cspm/cloud-security-posture/wiz/prisma-cloud         → security/cspm
-pentest/penetration-test/ethical-hacking             → security/penetration-testing
-iam-governance/identity-governance/access-review     → security/iam-governance
+zero-trust/zta/beyondcorp/never-trust               → cybersecurity/zero-trust-identity
+cspm/cloud-security-posture/wiz/prisma-cloud         → cloud-native/cloud-security-defensive
+pentest/penetration-test/ethical-hacking             → cybersecurity/red-team-pentest
+iam-governance/identity-governance/access-review     → security/rbac
 
-etl/airflow/dbt/pipeline        → data/data-etl-pipeline
+etl/airflow/dbt/pipeline        → data/etl-pipeline
 warehouse/snowflake/bigquery    → data/data-warehouse
-streaming/kafka/flink/real-time → data/data-streaming
-bi/metabase/superset/looker     → data/data-bi-tools
+streaming/kafka/flink/real-time → data/streaming
+bi/metabase/superset/looker     → data/bi-tools
 data-quality/great-expectations → data/data-quality
-distributed-storage/hdfs        → data/data-distributed-storage
-distributed-compute/spark/dask  → data/data-distributed-compute
+distributed-storage/hdfs        → data/distributed-storage
+distributed-compute/spark/dask  → data/distributed-compute
 data-lake/delta-lake            → data/data-lake
 lakehouse/medallion             → data/data-lakehouse
-batch-processing/hive           → data/data-batch-processing
+batch-processing/hive           → data/batch-processing
 workflow-orchestration/airflow  → data/etl-pipeline
 cdc/debezium/change-data-capture → data/streaming
 data-replication                → data/relational-database
@@ -353,7 +353,7 @@ contract-testing/pact           → quality/contract-testing
 unit-testing/tdd/test-doubles/mocking → quality/unit-testing
 integration-testing/api-testing/test-containers → quality/integration-testing
 property-based-testing/fuzzing/fast-check → quality/property-based-testing
-exploratory-testing/charter/session-based/test-heuristics → quality/exploratory-testing
+exploratory-testing/charter/session-based/test-heuristics → quality/acceptance-testing
 acceptance-testing/uat/alpha-beta/acceptance-criteria → quality/acceptance-testing
 regression-testing/regression-suite/regression-selection → quality/regression-testing
 smoke-testing/smoke/bvt/build-verification/deployment-health → quality/smoke-testing
@@ -395,7 +395,7 @@ policy-engine/opa-policy/conditional-access          → security/abac
 permission-boundary/least-privilege/privileged-access → security/abac
 cloud-migration/lift-and-shift/6-rs → devops/cloud-migration
 pulumi/pulumi-iac/infrastructure-as-code-pulumi → devops/pulumi
-crossplane/crossplane-control-plane/composition      → devops/crossplane
+crossplane/crossplane-control-plane/composition      → devops/kubernetes-operators
 gitlab-ci/gitlab-pipeline/gitlab-ci-cd               → devops/gitlab-ci
 circleci/circleci-config                              → devops/circleci
 keda/autoscaling/hpa/vpa/cluster-autoscaler           → devops/kubernetes-autoscaling
