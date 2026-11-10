@@ -4,6 +4,15 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (2 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`modern-cryptography`](../../skills/cybersecurity/modern-cryptography/SKILL.md) | `cybersecurity/modern-cryptography` | Explain the mechanics and correct selection of modern asymmetric cryptography — ECC/ECDHE for key exchange and forward secrecy, and NIST PQC… |
+| [`security-sbom`](../../skills/security/sbom/SKILL.md) | `security/sbom` | Design an SBOM generation pipeline with format selection, vulnerability correlation, license compliance, and policy enforcement for software… |
+
 ## Level 1 — Essentials (5 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -50,16 +59,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (5 skills):**
+**Level 1 + security baseline (7 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill lang-c --skill lang-cpp --skill lang-rust --skill cpu-architecture --skill core-algorithms-system-design
+npx skills add j4flmao/agent-skills --skill lang-c --skill lang-cpp --skill lang-rust --skill cpu-architecture --skill core-algorithms-system-design --skill modern-cryptography --skill security-sbom
 ```
 
-**Level 1 + 2 (13 skills):**
+**Level 1 + 2 + security baseline (15 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill lang-c --skill lang-cpp --skill lang-rust --skill cpu-architecture --skill core-algorithms-system-design --skill compiler-design --skill kernel-development --skill network-protocols --skill ebpf-engineering --skill rtos --skill bare-metal-rust --skill c-cpp-patterns --skill iot-protocols
+npx skills add j4flmao/agent-skills --skill lang-c --skill lang-cpp --skill lang-rust --skill cpu-architecture --skill core-algorithms-system-design --skill compiler-design --skill kernel-development --skill network-protocols --skill ebpf-engineering --skill rtos --skill bare-metal-rust --skill c-cpp-patterns --skill iot-protocols --skill modern-cryptography --skill security-sbom
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

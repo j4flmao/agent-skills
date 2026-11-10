@@ -26,6 +26,18 @@ const DEPRECATED_PATTERNS = [
 // A line that names the old API to explain a migration is documentation, not a defect.
 const MIGRATION_NOTE = /deprecat|removed|legacy|replaced|instead|migrat|\bv\d+ used\b|\bin v\d+\b|→|->/i;
 const PLACEHOLDER = /\bTODO\b|\bFIXME\b|lorem ipsum/i;
+// Credentials that look real. Examples must use placeholders such as <api-key> or ${API_KEY}.
+const SECRET_PATTERNS = [
+  [/\bAKIA[0-9A-Z]{16}\b/, "AWS access key id"],
+  [/\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}\b/, "GitHub token"],
+  [/\bgithub_pat_[A-Za-z0-9_]{50,}\b/, "GitHub fine-grained token"],
+  [/\bsk_live_[A-Za-z0-9]{20,}\b/, "Stripe live secret key"],
+  [/\bxox[abprs]-[0-9]{8,}-[A-Za-z0-9-]{8,}/, "Slack token"],
+  [/\bAIza[0-9A-Za-z_-]{35}\b/, "Google API key"],
+  [/\bsk-ant-[A-Za-z0-9_-]{30,}/, "Anthropic API key"],
+  [/\bsk-(proj-)?[A-Za-z0-9]{40,}\b/, "OpenAI API key"],
+  [/-----BEGIN (RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----\s*\\?n?\s*[A-Za-z0-9+/=]{40,}/, "private key material"],
+];
 
 const errors = [];
 const warnings = [];
@@ -104,6 +116,11 @@ function checkContent(file) {
   const rel = toPosix(file);
   const text = fs.readFileSync(file, "utf8");
   const lines = text.split(/\r?\n/);
+  for (const [pattern, label] of SECRET_PATTERNS) {
+    const multiLine = label === "private key material";
+    const lineIndex = lines.findIndex((line, i) => pattern.test(multiLine ? line + "\n" + (lines[i + 1] || "") : line));
+    if (lineIndex >= 0) errors.push(rel + ":" + (lineIndex + 1) + ": looks like a real " + label + "; use a placeholder");
+  }
   const fenceLine = unclosedFenceLine(lines);
   if (fenceLine >= 0) errors.push(rel + ":" + (fenceLine + 1) + ": unclosed code fence");
   for (const [pattern, label] of DEPRECATED_PATTERNS) {
@@ -154,6 +171,7 @@ function anchors(file) {
     for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
       const match = /^#{1,6}\s+(.+?)\s*$/.exec(line);
       if (match) set.add(slug(match[1].replace(/`/g, "")));
+      for (const id of line.matchAll(/<a id="([^"]+)"/g)) set.add(id[1]);
     }
     anchorsOf.set(file, set);
   }

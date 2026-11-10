@@ -153,8 +153,8 @@ log_level = "info"
     Shared = true
     [runners.cache.s3]
       ServerAddress = "s3.amazonaws.com"
-      AccessKey = "AKIAIOSFODNN7EXAMPLE"
-      SecretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+      # No static keys: the runner authenticates with its IAM role (instance profile or IRSA)
+      AuthenticationType = "iam"
       BucketName = "runner-cache"
       BucketLocation = "us-east-1"
       Insecure = false
@@ -209,8 +209,9 @@ runners:
     s3:
       bucketName: runner-cache
       bucketLocation: us-east-1
-      accessKey: AKIAIOSFODNN7EXAMPLE
-      secretKey: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+      # Prefer an IAM role (IRSA). If static keys are unavoidable, store them in a
+      # Kubernetes Secret and reference it; never put keys in values files.
+      secretName: runner-s3-credentials
 
   # Node selector
   nodeSelector:
@@ -306,8 +307,8 @@ check_interval = 3
     Shared = true
     [runners.cache.s3]
       ServerAddress = "s3.amazonaws.com"
-      AccessKey = "AKIAIOSFODNN7EXAMPLE"
-      SecretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+      # No static keys: the runner authenticates with its IAM role (instance profile or IRSA)
+      AuthenticationType = "iam"
       BucketName = "runner-cache"
       BucketLocation = "us-east-1"
 ```
@@ -333,8 +334,8 @@ check_interval = 3
     Shared = true
     [runners.cache.s3]
       ServerAddress = "s3.amazonaws.com"
-      AccessKey = "AKIAIOSFODNN7EXAMPLE"
-      SecretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+      # No static keys: the runner authenticates with its IAM role (instance profile or IRSA)
+      AuthenticationType = "iam"
       BucketName = "my-runner-cache"
       BucketLocation = "us-east-1"
       Insecure = false
@@ -348,8 +349,9 @@ check_interval = 3
     Path = "cache"
     Shared = true
     [runners.cache.gcs]
-      AccessID = "my-service-account@project.iam.gserviceaccount.com"
-      PrivateKey = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+      # Mount the service-account key from a secret store (or use Workload Identity on GKE);
+      # never inline a private key in config.toml.
+      CredentialsFile = "/etc/gitlab-runner/gcs-credentials.json"
       BucketName = "my-runner-cache"
 ```
 

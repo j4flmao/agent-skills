@@ -49,5 +49,6 @@ backend-api:
 
 postgresql:
   auth:
-    postgresPassword: "supersecret"
+    # Reference a Secret created by External Secrets / Sealed Secrets; never commit passwords in values.
+    existingSecret: postgresql-credentials
 ```

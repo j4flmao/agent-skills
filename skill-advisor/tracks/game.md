@@ -4,6 +4,15 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (2 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`anti-cheat-server`](../../skills/game/game-server/anti-cheat-server/SKILL.md) | `game/game-server/anti-cheat-server` | The server is the only place that can prove cheating. |
+| [`security-api-security`](../../skills/security/api-security/SKILL.md) | `security/api-security` | Design comprehensive API security controls covering OWASP API Top 10 threat modeling, authentication (JWT, OAuth2, API keys), rate limiting (token… |
+
 ## Level 1 — Essentials (4 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -31,13 +40,12 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`level-streaming`](../../skills/game/client-engine/level-streaming/SKILL.md) | `game/client-engine/level-streaming` | Open worlds don't fit in RAM or load in one frame. |
 | [`multiplayer-netcode`](../../skills/game/multiplayer-netcode/SKILL.md) | `game/multiplayer-netcode` | Building robust multiplayer requires understanding latency, jitter, bandwidth, and how to hide them. |
 
-## Level 3 — Specialist (10 skills)
+## Level 3 — Specialist (9 skills)
 
 Add one at a time, only for the problem in front of you. These are deep and narrow.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
-| [`anti-cheat-server`](../../skills/game/game-server/anti-cheat-server/SKILL.md) | `game/game-server/anti-cheat-server` | The server is the only place that can prove cheating. |
 | [`authoritative-server`](../../skills/game/game-server/authoritative-server/SKILL.md) | `game/game-server/authoritative-server` | The server is the single source of truth. |
 | [`interest-management`](../../skills/game/game-server/interest-management/SKILL.md) | `game/game-server/interest-management` | Nobody needs everything. |
 | [`matchmaking-lobby`](../../skills/game/game-server/matchmaking-lobby/SKILL.md) | `game/game-server/matchmaking-lobby` | Matchmaking turns "players waiting" into "a fair game started fast." The lobby keeps a group of players synced until the match host is assigned. |
@@ -52,16 +60,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (4 skills):**
+**Level 1 + security baseline (6 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill game-engine-patterns --skill ecs-architecture --skill physics-engine --skill input-systems
+npx skills add j4flmao/agent-skills --skill game-engine-patterns --skill ecs-architecture --skill physics-engine --skill input-systems --skill anti-cheat-server --skill security-api-security
 ```
 
-**Level 1 + 2 (13 skills):**
+**Level 1 + 2 + security baseline (15 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill game-engine-patterns --skill ecs-architecture --skill physics-engine --skill input-systems --skill memory-management --skill job-system --skill render-graph --skill asset-pipeline --skill math-foundation --skill animation-systems --skill audio-engine --skill level-streaming --skill multiplayer-netcode
+npx skills add j4flmao/agent-skills --skill game-engine-patterns --skill ecs-architecture --skill physics-engine --skill input-systems --skill memory-management --skill job-system --skill render-graph --skill asset-pipeline --skill math-foundation --skill animation-systems --skill audio-engine --skill level-streaming --skill multiplayer-netcode --skill anti-cheat-server --skill security-api-security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

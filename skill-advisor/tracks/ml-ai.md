@@ -4,6 +4,15 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (2 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`security-data-security`](../../skills/security/data-security/SKILL.md) | `security/data-security` | Implements data security controls: encryption, key management, masking, column-level security, and data anonymization for regulatory compliance. |
+| [`ai-defense-mechanisms`](../../skills/rnd/security/ai-defense-mechanisms/SKILL.md) | `rnd/security/ai-defense-mechanisms` | No classifier or prompt reliably stops prompt injection, so defenses must assume the model can be manipulated and limit what a manipulated model… |
+
 ## Level 1 — Essentials (6 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -51,16 +60,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (6 skills):**
+**Level 1 + security baseline (8 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill ml-classical-ml --skill ml-deep-learning --skill ml-model-evaluation --skill ml-feature-engineering --skill prompt-few-shot --skill prompt-chain-of-thought
+npx skills add j4flmao/agent-skills --skill ml-classical-ml --skill ml-deep-learning --skill ml-model-evaluation --skill ml-feature-engineering --skill prompt-few-shot --skill prompt-chain-of-thought --skill security-data-security --skill ai-defense-mechanisms
 ```
 
-**Level 1 + 2 (15 skills):**
+**Level 1 + 2 + security baseline (17 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill ml-classical-ml --skill ml-deep-learning --skill ml-model-evaluation --skill ml-feature-engineering --skill prompt-few-shot --skill prompt-chain-of-thought --skill ml-model-serving --skill ml-inference-optimization --skill ml-experiment-tracking --skill devops-mlops --skill llm-rag-retrieval-internals --skill prompt-rag-query-design --skill data-vector-databases --skill llm-finetuning --skill data-science-experimentation
+npx skills add j4flmao/agent-skills --skill ml-classical-ml --skill ml-deep-learning --skill ml-model-evaluation --skill ml-feature-engineering --skill prompt-few-shot --skill prompt-chain-of-thought --skill ml-model-serving --skill ml-inference-optimization --skill ml-experiment-tracking --skill devops-mlops --skill llm-rag-retrieval-internals --skill prompt-rag-query-design --skill data-vector-databases --skill llm-finetuning --skill data-science-experimentation --skill security-data-security --skill ai-defense-mechanisms
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

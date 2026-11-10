@@ -4,6 +4,15 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (2 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`frontend-security`](../../skills/frontend/universal/security/SKILL.md) | `frontend/universal/security` | Prevent XSS, CSRF, and injection attacks. |
+| [`owasp-web-security`](../../skills/cybersecurity/owasp-web-security/SKILL.md) | `cybersecurity/owasp-web-security` | Explain the root-cause mechanics of common OWASP web vulnerability classes (injection, SSRF, XSS) and the secure-coding controls that eliminate them. |
+
 ## Level 1 — Essentials (8 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -19,7 +28,7 @@ Install these first. They cover the everyday work of this role and rarely confli
 | [`frontend-testing`](../../skills/frontend/universal/testing/SKILL.md) | `frontend/universal/testing` | Test user behavior, not implementation. |
 | [`frontend-css-strategy`](../../skills/frontend/universal/css-strategy/SKILL.md) | `frontend/universal/css-strategy` | Choose and implement the right CSS approach for the project. |
 
-## Level 2 — Professional (11 skills)
+## Level 2 — Professional (10 skills)
 
 Add when the project grows: production concerns, scaling and team workflows.
 
@@ -31,7 +40,6 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`frontend-tailwind-css`](../../skills/frontend/universal/tailwind-css/SKILL.md) | `frontend/universal/tailwind-css` | Generate production-ready Tailwind CSS code following utility-first principles with consistent design tokens and responsive patterns. |
 | [`frontend-authentication`](../../skills/frontend/universal/authentication/SKILL.md) | `frontend/universal/authentication` | Implement secure authentication on the frontend: token acquisition, storage, route protection, session refresh, and logout — compatible with any… |
 | [`frontend-error-handling`](../../skills/frontend/universal/error-handling/SKILL.md) | `frontend/universal/error-handling` | Catch, report, and recover from frontend errors without crashing the entire app. |
-| [`frontend-security`](../../skills/frontend/universal/security/SKILL.md) | `frontend/universal/security` | Prevent XSS, CSRF, and injection attacks. |
 | [`frontend-responsive-design`](../../skills/frontend/universal/responsive-design/SKILL.md) | `frontend/universal/responsive-design` | Build mobile-first responsive UIs with container queries, consistent breakpoints, fluid typography, and no horizontal overflow. |
 | [`frontend-internationalization`](../../skills/frontend/universal/internationalization/SKILL.md) | `frontend/universal/internationalization` | Deliver multi-locale frontends with proper locale detection, resource loading, ICU message formatting, pluralization, date/number formatting, and… |
 | [`frontend-image-optimization`](../../skills/frontend/universal/image-optimization/SKILL.md) | `frontend/universal/image-optimization` | Deliver optimized images that load fast, look crisp on any screen, and minimize bandwidth usage — directly impacting LCP, CLS, and overall page… |
@@ -58,16 +66,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (8 skills):**
+**Level 1 + security baseline (10 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill frontend-typescript-patterns --skill frontend-patterns --skill frontend-state-management --skill frontend-data-fetching --skill frontend-form-handling --skill frontend-accessibility --skill frontend-testing --skill frontend-css-strategy
+npx skills add j4flmao/agent-skills --skill frontend-typescript-patterns --skill frontend-patterns --skill frontend-state-management --skill frontend-data-fetching --skill frontend-form-handling --skill frontend-accessibility --skill frontend-testing --skill frontend-css-strategy --skill frontend-security --skill owasp-web-security
 ```
 
-**Level 1 + 2 (19 skills):**
+**Level 1 + 2 + security baseline (20 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill frontend-typescript-patterns --skill frontend-patterns --skill frontend-state-management --skill frontend-data-fetching --skill frontend-form-handling --skill frontend-accessibility --skill frontend-testing --skill frontend-css-strategy --skill frontend-performance --skill frontend-rendering-strategies --skill frontend-design-system --skill frontend-tailwind-css --skill frontend-authentication --skill frontend-error-handling --skill frontend-security --skill frontend-responsive-design --skill frontend-internationalization --skill frontend-image-optimization --skill frontend-bundler-tools
+npx skills add j4flmao/agent-skills --skill frontend-typescript-patterns --skill frontend-patterns --skill frontend-state-management --skill frontend-data-fetching --skill frontend-form-handling --skill frontend-accessibility --skill frontend-testing --skill frontend-css-strategy --skill frontend-performance --skill frontend-rendering-strategies --skill frontend-design-system --skill frontend-tailwind-css --skill frontend-authentication --skill frontend-error-handling --skill frontend-responsive-design --skill frontend-internationalization --skill frontend-image-optimization --skill frontend-bundler-tools --skill frontend-security --skill owasp-web-security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

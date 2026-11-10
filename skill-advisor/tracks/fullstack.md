@@ -4,6 +4,16 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (3 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`security-api-security`](../../skills/security/api-security/SKILL.md) | `security/api-security` | Design comprehensive API security controls covering OWASP API Top 10 threat modeling, authentication (JWT, OAuth2, API keys), rate limiting (token… |
+| [`frontend-security`](../../skills/frontend/universal/security/SKILL.md) | `frontend/universal/security` | Prevent XSS, CSRF, and injection attacks. |
+| [`security-secrets-management`](../../skills/security/secrets-management/SKILL.md) | `security/secrets-management` | Design a secrets management strategy covering detection (GitLeaks, truffleHog, ggshield), centralized storage (Vault, AWS Secrets Manager, GCP… |
+
 ## Level 1 — Essentials (9 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -36,7 +46,7 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`code-review`](../../skills/dev-loop/code-review/SKILL.md) | `dev-loop/code-review` | Provide systematic, structured code reviews covering correctness, architecture, clarity, performance, security, and tests. |
 | [`dev-loop-pr-writer`](../../skills/dev-loop/pr-writer/SKILL.md) | `dev-loop/pr-writer` | Write effective pull request descriptions — clear, structured, and reviewable — that communicate what changed, why it changed, and how it was… |
 
-## Level 3 — Specialist (6 skills)
+## Level 3 — Specialist (5 skills)
 
 Add one at a time, only for the problem in front of you. These are deep and narrow.
 
@@ -46,23 +56,22 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 | [`devops-progressive-delivery`](../../skills/devops/progressive-delivery/SKILL.md) | `devops/progressive-delivery` | Implement progressive delivery strategies: canary releases, blue-green deployments, feature flags in production, traffic mirroring, and automated… |
 | [`backend-feature-flags`](../../skills/backend/universal/feature-flags/SKILL.md) | `backend/universal/feature-flags` | Design feature flag systems with lifecycle management, targeting, and risk controls. |
 | [`frontend-performance`](../../skills/frontend/universal/performance/SKILL.md) | `frontend/universal/performance` | Optimize Core Web Vitals (LCP, CLS, INP) and bundle size. |
-| [`security-api-security`](../../skills/security/api-security/SKILL.md) | `security/api-security` | Design comprehensive API security controls covering OWASP API Top 10 threat modeling, authentication (JWT, OAuth2, API keys), rate limiting (token… |
 | [`database-migration`](../../skills/devops/database-migration/SKILL.md) | `devops/database-migration` | Plan and execute database migrations including schema changes, cross-engine migration, zero-downtime deployments, and rollback strategies. |
 
 ## Install
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (9 skills):**
+**Level 1 + security baseline (12 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill master-orchestrator --skill project-init --skill create-tech-spec --skill backend-api-design --skill backend-database-patterns --skill backend-auth-patterns --skill frontend-state-management --skill frontend-data-fetching --skill docker-patterns
+npx skills add j4flmao/agent-skills --skill master-orchestrator --skill project-init --skill create-tech-spec --skill backend-api-design --skill backend-database-patterns --skill backend-auth-patterns --skill frontend-state-management --skill frontend-data-fetching --skill docker-patterns --skill security-api-security --skill frontend-security --skill security-secrets-management
 ```
 
-**Level 1 + 2 (18 skills):**
+**Level 1 + 2 + security baseline (21 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill master-orchestrator --skill project-init --skill create-tech-spec --skill backend-api-design --skill backend-database-patterns --skill backend-auth-patterns --skill frontend-state-management --skill frontend-data-fetching --skill docker-patterns --skill github-actions --skill cicd-pipeline --skill e2e-testing --skill quality-integration-testing --skill frontend-design-system --skill backend-caching --skill backend-background-jobs --skill code-review --skill dev-loop-pr-writer
+npx skills add j4flmao/agent-skills --skill master-orchestrator --skill project-init --skill create-tech-spec --skill backend-api-design --skill backend-database-patterns --skill backend-auth-patterns --skill frontend-state-management --skill frontend-data-fetching --skill docker-patterns --skill github-actions --skill cicd-pipeline --skill e2e-testing --skill quality-integration-testing --skill frontend-design-system --skill backend-caching --skill backend-background-jobs --skill code-review --skill dev-loop-pr-writer --skill security-api-security --skill frontend-security --skill security-secrets-management
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

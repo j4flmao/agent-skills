@@ -4,6 +4,16 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (3 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`security-api-security`](../../skills/security/api-security/SKILL.md) | `security/api-security` | Design comprehensive API security controls covering OWASP API Top 10 threat modeling, authentication (JWT, OAuth2, API keys), rate limiting (token… |
+| [`security-secrets-management`](../../skills/security/secrets-management/SKILL.md) | `security/secrets-management` | Design a secrets management strategy covering detection (GitLeaks, truffleHog, ggshield), centralized storage (Vault, AWS Secrets Manager, GCP… |
+| [`owasp-web-security`](../../skills/cybersecurity/owasp-web-security/SKILL.md) | `cybersecurity/owasp-web-security` | Explain the root-cause mechanics of common OWASP web vulnerability classes (injection, SSRF, XSS) and the secure-coding controls that eliminate them. |
+
 ## Level 1 — Essentials (8 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -59,16 +69,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (8 skills):**
+**Level 1 + security baseline (11 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill backend-api-design --skill backend-api-response --skill backend-database-patterns --skill backend-auth-patterns --skill backend-structured-logging --skill backend-clean-architecture --skill quality-unit-testing --skill quality-integration-testing
+npx skills add j4flmao/agent-skills --skill backend-api-design --skill backend-api-response --skill backend-database-patterns --skill backend-auth-patterns --skill backend-structured-logging --skill backend-clean-architecture --skill quality-unit-testing --skill quality-integration-testing --skill security-api-security --skill security-secrets-management --skill owasp-web-security
 ```
 
-**Level 1 + 2 (20 skills):**
+**Level 1 + 2 + security baseline (23 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill backend-api-design --skill backend-api-response --skill backend-database-patterns --skill backend-auth-patterns --skill backend-structured-logging --skill backend-clean-architecture --skill quality-unit-testing --skill quality-integration-testing --skill backend-caching --skill backend-background-jobs --skill backend-message-queue --skill backend-idempotency --skill rate-limiting --skill backend-resilience-patterns --skill backend-authorization --skill backend-api-versioning --skill backend-openapi-documentation --skill backend-file-storage --skill backend-webhooks --skill backend-multi-tenancy
+npx skills add j4flmao/agent-skills --skill backend-api-design --skill backend-api-response --skill backend-database-patterns --skill backend-auth-patterns --skill backend-structured-logging --skill backend-clean-architecture --skill quality-unit-testing --skill quality-integration-testing --skill backend-caching --skill backend-background-jobs --skill backend-message-queue --skill backend-idempotency --skill rate-limiting --skill backend-resilience-patterns --skill backend-authorization --skill backend-api-versioning --skill backend-openapi-documentation --skill backend-file-storage --skill backend-webhooks --skill backend-multi-tenancy --skill security-api-security --skill security-secrets-management --skill owasp-web-security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

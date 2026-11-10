@@ -4,6 +4,16 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (3 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`devsecops`](../../skills/security/devsecops/SKILL.md) | `security/devsecops` | Embed security directly into CI/CD pipelines to catch vulnerabilities early (shift-left). |
+| [`security-secrets-management`](../../skills/security/secrets-management/SKILL.md) | `security/secrets-management` | Design a secrets management strategy covering detection (GitLeaks, truffleHog, ggshield), centralized storage (Vault, AWS Secrets Manager, GCP… |
+| [`security-container-security`](../../skills/security/container-security/SKILL.md) | `security/container-security` | Build a container security program spanning image scanning (Trivy, Grype, Clair, Snyk), Dockerfile hardening (distroless, multi-stage, non-root),… |
+
 ## Level 1 — Essentials (7 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -55,16 +65,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (7 skills):**
+**Level 1 + security baseline (10 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill docker-patterns --skill cicd-pipeline --skill github-actions --skill terraform --skill kubernetes --skill helm-patterns --skill observability
+npx skills add j4flmao/agent-skills --skill docker-patterns --skill cicd-pipeline --skill github-actions --skill terraform --skill kubernetes --skill helm-patterns --skill observability --skill devsecops --skill security-secrets-management --skill security-container-security
 ```
 
-**Level 1 + 2 (17 skills):**
+**Level 1 + 2 + security baseline (20 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill docker-patterns --skill cicd-pipeline --skill github-actions --skill terraform --skill kubernetes --skill helm-patterns --skill observability --skill gitops --skill argo-cd --skill vault --skill devops-kubernetes-autoscaling --skill devops-policy-as-code --skill devops-progressive-delivery --skill devops-service-mesh --skill dependency-management --skill monorepo --skill database-migration
+npx skills add j4flmao/agent-skills --skill docker-patterns --skill cicd-pipeline --skill github-actions --skill terraform --skill kubernetes --skill helm-patterns --skill observability --skill gitops --skill argo-cd --skill vault --skill devops-kubernetes-autoscaling --skill devops-policy-as-code --skill devops-progressive-delivery --skill devops-service-mesh --skill dependency-management --skill monorepo --skill database-migration --skill devsecops --skill security-secrets-management --skill security-container-security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

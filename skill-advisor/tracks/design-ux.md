@@ -4,6 +4,14 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (1 skill, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`frontend-security`](../../skills/frontend/universal/security/SKILL.md) | `frontend/universal/security` | Prevent XSS, CSRF, and injection attacks. |
+
 ## Level 1 — Essentials (4 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -44,16 +52,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (4 skills):**
+**Level 1 + security baseline (5 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill design-visual-design --skill design-accessibility --skill design-systems --skill frontend-design-system
+npx skills add j4flmao/agent-skills --skill design-visual-design --skill design-accessibility --skill design-systems --skill frontend-design-system --skill frontend-security
 ```
 
-**Level 1 + 2 (11 skills):**
+**Level 1 + 2 + security baseline (12 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill design-visual-design --skill design-accessibility --skill design-systems --skill frontend-design-system --skill design-ux-research --skill design-information-architecture --skill design-motion-design --skill design-brand-identity --skill frontend-theming --skill frontend-animation --skill frontend-accessibility
+npx skills add j4flmao/agent-skills --skill design-visual-design --skill design-accessibility --skill design-systems --skill frontend-design-system --skill design-ux-research --skill design-information-architecture --skill design-motion-design --skill design-brand-identity --skill frontend-theming --skill frontend-animation --skill frontend-accessibility --skill frontend-security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

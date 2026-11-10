@@ -4,6 +4,15 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (2 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`frontend-security`](../../skills/frontend/universal/security/SKILL.md) | `frontend/universal/security` | Prevent XSS, CSRF, and injection attacks. |
+| [`security-secrets-management`](../../skills/security/secrets-management/SKILL.md) | `security/secrets-management` | Design a secrets management strategy covering detection (GitLeaks, truffleHog, ggshield), centralized storage (Vault, AWS Secrets Manager, GCP… |
+
 ## Level 1 — Essentials (2 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -28,13 +37,12 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`desktop-appkit`](../../skills/desktop/appkit/SKILL.md) | `desktop/appkit` | Build native macOS applications using AppKit — Apple's mature, Objective-C-originated UI framework. |
 | [`desktop-gnome`](../../skills/desktop/gnome/SKILL.md) | `desktop/gnome` | Build applications and extensions for the GNOME desktop environment using GNOME platform libraries — GLib, GIO, GSettings, libadwaita, and GNOME… |
 
-## Level 3 — Specialist (3 skills)
+## Level 3 — Specialist (2 skills)
 
 Add one at a time, only for the problem in front of you. These are deep and narrow.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
-| [`frontend-security`](../../skills/frontend/universal/security/SKILL.md) | `frontend/universal/security` | Prevent XSS, CSRF, and injection attacks. |
 | [`dev-loop-performance-profiler`](../../skills/dev-loop/performance-profiler/SKILL.md) | `dev-loop/performance-profiler` | Identify, analyze, and resolve performance bottlenecks in applications — CPU profiling, memory profiling, I/O analysis, database query… |
 | [`github-actions`](../../skills/devops/github-actions/SKILL.md) | `devops/github-actions` | Define CI/CD pipelines using GitHub Actions workflows, reusable workflows, and composite actions. |
 
@@ -42,16 +50,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (2 skills):**
+**Level 1 + security baseline (4 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill desktop-electron --skill desktop-tauri
+npx skills add j4flmao/agent-skills --skill desktop-electron --skill desktop-tauri --skill frontend-security --skill security-secrets-management
 ```
 
-**Level 1 + 2 (10 skills):**
+**Level 1 + 2 + security baseline (12 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill desktop-electron --skill desktop-tauri --skill desktop-qt --skill desktop-gtk --skill desktop-wpf --skill desktop-winforms --skill desktop-uwp --skill desktop-swiftui --skill desktop-appkit --skill desktop-gnome
+npx skills add j4flmao/agent-skills --skill desktop-electron --skill desktop-tauri --skill desktop-qt --skill desktop-gtk --skill desktop-wpf --skill desktop-winforms --skill desktop-uwp --skill desktop-swiftui --skill desktop-appkit --skill desktop-gnome --skill frontend-security --skill security-secrets-management
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

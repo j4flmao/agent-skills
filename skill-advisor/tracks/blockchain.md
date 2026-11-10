@@ -4,6 +4,14 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (1 skill, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`security-secrets-management`](../../skills/security/secrets-management/SKILL.md) | `security/secrets-management` | Design a secrets management strategy covering detection (GitLeaks, truffleHog, ggshield), centralized storage (Vault, AWS Secrets Manager, GCP… |
+
 ## Level 1 — Essentials (5 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -47,16 +55,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (5 skills):**
+**Level 1 + security baseline (6 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill blockchain-core --skill blockchain-application --skill blockchain-testing --skill blockchain-security --skill smart-contract-security
+npx skills add j4flmao/agent-skills --skill blockchain-core --skill blockchain-application --skill blockchain-testing --skill blockchain-security --skill smart-contract-security --skill security-secrets-management
 ```
 
-**Level 1 + 2 (11 skills):**
+**Level 1 + 2 + security baseline (12 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill blockchain-core --skill blockchain-application --skill blockchain-testing --skill blockchain-security --skill smart-contract-security --skill blockchain-ethereum --skill blockchain-web3 --skill blockchain-patterns --skill blockchain-defi --skill blockchain-infrastructure --skill blockchain-data-indexing
+npx skills add j4flmao/agent-skills --skill blockchain-core --skill blockchain-application --skill blockchain-testing --skill blockchain-security --skill smart-contract-security --skill blockchain-ethereum --skill blockchain-web3 --skill blockchain-patterns --skill blockchain-defi --skill blockchain-infrastructure --skill blockchain-data-indexing --skill security-secrets-management
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

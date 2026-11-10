@@ -271,7 +271,9 @@ curl -X PATCH 'http://localhost:7700/indexes/products/settings' \
 # Meilisearch — Node.js client
 import { MeiliSearch } from 'meilisearch';
 
-const client = new MeiliSearch({ host: 'http://localhost:7700', apiKey: 'masterKey' });
+// Server-side admin client: use an admin API key from the environment, never the master key in app code.
+// Browsers get a separate search-only key (or a tenant token) with the minimum index scope.
+const client = new MeiliSearch({ host: process.env.MEILI_HOST, apiKey: process.env.MEILI_ADMIN_KEY });
 await client.index('products').updateSettings({
   searchableAttributes: ['title', 'description', 'brand'],
   filterableAttributes: ['category', 'price', 'inStock'],

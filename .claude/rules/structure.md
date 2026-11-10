@@ -23,7 +23,7 @@ agent-skills/
 │   ├── data-science/ (4)  fundamental-truths/ (4)  prompt-engineering/ (4)  seo/ (4)
 │   ├── site-reliability-engineering/ (4)  system-design/ (4)  web/ (4)  playbooks/ (3)
 │   └── tools/ (3)  harness-engineering/ (2)  quality-assurance/ (2)  aspirational/ (1)
-├── skill-advisor/   Skill Combination Advisor: README (index), bundles.md, custom-bundles.md, recipes.md, tracks/*.md (19 tracks)
+├── skill-advisor/   Skill Combination Advisor: README (index), bundles.md, custom-bundles.md, recipes.md, recommendations.md, tracks.json + tracks/*.md (78 tracks in 10 groups, 20 recommended combinations; most tracks carry a security baseline)
 ├── bundles/         bundle-definitions.json — single source of truth for all bundles
 ├── docs/            agent-reliability-spec.md, agent-governance-matrix.md, skills-master-summary.md
 ├── reports/         research reports (English)

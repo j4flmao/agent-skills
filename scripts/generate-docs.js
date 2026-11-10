@@ -69,6 +69,7 @@ function pick(...globs) {
   }
   return out;
 }
+const plural = (n) => `${n} skill${n === 1 ? "" : "s"}`;
 const npx = (names) => `npx skills add ${REPO} ` + names.map((n) => `--skill ${n}`).join(" ");
 const namesOf = (paths) => paths.map((p) => skills.get(p).name);
 
@@ -86,22 +87,30 @@ const covered = new Set();
 for (const track of advisor.tracks) {
   const lines = [`# ${track.title}`, "", `**Who this is for:** ${track.who}`, "",
     "[← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)", ""];
-  const seen = [];
+  const skillRow = (p) => `| [\`${skills.get(p).name}\`](../../skills/${p}/SKILL.md) | \`${p}\` | ${skills.get(p).summary} |`;
+  const security = (track.security || []).length ? pick(...track.security) : [];
+  if (security.length) {
+    lines.push(`## Security baseline (${plural(security.length)}, installed with every level)`, "",
+      "These skills make the agent apply this domain's security practices by default. They are included in every install command below; " +
+      "the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).", "",
+      "| Skill | Path | What it covers |", "|-------|------|----------------|", ...security.map(skillRow), "");
+  }
+  const seen = [...security];
+  const levelPaths = {};
   for (const level of ["1", "2", "3"]) {
     const paths = pick(...track.levels[level]).filter((p) => !seen.includes(p));
+    levelPaths[level] = paths;
     seen.push(...paths);
-    lines.push(`## ${advisor.levels[level].title} (${paths.length} skills)`, "", advisor.levels[level].hint, "",
-      "| Skill | Path | What it covers |", "|-------|------|----------------|",
-      ...paths.map((p) => `| [\`${skills.get(p).name}\`](../../skills/${p}/SKILL.md) | \`${p}\` | ${skills.get(p).summary} |`), "");
+    lines.push(`## ${advisor.levels[level].title} (${plural(paths.length)})`, "", advisor.levels[level].hint, "",
+      "| Skill | Path | What it covers |", "|-------|------|----------------|", ...paths.map(skillRow), "");
   }
   seen.forEach((p) => covered.add(skills.get(p).name));
-  const level1 = seen.slice(0, pick(...track.levels["1"]).length);
-  const upTo2 = pick(...track.levels["1"], ...track.levels["2"]);
-  const level12 = seen.filter((p) => upTo2.includes(p));
+  const level1 = [...levelPaths["1"], ...security];
+  const level12 = [...levelPaths["1"], ...levelPaths["2"], ...security];
   lines.push("## Install", "",
     "Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.", "",
-    `**Level 1 only (${level1.length} skills):**`, "", "```bash", npx(namesOf(level1)), "```", "",
-    `**Level 1 + 2 (${level12.length} skills):**`, "", "```bash", npx(namesOf(level12)), "```", "",
+    `**Level 1${security.length ? " + security baseline" : " only"} (${level1.length} skills):**`, "", "```bash", npx(namesOf(level1)), "```", "",
+    `**Level 1 + 2${security.length ? " + security baseline" : ""} (${level12.length} skills):**`, "", "```bash", npx(namesOf(level12)), "```", "",
     "Level 3: add single skills with `--skill <name>` when you need them.", "",
     "## Ready-made bundles", "",
     "Bundles are installed with the same command; each one's full command is on the [bundles page](../bundles.md).", "",
@@ -111,8 +120,29 @@ for (const track of advisor.tracks) {
     ...track.combineWith.map((id) => `- [${advisor.tracks.find((t) => t.id === id).title}](${id}.md)`),
     "", "## Watch out", "", track.watchOut, "");
   outputs.set(`skill-advisor/tracks/${track.id}.md`, lines.join("\n"));
-  trackStats.set(track.id, { ...track, count: seen.length });
+  trackStats.set(track.id, { ...track, count: seen.length, sets: { 1: level1, 2: level12 } });
 }
+
+// ---------------------------------------------------------------- recommendations.md
+const profiles = advisor.profiles || [];
+const recLines = ["# Recommended Combinations", "",
+  "Ready-made combinations of tracks for common situations. Each one merges the chosen level of every track (security baselines included), removes duplicates, and gives one install command.", "",
+  "[← Advisor home](README.md) · [Bundles](bundles.md) · [Recipes](recipes.md)", "",
+  "| Situation | Tracks | Skills |", "|-----------|--------|--------|"];
+const recSections = [];
+for (const profile of profiles) {
+  const paths = [];
+  profile.tracks.forEach(({ track, level }) => {
+    if (!trackStats.has(track)) throw new Error(`tracks.json: profile ${profile.id} names unknown track ${track}`);
+    trackStats.get(track).sets[level].forEach((p) => { if (!paths.includes(p)) paths.push(p); });
+  });
+  const trackList = profile.tracks.map(({ track, level }) => `[${trackStats.get(track).title}](tracks/${track}.md) L${level === 1 ? "1" : "1–2"}`).join(" + ");
+  recLines.push(`| [${profile.title}](#${profile.id}) | ${trackList} | ${paths.length} |`);
+  recSections.push(`<a id="${profile.id}"></a>`, `## ${profile.title}`, "", `**Situation:** ${profile.situation}`, "",
+    `**Combines:** ${trackList} — **${paths.length} skills**${paths.length > 60 ? " (large: trim Level 2 skills you do not need)" : ""}`, "",
+    "```bash", npx(namesOf(paths)), "```", "", `**Next:** ${profile.notes}`, "");
+}
+outputs.set("skill-advisor/recommendations.md", [...recLines, "", ...recSections].join("\n"));
 
 // ---------------------------------------------------------------- bundles.md
 function bundleSection(b) {
@@ -154,6 +184,9 @@ const advisorIndex = ["# Skill Combination Advisor", "",
   "| **Level 1 — Essentials** | 2–9 skills | Everyday work of the role; safe default for any project |",
   "| **Level 2 — Professional** | +6–12 skills | Production concerns: scaling, security, delivery, team workflow |",
   "| **Level 3 — Specialist** | add one at a time | Deep, narrow problems you actually have right now |", "",
+  "**Security is built in.** Most tracks have a *security baseline*: the security skills for that domain (API security, secrets, " +
+  "container security, AI prompt-injection defense, …). They are part of every install command on the track page, so the agent " +
+  "applies those practices whenever it uses the track's skills, even after the skills are copied into another project.", "",
   "## Pick your track", "",
   ...advisor.groups.flatMap((g) => [`### ${g.title}`, "", "| Track | Who it is for | Skills in track | Closest bundle |", "|-------|---------------|-----------------|----------------|",
     ...g.tracks.map((id) => { const t = trackStats.get(id); return `| [${t.title}](tracks/${id}.md) | ${t.who} | ${t.count} | [\`${t.bundles[0]}\`](bundles.md#${t.bundles[0]}) |`; }), ""]),
@@ -175,6 +208,7 @@ const advisorIndex = ["# Skill Combination Advisor", "",
   "## Pages", "",
   "- [Bundles](bundles.md) — every bundle with its install command and team skill pack",
   "- [Build a custom bundle](custom-bundles.md) — combine bundles, pick single skills, share a set with your team",
+  "- [Recommended combinations](recommendations.md) — ready multi-track sets for common situations, one command each",
   "- [Recipes](recipes.md) — small combinations for common situations",
   "- Tracks: " + tracksByGroup.map((id) => `[${trackStats.get(id).title}](tracks/${id}.md)`).join(", "), "",
   `Tracks list ${covered.size} hand-picked skills. The rest are reachable through [bundles](bundles.md) and the full catalog in the [master summary](../docs/skills-master-summary.md#skills-by-category).`, ""];
@@ -209,14 +243,9 @@ ${skills.size} agent skills for software development, from planning and architec
 
 **[Skill Combination Advisor →](skill-advisor/README.md)** — pick a track for your role, choose a level (Essentials → Professional → Specialist), and copy one install command.
 
-| I am a… | Track |
-|---------|-------|
-| Frontend / Backend / Full-stack engineer | [Frontend](skill-advisor/tracks/frontend.md) · [Backend](skill-advisor/tracks/backend.md) · [Full-stack](skill-advisor/tracks/fullstack.md) |
-| Mobile / Desktop engineer | [Mobile](skill-advisor/tracks/mobile.md) · [Desktop](skill-advisor/tracks/desktop.md) |
-| DevOps / SRE / Security | [DevOps & Platform](skill-advisor/tracks/devops-platform.md) · [SRE](skill-advisor/tracks/sre.md) · [Security](skill-advisor/tracks/security.md) |
-| Data / ML / AI agents | [Data](skill-advisor/tracks/data-engineering.md) · [ML & AI](skill-advisor/tracks/ml-ai.md) · [AI agents](skill-advisor/tracks/ai-agents.md) |
-| Systems / Game / Web3 / Architect | [Systems](skill-advisor/tracks/systems.md) · [Game](skill-advisor/tracks/game.md) · [Blockchain](skill-advisor/tracks/blockchain.md) · [Architecture](skill-advisor/tracks/architecture.md) |
-| Product / Manager / QA / Designer | [Product](skill-advisor/tracks/product.md) · [Management](skill-advisor/tracks/management.md) · [Quality](skill-advisor/tracks/quality.md) · [Design](skill-advisor/tracks/design-ux.md) |
+| Area | Tracks |
+|------|--------|
+${advisor.groups.map((g) => `| ${g.title} | ` + g.tracks.map((id) => `[${trackStats.get(id).title}](skill-advisor/tracks/${id}.md)`).join(" · ") + " |").join("\n")}
 
 Also: [all bundles with install commands](skill-advisor/bundles.md) · [build your own bundle](skill-advisor/custom-bundles.md) · [recipes for common situations](skill-advisor/recipes.md).
 
@@ -353,7 +382,7 @@ const summary = ["# Skills Master Summary", "",
   `| Advisor tracks | ${trackCount} |`,
   `| Claude Code rules (\`.claude/rules/*.md\`) | ${ruleFiles.length} |`,
   `| Research reports | ${reportFiles.length} |`,
-  `| Tracked files in repository | ${fmt(files.length)} |`, "",
+  `| Tracked files in repository | ${fmt(new Set([...files, ...outputs.keys(), "docs/skills-master-summary.md"]).size)} |`, "",
   "## Skills by category", "",
   "| Category | Skills | Reference files | Skill names |", "|----------|--------|-----------------|-------------|",
   ...catsBySize.map((c) => `| \`${c}\` | ${catCount.get(c)} | ${refCat.get(c) || 0} | ` +

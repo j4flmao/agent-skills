@@ -4,6 +4,15 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (2 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`ai-defense-mechanisms`](../../skills/rnd/security/ai-defense-mechanisms/SKILL.md) | `rnd/security/ai-defense-mechanisms` | No classifier or prompt reliably stops prompt injection, so defenses must assume the model can be manipulated and limit what a manipulated model… |
+| [`security-secrets-management`](../../skills/security/secrets-management/SKILL.md) | `security/secrets-management` | Design a secrets management strategy covering detection (GitLeaks, truffleHog, ggshield), centralized storage (Vault, AWS Secrets Manager, GCP… |
+
 ## Level 1 — Essentials (5 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -29,7 +38,7 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`sandbox-execution`](../../skills/harness-engineering/sandbox-execution/SKILL.md) | `harness-engineering/sandbox-execution` | This skill provides the complete architectural and operational knowledge required to build production-grade sandboxed execution environments for… |
 | [`llm-rag-retrieval-internals`](../../skills/ai/llm-engineering/rag-architecture/SKILL.md) | `ai/llm-engineering/rag-architecture` | Retrieval quality caps RAG quality: the generator cannot use a passage that was never retrieved. |
 
-## Level 3 — Specialist (10 skills)
+## Level 3 — Specialist (9 skills)
 
 Add one at a time, only for the problem in front of you. These are deep and narrow.
 
@@ -39,7 +48,6 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 | [`multimodal-pipelines`](../../skills/rnd/ai-agents/multimodal-pipelines/SKILL.md) | `rnd/ai-agents/multimodal-pipelines` | Decide how images and audio reach a language model and build the pipeline. |
 | [`swarm-architectures`](../../skills/rnd/ai-agents/swarm-architectures/SKILL.md) | `rnd/ai-agents/swarm-architectures` | Explore whether several cooperating model instances outperform one: a router sends work to specialists, specialists run in isolation like actors,… |
 | [`adversarial-prompting`](../../skills/rnd/security/adversarial-prompting/SKILL.md) | `rnd/security/adversarial-prompting` | LLMs process instructions and data in the same token stream, so any text the model reads can try to steer it. |
-| [`ai-defense-mechanisms`](../../skills/rnd/security/ai-defense-mechanisms/SKILL.md) | `rnd/security/ai-defense-mechanisms` | No classifier or prompt reliably stops prompt injection, so defenses must assume the model can be manipulated and limit what a manipulated model… |
 | [`prompt-tree-of-thoughts`](../../skills/prompt-engineering/tree-of-thoughts/SKILL.md) | `prompt-engineering/tree-of-thoughts` | Tree of Thoughts (ToT) treats problem solving as search: a thought is a coherent intermediate step, the LLM proposes several candidate next… |
 | [`write-implementation-plan`](../../skills/planning/agent-implementation-plan/SKILL.md) | `planning/agent-implementation-plan` | Prevent blind edits on non-trivial tasks. |
 | [`agent-task-checklist`](../../skills/planning/agent-task-checklist/SKILL.md) | `planning/agent-task-checklist` | Make long agent tasks observable and resumable. |
@@ -50,16 +58,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (5 skills):**
+**Level 1 + security baseline (7 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill ai-agent-architectures --skill ai-agent-core-loop --skill tool-calling-principles --skill ai-agentic-workflows --skill prompt-chain-of-thought
+npx skills add j4flmao/agent-skills --skill ai-agent-architectures --skill ai-agent-core-loop --skill tool-calling-principles --skill ai-agentic-workflows --skill prompt-chain-of-thought --skill ai-defense-mechanisms --skill security-secrets-management
 ```
 
-**Level 1 + 2 (11 skills):**
+**Level 1 + 2 + security baseline (13 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill ai-agent-architectures --skill ai-agent-core-loop --skill tool-calling-principles --skill ai-agentic-workflows --skill prompt-chain-of-thought --skill ai-agent-memory-systems --skill ai-multi-agent-systems --skill multi-agent-topology --skill agent-observability --skill sandbox-execution --skill llm-rag-retrieval-internals
+npx skills add j4flmao/agent-skills --skill ai-agent-architectures --skill ai-agent-core-loop --skill tool-calling-principles --skill ai-agentic-workflows --skill prompt-chain-of-thought --skill ai-agent-memory-systems --skill ai-multi-agent-systems --skill multi-agent-topology --skill agent-observability --skill sandbox-execution --skill llm-rag-retrieval-internals --skill ai-defense-mechanisms --skill security-secrets-management
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

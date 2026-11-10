@@ -4,6 +4,15 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (2 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`security-secrets-management`](../../skills/security/secrets-management/SKILL.md) | `security/secrets-management` | Design a secrets management strategy covering detection (GitLeaks, truffleHog, ggshield), centralized storage (Vault, AWS Secrets Manager, GCP… |
+| [`security-container-security`](../../skills/security/container-security/SKILL.md) | `security/container-security` | Build a container security program spanning image scanning (Trivy, Grype, Clair, Snyk), Dockerfile hardening (distroless, multi-stage, non-root),… |
+
 ## Level 1 — Essentials (6 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -46,16 +55,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (6 skills):**
+**Level 1 + security baseline (8 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill devops-sre-practices --skill sre-sli-slo-management --skill devops-incident-response --skill observability --skill monitoring --skill alerting
+npx skills add j4flmao/agent-skills --skill devops-sre-practices --skill sre-sli-slo-management --skill devops-incident-response --skill observability --skill monitoring --skill alerting --skill security-secrets-management --skill security-container-security
 ```
 
-**Level 1 + 2 (13 skills):**
+**Level 1 + 2 + security baseline (15 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill devops-sre-practices --skill sre-sli-slo-management --skill devops-incident-response --skill observability --skill monitoring --skill alerting --skill devops-opentelemetry --skill apm-observability --skill sre-observability-scaling --skill backup-dr --skill enterprise-high-availability --skill enterprise-capacity-planning --skill enterprise-sla-management
+npx skills add j4flmao/agent-skills --skill devops-sre-practices --skill sre-sli-slo-management --skill devops-incident-response --skill observability --skill monitoring --skill alerting --skill devops-opentelemetry --skill apm-observability --skill sre-observability-scaling --skill backup-dr --skill enterprise-high-availability --skill enterprise-capacity-planning --skill enterprise-sla-management --skill security-secrets-management --skill security-container-security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

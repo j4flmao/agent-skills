@@ -4,6 +4,14 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (1 skill, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`security-sast-dast`](../../skills/security/sast-dast/SKILL.md) | `security/sast-dast` | Build a security scanning pipeline with static analysis rule sets, dynamic analysis scenarios, false positive management, and CI gating. |
+
 ## Level 1 — Essentials (5 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -47,16 +55,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (5 skills):**
+**Level 1 + security baseline (6 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill quality-unit-testing --skill quality-integration-testing --skill quality-e2e-testing --skill quality-regression-testing --skill quality-smoke-testing
+npx skills add j4flmao/agent-skills --skill quality-unit-testing --skill quality-integration-testing --skill quality-e2e-testing --skill quality-regression-testing --skill quality-smoke-testing --skill security-sast-dast
 ```
 
-**Level 1 + 2 (12 skills):**
+**Level 1 + 2 + security baseline (13 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill quality-unit-testing --skill quality-integration-testing --skill quality-e2e-testing --skill quality-regression-testing --skill quality-smoke-testing --skill quality-contract-testing --skill quality-load-testing --skill quality-property-based-testing --skill quality-acceptance-testing --skill quality-visual-testing --skill frontend-testing --skill mobile-testing
+npx skills add j4flmao/agent-skills --skill quality-unit-testing --skill quality-integration-testing --skill quality-e2e-testing --skill quality-regression-testing --skill quality-smoke-testing --skill quality-contract-testing --skill quality-load-testing --skill quality-property-based-testing --skill quality-acceptance-testing --skill quality-visual-testing --skill frontend-testing --skill mobile-testing --skill security-sast-dast
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

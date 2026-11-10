@@ -6,7 +6,6 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(rm *)",
             "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/scripts/block-destructive.sh",
             "args": [],
             "timeout": 10

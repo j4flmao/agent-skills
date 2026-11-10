@@ -4,6 +4,14 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (1 skill, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`security`](../../skills/management/security/SKILL.md) | `management/security` | Define security team operations including vulnerability management, security review gates, incident response, tool selection, and compliance mapping. |
+
 ## Level 1 — Essentials (5 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -45,16 +53,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (5 skills):**
+**Level 1 + security baseline (6 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill agile-scrum-kanban --skill sprint-retro --skill management-stakeholder --skill management-risk-management --skill team-rules
+npx skills add j4flmao/agent-skills --skill agile-scrum-kanban --skill sprint-retro --skill management-stakeholder --skill management-risk-management --skill team-rules --skill security
 ```
 
-**Level 1 + 2 (11 skills):**
+**Level 1 + 2 + security baseline (12 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill agile-scrum-kanban --skill sprint-retro --skill management-stakeholder --skill management-risk-management --skill team-rules --skill management-hiring --skill management-team-topology --skill management-change-management --skill management-okr-kpi --skill cost-benefit --skill dev-loop-tech-debt-tracker
+npx skills add j4flmao/agent-skills --skill agile-scrum-kanban --skill sprint-retro --skill management-stakeholder --skill management-risk-management --skill team-rules --skill management-hiring --skill management-team-topology --skill management-change-management --skill management-okr-kpi --skill cost-benefit --skill dev-loop-tech-debt-tracker --skill security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

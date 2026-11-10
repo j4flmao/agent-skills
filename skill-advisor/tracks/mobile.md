@@ -4,7 +4,16 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
-## Level 1 — Essentials (6 skills)
+## Security baseline (2 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`mobile-security`](../../skills/mobile/universal/security/SKILL.md) | `mobile/universal/security` | Implement mobile security controls covering data-at-rest encryption, network security (certificate pinning), authentication, and code protection… |
+| [`security-secrets-management`](../../skills/security/secrets-management/SKILL.md) | `security/secrets-management` | Design a secrets management strategy covering detection (GitLeaks, truffleHog, ggshield), centralized storage (Vault, AWS Secrets Manager, GCP… |
+
+## Level 1 — Essentials (5 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
 
@@ -14,7 +23,6 @@ Install these first. They cover the everyday work of this role and rarely confli
 | [`mobile-networking`](../../skills/mobile/universal/networking/SKILL.md) | `mobile/universal/networking` | Design mobile networking layers with offline-first architecture, caching strategy, retry logic, pagination, and authentication interceptors. |
 | [`mobile-storage`](../../skills/mobile/universal/storage/SKILL.md) | `mobile/universal/storage` | Design mobile local storage architectures selecting the right persistence strategy — SQLite, Room, Core Data, Hive, Isar, key-value, or file… |
 | [`mobile-testing`](../../skills/mobile/universal/testing/SKILL.md) | `mobile/universal/testing` | Design comprehensive mobile test strategies following the test pyramid — unit, widget/component, integration, and E2E — with proper mocking,… |
-| [`mobile-security`](../../skills/mobile/universal/security/SKILL.md) | `mobile/universal/security` | Implement mobile security controls covering data-at-rest encryption, network security (certificate pinning), authentication, and code protection… |
 | [`mobile-performance`](../../skills/mobile/universal/performance/SKILL.md) | `mobile/universal/performance` | Diagnose and optimize mobile app performance across rendering, memory, startup time, battery drain, and bundle size using platform profiling tools. |
 
 ## Level 2 — Professional (8 skills)
@@ -51,16 +59,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (6 skills):**
+**Level 1 + security baseline (7 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill mobile-patterns --skill mobile-networking --skill mobile-storage --skill mobile-testing --skill mobile-security --skill mobile-performance
+npx skills add j4flmao/agent-skills --skill mobile-patterns --skill mobile-networking --skill mobile-storage --skill mobile-testing --skill mobile-performance --skill mobile-security --skill security-secrets-management
 ```
 
-**Level 1 + 2 (14 skills):**
+**Level 1 + 2 + security baseline (15 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill mobile-patterns --skill mobile-networking --skill mobile-storage --skill mobile-testing --skill mobile-security --skill mobile-performance --skill mobile-deployment --skill mobile-push-notifications --skill mobile-deep-linking --skill mobile-offline-first --skill mobile-crash-reporting --skill mobile-analytics --skill mobile-in-app-purchase --skill mobile-localization
+npx skills add j4flmao/agent-skills --skill mobile-patterns --skill mobile-networking --skill mobile-storage --skill mobile-testing --skill mobile-performance --skill mobile-deployment --skill mobile-push-notifications --skill mobile-deep-linking --skill mobile-offline-first --skill mobile-crash-reporting --skill mobile-analytics --skill mobile-in-app-purchase --skill mobile-localization --skill mobile-security --skill security-secrets-management
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

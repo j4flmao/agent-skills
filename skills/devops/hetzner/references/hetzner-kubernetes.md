@@ -35,7 +35,9 @@ sudo cat /etc/rancher/k3s/k3s.yaml
 
 ```yaml
 # /etc/rancher/k3s/config.yaml
-token: "mysecret"
+# Generate a long random token (openssl rand -hex 32) and keep it out of git;
+# token-file reads it from a root-only file instead of the config.
+token-file: /etc/rancher/k3s/cluster-token
 cluster-init: true
 node-taint:
   - "node-role.kubernetes.io/control-plane:NoSchedule"

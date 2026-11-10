@@ -4,6 +4,15 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (2 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`threat-modeling`](../../skills/security/threat-modeling/SKILL.md) | `security/threat-modeling` | Identify and mitigate architectural security flaws during the design phase, before any code is written. |
+| [`zero-trust-identity`](../../skills/cybersecurity/zero-trust-identity/SKILL.md) | `cybersecurity/zero-trust-identity` | Explain Zero Trust identity mechanics — OIDC/OAuth2 flows (Authorization Code + PKCE), JWT signature validation (RS256 vs HS256 and… |
+
 ## Level 1 — Essentials (6 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -51,16 +60,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (6 skills):**
+**Level 1 + security baseline (8 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill create-tech-spec --skill system-design-database-sharding --skill distributed-consensus --skill microservices --skill backend-event-driven --skill architecture-domain-driven-design
+npx skills add j4flmao/agent-skills --skill create-tech-spec --skill system-design-database-sharding --skill distributed-consensus --skill microservices --skill backend-event-driven --skill architecture-domain-driven-design --skill threat-modeling --skill zero-trust-identity
 ```
 
-**Level 1 + 2 (16 skills):**
+**Level 1 + 2 + security baseline (18 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill create-tech-spec --skill system-design-database-sharding --skill distributed-consensus --skill microservices --skill backend-event-driven --skill architecture-domain-driven-design --skill architecture-microservices-patterns --skill architecture-event-driven --skill architecture-crdts --skill architecture-postgresql-internals --skill architecture-database-scaling --skill backend-cqrs-patterns --skill backend-event-sourcing --skill backend-resilience-patterns --skill cloud-architecture --skill enterprise-integration-patterns
+npx skills add j4flmao/agent-skills --skill create-tech-spec --skill system-design-database-sharding --skill distributed-consensus --skill microservices --skill backend-event-driven --skill architecture-domain-driven-design --skill architecture-microservices-patterns --skill architecture-event-driven --skill architecture-crdts --skill architecture-postgresql-internals --skill architecture-database-scaling --skill backend-cqrs-patterns --skill backend-event-sourcing --skill backend-resilience-patterns --skill cloud-architecture --skill enterprise-integration-patterns --skill threat-modeling --skill zero-trust-identity
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

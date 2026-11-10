@@ -366,13 +366,13 @@ http {
 # Encrypt a file
 # ansible-vault encrypt group_vars/production/vault.yml
 
-# vault.yml (encrypted)
-vault_db_password: "s3cur3p@ssw0rd!"
-vault_api_key: "ak-abc123def456"
+# vault.yml - decrypted view shown for illustration only.
+# Create/edit with `ansible-vault create|edit vault.yml`; commit only the encrypted file,
+# and keep the vault password in a password manager or CI secret (never in the repo).
+vault_db_password: "<generated-in-secret-manager>"
+vault_api_key: "<issued-by-provider>"
 vault_ssl_private_key: |
-  -----BEGIN PRIVATE KEY-----
-  MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...
-  -----END PRIVATE KEY-----
+  <PEM private key pasted only inside ansible-vault edit>
 
 # Reference in playbook
 - name: Configure database

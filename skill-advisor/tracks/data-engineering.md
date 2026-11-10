@@ -4,6 +4,15 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
+## Security baseline (2 skills, installed with every level)
+
+These skills make the agent apply this domain's security practices by default. They are included in every install command below; the repository-wide baseline is in [`.claude/rules/secure-by-default.md`](../../.claude/rules/secure-by-default.md).
+
+| Skill | Path | What it covers |
+|-------|------|----------------|
+| [`security-data-security`](../../skills/security/data-security/SKILL.md) | `security/data-security` | Implements data security controls: encryption, key management, masking, column-level security, and data anonymization for regulatory compliance. |
+| [`security-secrets-management`](../../skills/security/secrets-management/SKILL.md) | `security/secrets-management` | Design a secrets management strategy covering detection (GitLeaks, truffleHog, ggshield), centralized storage (Vault, AWS Secrets Manager, GCP… |
+
 ## Level 1 — Essentials (6 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
@@ -58,16 +67,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (6 skills):**
+**Level 1 + security baseline (8 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill data-etl-pipeline --skill data-data-warehouse --skill data-dimensional-modeling --skill data-data-quality --skill data-relational-database --skill data-streaming
+npx skills add j4flmao/agent-skills --skill data-etl-pipeline --skill data-data-warehouse --skill data-dimensional-modeling --skill data-data-quality --skill data-relational-database --skill data-streaming --skill security-data-security --skill security-secrets-management
 ```
 
-**Level 1 + 2 (17 skills):**
+**Level 1 + 2 + security baseline (19 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill data-etl-pipeline --skill data-data-warehouse --skill data-dimensional-modeling --skill data-data-quality --skill data-relational-database --skill data-streaming --skill data-data-lakehouse --skill data-data-lake --skill data-batch-processing --skill data-distributed-compute --skill data-formats --skill data-schema-registry --skill data-data-contracts --skill data-data-observability --skill data-lineage --skill data-testing --skill data-pipeline-cicd
+npx skills add j4flmao/agent-skills --skill data-etl-pipeline --skill data-data-warehouse --skill data-dimensional-modeling --skill data-data-quality --skill data-relational-database --skill data-streaming --skill data-data-lakehouse --skill data-data-lake --skill data-batch-processing --skill data-distributed-compute --skill data-formats --skill data-schema-registry --skill data-data-contracts --skill data-data-observability --skill data-lineage --skill data-testing --skill data-pipeline-cicd --skill security-data-security --skill security-secrets-management
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.

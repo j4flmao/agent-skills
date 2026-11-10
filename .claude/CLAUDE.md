@@ -8,6 +8,7 @@ Project: 641 agent skills. Each `skills/<area>/<name>/SKILL.md` defines Trigger 
 - Detect stack: read package.json, go.mod, Cargo.toml, etc.
 
 Rules in `rules/` are auto-loaded. Reference them from memory.
+`rules/secure-by-default.md` applies to every task: no secrets in code, validate input, authorize server-side, pin dependencies, least privilege, confirm destructive actions.
 
 ## Skills
 `.claude/skills/<name>/SKILL.md` — Claude Code-specific skills with frontmatter:
@@ -18,7 +19,7 @@ Rules in `rules/` are auto-loaded. Reference them from memory.
 
 ## Hooks
 `.claude/hooks/` — lifecycle automation:
-- `PreToolUse` (Bash → `rm -rf` block)
+- `PreToolUse` (Bash → blocks recursive deletes of system/home/project roots, disk wipes, `--no-preserve-root`)
 - `PostToolUse` (Write|Edit → change log)
 - `SessionStart` (startup → session log)
 

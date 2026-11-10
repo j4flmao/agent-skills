@@ -7,21 +7,25 @@
 | Skills (`SKILL.md`) | 641 in 43 categories |
 | Reference files | 3,942 |
 | Bundles | 59 (43 focused, 16 broad) |
-| Advisor tracks | 19 |
+| Advisor tracks | 78 |
 | Agent integrations | 8 (Claude Code, Codex CLI, OpenCode, Amp, Cursor, Gemini, GitHub Copilot, Windsurf) |
 
 ## Not sure what to install? Start with the advisor
 
 **[Skill Combination Advisor →](skill-advisor/README.md)** — pick a track for your role, choose a level (Essentials → Professional → Specialist), and copy one install command.
 
-| I am a… | Track |
-|---------|-------|
-| Frontend / Backend / Full-stack engineer | [Frontend](skill-advisor/tracks/frontend.md) · [Backend](skill-advisor/tracks/backend.md) · [Full-stack](skill-advisor/tracks/fullstack.md) |
-| Mobile / Desktop engineer | [Mobile](skill-advisor/tracks/mobile.md) · [Desktop](skill-advisor/tracks/desktop.md) |
-| DevOps / SRE / Security | [DevOps & Platform](skill-advisor/tracks/devops-platform.md) · [SRE](skill-advisor/tracks/sre.md) · [Security](skill-advisor/tracks/security.md) |
-| Data / ML / AI agents | [Data](skill-advisor/tracks/data-engineering.md) · [ML & AI](skill-advisor/tracks/ml-ai.md) · [AI agents](skill-advisor/tracks/ai-agents.md) |
-| Systems / Game / Web3 / Architect | [Systems](skill-advisor/tracks/systems.md) · [Game](skill-advisor/tracks/game.md) · [Blockchain](skill-advisor/tracks/blockchain.md) · [Architecture](skill-advisor/tracks/architecture.md) |
-| Product / Manager / QA / Designer | [Product](skill-advisor/tracks/product.md) · [Management](skill-advisor/tracks/management.md) · [Quality](skill-advisor/tracks/quality.md) · [Design](skill-advisor/tracks/design-ux.md) |
+| Area | Tracks |
+|------|--------|
+| Build products | [Frontend Engineer](skill-advisor/tracks/frontend.md) · [Backend Engineer](skill-advisor/tracks/backend.md) · [Full-Stack Product Team](skill-advisor/tracks/fullstack.md) · [Mobile Engineer](skill-advisor/tracks/mobile.md) · [Desktop App Engineer](skill-advisor/tracks/desktop.md) · [Designer & Design Engineer](skill-advisor/tracks/design-ux.md) |
+| Stack specialists | [React & Next.js Developer](skill-advisor/tracks/react.md) · [Vue & Nuxt Developer](skill-advisor/tracks/vue.md) · [Angular Developer](skill-advisor/tracks/angular.md) · [Node.js & TypeScript Backend](skill-advisor/tracks/node-backend.md) · [Python Backend Developer](skill-advisor/tracks/python-backend.md) · [Go Backend Developer](skill-advisor/tracks/go-backend.md) · [Java & Kotlin Backend Developer](skill-advisor/tracks/java-kotlin-backend.md) · [.NET Developer](skill-advisor/tracks/dotnet.md) · [PHP & Ruby Web Developer](skill-advisor/tracks/php-ruby.md) · [iOS Developer](skill-advisor/tracks/ios.md) · [Android Developer](skill-advisor/tracks/android.md) · [Flutter Developer](skill-advisor/tracks/flutter.md) · [React Native Developer](skill-advisor/tracks/react-native.md) · [Rust Developer](skill-advisor/tracks/rust.md) · [Elixir & Phoenix Developer](skill-advisor/tracks/elixir.md) · [Svelte, Solid, Astro & Qwik Developer](skill-advisor/tracks/modern-frontend.md) |
+| Cloud and operations | [DevOps & Platform Engineer](skill-advisor/tracks/devops-platform.md) · [Site Reliability Engineer](skill-advisor/tracks/sre.md) · [Cloud Architect & Engineer](skill-advisor/tracks/cloud.md) · [Observability Engineer](skill-advisor/tracks/observability.md) · [Database Engineer](skill-advisor/tracks/database.md) · [Platform Engineer (IDP)](skill-advisor/tracks/platform-engineering.md) · [FinOps & Cloud Cost Engineer](skill-advisor/tracks/finops.md) |
+| Data and AI | [Data Engineer](skill-advisor/tracks/data-engineering.md) · [ML & AI Engineer](skill-advisor/tracks/ml-ai.md) · [AI Agent Builder](skill-advisor/tracks/ai-agents.md) · [LLM Application Developer](skill-advisor/tracks/llm-app.md) · [MLOps Engineer](skill-advisor/tracks/mlops.md) · [Data Scientist & Analyst](skill-advisor/tracks/data-scientist.md) · [Analytics Engineer](skill-advisor/tracks/analytics-engineer.md) · [Streaming & Event Data Engineer](skill-advisor/tracks/streaming.md) · [Search & Retrieval Engineer](skill-advisor/tracks/search.md) · [Prompt Engineer & AI Evaluator](skill-advisor/tracks/prompt-engineer.md) · [AI Safety & LLM Red Team](skill-advisor/tracks/ai-safety.md) · [GPU Kernel & Inference Engineer](skill-advisor/tracks/gpu-kernels.md) |
+| Security | [Security Engineer](skill-advisor/tracks/security.md) · [Application Security & DevSecOps](skill-advisor/tracks/appsec.md) · [SOC Analyst & Detection Engineer](skill-advisor/tracks/soc.md) · [Compliance & Privacy Engineer](skill-advisor/tracks/compliance.md) |
+| Game development | [Game Developer](skill-advisor/tracks/game.md) · [Unity Developer](skill-advisor/tracks/unity.md) · [Unreal Engine Developer](skill-advisor/tracks/unreal.md) · [Godot Developer](skill-advisor/tracks/godot.md) · [Game Engine Programmer](skill-advisor/tracks/engine-programmer.md) · [Online Game Backend Engineer](skill-advisor/tracks/game-backend.md) |
+| Product types | [SaaS Product Builder](skill-advisor/tracks/saas.md) · [E-commerce Engineer](skill-advisor/tracks/ecommerce.md) · [Real-Time Apps Developer](skill-advisor/tracks/realtime.md) · [Blockchain & Web3 Engineer](skill-advisor/tracks/blockchain.md) · [DeFi Protocol Engineer](skill-advisor/tracks/defi.md) |
+| Specialized engineering | [Systems & Embedded Engineer](skill-advisor/tracks/systems.md) · [Software & Solution Architect](skill-advisor/tracks/architecture.md) · [Performance Engineer](skill-advisor/tracks/performance.md) · [Accessibility Specialist](skill-advisor/tracks/accessibility.md) · [QA & Test Engineer](skill-advisor/tracks/quality.md) · [Low-Latency & HFT Engineer](skill-advisor/tracks/low-latency.md) · [IoT & Edge Engineer](skill-advisor/tracks/iot-edge.md) · [Zero-Knowledge & Cryptography Engineer](skill-advisor/tracks/zk.md) · [Quantum Computing Researcher](skill-advisor/tracks/quantum.md) · [Microservices Engineer](skill-advisor/tracks/microservices.md) · [GraphQL API Engineer](skill-advisor/tracks/graphql.md) · [Legacy Modernization Lead](skill-advisor/tracks/legacy-modernization.md) |
+| Roles and career | [Startup CTO & Solo Founder](skill-advisor/tracks/startup-cto.md) · [Tech Lead & Staff Engineer](skill-advisor/tracks/tech-lead.md) · [Product Manager & Planner](skill-advisor/tracks/product.md) · [Engineering Manager & Delivery Lead](skill-advisor/tracks/management.md) · [Open-Source Maintainer](skill-advisor/tracks/oss-maintainer.md) · [Technical Writer & Docs Engineer](skill-advisor/tracks/technical-writer.md) · [Beginner Learning Path](skill-advisor/tracks/beginner.md) |
+| Delivery and growth | [QA Automation Engineer](skill-advisor/tracks/qa-automation.md) · [SEO & Web Growth Engineer](skill-advisor/tracks/web-growth.md) · [Agile Coach & Scrum Master](skill-advisor/tracks/agile-coach.md) |
 
 Also: [all bundles with install commands](skill-advisor/bundles.md) · [build your own bundle](skill-advisor/custom-bundles.md) · [recipes for common situations](skill-advisor/recipes.md).
 
@@ -215,7 +219,7 @@ The full list of skill names per category is in [docs/skills-master-summary.md](
 ```
 agent-skills/
 ├── skills/            641 skills in 43 categories (+ references/)
-├── skill-advisor/     Skill Combination Advisor: 19 tracks, bundles, recipes, custom bundles
+├── skill-advisor/     Skill Combination Advisor: 78 tracks, bundles, recipes, custom bundles
 ├── bundles/           bundle-definitions.json (single source of truth for bundles)
 ├── docs/              reliability spec, governance matrix, master summary
 ├── reports/           research reports (evaluation architecture, visual testing)
