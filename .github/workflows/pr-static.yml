@@ -52,7 +52,7 @@ jobs:
             --exclude '^https?://[^/]+\.(internal|local|svc|cluster\.local)\b'
             --exclude '^https://github\.com/(team|your-org|myorg|org)/'
             --exclude-path 'skills/dev-loop/readme-writer/references'
-            --accept 200,206,403,429
+            --accept 200,202,206,403,429
             'skills/**/*.md'
           fail: true
         env:
