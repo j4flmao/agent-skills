@@ -1,7 +1,11 @@
 ---
 name: core-algorithms-system-design
 description: >
-  Use this skill when the user says 'consistent hashing', 'hash ring', 'virtual nodes', 'rendezvous hashing', 'jump hash', 'bloom filter', 'false positive rate', 'count-min sketch', 'HyperLogLog', 'top-k', 'merkle tree', 'geohash', 'algorithms for system design interview'. Explains and sizes the probabilistic and partitioning algorithms used in distributed systems — consistent/rendezvous/jump hashing, Bloom and cuckoo filters, Count-Min Sketch, HyperLogLog, Merkle trees, geohash — with formulas, code and when to use each. Do NOT use for: rate limiting algorithms (use system-design-rate-limiting), shard topology and resharding (use system-design-database-sharding), consensus (use distributed-consensus).
+  Use when the user asks about consistent hashing, hash rings and virtual nodes,
+  rendezvous or jump hash, Bloom filter false positive rate, Count-Min Sketch,
+  HyperLogLog, top-k, Merkle trees or geohash. Produces sizing formulas, code
+  and when to use each. Not for rate limiting (use rate-limiting) or shard
+  topology (use architecture-database-scaling).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

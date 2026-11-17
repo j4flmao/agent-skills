@@ -23,7 +23,7 @@ fn movement_system(
     mut query: Query<(&mut Transform, &Velocity)>,
 ) {
     for (mut transform, velocity) in query.iter_mut() {
-        transform.translation += velocity.0 * time.delta_seconds();
+        transform.translation += velocity.0 * time.delta_secs();
     }
 }
 ```
@@ -104,32 +104,32 @@ struct Dead;
 
 ### Bundles (Spawn Presets)
 
+Custom bundles still work for grouping your own components. The built-in `SpriteBundle`/`PbrBundle` types were deprecated in Bevy 0.15 and removed later; spawn the component itself (`Sprite`, `Mesh3d`) and let required components fill in the rest.
+
 ```rust
 #[derive(Bundle)]
 struct PlayerBundle {
-    sprite: SpriteBundle,
+    sprite: Sprite,
     velocity: Velocity,
     health: Health,
     tag: IsPlayer,
 }
 
 commands.spawn(PlayerBundle {
-    sprite: SpriteBundle { /* ... */ },
+    sprite: Sprite::from_image(asset_server.load("player.png")),
     velocity: Velocity(Vec3::ZERO),
     health: Health(100.0),
     tag: IsPlayer,
 });
 ```
 
-### Required Components (Bevy 0.12+)
+### Required Components (Bevy 0.15+)
 
 ```rust
 #[derive(Component)]
-#[require(Transform, SpriteBundle, Visibility)]
-struct Player {
-    health: f32,
-}
-// spawning Player automatically adds Transform + SpriteBundle + Visibility
+#[require(Transform, Visibility, Health(100.0))]
+struct Player;
+// spawning Player inserts Transform, Visibility and Health(100.0) unless already provided
 ```
 
 ## States (App-Level State Machines)
@@ -148,7 +148,7 @@ app.add_systems(Update, (
     input_system,
     movement_system.after(input_system),
     physics_system.after(movement_system),
-).in_set(OnUpdate(GamePhase::Playing)));
+).run_if(in_state(GamePhase::Playing)));
 
 // Transition
 fn game_over_checker(
@@ -164,22 +164,24 @@ fn game_over_checker(
 }
 ```
 
-## Events
+## Buffered Messages (formerly Events)
+
+Bevy 0.17 renamed buffered events to messages (`Message`, `MessageWriter`, `MessageReader`, `app.add_message::<T>()`); `Event` now means observer-triggered events. On 0.16 and earlier use `#[derive(Event)]`, `EventWriter::write` (`send` before 0.16) and `EventReader`.
 
 ```rust
-#[derive(Event)]
-struct DamageEvent {
+#[derive(Message)]
+struct DamageMessage {
     target: Entity,
     amount: f32,
 }
 
-fn spawn_damage_event(commands: Commands, mut ev_damage: EventWriter<DamageEvent>) {
-    ev_damage.send(DamageEvent { target: Entity::PLACEHOLDER, amount: 10.0 });
+fn deal_damage(mut writer: MessageWriter<DamageMessage>, target: Single<Entity, With<IsPlayer>>) {
+    writer.write(DamageMessage { target: *target, amount: 10.0 });
 }
 
 fn apply_damage(
     mut query: Query<&mut Health>,
-    mut ev_damage: EventReader<DamageEvent>,
+    mut ev_damage: MessageReader<DamageMessage>,
 ) {
     for event in ev_damage.read() {
         if let Ok(mut health) = query.get_mut(event.target) {
@@ -194,7 +196,7 @@ fn apply_damage(
 ```rust
 fn spawn_entities(mut commands: Commands) {
     commands.spawn((
-        SpriteBundle { /* ... */ },
+        Sprite::default(),
         Velocity(Vec3::new(1.0, 0.0, 0.0)),
         Health(100.0),
     ));
@@ -265,15 +267,14 @@ fn setup_player(mut map: ResMut<PlayerEntity>, query: Query<Entity, With<IsPlaye
 }
 ```
 
-### Despawn Recursively
+### Despawning Hierarchies
+
+Since Bevy 0.16, `despawn()` also despawns descendants linked through `ChildOf`/`Children`; `despawn_recursive()` was removed. Use `despawn_related::<Children>()` to remove only the children.
 
 ```rust
-fn despawn_children(
-    mut commands: Commands,
-    parent_query: Query<Entity, With<DespawnRecursive>>,
-) {
-    for entity in parent_query.iter() {
-        commands.entity(entity).despawn_recursive();
+fn despawn_trees(mut commands: Commands, roots: Query<Entity, With<DespawnTree>>) {
+    for entity in &roots {
+        commands.entity(entity).despawn();
     }
 }
 ```
@@ -282,7 +283,7 @@ fn despawn_children(
 
 1. **Use `Changed<T>`** to skip systems entirely when data hasn't changed.
 2. **Use `Without<T>`** filters to avoid iterating irrelevant entities.
-3. **Avoid `Option<&T>` in queries** — it forces the query to scan all archetypes.
+3. **Be careful with `Option<&T>`** — a query made only of optional terms matches every archetype; pair optional terms with at least one required component or filter.
 4. **Prefer `Local<T>`** (per-system state) over `ResMut<T>` when possible.
 5. **Batch operations**: use `for` over query, not per-entity `query.get(entity)`.
 

@@ -1,16 +1,7 @@
 ---
 name: devops-azure
 description: >
-  Trigger: "Azure", "Microsoft Azure", "Azure DevOps", "Azure Kubernetes",
-  "AKS", "Azure Functions", "Azure App Service", "Azure Storage", "Azure SQL",
-  "ARM template", "Bicep", "Azure CLI", "Azure pipeline", "Azure AD",
-  "Managed Identity", "Azure Policy", "Azure Monitor", "Log Analytics",
-  "Key Vault", "Azure Front Door", "Azure Firewall", "Private Link".
-  Covers: compute (AKS, App Service, Functions, VMs), storage (Blob, Disk, Files),
-  database (Azure SQL, Cosmos DB), networking (VNet, VPN, ExpressRoute),
-  IaC (Bicep, ARM), security (Azure AD, Key Vault, Policy), monitoring,
-  cost management, landing zone design (CAF).
-  Exclusion: Not for AWS or GCP — use those specific skills.
+  Use when the user asks about Azure, AKS, App Service, Bicep or ARM templates, Entra ID (Azure AD), managed identity, Azure Policy, Key Vault, Azure Monitor, Front Door, or a CAF landing zone. Produces Azure architectures and Bicep/CLI configs. Not for Azure Functions and Durable Functions (use cloud-native-azure-functions) or AWS (use aws).
 version: 2.0.0
 author: j4flmao
 license: MIT
@@ -79,13 +70,14 @@ Infrastructure deployed via Bicep, AKS cluster operational, pipeline passing, ne
 | Site-to-site VPN | VPN Gateway | ~$30/month |
 | Dedicated private connection | ExpressRoute | ~$500/month + port fees |
 
-### Authentication: Azure AD vs Managed Identity vs Service Principal
+### Authentication: Entra ID users vs Managed Identity vs Service Principal
+Microsoft Entra ID is the current name of Azure Active Directory (Azure AD); APIs and some docs still use `aad`.
 | Method | Use Case | Security Level |
 |---|---|---|
-| Azure AD user | Human access, Azure Portal | Medium (requires MFA) |
+| Entra ID user | Human access, Azure Portal | Medium (requires MFA) |
 | Managed Identity | Azure resource to Azure resource | High (no credentials) |
 | Service Principal | External app, CI/CD | Medium (secret rotation needed) |
-| Azure AD Pod Identity | Pods to Azure services (AKS) | High |
+| Microsoft Entra Workload ID | Pods to Azure services (AKS); replaces the deprecated AAD Pod Identity | High (federated, no secrets) |
 | Workload Identity Federation | GitHub Actions, Terraform Cloud | High (OIDC, no secrets) |
 
 ## Quick Start
@@ -264,12 +256,13 @@ resource nsgShared 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
 }
 ```
 
-### Step 3: AKS Cluster with Azure AD Integration
+### Step 3: AKS Cluster with Entra ID Integration
 ```bicep
 // aks/aks-cluster.bicep
 param clusterName string = 'aks-production'
 param dnsPrefix string = 'aks-production-dns'
-param kubernetesVersion string = '1.29'
+@description('Pick a currently supported version: az aks get-versions --location <region>')
+param kubernetesVersion string
 param vmSize string = 'Standard_DS3_v2'
 param nodeCount int = 3
 
@@ -294,7 +287,6 @@ resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-01-01' = {
       loadBalancerSku: 'standard'
       serviceCidr: '10.0.0.0/16'
       dnsServiceIP: '10.0.0.10'
-      dockerBridgeCidr: '172.17.0.1/16'
     }
     agentPoolProfiles: [
       {
@@ -554,7 +546,7 @@ resource policyAssignmentLocations 'Microsoft.Authorization/policyAssignments@20
 | Networking - LB | Azure Load Balancer | ELB/ALB |
 | Networking - CDN | Azure Front Door / CDN | CloudFront |
 | DNS | Azure DNS | Route53 |
-| IAM | Azure AD + RBAC | IAM |
+| IAM | Entra ID + Azure RBAC | IAM |
 | Key Management | Key Vault | KMS |
 | Monitoring | Azure Monitor | CloudWatch |
 | CI/CD | Azure DevOps Pipelines | CodePipeline |
@@ -585,7 +577,7 @@ No budgets, no alerts, no tags for cost allocation. Azure costs can spiral witho
 
 ### Security
 - Enable Azure Defender (Microsoft Defender for Cloud) on all subscriptions.
-- Use Azure AD Conditional Access with MFA for all administrative access.
+- Use Entra ID Conditional Access with MFA for all administrative access.
 - Enable Diagnostic Settings on all resources for audit logging.
 - Use Azure Policy to enforce HTTPS, deny public IPs on NSGs, require encryption.
 - Use Key Vault with soft-delete and purge protection enabled.
@@ -623,7 +615,7 @@ No budgets, no alerts, no tags for cost allocation. Azure costs can spiral witho
 2. Managed identities over service principals for Azure resource auth.
 3. Private endpoints for all PaaS services (SQL, Storage, ACR, Key Vault).
 4. Azure Policy for compliance enforcement at resource creation.
-5. AKS with Azure CNI and Azure AD integration.
+5. AKS with Azure CNI and Entra ID integration.
 6. Cost allocation via resource tags — every resource gets mandatory tags.
 7. Deployment slots for zero-downtime App Service deployments.
 8. Diagnostic settings enabled on all services for audit and monitoring.

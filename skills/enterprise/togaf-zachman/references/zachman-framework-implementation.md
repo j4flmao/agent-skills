@@ -414,7 +414,7 @@ technology_function:
     - endpoint: "POST /api/v1/orders"
       technology: "AWS API Gateway + Lambda"
       implementation:
-        runtime: "Node.js 20"
+        runtime: "Node.js 24"
         database: "PostgreSQL Aurora"
         cache: "ElastiCache Redis"
         auth: "OAuth2 with Cognito"

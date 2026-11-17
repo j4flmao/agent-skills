@@ -597,7 +597,7 @@ First-party mobile/web app?
 - All routes async/await — never use EventLoopFuture directly.
 - Fluent migrations for every schema change — never raw SQL.
 - Environment configuration via .env — never hardcoded values.
-- Middleware order: auth -> error -> logging.
+- Middleware order: `ErrorMiddleware` outermost (`at: .beginning`), then logging/CORS, then auth on route groups.
 - Controllers implement RouteCollection — never free-floating route handlers.
 - DTOs separate from Models — use toResponse() mapping.
 - Database access via service layer — never in controllers directly.

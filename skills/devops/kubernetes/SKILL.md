@@ -1,15 +1,7 @@
 ---
 name: kubernetes
 description: >
-  Use this skill for Kubernetes cluster administration, architecture, operations,
-  and production best practices. Covers: cluster architecture (control plane,
-  etcd, worker nodes), networking (CNI, Service, Ingress, NetworkPolicies),
-  storage (CSI, PVC, StorageClasses), security (RBAC, PodSecurity, secrets),
-  scheduling (taints/tolerations, node affinity, topology spread), upgrades,
-  backup/DR, and cluster autoscaling.
-  Do NOT use for: application-level Kubernetes patterns (kubernetes-patterns),
-  Helm chart design (helm-patterns), service mesh (service-mesh), or
-  cloud-specific managed Kubernetes (aws/gcp/azure).
+  Use when the user asks about Kubernetes cluster admin, a deployment that keeps getting OOMKilled, CrashLoopBackOff, RBAC, Pod Security Admission, NetworkPolicies, Ingress or Gateway API, StorageClasses, cluster upgrades, or etcd backup. Produces cluster fixes and configs. Not for control-plane internals (use kubernetes-internals) or workload patterns (use cloud-native-kubernetes-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -618,7 +610,7 @@ spec:
   template:
     spec:
       containers:
-        - image: myapp:latest
+        - image: myapp:<pinned-tag>
           name: app
 
 # GOOD: Resources, probes, security context

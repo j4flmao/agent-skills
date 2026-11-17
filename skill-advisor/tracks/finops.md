@@ -4,15 +4,13 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
-## Level 1 — Essentials (3 skills)
+## Level 1 — Essentials (1 skill)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
 | [`devops-finops`](../../skills/devops/finops/SKILL.md) | `devops/finops` | Implement FinOps practices for cloud cost visibility, allocation, optimization, and governance -- covering compute, storage, Kubernetes, and… |
-| [`cloud-cost-optimization`](../../skills/devops/cloud-cost-optimization/SKILL.md) | `devops/cloud-cost-optimization` | Comprehensive description of cloud cost optimization. |
-| [`enterprise-finops-cloud-cost`](../../skills/enterprise/finops-cloud-cost/SKILL.md) | `enterprise/finops-cloud-cost` | Treat cloud cost as an engineering metric with an owner. |
 
 ## Level 2 — Professional (4 skills)
 
@@ -39,16 +37,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (3 skills):**
+**Level 1 only (1 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill devops-finops --skill cloud-cost-optimization --skill enterprise-finops-cloud-cost
+npx skills add j4flmao/agent-skills --skill devops-finops
 ```
 
-**Level 1 + 2 (7 skills):**
+**Level 1 + 2 (5 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill devops-finops --skill cloud-cost-optimization --skill enterprise-finops-cloud-cost --skill enterprise-cost-governance --skill data-cost-optimization --skill devops-kubernetes-autoscaling --skill ml-inference-optimization
+npx skills add j4flmao/agent-skills --skill devops-finops --skill enterprise-cost-governance --skill data-cost-optimization --skill devops-kubernetes-autoscaling --skill ml-inference-optimization
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -59,7 +57,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`infra-cloud`](../bundles.md#infra-cloud) | 36 | Infrastructure & Cloud: IaC, CI/CD, K8s, cloud providers, observability, networking |
+| [`infra-cloud`](../bundles.md#infra-cloud) | 35 | Infrastructure & Cloud: IaC, CI/CD, K8s, cloud providers, observability, networking |
 | [`cloud-architecture`](../bundles.md#cloud-architecture) | 15 | Cloud architecture: landing zone, well-architected framework, governance, multi-cloud |
 
 ## Combine with
@@ -69,4 +67,4 @@ Bundles are installed with the same command; each one's full command is on the [
 
 ## Watch out
 
-`devops/finops` and `enterprise/finops-cloud-cost` overlap; engineers keep the DevOps one, finance-facing roles the enterprise one.
+`devops/finops` and `devops/finops` overlap; engineers keep the DevOps one, finance-facing roles the enterprise one.

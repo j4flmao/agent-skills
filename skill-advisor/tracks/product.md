@@ -81,7 +81,7 @@ Bundles are installed with the same command; each one's full command is on the [
 |--------|--------|-------------|
 | [`product-growth`](../bundles.md#product-growth) | 18 | Product management and growth: discovery, analytics, A/B tests, pricing, GTM, onboarding, roadmaps, PRDs, OKRs |
 | [`planning-docs`](../bundles.md#planning-docs) | 17 | Planning and specification documents: briefs, PRDs, stories, tech specs, roadmaps, BDD/ATDD, BPMN, cost-benefit, agent plans |
-| [`management-only`](../bundles.md#management-only) | 66 | Management: PM, BA, QA, QC, security, pentesting, alerting, team-rules |
+| [`management-only`](../bundles.md#management-only) | 65 | Management: PM, BA, QA, QC, security, pentesting, alerting, team-rules |
 
 ## Combine with
 

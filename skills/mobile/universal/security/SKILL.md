@@ -1,9 +1,11 @@
 ---
 name: mobile-security
 description: >
-  Use this skill when the user asks about mobile security, secure storage,
-  certificate pinning, SSL pinning, biometric authentication, data encryption,
-  ProGuard, obfuscation, or OWASP Mobile Top 10.
+  Use when the user asks about mobile app security, Keychain/Keystore secure
+  storage, certificate or SSL pinning, root/jailbreak detection, Play Integrity,
+  App Attest, R8 obfuscation or OWASP MASVS. Produces a hardened storage,
+  transport and integrity setup. Not for biometric login UX (use
+  mobile-biometrics) or web security (use frontend-security).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -1,7 +1,7 @@
 ---
 name: cloud-native-ebpf-networking
 description: >
-  Use this skill when the user says 'ebpf networking', 'xdp', 'tc ebpf hook', 'cilium datapath', 'kube-proxy replacement', 'cilium dsr', 'netkit', 'bpf maps networking', 'xdp ddos drop', 'how does cilium route packets'. Explains kernel packet-processing hooks (XDP, tc/tcx, cgroup socket hooks), how Cilium builds its datapath on them, and writes verifier-safe XDP programs with libbpf CO-RE. Do NOT use for: operating Cilium (Helm values, Hubble, cluster mesh) (cilium-ebpf), eBPF tracing/profiling (cloud-native-ebpf-observability), security detection with eBPF (ebpf-threat-detection).
+  Use when the user asks about XDP, tc/tcx eBPF hooks, the Cilium datapath, kube-proxy replacement, DSR, netkit, BPF maps for networking, or dropping DDoS traffic with XDP. Explains kernel packet hooks and writes verifier-safe libbpf CO-RE XDP programs. Not for operating Cilium (use cilium-ebpf) or eBPF tracing (use cloud-native-ebpf-observability).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -1,10 +1,14 @@
 ---
 name: ai-multi-agent-systems
 description: >
-  Use this skill when the user says 'multi-agent system', 'LangGraph multi-agent', 'AutoGen', 'CrewAI', 'OpenAI Agents SDK handoffs', 'agents sharing state', 'blackboard', 'human approval in agent graph', 'A2A protocol'. Builds the runtime for several cooperating agents: orchestration style (deterministic graph vs dynamic conversation), shared state, inter-agent protocols, checkpointing and human-in-the-loop, budgets, and observability. Do NOT use for: choosing the topology shape itself (ai/ai-agents/multi-agent-topology), a single agent's loop (ai/ai-agents/core-architectures), or experimental swarm/debate research (rnd/ai-agents/swarm-architectures).
+  Use when the user asks about a multi-agent system in LangGraph, AutoGen, CrewAI or OpenAI Agents SDK handoffs,
+  shared blackboard state, A2A, checkpointing or human approval in an agent graph. Produces a runtime design:
+  typed state, nodes, routing, durable checkpointer, interrupts, budgets and tracing. Not for choosing the
+  topology (use multi-agent-topology).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, agents, multi-agent, langgraph, orchestration, blackboard, hitl]
 ---
 
@@ -172,3 +176,11 @@ Additional reference material for this skill, stored outside its own `references
 - `../../harness-engineering/multi-agent-coordination/references/role-specialization-patterns.md` — Role Specialization Patterns for Agent Teams
 - `../../harness-engineering/multi-agent-coordination/references/state-sharing-mechanisms.md` — State Sharing Mechanisms for Multi-Agent Systems
 - `../../harness-engineering/multi-agent-coordination/references/supervisor-worker-hierarchies.md` — Supervisor-Worker Hierarchies Reference Guide
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/multi-agent-debate.md` — Multi-Agent Debate (Society of Mind)
+- `references/persona-ensembles.md` — Persona Ensembles (Mixture of Experts)
+- `references/the-critic.md` — The Critic Persona (Red Teamer)
+- `references/the-supervisor.md` — The Supervisor Persona (Orchestrator)

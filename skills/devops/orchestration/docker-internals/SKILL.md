@@ -1,7 +1,7 @@
 ---
 name: docker-internals
 description: >
-  Use this skill when the user says 'how do containers work', 'docker internals', 'namespaces and cgroups', 'overlayfs layers', 'copy on write container', 'containerd runc', 'oci runtime', 'cgroup v2 limits', 'container pid 1', 'why is my container oom killed'. Explains the Linux primitives behind containers (namespaces, cgroups v2, capabilities, seccomp, OverlayFS) and the runtime stack (Docker Engine → containerd → runc/OCI) and applies them to debugging and hardening. Do NOT use for: Dockerfile/Compose authoring practices (docker-patterns / devops-docker), Kubernetes control plane (kubernetes-architecture), container image scanning (security container-security).
+  Use when the user asks how containers work, Linux namespaces and cgroups v2, OverlayFS layers and copy-on-write, containerd and runc, the OCI runtime spec, container PID 1 and signals, or why a container is OOM killed. Explains container primitives for debugging and hardening. Not for Dockerfile authoring (use docker-patterns) or image scanning (use security-container-security).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -111,4 +111,4 @@ docker run --rm -it --pid=container:<ctr> --net=container:<ctr> nicolaka/netshoo
 - [ ] Persistent/write-heavy data on volumes.
 
 ## References
-- Related skills: `skills/devops/docker/SKILL.md`, `skills/devops/docker-patterns/SKILL.md`, `skills/devops/orchestration/kubernetes-architecture/SKILL.md`.
+- Related skills: `skills/devops/docker-patterns/references/merged-devops-docker.md`, `skills/devops/docker-patterns/SKILL.md`, `skills/devops/orchestration/kubernetes-architecture/SKILL.md`.

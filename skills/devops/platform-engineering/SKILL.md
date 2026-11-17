@@ -1,7 +1,7 @@
 ---
 name: devops-platform-engineering
 description: >
-  Use when the user asks about platform engineering, Internal Developer Platform (IDP), Backstage, developer portals, golden paths, developer self-service, platform teams, or internal developer tooling. Do NOT use for: CI/CD pipeline setup (cicd-pipeline), Kubernetes cluster setup (kubernetes-patterns), or general DevOps automation (devops-terraform/ansible).
+  Use when the user asks about platform engineering, an internal developer platform (IDP), platform teams, golden paths, developer self-service, an internal developer portal such as Backstage, platform as a product, or platform maturity. Produces a platform strategy, team model and capability roadmap. Not for Backstage plugin and catalog implementation (use devops-internal-developer-platform).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

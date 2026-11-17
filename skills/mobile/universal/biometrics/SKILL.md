@@ -1,7 +1,11 @@
 ---
 name: mobile-biometrics
 description: >
-  Use this skill when the user says 'biometrics', 'Face ID', 'Touch ID', 'fingerprint', 'fingerprint auth', 'biometric auth', 'face unlock', 'local authentication', 'biometric prompt', 'device credential'. Implement biometric authentication with secure storage on iOS and Android. Do NOT use for: server-side authentication or password-based auth.
+  Use when the user asks about Face ID, Touch ID, fingerprint login,
+  BiometricPrompt, LocalAuthentication, local_auth or keys bound to biometrics
+  in the Keychain/Keystore. Produces biometric gating with secure key storage
+  and fallbacks. Not for server-side login flows (use backend-auth-patterns) or
+  general app hardening (use mobile-security).
 compatibility:
   claude-code: true
   cursor: true

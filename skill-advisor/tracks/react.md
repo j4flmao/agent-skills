@@ -40,7 +40,7 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`frontend-accessibility`](../../skills/frontend/universal/accessibility/SKILL.md) | `frontend/universal/accessibility` | Meet WCAG 2.2 AA standards. |
 | [`frontend-authentication`](../../skills/frontend/universal/authentication/SKILL.md) | `frontend/universal/authentication` | Implement secure authentication on the frontend: token acquisition, storage, route protection, session refresh, and logout — compatible with any… |
 
-## Level 3 — Specialist (5 skills)
+## Level 3 — Specialist (4 skills)
 
 Add one at a time, only for the problem in front of you. These are deep and narrow.
 
@@ -48,7 +48,6 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 |-------|------|----------------|
 | [`react-fiber-architecture`](../../skills/frontend/react/react-fiber/SKILL.md) | `frontend/react/react-fiber` | Fiber is React's reconciler (since React 16): a linked tree of work units that lets React split rendering into interruptible chunks, prioritise… |
 | [`nextjs-internals`](../../skills/frontend/nextjs/internals/SKILL.md) | `frontend/nextjs/internals` | Explain the App Router request lifecycle precisely enough to debug it: how a route is classified static or dynamic, what the RSC payload is, how… |
-| [`nextjs-server-components`](../../skills/web/nextjs-server-components/SKILL.md) | `web/nextjs-server-components` | In the App Router every page/layout is a Server Component by default. |
 | [`frontend-storybook`](../../skills/frontend/universal/storybook/SKILL.md) | `frontend/universal/storybook` | Create, maintain, and optimize Storybook stories using CSF 3.x format with interaction tests, accessibility checks, and addon-driven workflows. |
 | [`quality-visual-testing`](../../skills/quality/visual-testing/SKILL.md) | `quality/visual-testing` | Make a red visual diff almost always mean a real change. |
 
@@ -76,7 +75,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`fullstack-nodejs-react`](../bundles.md#fullstack-nodejs-react) | 223 | Full stack: Node.js backend + React frontend |
+| [`fullstack-nodejs-react`](../bundles.md#fullstack-nodejs-react) | 221 | Full stack: Node.js backend + React frontend |
 | [`frontend-foundations`](../bundles.md#frontend-foundations) | 28 | Frontend foundations for any framework: TypeScript, CSS strategy, responsive design, auth, error handling, security, forms, data fetching, state |
 
 ## Combine with
@@ -87,4 +86,4 @@ Bundles are installed with the same command; each one's full command is on the [
 
 ## Watch out
 
-`frontend/react/nextjs`, `frontend/nextjs/internals` and `web/nextjs-server-components` overlap; start with the first and add the others only for App Router internals.
+`frontend/react/nextjs`, `frontend/nextjs/internals` and `frontend/react/nextjs` overlap; start with the first and add the others only for App Router internals.

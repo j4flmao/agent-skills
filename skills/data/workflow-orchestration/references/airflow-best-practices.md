@@ -8,16 +8,18 @@
 ## Task Configuration
 | Parameter | Recommendation | Reason |
 |-----------|---------------|--------|
-| etries | 2-3 | Handle transient failures |
-| etry_delay | 5-10 minutes | Avoid rapid retry storms |
-| xecution_timeout | Set per task | Prevent hung tasks |
+| 
+etries | 2-3 | Handle transient failures |
+| 
+etry_delay | 5-10 minutes | Avoid rapid retry storms |
+| `execution_timeout` | Set per task | Prevent hung tasks |
 | sla | Optional | Alert on slow tasks |
-| mail_on_failure | True | Immediate notification |
+| `email_on_failure` | True | Immediate notification |
 
 ## Using TaskFlow API
 The TaskFlow API (Airflow 2.0+) simplifies DAG writing by using Python decorators:
 
-`python
+```python
 from airflow.decorators import dag, task
 from datetime import datetime
 
@@ -42,12 +44,12 @@ def etl_pipeline():
     load(transformed)
 
 etl_instance = etl_pipeline()
-`
+```
 
 ## Dynamic DAGs
 Generate DAGs programmatically for similar pipelines:
 
-`python
+```python
 import json
 from pathlib import Path
 
@@ -69,12 +71,12 @@ def create_dag(dag_id, config):
 
         process(config["source"], config["destination"])
     return dynamic_dag()
-`
+```
 
 ## Pool Management
 Use Airflow pools to control resource contention:
 
-`python
+```python
 with DAG("pool_example", ...):
     heavy_task = PythonOperator(
         task_id="heavy_computation",
@@ -82,10 +84,10 @@ with DAG("pool_example", ...):
         pool="high_cpu",
         pool_slots=2,
     )
-`
+```
 
 ## SLAs and Alerts
-`python
+```python
 default_args = {
     "sla": timedelta(hours=2),
     "sla_miss_callback": sla_callback,
@@ -93,10 +95,10 @@ default_args = {
 
 def sla_callback(dag, task_list, blocking_task_list, slas, blocking_tis):
     send_alert(f"SLA missed for {dag.dag_id}")
-`
+```
 
 ## Testing DAGs
-`python
+```python
 import pytest
 from airflow.models import DagBag
 
@@ -110,13 +112,13 @@ def test_dag_structure():
     assert dag is not None
     tasks = dag.tasks
     assert len(tasks) == 3
-`
+```
 
 ## Deployment Patterns
 - Use Helm charts for Kubernetes-based Airflow deployments
 - Store DAGs in Git and sync via GitSync or persistent volumes
 - Use secrets backend (Vault, AWS SSM) for sensitive configs
-- Enable udit_log for compliance tracking
+- Enable audit logging for compliance tracking
 
 ## Performance Tuning
 | Optimization | Impact |
@@ -128,7 +130,7 @@ def test_dag_structure():
 
 ## Security Best Practices
 - Use RBAC roles (Admin, Op, User, Viewer)
-- Variable encryption: irflow.cfg -> ernet_key
+- Variable encryption: `airflow.cfg` -> `fernet_key`
 - Network isolation for workers
 - Regular secret rotation
 - Audit logging for all DAG mutations

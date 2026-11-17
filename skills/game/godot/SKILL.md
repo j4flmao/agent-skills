@@ -1,7 +1,11 @@
 ---
 name: godot
 description: >
-  Use this skill when the user says 'godot', 'godot 4', 'gdscript project', 'godot scenes', 'godot export', 'godot c#', 'gdextension'. Guides Godot 4 projects: scenes and nodes, GDScript/C#/GDExtension, renderers, physics (GodotPhysics/Jolt), animation, UI, exports and performance. Do NOT use for: deep server-level GDScript optimisation (use godot-gdscript), Unity/Unreal.
+  Use when the user asks about Godot 4, GDScript projects, scenes and nodes,
+  Godot C#, GDExtension, Jolt physics in Godot, Godot export templates or Godot
+  performance. Produces Godot 4 project structure, gameplay code and export
+  settings. Not for low-level server APIs and deep optimisation (use
+  godot-gdscript) or Unity (use unity).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

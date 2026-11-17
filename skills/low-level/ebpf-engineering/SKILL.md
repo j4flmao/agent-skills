@@ -1,7 +1,11 @@
 ---
 name: ebpf-engineering
 description: >
-  Use this skill when the user says 'eBPF', 'BPF program', 'libbpf', 'CO-RE', 'BTF', 'kprobe', 'fentry', 'tracepoint', 'uprobe', 'XDP', 'tc BPF', 'BPF map', 'ring buffer', 'verifier error', 'bpftrace', 'cilium/ebpf', 'aya'. Writes and debugs production eBPF: program types and attach points, libbpf + CO-RE with skeletons, maps and ring buffers, verifier constraints, user-space loaders in C/Go/Rust, and deployment across kernel versions. Do NOT use for: Cilium cluster configuration (use devops/cilium-ebpf), threat-detection rule design (use cybersecurity/ebpf-threat-detection), general kernel module development (use kernel-development).
+  Use when the user asks about eBPF programs, libbpf, CO-RE, BTF, kprobes,
+  fentry, tracepoints, uprobes, XDP to drop packets, tc BPF, BPF maps, ring
+  buffers, verifier errors, bpftrace, cilium/ebpf or aya. Produces loadable eBPF
+  programs and loaders. Not for Cilium cluster setup (use cilium-ebpf) or
+  detection rules (use ebpf-threat-detection).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

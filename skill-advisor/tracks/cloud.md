@@ -38,7 +38,7 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`backup-dr`](../../skills/devops/backup-dr/SKILL.md) | `devops/backup-dr` | Design and implement backup strategies and disaster recovery plans with defined RPO/RTO, the 3-2-1 rule, automation, validation, and cloud DR… |
 | [`cdn-edge`](../../skills/devops/cdn-edge/SKILL.md) | `devops/cdn-edge` | Design and implement content delivery networks with caching strategies, edge computing, WAF, DDoS mitigation, and performance optimization across… |
 
-## Level 3 — Specialist (9 skills)
+## Level 3 — Specialist (7 skills)
 
 Add one at a time, only for the problem in front of you. These are deep and narrow.
 
@@ -46,8 +46,6 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 |-------|------|----------------|
 | [`devops-pulumi`](../../skills/devops/pulumi/SKILL.md) | `devops/pulumi` | Provision, manage, and version cloud infrastructure using Pulumi's programming language approach, enabling real code constructs (loops,… |
 | [`hybrid-cloud`](../../skills/devops/hybrid-cloud/SKILL.md) | `devops/hybrid-cloud` | Design and operate hybrid cloud architectures that span on-premises data centers and public cloud providers, with secure networking, consistent… |
-| [`enterprise-finops-cloud-cost`](../../skills/enterprise/finops-cloud-cost/SKILL.md) | `enterprise/finops-cloud-cost` | Treat cloud cost as an engineering metric with an owner. |
-| [`cloud-cost-optimization`](../../skills/devops/cloud-cost-optimization/SKILL.md) | `devops/cloud-cost-optimization` | Comprehensive description of cloud cost optimization. |
 | [`oracle-cloud`](../../skills/devops/oracle-cloud/SKILL.md) | `devops/oracle-cloud` | Manage Oracle Cloud Infrastructure resources: compute, networking, storage, IAM, OKE (Kubernetes), Autonomous Database, and cost governance. |
 | [`digitalocean`](../../skills/devops/digitalocean/SKILL.md) | `devops/digitalocean` | Design, deploy, and manage DigitalOcean infrastructure using Terraform, doctl, and best practices for Droplets, Kubernetes, managed databases, and… |
 | [`hetzner-cloud`](../../skills/devops/hetzner/SKILL.md) | `devops/hetzner` | Manage Hetzner Cloud and Dedicated infrastructure: servers, networking, volumes, firewalls, load balancers, Storage Boxes, and Kubernetes clusters. |
@@ -78,9 +76,9 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`infra-cloud`](../bundles.md#infra-cloud) | 36 | Infrastructure & Cloud: IaC, CI/CD, K8s, cloud providers, observability, networking |
+| [`infra-cloud`](../bundles.md#infra-cloud) | 35 | Infrastructure & Cloud: IaC, CI/CD, K8s, cloud providers, observability, networking |
 | [`cloud-architecture`](../bundles.md#cloud-architecture) | 15 | Cloud architecture: landing zone, well-architected framework, governance, multi-cloud |
-| [`serverless-edge`](../bundles.md#serverless-edge) | 9 | Serverless and edge: Lambda/Functions, cold starts, Cloudflare Workers, orchestration, event-driven scaling, CDN |
+| [`serverless-edge`](../bundles.md#serverless-edge) | 8 | Serverless and edge: Lambda/Functions, cold starts, Cloudflare Workers, orchestration, event-driven scaling, CDN |
 
 ## Combine with
 

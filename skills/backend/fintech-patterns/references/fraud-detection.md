@@ -152,7 +152,7 @@ rules_config = [
 ### Feature Engineering
 ```python
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 class FeatureExtractor:
     async def extract_features(self, transaction: Transaction) -> dict:
@@ -248,7 +248,7 @@ class FraudModelTrainer:
     async def deploy_model(self, model, threshold: float):
         joblib.dump(model, "models/fraud_model.pkl")
         await config_store.set("fraud_model_threshold", threshold)
-        await config_store.set("fraud_model_version", datetime.utcnow().isoformat())
+        await config_store.set("fraud_model_version", datetime.now(timezone.utc).isoformat())
 ```
 
 ## Behavioral Analysis
@@ -330,7 +330,7 @@ class FraudScoringService:
             rule_results=rule_score.details,
             ml_probability=ml_score,
             behavior_anomalies=behavior_score.details,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
 
         # Cache for dedup
@@ -368,7 +368,7 @@ class FraudReviewQueue:
             risk_score=assessment.score,
             reasons=assessment.reasons,
             status="pending",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         await self.case_store.save(case)
         await self.notify_reviewers(case)
@@ -385,7 +385,7 @@ class FraudReviewQueue:
             "status": "resolved",
             "resolution": resolution,
             "resolved_by": reviewer,
-            "resolved_at": datetime.utcnow(),
+            "resolved_at": datetime.now(timezone.utc),
         })
 
         if resolution == "fraud":

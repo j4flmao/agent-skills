@@ -370,11 +370,11 @@ exporters:
       max_elapsed_time: 300s
 ```
 
-### Logging Exporter
+### Debug Exporter (replaces the removed `logging` exporter)
 ```yaml
 exporters:
-  logging:
-    verbosity: detailed  # normal, detailed
+  debug:
+    verbosity: detailed  # basic, normal, detailed
     sampling_initial: 5
     sampling_thereafter: 100
 ```
@@ -399,7 +399,7 @@ service:
     traces:
       receivers: [otlp, jaeger]
       processors: [memory_limiter, k8sattributes, batch]
-      exporters: [otlp, logging]
+      exporters: [otlp, debug]
 
     # Metrics pipeline
     metrics:
@@ -411,7 +411,7 @@ service:
     logs:
       receivers: [otlp, filelog]
       processors: [memory_limiter, attributes, batch]
-      exporters: [otlp, logging]
+      exporters: [otlp, debug]
 ```
 
 ## Extensions

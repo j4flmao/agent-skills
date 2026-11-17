@@ -356,7 +356,7 @@ class UsageAnalytics:
             "client_id": request.headers.get("X-Client-ID"),
             "status": response.status_code,
             "latency_ms": response.elapsed_ms,
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
         }
         self.analytics_client.send(event)
 ```

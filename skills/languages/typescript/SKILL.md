@@ -1,7 +1,11 @@
 ---
 name: typescript
 description: >
-  Use this skill when the user says 'typescript', 'tsconfig', 'module resolution', 'ESM vs CJS', 'generics', 'conditional types', 'type narrowing', 'zod', 'tsc is slow', 'type-safe API'. Covers TypeScript compiler configuration, the type system, runtime validation at boundaries and build tooling. Do NOT use for: React/Next.js component architecture (use frontend skills), NestJS/Node backends (use backend/nodejs or backend/nestjs).
+  Use when the user asks about TypeScript, tsconfig, module resolution, ESM vs
+  CJS, generics, conditional types, type narrowing, zod validation, slow tsc or
+  a type-safe API. Produces compiler configuration, typed code and boundary
+  validation. Not for React component architecture (use react-architecture) or
+  Node backends (use nodejs-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

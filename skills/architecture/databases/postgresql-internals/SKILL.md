@@ -1,7 +1,11 @@
 ---
 name: architecture-postgresql-internals
 description: >
-  Use this skill when the user says 'Postgres MVCC', 'table bloat', 'autovacuum', 'dead tuples', 'transaction ID wraparound', 'WAL', 'checkpoints', 'HOT updates', 'why is Postgres slow', 'EXPLAIN ANALYZE'. Explains PostgreSQL storage and concurrency internals (heap, tuples, MVCC visibility, VACUUM, WAL, checkpoints, buffer cache, planner) and turns them into diagnosis queries and tuning settings. Do NOT use for: schema design rules (data/relational-database), sharding/scaling topology (architecture/databases/scaling-and-sharding), or ORM usage (backend skills).
+  Use when the user asks about Postgres MVCC, the write-ahead log (WAL), table
+  bloat, autovacuum, dead tuples, transaction ID wraparound, checkpoints, HOT
+  updates, EXPLAIN ANALYZE or why Postgres is slow. Produces diagnosis queries
+  and tuning settings. Not for schema design (use data-relational-database) or
+  sharding (use architecture-database-scaling).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

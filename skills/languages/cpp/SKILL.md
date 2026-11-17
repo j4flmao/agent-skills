@@ -1,7 +1,11 @@
 ---
 name: lang-cpp
 description: >
-  Use this skill when the user says 'C++', 'cpp', 'modern C++', 'C++20', 'C++23', 'RAII', 'smart pointers', 'move semantics', 'templates', 'concepts', 'CMake', 'undefined behavior C++', 'rule of five', 'std::span', 'coroutines'. Writes and reviews modern C++ (C++17/20/23): ownership with RAII and smart pointers, value/move semantics, templates and concepts, error handling, the standard library, build with CMake, and sanitizers/static analysis. Do NOT use for: MCU firmware C++ subsets (use c-cpp-patterns), game-engine architecture (use game skills), plain C (use lang-c).
+  Use when the user asks about modern C++ (C++20, C++23), RAII, smart pointers,
+  move semantics, templates and concepts, std::span, coroutines, CMake or
+  undefined behavior in C++. Produces idiomatic C++ with ownership rules and
+  sanitizer builds. Not for firmware C++ subsets (use c-cpp-patterns) or plain C
+  (use lang-c).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

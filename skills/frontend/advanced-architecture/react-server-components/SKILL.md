@@ -1,7 +1,7 @@
 ---
 name: react-server-components
 description: >
-  Use this skill when the user says 'React Server Components', 'RSC', 'use client', 'use server', 'server functions', 'server actions', 'RSC payload', 'client boundary', 'serializable props'. It explains the RSC model in React 19 (framework-agnostic), where to place client boundaries, what can cross the boundary, and how Server Functions mutate data. Do NOT use for: Next.js routing/caching specifics (use nextjs-server-components or react-nextjs), Next.js build internals (use nextjs-internals), or classic SSR hydration tuning (use frontend-rendering-strategies).
+  Use this skill when the user says 'React Server Components', 'RSC', 'use client', 'use server', 'server functions', 'server actions', 'RSC payload', 'client boundary', 'serializable props'. It explains the RSC model in React 19 (framework-agnostic), where to place client boundaries, what can cross the boundary, and how Server Functions mutate data. Do NOT use for: Next.js routing/caching specifics (use react-nextjs or react-nextjs), Next.js build internals (use nextjs-internals), or classic SSR hydration tuning (use frontend-rendering-strategies).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

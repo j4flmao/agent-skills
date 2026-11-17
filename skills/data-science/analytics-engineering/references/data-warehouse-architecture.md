@@ -8,7 +8,7 @@ The star schema is the most common dimensional modeling pattern:
 - **Dimension tables**: Contain descriptive attributes (who, what, where, when)
 - **Benefits**: Simple to understand, fast aggregations, efficient for BI tools
 
-`sql
+```sql
 CREATE TABLE fact_sales (
     sale_id BIGINT PRIMARY KEY,
     date_id INT REFERENCES dim_date(date_id),
@@ -34,7 +34,7 @@ CREATE TABLE dim_product (
     end_date DATE,
     is_current BOOLEAN DEFAULT TRUE
 );
-`
+```
 
 ### Snowflake Schema
 - Normalized dimension tables (sub-dimensions as separate tables)
@@ -55,7 +55,7 @@ CREATE TABLE dim_product (
 - **Compute**: Virtual warehouses (elastic clusters), auto-suspend/resume
 - **Services**: Query optimization, metadata management, security
 
-`sql
+```sql
 -- Snowflake clustering
 ALTER TABLE fact_sales CLUSTER BY (sale_date);
 
@@ -66,14 +66,14 @@ CLONE analytics_prod.fact_sales;
 -- Time travel queries
 SELECT * FROM fact_sales
 AT (TIMESTAMP => '2024-01-15 10:00:00'::TIMESTAMP);
-`
+```
 
 ### BigQuery Architecture
 - **Colossus**: Distributed file system for storage
 - **Borg/Dremel**: Compute engine with slot-based resource management
 - **Separation**: Storage and compute are fully separated
 
-`sql
+```sql
 -- BigQuery partitioning
 CREATE TABLE project.dataset.sales
 PARTITION BY DATE(order_date)
@@ -89,14 +89,14 @@ SELECT
     SUM(revenue) AS total_revenue
 FROM project.dataset.sales
 GROUP BY 1, 2;
-`
+```
 
 ### Redshift Architecture
 - **Leader node**: Query planning, result aggregation
 - **Compute nodes**: Columnar storage, local SSD caching
 - **Distribution styles**: KEY, ALL, EVEN, AUTO
 
-`sql
+```sql
 -- Redshift distribution and sort keys
 CREATE TABLE fact_sales (
     sale_id BIGINT ENCODE DELTA,
@@ -123,7 +123,7 @@ FROM fact_sales s
 JOIN dim_date d ON s.date_id = d.date_id
 JOIN dim_product p ON s.product_id = p.product_id
 GROUP BY 1, 2, 3, 4;
-`
+```
 
 ## Data Modeling Best Practices
 
@@ -136,7 +136,7 @@ GROUP BY 1, 2, 3, 4;
 | SCD 3 | Add new column | Limited history (previous value) |
 | SCD 4 | Separate history table | High-volume audit tracking |
 
-`sql
+```sql
 -- SCD Type 2 implementation
 CREATE TABLE dim_customer_scd2 (
     customer_sk BIGINT PRIMARY KEY,
@@ -166,7 +166,7 @@ WHEN NOT MATCHED THEN
     VALUES (NEXT VALUE FOR seq_customer_sk, source.customer_id,
             source.full_name, source.email, source.address,
             CURRENT_DATE, NULL, TRUE);
-`
+```
 
 ### Conformed Dimensions
 - Same dimension used across multiple fact tables
@@ -188,7 +188,7 @@ WHEN NOT MATCHED THEN
 | Yearly | > 10GB/day | 7 years | ZSTD |
 
 ### Materialized View Patterns
-`sql
+```sql
 -- Pre-aggregated marts for common queries
 CREATE MATERIALIZED VIEW mv_customer_monthly AS
 SELECT
@@ -204,7 +204,7 @@ JOIN fact_sales s ON c.customer_sk = s.customer_sk
 JOIN dim_date d ON s.date_id = d.date_id
 WHERE c.is_current = TRUE
 GROUP BY 1, 2, 3, 4;
-`
+```
 
 ## Key Points
 - Choose architectural pattern (Kimball, Inmon, Data Vault) based on organizational maturity and requirements

@@ -87,8 +87,8 @@ Can the application tolerate stale data?
 │   └── Read-through or write-behind
 └── No, strong consistency required
     ├── Is read volume much higher than write?
-    │   ├── Yes → Write-through cache (write DB + cache atomically)
-    │   └── No → Write-through with cache invalidation after DB write
+    │   ├── Yes → Delete-on-write after commit + short TTL (DB and Redis cannot be written atomically)
+    │   └── No → Read the DB directly; cache only derived, non-critical data
     └── Is cache acting as source of truth?
         └── Never use cache as primary store
 ```
@@ -111,8 +111,8 @@ Is there a single hot key that gets many concurrent requests?
 Can the system tolerate stale data for up to TTL duration?
 ├── Yes → TTL-based invalidation (simplest)
 ├── No → Are cache and DB in the same transaction boundary?
-│   ├── Yes → Write-through (DB + cache in transaction)
-│   └── No → Event-driven invalidation (publish eviction event)
+│   ├── Yes → Delete the key after the DB commit (no cross-store transaction exists)
+│   └── No → Event-driven invalidation (CDC/outbox publishes eviction events)
 └── Mixed → TTL for most data, event-driven for critical data
 ```
 
@@ -125,7 +125,7 @@ Can the system tolerate stale data for up to TTL duration?
 | In-memory (local) | ~0.1ms | Lost on restart | Per-instance | Hot data, session, computed values |
 | Distributed (Redis) | ~1-5ms | Configurable | All instances | Shared data, counters, rate limits |
 | CDN | ~10-50ms | Durable at edge | Global | Static assets, public API responses |
-| Database query cache | ~0.5ms | DB-backed | All instances | Frequent identical queries |
+| DB-side (materialized view, buffer pool) | DB latency | DB-backed | All instances | Expensive aggregates (MySQL 8.0 removed its query cache) |
 
 ### Step 2: Choose Strategy
 
@@ -171,14 +171,14 @@ class CacheAside<T> {
 - Recommended: Write DB first, then delete cache (cache will be populated on next read)
 - Best for: key-value lookups with consistent access patterns
 
-**Write-through** — write DB and cache atomically:
+**Write-through** — write DB, then write cache in the same request (not atomic):
 ```
 Write:
   1. Write to DB
   2. Write to cache (or update in place)
 ```
-- Best for: strong consistency requirements
-- Risk: higher write latency
+- Best for: small hot sets read right after write
+- Risk: higher write latency; a failed second write or concurrent writers leave the cache divergent, so keep a TTL
 
 **Write-behind (write-back)** — write cache first, async write DB:
 ```
@@ -383,8 +383,10 @@ async function onInvalidationEvent(event: CacheInvalidationEvent): Promise<void>
   if (event.key) {
     await cache.del(event.key);
   } else if (event.pattern) {
-    const keys = await cache.keys(event.pattern);
-    if (keys.length > 0) await cache.del(...keys);
+    // SCAN iterates incrementally; KEYS blocks Redis for the whole keyspace
+    for await (const key of cache.scanIterator({ MATCH: event.pattern, COUNT: 500 })) {
+      await cache.unlink(key);
+    }
   }
 }
 ```
@@ -572,12 +574,13 @@ Fix: Cache individual entities, compose at read time. Or use short TTL for query
 - Always set a TTL. Never use infinite TTL except for known immutable data with manual invalidation.
 - Never put large objects (>1MB) in cache. Compress or split.
 - Cache keys must include a namespace prefix to avoid collisions.
-- Always monitor cache hit ratio. Below 80% means cache is ineffective.
+- Always monitor cache hit ratio per key family; set a target from the workload and investigate drops (a low ratio on a read-heavy path usually means bad keys or TTLs).
 - Never use cache as a primary data store. Caches lose data.
 - Always have a fallback when cache is unavailable (degrade gracefully to DB).
 - Use connection pooling for Redis/Memcached. One connection per request is wasteful.
 - Cache null results (with short TTL) to prevent repeated DB misses on missing data.
-- Write to DB first, then invalidate/update cache. Never the reverse.
+- Default to cache-aside with delete-on-write: commit to the DB first, then delete the key (deleting beats updating, which races with concurrent readers).
+- Never cache balances, permissions or other money/security data unless every write path invalidates it.
 - Add ±10% jitter to TTL values to prevent thundering herd.
 - Implement stampede protection for hot keys on high-traffic endpoints.
 - Monitor evictions: if keys are evicted before TTL, cache is too small.
@@ -592,6 +595,11 @@ Fix: Cache individual entities, compose at read time. Or use short TTL for query
   - references/caching-fundamentals.md — Caching Fundamentals
   - references/caching-advanced.md — Caching Advanced Patterns
   - references/caching-stampede-prevention.md — Cache Stampede Prevention
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-backend-caching-strategies.md` — Caching Strategies with Redis (merged from `backend/caching-strategies`)
 
 ## Handoff
 No artifact produced unless requested.

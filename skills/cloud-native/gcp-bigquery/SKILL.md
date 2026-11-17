@@ -1,7 +1,7 @@
 ---
 name: cloud-native-gcp-bigquery
 description: >
-  Use this skill when the user says 'bigquery', 'bigquery cost', 'bigquery partitioning', 'bigquery clustering', 'dremel', 'capacitor', 'bigquery slots', 'bigquery editions', 'bigquery slow query', 'bytes scanned'. Explains BigQuery's architecture (Dremel execution, Capacitor columnar storage on Colossus, shuffle tier) and applies it to table design, query tuning, and pricing-model choice. Do NOT use for: warehouse vendor comparison and dimensional modeling (data-data-warehouse / data-dimensional-modeling), dbt project structure (data-science analytics-engineering).
+  Use when the user asks about BigQuery cost, bytes scanned, partitioning and clustering, slots and editions, slow BigQuery queries, or Dremel and Capacitor internals. Produces table designs, query fixes and a pricing-model choice. Not for warehouse vendor comparison (use data-data-warehouse) or dbt projects (use data-science-analytics-engineering).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

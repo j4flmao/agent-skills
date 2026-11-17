@@ -391,9 +391,9 @@ GRANT USAGE ON SEQUENCE orders_id_seq TO app_user;
 - Every migration has both up and down scripts.
 - Soft deletes by default. Hard deletes are a privileged operation.
 - Transactions belong in Application layer, never in controllers or repositories.
-- Use keyset pagination for large datasets, never OFFSET.
+- Use keyset pagination for large or deep result sets; OFFSET is acceptable only for small, shallow pages.
 - Test migrations against production-sized data before deployment.
-- Always use native DB enums instead of VARCHAR with app-level validation.
+- Enforce allowed values in the database: a `CHECK` constraint or lookup table (easy to evolve), or a native enum when the set is stable (PostgreSQL enum values cannot be dropped).
 
 ## References
   - references/connection-pooling.md — Connection Pooling

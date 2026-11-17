@@ -13,7 +13,7 @@ dbt provides built-in test types:
 - **Relationships**: Foreign key integrity check
 - **Custom**: User-defined SQL assertions
 
-`yaml
+```yaml
 # schema.yml
 version: 2
 
@@ -48,10 +48,10 @@ models:
           - relationships:
               to: ref('dim_customer')
               field: customer_id
-`
+```
 
 ### Custom Generic Tests
-`sql
+```sql
 -- tests/generic/test_no_nulls_in_dimensions.sql
 {% test no_nulls_in_dimensions(model, columns) %}
 SELECT *
@@ -62,10 +62,10 @@ WHERE
         {% if not loop.last %} OR {% endif %}
     {% endfor %}
 {% endtest %}
-`
+```
 
 ### Custom Singular Tests
-`sql
+```sql
 -- tests/singular/assert_positive_revenue.sql
 -- Revenue should never be negative
 SELECT
@@ -83,59 +83,66 @@ FROM {{ ref('fact_orders') }} o
 JOIN {{ ref('dim_customer') }} c
     ON o.customer_id = c.customer_id
 WHERE o.order_date < c.created_at
-`
+```
 
 ## Great Expectations
 
 ### Setting Up Expectations
-`python
-import great_expectations as ge
-from great_expectations.dataset import PandasDataset
+```python
+import great_expectations as gx
+import great_expectations.expectations as gxe
+import pandas as pd
 
-def validate_source_data(df):
-    dataset = PandasDataset(df)
+# GX Core 1.x API (the legacy PandasDataset API was removed in 1.0).
+context = gx.get_context()
+batch_def = (
+    context.data_sources.add_pandas("orders_src")
+    .add_dataframe_asset("orders")
+    .add_batch_definition_whole_dataframe("all")
+)
+suite = context.suites.add(gx.ExpectationSuite(name="orders_suite"))
+for exp in [
+    gxe.ExpectColumnValuesToNotBeNull(column="customer_id"),
+    gxe.ExpectColumnValuesToBeUnique(column="order_id"),
+    gxe.ExpectColumnValuesToBeInSet(
+        column="status", value_set=["pending", "shipped", "delivered", "cancelled"]
+    ),
+    gxe.ExpectColumnMeanToBeBetween(column="total_amount", min_value=0, max_value=100000),
+    gxe.ExpectColumnPairValuesAToBeGreaterThanB(
+        column_A="delivery_date", column_B="order_date"
+    ),
+]:
+    suite.add_expectation(exp)
 
-    expectations = [
-        dataset.expect_column_values_to_not_be_null("customer_id"),
-        dataset.expect_column_values_to_be_unique("order_id"),
-        dataset.expect_column_values_to_be_in_set(
-            "status", ["pending", "shipped", "delivered", "cancelled"]
-        ),
-        dataset.expect_column_mean_to_be_between("total_amount", 0, 100000),
-        dataset.expect_column_values_to_be_of_type("order_date", "datetime64[ns]"),
-        dataset.expect_column_pair_values_a_to_be_greater_than_b(
-            "delivery_date", "order_date"
-        ),
-    ]
-
-    results = dataset.validate()
-    return results
+def validate_source_data(df: pd.DataFrame):
+    batch = batch_def.get_batch(batch_parameters={"dataframe": df})
+    return batch.validate(suite)
 
 # Usage in Airflow
 @task
 def validate_orders(data_path):
     df = pd.read_parquet(data_path)
     results = validate_source_data(df)
-    if not results["success"]:
-        raise ValueError(f"Data validation failed: {results}")
+    if not results.success:
+        raise ValueError(f"Data validation failed for {data_path}: {results.describe()}")
     return data_path
-`
+```
 
 ### Data Docs
 Great Expectations generates human-readable data documentation:
-`ash
-# Generate data docs
-great_expectations docs build
+```python
+# GX Core 1.x removed the `great_expectations` CLI; build Data Docs from Python.
+import great_expectations as gx
 
-# View expectations suite
-great_expectations suite list
-great_expectations suite show my_suite
-`
+context = gx.get_context()
+context.build_data_docs()
+print([s.name for s in context.suites.all()])   # list expectation suites
+```
 
 ## Automated Quality Gates in CI/CD
 
 ### GitHub Actions Integration
-`yaml
+```yaml
 # .github/workflows/data-quality.yml
 name: Data Quality Checks
 on:
@@ -165,19 +172,19 @@ jobs:
 
       - name: Great Expectations validation
         run: |
-          great_expectations checkpoint run production_checkpoint
+          uv run python scripts/run_gx_checkpoint.py production_checkpoint   # GX 1.x: run checkpoints from Python
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: target/
-`
+```
 
 ## Monitoring Data Quality Over Time
 
 ### dbt Artifacts and Freshness
-`yaml
+```yaml
 # Configure freshness checks
 sources:
   - name: raw_orders
@@ -189,10 +196,10 @@ sources:
       - name: orders
       - name: order_items
       - name: order_status_history
-`
+```
 
 ### Tracking Quality Metrics
-`sql
+```sql
 -- Create a quality metrics table
 CREATE TABLE analytics_quality.dq_metrics (
     check_date DATE NOT NULL,
@@ -213,12 +220,12 @@ CREATE TABLE analytics_quality.dq_metrics (
          'pass', {{ rows_tested }}, 0, 0, '{{ run_id }}')"
     ]
 ) }}
-`
+```
 
 ## Data Contracts
 Define formal agreements between data producers and consumers:
 
-`yaml
+```yaml
 # data_contracts/orders_contract.yaml
 dataset: orders
 version: 1.0
@@ -255,7 +262,7 @@ owner: data-platform-team
 consumers:
   - analytics
   - billing
-`
+```
 
 ## Key Points
 - Automate data quality testing in CI/CD pipelines to catch issues before they reach production

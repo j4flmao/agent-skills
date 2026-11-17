@@ -1,7 +1,11 @@
 ---
 name: mobile-ionic-capacitor
 description: >
-  Use this skill when the user says 'Ionic', 'Capacitor', 'Ionic app', 'hybrid mobile', 'web-to-mobile', 'Capacitor plugin', 'Ionic framework', 'Ionic React', 'Ionic Angular', 'Ionic Vue'. Build hybrid mobile apps using Ionic UI components and Capacitor native bridge with web-to-native access. Do NOT use for: native mobile development (KMP/MAUI) or pure web apps.
+  Use when the user asks about Ionic, Capacitor, Capacitor plugins, Ionic
+  React/Angular/Vue, hybrid web-to-mobile apps or live updates for a Capacitor
+  app. Produces hybrid app setup, native plugin bridges and store builds. Not
+  for fully native or shared-Kotlin apps (use mobile-kotlin-multiplatform) or
+  plain web PWAs (use frontend-pwa).
 compatibility:
   claude-code: true
   cursor: true
@@ -130,7 +134,7 @@ Need native device access?
 
 9. **Deep linking and universal links** — Configure deep links to open the app from URLs. iOS: configure `apple-app-site-association` file on your server, add associated domain in Xcode, handle in AppDelegate. Android: configure intent filters in `AndroidManifest.xml` for URL scheme. Capacitor's `App.addListener('appUrlOpen')` catches incoming URLs in the web layer. Map URL paths to navigation routes. Test with `xcrun simctl openurl` for iOS and `adb shell am start` for Android.
 
-10. **Push notifications** — Set up push notifications via `@capacitor/push-notifications`. iOS: configure APNs certificate in Apple Developer Portal, add Push Notifications capability in Xcode. Android: set up Firebase Cloud Messaging, upload server key to Firebase Console. Register for notifications: `PushNotifications.requestPermissions()` then `PushNotifications.register()`. Handle foreground notifications with `PushNotifications.addListener('pushNotificationReceived')`. Handle background tap actions with `PushNotifications.addListener('pushNotificationActionPerformed')`. Test with `curl` to APNs/FCM endpoints or use Pusher/PushCompanion tools.
+10. **Push notifications** — Set up push notifications via `@capacitor/push-notifications`. iOS: configure APNs certificate in Apple Developer Portal, add Push Notifications capability in Xcode. Android: add the app to a Firebase project and include `google-services.json`; your server sends through the FCM HTTP v1 API with a service-account OAuth token (legacy server keys were shut down in 2024). Register for notifications: `PushNotifications.requestPermissions()` then `PushNotifications.register()`. Handle foreground notifications with `PushNotifications.addListener('pushNotificationReceived')`. Handle background tap actions with `PushNotifications.addListener('pushNotificationActionPerformed')`. Test with `curl` to APNs/FCM endpoints or use Pusher/PushCompanion tools.
 
 ## Platform Compatibility
 

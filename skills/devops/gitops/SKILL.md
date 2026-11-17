@@ -1,13 +1,7 @@
 ---
 name: gitops
 description: >
-  Use this skill when the user says 'GitOps', 'ArgoCD', 'Flux', 'Git as source
-  of truth', 'sync policy', 'drift detection', 'multi-env GitOps', 'Application
-  CRD', 'Kustomize', 'Helm with GitOps', 'sync waves', 'phased rollouts'.
-  Covers: declarative deployments, ArgoCD setup, Flux setup, sync strategies,
-  drift detection, multi-environment promotion, secrets in GitOps.
-  Do NOT use this for: plain Kubernetes manifests (use kubernetes-patterns),
-  CI pipeline design, or monorepo tooling.
+  Use when the user asks about GitOps, Flux, Git as the source of truth, drift detection, multi-environment promotion, Kustomize overlays, secrets in GitOps, or how to sync cluster state from git with Argo CD or Flux. Produces GitOps repo layouts and promotion flows. Not for Argo CD specifics (use argo-cd) or ApplicationSets at scale (use devops-gitops-advanced).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -15,7 +9,7 @@ compatibility:
   claude-code: true
   cursor: true
   codex: true
-  windsuf: true
+  windsurf: true
 tags: [devops, gitops, argocd, flux, phase-5]
 ---
 
@@ -484,6 +478,15 @@ GitOps (pull-based): agent in cluster pulls desired state from Git. No cluster A
 - references/gitops-fundamentals.md -- Gitops Fundamentals
 - references/gitops-principles.md -- GitOps Principles
 - references/sync-strategies.md -- Sync Strategies
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-cloud-native-gitops-workflows.md` — GitOps Workflows and Promotion (merged from `cloud-native/gitops-workflows`)
+- `references/merged-cloud-native-argocd-reconciliation.md` — Argo CD Reconciliation and Drift Detection (merged from `cloud-native/gitops`)
+- `references/argocd-architecture.md` — ArgoCD Architecture & Reconciliation Loop
+- `references/progressive-delivery-flagger.md` — Progressive Delivery with Flagger
+- `references/secrets-management-eso.md` — External Secrets Operator (ESO)
 
 ## Handoff
 After completing this skill:

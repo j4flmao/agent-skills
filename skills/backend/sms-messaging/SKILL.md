@@ -221,10 +221,10 @@ class OTPService {
   }
 
   private generateCode(): string {
-    const digits = '0123456789';
+    // CSPRNG only: crypto.randomInt is uniform and unpredictable (never Math.random)
     let code = '';
     for (let i = 0; i < this.OTP_LENGTH; i++) {
-      code += digits[Math.floor(Math.random() * digits.length)];
+      code += crypto.randomInt(0, 10).toString();
     }
     return code;
   }
@@ -410,7 +410,7 @@ async function sendWhatsAppMessage(to: string, templateName: string, params: Rec
 4. Always implement message length detection and concatenation for >160 characters.
 5. Never store plaintext OTP codes — always hash with bcrypt before storage.
 6. Always implement carrier filtering for landline numbers (SMS to landline fails).
-7. Never exceed 5 messages per recipient per hour without explicit opt-in.
+7. Cap messages per recipient per time window (e.g. a few OTPs per hour) to limit abuse and SMS pumping fraud.
 8. Always include sender identification (business name) in message body.
 9. Never send sensitive data (passwords, full SSN, CVV) via SMS.
 10. Always implement Unicode detection and fallback for non-GSM characters.

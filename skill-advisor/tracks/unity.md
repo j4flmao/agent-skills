@@ -23,13 +23,12 @@ Install these first. They cover the everyday work of this role and rarely confli
 | [`lang-csharp`](../../skills/languages/csharp/SKILL.md) | `languages/csharp` | C# combines a managed runtime with value types, spans and a mature async model. |
 | [`game-engine-patterns`](../../skills/game/game-engine/patterns/SKILL.md) | `game/game-engine/patterns` | Game engines are the most demanding real-time software systems in common use. |
 
-## Level 2 — Professional (6 skills)
+## Level 2 — Professional (5 skills)
 
 Add when the project grows: production concerns, scaling and team workflows.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
-| [`ecs-architecture`](../../skills/game/ecs-architecture/SKILL.md) | `game/ecs-architecture` | ECS is a data-driven design pattern for game engines that separates entities (IDs), components (pure data), and systems (logic operating on… |
 | [`ecs-pattern`](../../skills/game/game-engine/ecs-pattern/SKILL.md) | `game/game-engine/ecs-pattern` | ECS is the dominant data-oriented architecture for modern game engines (Unity Entities/DOTS, Bevy, Unreal Mass, Overwatch's engine, flecs, EnTT —… |
 | [`physics-engine`](../../skills/game/game-development/physics-engine/SKILL.md) | `game/game-development/physics-engine` | A physics engine simulates rigid bodies through three pipelines every tick: collision detection (find contacts), collision resolution (apply… |
 | [`input-systems`](../../skills/game/client-engine/input-systems/SKILL.md) | `game/client-engine/input-systems` | Input is the player's handshake: it must be lag-free, remappable, device-agnostic and deterministic. |
@@ -56,10 +55,10 @@ Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a 
 npx skills add j4flmao/agent-skills --skill unity --skill unity-csharp --skill lang-csharp --skill game-engine-patterns --skill anti-cheat-server
 ```
 
-**Level 1 + 2 + security baseline (11 skills):**
+**Level 1 + 2 + security baseline (10 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill unity --skill unity-csharp --skill lang-csharp --skill game-engine-patterns --skill ecs-architecture --skill ecs-pattern --skill physics-engine --skill input-systems --skill animation-systems --skill audio-engine --skill anti-cheat-server
+npx skills add j4flmao/agent-skills --skill unity --skill unity-csharp --skill lang-csharp --skill game-engine-patterns --skill ecs-pattern --skill physics-engine --skill input-systems --skill animation-systems --skill audio-engine --skill anti-cheat-server
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -70,7 +69,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`game-development`](../bundles.md#game-development) | 32 | Game development: engines, ECS, rendering, physics, animation, audio, input, streaming, netcode, game servers |
+| [`game-development`](../bundles.md#game-development) | 30 | Game development: engines, ECS, rendering, physics, animation, audio, input, streaming, netcode, game servers |
 
 ## Combine with
 

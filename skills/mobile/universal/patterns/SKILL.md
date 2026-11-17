@@ -1,9 +1,11 @@
 ---
 name: mobile-patterns
 description: >
-  Use this skill when the user asks about mobile architecture patterns, MVVM,
-  MVI, Clean Architecture, Coordinator, Navigator, Repository pattern, UseCase,
-  or dependency injection in mobile apps.
+  Use when the user asks about mobile architecture patterns, MVVM vs MVI, Clean
+  Architecture, Coordinator, repository and use case layers, dependency
+  injection in mobile apps or choosing a cross-platform framework. Produces
+  layer boundaries and module structure. Not for platform-specific code (use
+  ios, android or flutter-expertise).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

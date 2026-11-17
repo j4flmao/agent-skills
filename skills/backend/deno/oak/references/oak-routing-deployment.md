@@ -150,7 +150,7 @@ orderRouter.get('/', async (ctx) => {
 ## Static File Serving
 
 ```typescript
-import { send } from 'oak/send.ts'
+import { send } from '@oak/oak'
 
 app.use(async (ctx, next) => {
   const path = ctx.request.url.pathname
@@ -188,11 +188,11 @@ export { config }
 ### Deno Deploy
 
 ```typescript
-import { serve } from 'https://deno.land/std@0.208.0/http/server.ts'
 import { createApp } from './app.ts'
 
 const app = createApp()
-await serve(app.handle, { port: 8080 })
+// Oak uses Deno.serve under the hood on Deno 2
+await app.listen({ port: 8080 })
 ```
 
 ### Docker Deployment

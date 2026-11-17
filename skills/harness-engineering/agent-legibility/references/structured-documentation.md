@@ -97,7 +97,7 @@ Structured comments embed machine-readable metadata directly in source code:
  * ```typescript
  * const result = await authenticate({
  *   email: 'user@example.com',
- *   password: 'securePassword123'
+ *   password: process.env.TEST_USER_PASSWORD!
  * });
  *
  * if (result.ok) {

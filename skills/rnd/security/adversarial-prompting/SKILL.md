@@ -1,10 +1,14 @@
 ---
 name: adversarial-prompting
 description: >
-  Use this skill when the user says 'prompt injection', 'indirect prompt injection', 'jailbreak testing', 'LLM red team', 'system prompt leakage', 'data exfiltration via markdown', 'test my chatbot for attacks', 'OWASP LLM Top 10'. Explains attack classes against LLM applications and agents and builds an authorized red-team harness (garak, PyRIT, promptfoo or a custom canary-based suite) to measure them. Do NOT use for: designing defenses and guardrails (rnd/security/ai-defense-mechanisms), general web app pentesting (security/penetration-testing), or model safety training.
+  Use when the user asks to test for prompt injection, indirect prompt injection, jailbreaks, system prompt
+  leakage, markdown-image exfiltration, LLM red teaming or OWASP LLM Top 10. Produces a sources-by-sinks threat
+  model and an authorized canary test harness (garak, PyRIT, promptfoo). Not for building defenses (use
+  ai-defense-mechanisms) or web app pentests (use red-team-pentest-methodology).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [rnd, security, adversarial-prompting, prompt-injection, red-team, owasp-llm]
 ---
 

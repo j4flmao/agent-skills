@@ -193,7 +193,7 @@ This approach doubles latency and increases cost. It should only be applied to u
 
 ## 7. Securing Dynamic Example Pools
 
-When using RAG or dynamic selection to construct few-shot examples (as per `example-selection-architectures.md`), the data sources must be sanitized.
+When using RAG or dynamic selection to construct few-shot examples (see the dynamic few-shot section of the parent SKILL.md), the data sources must be sanitized.
 
 1. **Immutable Golden Sets**: Ideally, few-shot examples should be hand-curated by developers and stored in an immutable "Golden Set".
 2. **Review Workflows**: If examples are generated from user logs, they MUST pass through a human review process or a strict automated sanitizer before being added to the active example pool.

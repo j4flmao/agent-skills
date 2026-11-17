@@ -1,10 +1,13 @@
 ---
 name: tpu-systolic-arrays
 description: >
-  Use this skill when the user says 'tpu', 'systolic array', 'mxu', 'matrix multiply unit', 'xla on tpu', 'jax tpu', 'pallas', 'tpu performance', 'tpu padding', 'weight stationary'. Explains Google TPU architecture (systolic MXU, vector/scalar units, HBM, interconnect) and turns it into concrete rules for writing fast JAX / PyTorch-XLA code: shapes, dtypes, static compilation, sharding and custom Pallas kernels. Do NOT use for: NVIDIA GPU kernels (cuda-programming, triton-kernels), GPU multi-node fabrics (rdma-roce), framework-agnostic distributed training on GPUs (distributed-training).
+  Use when the user asks about TPUs, systolic arrays, the MXU, XLA on TPU, JAX TPU performance, Pallas kernels,
+  TPU padding or recompilation. Produces shape, dtype and sharding rules plus JAX code and profiling steps. Not
+  for NVIDIA GPU kernels (use cuda-programming) or GPU multi-node training (use distributed-training).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [hardware-acceleration, tpu, systolic-array, xla, jax, pallas]
 ---
 

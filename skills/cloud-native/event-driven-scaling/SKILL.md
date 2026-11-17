@@ -1,7 +1,7 @@
 ---
 name: cloud-native-event-driven-scaling
 description: >
-  Use this skill when the user says 'keda', 'scale to zero', 'scaledobject', 'scaledjob', 'scale on queue length', 'kafka consumer autoscaling', 'sqs scaling kubernetes', 'event driven autoscaling', 'triggerauthentication'. Configures KEDA to scale Kubernetes workloads on event-source metrics (queue depth, consumer lag, Prometheus queries, cron), including scale-to-zero, flapping control, and long-running jobs. Do NOT use for: CPU/memory HPA, VPA and node autoscaling in depth (devops-kubernetes-autoscaling), serverless platform cold starts (cloud-native-serverless-cold-starts).
+  Use when the user asks about KEDA, ScaledObject, ScaledJob, TriggerAuthentication, scale to zero, scaling pods on queue length, Kafka consumer lag or SQS depth autoscaling on Kubernetes. Produces KEDA configs with flapping control and long-running job handling. Not for CPU/memory HPA, VPA or node autoscaling (use devops-kubernetes-autoscaling).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

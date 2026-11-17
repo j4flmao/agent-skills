@@ -1,10 +1,14 @@
 ---
 name: ai-agent-core-loop
 description: >
-  Use this skill when the user says 'agent loop', 'perceive think act', 'ReAct vs plan-and-solve', 'agent keeps looping', 'agent self-reflection', 'Reflexion', 'agent termination condition'. Explains and implements the mechanics of a single agent's control loop: observation assembly, action selection, termination, re-planning, and reflection. Do NOT use for: overall agent design (ai/ai-agents), workflow pattern selection (ai/agentic-workflows), tool schemas (ai/ai-agents/tool-calling-principles), or memory stores (ai/ai-agents/memory-systems).
+  Use when the user asks about the agent loop, ReAct vs plan-and-solve, re-planning, Reflexion, an agent stuck
+  in a loop, max iterations or termination conditions. Produces a loop spec or patch with state, success
+  predicate, caps and no-progress detection. Not for overall agent design (use ai-agent-architectures) or tool
+  schemas (use tool-calling-principles).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, agents, react, plan-and-solve, reflexion, control-loop]
 ---
 
@@ -179,3 +183,9 @@ def run_loop(
 ## References
 - Yao et al., "ReAct" (ICLR 2023); Shinn et al., "Reflexion" (NeurIPS 2023); Kim et al., "An LLM Compiler for Parallel Function Calling" (ICML 2024).
 - Parent: `../SKILL.md`; planning detail: `../references/planning-strategies.md`.
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/react-pattern.md` — ReAct Pattern (Reason + Act)
+- `references/reflexion.md` — Reflexion (Self-Correction Architecture)

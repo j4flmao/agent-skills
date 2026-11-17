@@ -462,6 +462,27 @@ components:
   - references/openapi-testing.md — OpenAPI Testing
   - references/openapi-tools.md — OpenAPI Tools
   - references/openapi-versioning-strategies.md — OpenAPI Versioning Strategies
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-api-documentation.md` — API Documentation (merged from `devops/api-documentation`)
+- `references/api-documentation-advanced.md` — API Documentation Advanced Topics
+- `references/api-documentation-fundamentals.md` — API Documentation Fundamentals
+- `references/api-versioning.md` — API Versioning and Deprecation
+- `references/api_reference.md` — OpenAPI 3.1 Advanced Object Reference
+- `references/architecture_patterns.md` — API Documentation Architecture Patterns
+- `references/best_practices.md` — API Documentation Writing Best Practices
+- `references/code-first.md` — Code-First API Documentation
+- `references/configuration_templates.md` — API Documentation Configuration Templates
+- `references/deployment_strategies.md` — Deploying and Publishing API Documentation
+- `references/design-first.md` — Design-First API Development
+- `references/documentation-tools.md` — Documentation Tools
+- `references/openapi-basics.md` — OpenAPI Basics
+- `references/performance_tuning.md` — Performance Tuning for Large API Specs and Doc Sites
+- `references/security_guidelines.md` — Security Guidelines for API Documentation
+- `references/troubleshooting_matrix.md` — API Documentation Troubleshooting Matrix
+
 ## Handoff
 No artifact produced unless requested.
 Next skill: contract-testing — verify the OpenAPI spec against provider behavior.

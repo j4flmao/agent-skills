@@ -69,7 +69,7 @@ Lookup matrices for the decisions the orchestrator makes most often. Each matrix
 | Two frameworks in one manifest (React + Next) | Most specific (Next) |
 | Monorepo, request does not name a package | C: list packages with their stacks |
 | Request names a technology absent from manifests | Trust the request (migration or new service) |
-| Overlapping skills (e.g. `devops/gitops` vs `cloud-native/gitops`) | Quick Map owner of the trigger; otherwise C |
+| Overlapping skills (e.g. `devops/gitops` vs `devops/gitops-advanced`) | Quick Map owner of the trigger; otherwise C |
 | User asks "how do I X" | Route to the skill owning X, do not answer |
 
 ## 6. Single vs Chain

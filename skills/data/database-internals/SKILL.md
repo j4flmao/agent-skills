@@ -103,3 +103,9 @@ SHOW ENGINE INNODB STATUS;
 - `storage-engines.md` (B-tree vs LSM details, in this skill directory)
 - `mvcc-and-wal.md` (WAL and MVCC walkthrough, in this skill directory)
 - Kleppmann, *Designing Data-Intensive Applications*, ch. 3 and 7; Petrov, *Database Internals*.
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/mvcc-and-wal.md` — WAL and MVCC (Database Concurrency)
+- `references/storage-engines.md` — Storage Engines: B-Trees vs. LSM-Trees

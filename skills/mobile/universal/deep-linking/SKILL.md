@@ -1,7 +1,11 @@
 ---
 name: mobile-deep-linking
 description: >
-  Use this skill when the user says 'deep linking', 'universal link', 'app link', 'URL scheme', 'deferred deep link', 'routing deep link', 'link handler', 'deep navigation'. Implement deep linking across iOS and Android using universal links, custom URL schemes, and deferred deep linking. Do NOT use for: web URL routing or push notification handling.
+  Use when the user asks about deep links, universal links, Android App Links,
+  apple-app-site-association, assetlinks.json, custom URL schemes or deferred
+  deep links. Produces link verification files and in-app routing for iOS and
+  Android. Not for push notification handling (use mobile-push-notifications) or
+  web routing.
 compatibility:
   claude-code: true
   cursor: true

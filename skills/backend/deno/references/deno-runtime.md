@@ -27,18 +27,18 @@
 // deno.json — import maps
 {
   "imports": {
-    "std/": "https://deno.land/std@0.220.0/",
-    "oak/": "https://deno.land/x/oak@v12.6.2/",
-    "zod/": "https://deno.land/x/zod@v3.22.0/",
-    "lodash": "npm:lodash",
-    "express": "npm:express"
+    "@std/path": "jsr:@std/path@^1.0.0",
+    "@oak/oak": "jsr:@oak/oak@^17.1.0",
+    "zod": "npm:zod@^3.23",
+    "lodash": "npm:lodash@^4.17.21",
+    "express": "npm:express@^5.1.0"
   }
 }
 ```
 
 | Source | URL Pattern | When |
 |--------|-------------|------|
-| **deno.land/x** | `https://deno.land/x/pkg@v1.0.0/mod.ts` | Deno-native packages |
+| **deno.land/x** | `https://deno.land/x/pkg@v1.0.0/mod.ts` | Legacy Deno-native registry; prefer JSR for new code |
 | **JSR** | `jsr:@scope/pkg` | Modern registry, works with Node/Bun |
 | **npm** | `npm:package` | Node.js ecosystem packages |
 | **Local** | `./path/to/mod.ts` | Project modules, relative paths |

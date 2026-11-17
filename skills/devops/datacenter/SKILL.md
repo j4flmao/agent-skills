@@ -1,16 +1,7 @@
 ---
 name: datacenter
 description: >
-  Use this skill when the user says 'datacenter', 'data center', 'DC',
-  'rack', 'power', 'cooling', 'PDU', 'UPS', 'Tier classification',
-  'N+1 redundancy', '2N redundancy', 'cabling', 'fiber', 'copper',
-  'hot aisle', 'cold aisle', 'rack density', 'kW per rack',
-  'DCIM', 'data center operations', 'colocation'.
-  Covers: datacenter tier classification (Tier I-IV), power and cooling design,
-  rack layout, cabling standards, DCIM tools, capacity planning,
-  redundancy models, environmental monitoring, colocation selection.
-  Do NOT use for: cloud infrastructure (use cloud-specific skills),
-  server provisioning (use bare-metal skill).
+  Use when the user asks about data center design, Uptime Tier I-IV, rack power and kW per rack, PDU and UPS, cooling, hot/cold aisle containment, N+1 or 2N redundancy, structured cabling, DCIM, or colocation choice. Produces facility and capacity designs. Not for server provisioning (use bare-metal) or network fabric (use devops-network-infrastructure).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

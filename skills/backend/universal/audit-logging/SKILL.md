@@ -469,7 +469,7 @@ Fix: Database triggers to prevent mutations, restricted permissions.
 - Include a hash chain for tamper evidence. Verify chain integrity quarterly.
 - Never log actual sensitive values in the diff. Log that access occurred and mask values.
 - Time must be in UTC with timezone, never server local time.
-- Retention policy must meet the strictest regulatory requirement (usually 7 years).
+- Retention policy must meet the strictest applicable requirement (varies by regime, e.g. SOX-related audit records commonly 7 years, HIPAA documentation 6 years).
 - Reject any request that does not include audit context (actor, resource, action).
 - Test tamper detection regularly (at least quarterly for SOC 2).
 - Include correlation IDs for cross-service traceability.

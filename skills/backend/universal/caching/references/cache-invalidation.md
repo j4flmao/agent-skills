@@ -45,7 +45,7 @@ Solution for race:
 ```
 Admin endpoint or CLI:
   DELETE /cache/purge?pattern=users:*
-  redis-cli KEYS "users:*" | xargs redis-cli DEL
+  redis-cli --scan --pattern "users:*" | xargs -r redis-cli UNLINK   # SCAN-based; never KEYS in production
 
 Pros: full control, simple to understand
 Cons: manual, error-prone, missed invalidation = stale data

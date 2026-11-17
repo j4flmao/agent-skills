@@ -72,3 +72,10 @@ flowchart TD
     F -->|"Checks available slots"| H
     H -.->|"Read Data"| A
 ```
+
+## References
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/lock-free-concurrency.md` — Lock-Free Concurrency & LMAX Disruptor

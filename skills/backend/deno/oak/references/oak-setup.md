@@ -1,7 +1,7 @@
 # Oak Setup Guide
 
 ## Prerequisites
-- Deno 1.40+ (install: `winget install deno` / `curl -fsSL https://deno.land/install.sh | sh`)
+- Deno 2.x (install with a package manager: `winget install DenoLand.Deno`, `brew install deno`; the official `install.sh` script should be downloaded and reviewed before running)
 
 ## Project Initialization
 ```bash

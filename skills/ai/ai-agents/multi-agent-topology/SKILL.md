@@ -1,10 +1,14 @@
 ---
 name: multi-agent-topology
 description: >
-  Use this skill when the user says 'supervisor agent', 'agent hierarchy', 'pipeline of agents', 'agent debate', 'handoff between agents', 'which multi-agent topology', 'should I use multiple agents'. Chooses the interaction graph between agents (single, pipeline, supervisor-worker, hierarchical, handoff, debate/critic) and defines authority, message contracts, and failure handling for each edge. Do NOT use for: framework-level orchestration and runtime choices (ai/multi-agent-systems), single-agent loop design (ai/ai-agents/core-architectures), or R&D swarm prototypes (rnd/ai-agents/swarm-architectures).
+  Use when the user asks whether to use multiple agents, supervisor-worker, agent hierarchy, pipeline of agents,
+  handoffs or a critic/debate setup. Produces a topology diagram, role table with least-privilege tools, typed
+  edge contracts and round caps. Not for framework runtime and checkpointing (use ai-multi-agent-systems) or R&D
+  swarms (use swarm-architectures).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, agents, multi-agent, topology, supervisor, pipeline, debate]
 ---
 

@@ -69,10 +69,10 @@ Consumer tests define the expected request and response for each API interaction
 Provider tests fetch the latest consumer contracts from the Pact Broker and verify each interaction against the provider's actual API. The provider starts a test server, runs the contract verifier, and checks that each consumer interaction's response matches the actual response. Provider states are set up via API calls to the provider's test endpoints or database seeding.
 
 ### Pact Broker Deployment
-The Pact Broker stores contracts, verification results, and matrices of compatible versions. It can be self-hosted via Docker Compose or used as a SaaS product (PactFlow). The Broker exposes a web UI showing the network diagram of all service dependencies. Webhooks can be configured to notify consumers when a provider publishes a new verification result or whena contract changes.
+The Pact Broker stores contracts, verification results, and matrices of compatible versions. It can be self-hosted via Docker Compose or used as a SaaS product (PactFlow). The Broker exposes a web UI showing the network diagram of all service dependencies. Webhooks can be configured to notify consumers when a provider publishes a new verification result or when a contract changes.
 
 ### Versioning and Compatibility
-Contracts are versioned by the consumer's application version (Git commit SHA). Tags identify which version is deployed to each environment (dev, staging, production). The can-i-deploy tool checks the Pact Broker for compatibility before any deployment. The Broker maintains a matrix of compatible consumer and provider versions.
+Contracts are versioned by the consumer's application version (Git commit SHA) and branch. Deployments are recorded per environment with `pact-broker record-deployment` (or `record-release`); tags are the legacy mechanism. The can-i-deploy tool checks the Pact Broker for compatibility before any deployment. The Broker maintains a matrix of compatible consumer and provider versions.
 
 ### Breaking Change Detection
 When a provider change breaks a consumer contract, the Broker shows exactly which consumer is affected, which interaction failed, and the exact response diff. The developer fixes the issue by making the change backward compatible (add new endpoint instead of modifying existing, add optional fields) or coordinating a multi-service deployment.
@@ -83,8 +83,8 @@ Consumer CI: test → publish pact with branch + version. Provider CI: fetch pen
 ### Spring Cloud Contract Alternative
 Spring Cloud Contract provides Groovy-based contract definitions for JVM projects. Contracts are defined as Groovy DSL files alongside the provider code. The provider generates a test stub from the contract. Consumer-side tests use the WireMock stub generated from the contract. Contracts are stored in a Git repository or Artifactory instead of a Pact Broker.
 
-### WebSphere MQ Contract Testing
-For messaging contracts, Pact supports message pacts. A message pact defines the expected message payload (key-value pairs or serialized objects) that the consumer expects from a message queue. The provider verification starts the message producer and checks that the produced message matches the expected format and content. Pact Broker stores message pacts alongside HTTP pacts.
+### Message (Async) Contract Testing
+For messaging contracts (Kafka, SQS, RabbitMQ, IBM MQ), Pact supports message pacts. A message pact defines the expected message payload (key-value pairs or serialized objects) that the consumer expects from a message queue. The provider verification starts the message producer and checks that the produced message matches the expected format and content. Pact Broker stores message pacts alongside HTTP pacts.
 
 ## Workflow
 
@@ -325,7 +325,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm ci
       - name: Consumer contract tests
-        run: npx jest --testPathPattern="\.pact\.test\.ts$"
+        run: npx jest --testPathPatterns="\.pact\.test\.ts$"
       - name: Pact Publish
         run: |
           npx pact-broker publish ./pacts \
@@ -350,7 +350,7 @@ jobs:
       - name: Start provider
         run: npm start & npx wait-on http://localhost:3001
       - name: Run provider verification (verifier fetches pacts via consumer version selectors and publishes results)
-        run: npx jest --testPathPattern="verification"
+        run: npx jest --testPathPatterns="verification"
         env:
           PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
           PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
@@ -359,7 +359,12 @@ jobs:
           PACT_PUBLISH_RESULTS: "true"   # read by the verifier config: publishVerificationResult
       - name: Can I deploy?
         run: |
-          npx pact-broker can-i-deploy             --pacticipant payment-service             --version ${{ github.sha }}             --to-environment production             --broker-base-url ${{ secrets.PACT_BROKER_URL }}             --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
+          npx pact-broker can-i-deploy \
+            --pacticipant payment-service \
+            --version ${{ github.sha }} \
+            --to-environment production \
+            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
+            --broker-token ${{ secrets.PACT_BROKER_TOKEN }}
       # After deploying: `pact-broker record-deployment --pacticipant payment-service --version $SHA --environment production`
 ```
 
@@ -406,8 +411,8 @@ When a provider verification fails, the affected consumer team must be notified 
 - Contracts are published on every consumer CI run
 - Provider verifies ALL consumer contracts before deployment
 - can-i-deploy gates all deployments — no bypass
-- Contract versions are tagged by environment (dev, staging, prod)
-- Never delete a contract — mark as deprecated
+- Record deployments per environment (`record-deployment` / `record-release`); tags are legacy
+- Retire contracts by removing the consumer interaction and letting the broker's matrix show it is no longer required
 - Webhook on verification failure notifies affected teams
 - Pact contract = executable documentation
 - Providers verify contracts before deploying to staging
@@ -424,6 +429,22 @@ When a provider verification fails, the affected consumer team must be notified 
   - references/pact-patterns.md — Pact Patterns
   - references/pact-setup.md — Pact Setup
   - references/provider-verification.md — Provider Verification
+
+Merged-in decision rules: use consumer-driven Pact when consumer and provider are owned by different teams or one provider has several consumers; use provider-driven (OpenAPI + Specmatic, Spring Cloud Contract) when the provider owns the contract; use PactFlow bi-directional contracts to compare a consumer pact with a provider OpenAPI spec without provider-side Pact tests. Pact Broker tokens are CI secrets, and provider-state endpoints must exist only in test builds.
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-backend-contract-testing.md` — Backend Contract Testing (merged from `backend/universal/contract-testing`)
+- `references/cdc-workflow.md` — Consumer-Driven Contract Workflow
+- `references/contract-testing-advanced-2.md` — Contract Testing Advanced Patterns
+- `references/contract-testing-ci.md` — Contract Testing CI Pipeline
+- `references/contract-testing-fundamentals-2.md` — Contract Testing Fundamentals
+- `references/contract-testing-tools.md` — Contract Testing Tools
+- `references/contract-testing-workflow.md` — Contract Testing Workflow
+- `references/pact-setup-2.md` — Pact Contract Testing Setup
+- `references/provider-verification-deep.md` — Provider Verification Deep Dive
+
 ## Handoff
 `quality-e2e-testing` for E2E tests that complement contract tests.
 `devops-observability` for monitoring contract verification in CI/CD.

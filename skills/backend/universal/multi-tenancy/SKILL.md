@@ -335,12 +335,12 @@ class TenantAwareWorker {
 - Backups must be restorable per tenant for enterprise plans.
 - Log all cross-tenant access attempts as security events.
 - Tenant context must be validated at every service boundary.
-- Never use shared database sequences across tenants (use UUIDs or per-tenant sequences).
+- Do not expose shared sequential IDs across tenants (they leak volume); use UUIDv7/ULID or a separate public ID.
 - Connection pool limits per tenant: implement max connections per tenant.
 - Rate limiting must be per-tenant, not global — one noisy tenant affects others.
 - Feature flags should support per-tenant rollout before global rollout.
 - Monitor tenant-level query performance — a slow tenant is a canary for issues.
-- Use RLS as defense-in-depth, not as primary isolation mechanism.
+- Scope every query in the application AND enforce Row-Level Security in the database; each layer catches the other's mistakes.
 
 ## References
   - references/data-partitioning.md — Data Partitioning at Scale Reference
@@ -351,6 +351,18 @@ class TenantAwareWorker {
   - references/multi-tenancy-tenant-lifecycle.md — Multi-Tenancy Tenant Lifecycle
   - references/tenant-provisioning.md — Tenant Provisioning
   - references/tenant-routing.md — Tenant Routing Reference
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-enterprise-multi-tenant.md` — Multi-Tenant Architecture Agent (merged from `enterprise/multi-tenant`)
+- `references/multi-tenant-advanced.md` — Advanced Multi-Tenancy: Noisy Neighbors, Quotas, Cells, Tenant Migration and Cost Attribution
+- `references/multi-tenant-architecture.md` — Multi-Tenant Architecture Patterns
+- `references/multi-tenant-fundamentals.md` — Multi-Tenant Fundamentals: Tenancy Models and Tenant Context
+- `references/tenant-isolation.md` — Tenant Isolation Models
+- `references/tenant-lifecycle.md` — Tenant Lifecycle Management
+- `references/tenant-provisioning-2.md` — Tenant Provisioning
+
 ## Handoff
 No artifact produced unless requested.
 Next skill: bff-pattern — create tenant-specific BFFs for different client types.

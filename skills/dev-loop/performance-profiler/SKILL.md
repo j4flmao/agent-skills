@@ -347,6 +347,12 @@ optimizations:
    - references/profiling-tools.md — Profiling Tools
    - references/performance-profiler-fundamentals.md — Performance Profiler Fundamentals
 
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/bottleneck-analysis-2.md` — Bottleneck Analysis
+- `references/profiling-tools-2.md` — Profiling Tools
+
 ## Implementation Patterns
 
 ### Performance Profiler CLI

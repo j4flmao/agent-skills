@@ -53,14 +53,18 @@ src/
 
 ## FastAPI App
 ```python
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from src.api.routes import orders
-from src.infrastructure.persistence.database import init_db
+from src.infrastructure.persistence.database import dispose_db, init_db
 
-app = FastAPI(title="Order Service", version="1.0.0")
-app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
-
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     await init_db()
+    yield
+    await dispose_db()
+
+app = FastAPI(title="Order Service", version="1.0.0", lifespan=lifespan)
+app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
 ```

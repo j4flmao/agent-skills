@@ -77,8 +77,9 @@ class OtpAuth {
       throw new Error(`Please wait ${this.RESEND_COOLDOWN}s before requesting a new code`);
     }
 
+    // CSPRNG only; never Math.random for codes
     const otp = Array.from({ length: this.OTP_LENGTH }, () =>
-      Math.floor(Math.random() * 10)
+      crypto.randomInt(0, 10)
     ).join('');
 
     const hashedOtp = await bcrypt.hash(otp, 10);

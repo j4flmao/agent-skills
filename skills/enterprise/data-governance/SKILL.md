@@ -559,4 +559,4 @@ Trying to capture lineage for every column in every table. Teams burn out mainta
   - references/data-contracts.md -- Data Contracts and Sharing Agreements
 
 ## Handoff
-For compliance requirements on data handling, hand off to `enterprise-compliance-audit`. For multi-tenant data isolation, hand off to `enterprise-multi-tenant`.
+For compliance requirements on data handling, hand off to `enterprise-compliance-audit`. For multi-tenant data isolation, hand off to `backend-multi-tenancy`.

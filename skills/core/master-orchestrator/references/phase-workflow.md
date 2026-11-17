@@ -5,7 +5,7 @@
 | Phase | Name | Skills | Purpose |
 |-------|------|--------|---------|
 | Phase 0 | Init & Define | project-init, create-brief, create-prd, create-story | Define what to build |
-| Phase 1 | Architect | create-adr, create-tech-spec, {stack}-architecture | Design architecture |
+| Phase 1 | Architect | create-tech-spec (includes ADRs), {stack}-architecture | Design architecture |
 | Phase 2 | API Design | backend-api-design, api-response, grpc-patterns | Define contracts |
 | Phase 3 | Implement | {stack}-patterns, frontend-*, mobile-* | Write code |
 | Phase 4 | Validate | testing, debugging, performance, code-review | Verify correctness |

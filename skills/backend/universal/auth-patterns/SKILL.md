@@ -471,7 +471,7 @@ Cache-Control: no-store  (never cache auth responses)
 - Every request is validated server-side. Client is never trusted for identity.
 - For browser apps: use httpOnly, Secure, SameSite=Strict cookies for refresh tokens.
 - Log every auth failure with: timestamp, user ID, IP address, failure reason.
-- Brute force protection on login is mandatory. Account lockout after 5 failures.
+- Brute force protection on login is mandatory: per-account and per-IP throttling with increasing delays (hard lockout lets attackers lock users out; NIST SP 800-63B caps consecutive failures at 100 before other controls must apply).
 - Refresh tokens are single-use with rotation. Token reuse detection invalidates all.
 - Auth middleware belongs in Infrastructure layer.
 - Secrets are always from environment variables or secrets manager.

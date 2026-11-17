@@ -1,10 +1,14 @@
 ---
 name: ptx-assembly
 description: >
-  Use this skill when the user says 'ptx', 'inline ptx', 'asm volatile', 'nvcc -ptx', 'ptxas', 'state space', 'ld.global', 'bar.sync', 'cp.async', 'mma.sync', 'register spill'. Reads and writes NVIDIA PTX (the virtual ISA): generating and inspecting PTX, inline assembly in CUDA C++, state spaces, predication, barriers, async copies and register-pressure diagnosis via ptxas. Do NOT use for: final machine code and stall analysis (sass-machine-code), high-level kernel design (cuda-programming), Triton (triton-kernels).
+  Use when the user asks about PTX, inline asm volatile in CUDA, nvcc -ptx, ptxas -v register spills, state
+  spaces, cp.async, mma.sync or bar.sync. Produces explained PTX listings or inline-asm snippets with
+  constraints and SASS verification steps. Not for native machine code and stall analysis (use
+  sass-machine-code) or kernel design (use cuda-programming).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [hardware-acceleration, ptx, cuda, nvidia, assembly, gpu]
 ---
 

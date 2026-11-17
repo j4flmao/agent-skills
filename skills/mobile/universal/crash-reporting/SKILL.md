@@ -1,7 +1,11 @@
 ---
 name: mobile-crash-reporting
 description: >
-  Use this skill when the user says 'crash report', 'crashlytics', 'sentry', 'symbolication', 'dsym', 'breadcrumb', 'non-fatal', 'user context', 'error tracking'. This skill enforces proper crash reporting patterns: SDK setup, symbolication, breadcrumbs, non-fatal error capture, user context, and release health monitoring. Applies to iOS, Android, Flutter, and React Native.
+  Use when the user asks about Crashlytics, Sentry for mobile, dSYM upload,
+  symbolication, ProGuard/R8 mapping files, breadcrumbs, non-fatal errors or
+  crash-free users. Produces crash SDK setup, symbol upload in CI and release
+  health checks. Not for general app performance profiling (use
+  mobile-performance).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

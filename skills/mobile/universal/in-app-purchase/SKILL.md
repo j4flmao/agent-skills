@@ -1,11 +1,11 @@
 ---
 name: mobile-in-app-purchase
 description: >
-  Use this skill when the user says 'in-app purchase', 'IAP', 'subscription',
-  'consumable', 'StoreKit', 'Play Billing', 'receipt validation', 'restore
-  purchase'. This skill enforces proper purchase flow patterns: product
-  configuration, purchase flow, receipt validation, subscription management,
-  and restore handling. Applies to iOS, Android, Flutter, and React Native.
+  Use when the user asks about in-app purchases, subscriptions, StoreKit 2,
+  Google Play Billing, RevenueCat, consumables, restore purchases or server-side
+  receipt and purchase-token validation. Produces purchase flows, entitlement
+  checks and server verification. Not for web payments (use
+  ecommerce-payment-processing).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

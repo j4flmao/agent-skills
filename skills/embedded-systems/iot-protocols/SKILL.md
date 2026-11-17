@@ -1,7 +1,11 @@
 ---
 name: iot-protocols
 description: >
-  Use this skill when the user says 'MQTT', 'CoAP', 'LwM2M', 'IoT protocol', 'QoS 1', 'retained message', 'last will', 'MQTT 5', 'device telemetry', 'BLE GATT', 'LoRaWAN', 'Matter', 'Thread', 'device provisioning'. Chooses and implements device-to-cloud and device-to-device protocols: MQTT 3.1.1/5 topic and QoS design, CoAP for constrained UDP networks, LwM2M device management, radio/link choices, security (TLS/DTLS, certificates) and offline behaviour. Do NOT use for: cloud backend stream processing (use data/streaming), general web APIs (use backend/universal/api-design), firmware driver code (use c-cpp-patterns).
+  Use when the user asks about MQTT 5, QoS, retained messages, last will, CoAP,
+  LwM2M, BLE GATT, LoRaWAN, Matter, Thread or device provisioning. Produces
+  device-to-cloud protocol choice, topic design and TLS/DTLS security. Not for
+  cloud stream processing (use data-streaming) or firmware drivers (use
+  c-cpp-patterns).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

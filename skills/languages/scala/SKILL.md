@@ -1,7 +1,11 @@
 ---
 name: lang-scala
 description: >
-  Use this skill when the user says 'Scala', 'Scala 3', 'sbt', 'scala-cli', 'given/using', 'implicits', 'type classes', 'opaque types', 'ADT enum', 'Cats Effect', 'ZIO', 'Pekko', 'Akka', 'Spark Scala', 'for-comprehension', 'munit'. Writes and reviews idiomatic Scala 3 (and Scala 2.13 where required): ADTs with enums, type classes with givens, extension methods, opaque types, effect systems (Cats Effect, ZIO), actor toolkits, Spark constraints, builds and testing. Do NOT use for: Play framework service architecture (use backend/scala/play), Spark job tuning (use data/distributed-compute), Java-only code (use java).
+  Use when the user asks about Scala 3, sbt, scala-cli, given/using, implicits,
+  type classes, opaque types, enums as ADTs, Cats Effect, ZIO, Pekko or
+  for-comprehensions. Produces idiomatic Scala 3 code, builds and tests. Not for
+  Play framework services (use scala-play) or Spark job tuning (use
+  data-distributed-compute).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

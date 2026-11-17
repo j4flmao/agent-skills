@@ -1,10 +1,14 @@
 ---
 name: ai-agent-memory-systems
 description: >
-  Use this skill when the user says 'agent memory', 'long-term memory', 'conversation memory', 'remember user preferences', 'context window full', 'summarize history', 'episodic memory', 'semantic memory'. Designs what an agent keeps in its context window, what it stores externally, how it writes and retrieves memories, and how memories expire. Do NOT use for: document RAG pipelines (ai/llm-engineering/rag-architecture), vector DB operations (data or ai vector-database skills), or the agent loop itself (ai/ai-agents/core-architectures).
+  Use when the user asks about agent memory, long-term memory across sessions, remembering user preferences,
+  context window full, conversation summarization, episodic or semantic memory. Produces memory tiers, a store
+  schema and write/retrieve/expiry policies with per-user isolation. Not for document RAG (use
+  llm-rag-retrieval-internals) or vector DB operations (use data-vector-databases).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, agents, memory, context-window, retrieval, summarization]
 ---
 
@@ -162,3 +166,9 @@ Additional reference material for this skill, stored outside its own `references
 - `../../../harness-engineering/context-engineering/references/memory-retrieval-architectures.md` — Memory Retrieval Architectures
 - `../../../harness-engineering/context-engineering/references/priority-scoring-algorithms.md` — Priority Scoring Algorithms
 - `../../../harness-engineering/context-engineering/references/prompt-token-optimization.md` — Prompt Token Optimization
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/context-summarization.md` — Context Summarization & Compression
+- `references/semantic-memory.md` — Semantic Memory (Long-Term Continuity)

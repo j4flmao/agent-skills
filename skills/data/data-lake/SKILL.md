@@ -464,6 +464,11 @@ maintenance_jobs:
 ## References
 Coming soon.
 
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-data-lake-architecture.md` — Data Lake Architecture (merged from `data/data-engineering/data-lake-architecture`)
+
 ## Architecture Decision Trees
 
 ```

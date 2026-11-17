@@ -65,26 +65,27 @@ resource "digitalocean_droplet_snapshot" "web" {
 }
 ```
 
-## Floating IPs
+## Reserved IPs (formerly Floating IPs)
+DigitalOcean renamed Floating IPs to Reserved IPs; the Terraform provider uses `digitalocean_reserved_ip`.
 
 ```hcl
-resource "digitalocean_floating_ip" "web" {
+resource "digitalocean_reserved_ip" "web" {
   region = "nyc3"
   droplet_id = digitalocean_droplet.web[0].id
 }
 
-# Assign floating IP to another droplet on failover
-resource "digitalocean_floating_ip_assignment" "failover" {
-  ip_address  = digitalocean_floating_ip.web.ip_address
+# Assign the reserved IP to another droplet on failover
+resource "digitalocean_reserved_ip_assignment" "failover" {
+  ip_address  = digitalocean_reserved_ip.web.ip_address
   droplet_id  = digitalocean_droplet.web[1].id
 }
 
-# Floating IP with DNS
+# Reserved IP with DNS
 resource "digitalocean_record" "www" {
   domain = "example.com"
   type   = "A"
   name   = "www"
-  value  = digitalocean_floating_ip.web.ip_address
+  value  = digitalocean_reserved_ip.web.ip_address
 }
 ```
 
@@ -311,7 +312,7 @@ doctl vpc peering create --name app-to-db \
 - Use Cloud Firewall as the primary network policy layer
 - Enable backups on all production Droplets
 - Use monitoring (built-in) and ship metrics to external systems
-- Use Floating IPs for zero-downtime failover (not DNS-based)
+- Use Reserved IPs for zero-downtime failover (not DNS-based)
 - Use Load Balancer health checks with custom path
 - Enable sticky sessions only when needed (stateless is better)
 - Use Let's Encrypt certificates via DO Load Balancer for TLS termination

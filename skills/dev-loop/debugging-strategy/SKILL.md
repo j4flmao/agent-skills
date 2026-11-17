@@ -105,7 +105,7 @@ Create a minimal, deterministic reproduction:
 
 ```yaml
 reproduction_steps:
-  environment: "Node.js 20, macOS 14.5, PostgreSQL 16"
+  environment: "Node.js 24, macOS 15, PostgreSQL 16"
   prerequisites:
     - "npm install"
     - "docker compose up -d db"
@@ -313,6 +313,13 @@ techniques:
   - references/debugging-strategy-fundamentals.md — Debugging Strategy Fundamentals
   - references/toolchain.md — Debugging Toolchain
   - references/debugging-workflow.md — Debugging Workflow
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/debugging-techniques.md` — Debugging Techniques
+- `references/tool-specific.md` — Tool-Specific Debugging
+
 ## Handoff
 Hand off to `dev-loop-performance-profiler` if the bug is performance-related. Hand off to `dev-loop-code-review` for security-related bugs.
 
@@ -470,7 +477,7 @@ cat > /tmp/bisect.sh << 'SCRIPT'
 npm run build > /dev/null 2>&1
 
 # Run the specific test that catches the bug
-npx jest --testPathPattern="tests/specific-bug-test" 2>&1 | grep -q "FAIL"
+npx jest --testPathPatterns="tests/specific-bug-test" 2>&1 | grep -q "FAIL"
 
 # Exit 0 if good (test passes), 1 if bad (test fails)
 # Git bisect expects 0 for good, 1 for bad (or 125 for skip)

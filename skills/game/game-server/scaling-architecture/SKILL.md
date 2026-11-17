@@ -1,7 +1,11 @@
 ---
 name: scaling-architecture
 description: >
-  Use this skill when the user says 'game server scaling', 'sharding', 'zone servers', 'agones', 'game server autoscaling', 'game backend capacity'. Designs game-server fleets: zones/shards, stateless vs stateful services, persistence, regions/edge, observability and capacity/autoscaling. Do NOT use for: single-server tick loop (use authoritative-server), generic web autoscaling (use devops/kubernetes-autoscaling).
+  Use when the user asks about game server scaling, shards, zone servers,
+  Agones, game server fleet autoscaling or game backend capacity. Produces
+  fleet, persistence and region design with capacity math. Not for a single
+  server tick loop (use authoritative-server) or generic web autoscaling (use
+  devops-kubernetes-autoscaling).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -2,7 +2,7 @@
 
 ## Reactive vs Imperative
 
-| Aspect | Imperative (JAX-RS) | Reactive (RESTEasy Reactive) |
+| Aspect | Imperative (JAX-RS) | Reactive (Quarkus REST) |
 |--------|--------------------|------------------------------|
 | Thread model | Blocking per request | Event loop, non-blocking |
 | Concurrency | Thread pool (limited) | Event loop (high) |
@@ -10,7 +10,7 @@
 | Database access | Hibernate (blocking) | Hibernate Reactive, pg-client |
 | Best for | Standard CRUD | Streaming, high throughput |
 
-## RESTEasy Reactive Endpoints
+## Quarkus REST Endpoints
 
 ```java
 import io.smallrye.mutiny.Uni;

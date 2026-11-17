@@ -47,19 +47,19 @@ CMD ["deno", "run", "--allow-net", "--allow-read", "--allow-env", "src/main.ts"]
 ### URL Imports
 
 ```typescript
-// Direct URL import
-import { serve } from 'https://deno.land/std@0.220.0/http/server.ts';
+// HTTP server: built in, no import needed (std/http `serve` was removed)
+Deno.serve({ port: 8000 }, (_req) => new Response('ok'));
 
-// Version pinning — always pin version
-import { join } from 'https://deno.land/std@0.220.0/path/mod.ts';  // OK
-import { join } from 'https://deno.land/std/path/mod.ts';           // Bad — no version
+// Standard library: JSR, pinned (deno.land/std URLs are legacy)
+import { join } from 'jsr:@std/path@^1.0.0';      // OK
+import { join as j2 } from 'https://deno.land/std/path/mod.ts';  // Bad: legacy, unpinned
 
-// npm specifiers (Deno 1.33+)
-import express from 'npm:express@4.18';
-import { z } from 'npm:zod@3.22';
+// npm specifiers
+import express from 'npm:express@5';
+import { z } from 'npm:zod@^3.23';
 
 // JSR specifiers
-import { assert } from 'jsr:@std/assert@1.0';
+import { assert } from 'jsr:@std/assert@^1.0.0';
 ```
 
 ### Import Maps (deno.json)
@@ -67,9 +67,8 @@ import { assert } from 'jsr:@std/assert@1.0';
 ```json
 {
   "imports": {
-    "std/": "https://deno.land/std@0.220.0/",
-    "oak/": "https://deno.land/x/oak@v12.6.2/",
-    "oak-middleware/": "https://deno.land/x/oak_middleware@v1.0.0/",
+    "@std/path": "jsr:@std/path@^1.0.0",
+    "@oak/oak": "jsr:@oak/oak@^17.1.0",
     "db/": "./src/db/"
   }
 }
@@ -77,7 +76,7 @@ import { assert } from 'jsr:@std/assert@1.0';
 
 ```typescript
 // Usage — clean imports
-import { Application, Router } from 'oak/mod.ts';
+import { Application, Router } from '@oak/oak';
 import { serve } from 'std/http/server.ts';
 import { pool } from 'db/pool.ts';
 ```

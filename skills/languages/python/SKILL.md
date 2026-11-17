@@ -1,7 +1,11 @@
 ---
 name: python
 description: >
-  Use this skill when the user says 'python', 'uv', 'pyproject.toml', 'packaging', 'type hints', 'mypy', 'pytest', 'asyncio', 'virtual environment', 'python performance'. Covers the Python toolchain (uv-first), typing, async, testing and production deployment. Do NOT use for: FastAPI/Django/Flask framework architecture (use backend/python/*), ML training code (use ml/*).
+  Use when the user asks about Python with uv, pyproject.toml, packaging, type
+  hints and mypy, pytest, asyncio, virtual environments or Python performance.
+  Produces a uv-managed project, typed code and tests. Not for FastAPI or Django
+  architecture (use python-fastapi-architecture or python-django-architecture)
+  or ML training (use ml-deep-learning).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -137,8 +141,9 @@ poetry publish
 
 ### uv (Fastest, Rust-based)
 ```bash
-# Install
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Install (prefer a package manager; if you use the installer script,
+# download it, review it, then run it)
+brew install uv            # or: winget install --id=astral-sh.uv -e / pipx install uv
 
 # Commands
 uv init myproject

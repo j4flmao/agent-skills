@@ -69,7 +69,8 @@ Store API keys in a secret manager; rotate them; prefer trusted profiles for wor
 ## CLI
 
 ```bash
-curl -fsSL https://clis.cloud.ibm.com/install/linux | sh     # see docs for macOS/Windows installers
+curl -fsSLo ibmcloud-install.sh https://clis.cloud.ibm.com/install/linux   # review before running;
+sh ibmcloud-install.sh                                                     # see docs for macOS/Windows installers
 ibmcloud plugin repo-plugins                                  # list available plugins
 ibmcloud plugin install vpc-infrastructure container-service cloud-object-storage cloud-databases code-engine
 ibmcloud resource service-instances --type service_instance

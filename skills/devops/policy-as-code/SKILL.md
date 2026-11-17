@@ -1,14 +1,7 @@
 ---
 name: devops-policy-as-code
 description: >
-  Use when the user asks about policy as code, OPA, Rego, Kyverno, admission
-  controllers, policy enforcement, compliance as code, guardrails, or
-  policy-based governance in Kubernetes/cloud. Covers: OPA/Rego policy writing,
-  Gatekeeper constraint templates, Kyverno cluster policies, policy testing
-  (conftest, opa test), CI/CD policy integration, mutation policies, policy
-  reporting, and compliance automation.
-  Do NOT use for: general compliance (enterprise-compliance-audit), security
-  scanning (security-sast-dast), or RBAC design.
+  Use when the user asks to enforce admission policies with OPA Gatekeeper, Rego, Kyverno, ValidatingAdmissionPolicy (CEL), conftest or opa test, mutation policies, or compliance as code in CI. Produces tested policies and CI enforcement. Not for compliance programs (use enterprise-compliance-audit) or RBAC/ABAC design (use abac-access-control).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

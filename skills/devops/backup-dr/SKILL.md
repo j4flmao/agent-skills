@@ -1,17 +1,7 @@
 ---
 name: backup-dr
 description: >
-  Use this skill when the user says 'backup', 'disaster recovery', 'DR',
-  'RPO', 'RTO', 'backup strategy', '3-2-1 rule', 'business continuity',
-  'disaster recovery plan', 'failover', 'failback', 'replication',
-  'snapshot', 'backup automation', 'backup validation', 'offsite backup',
-  'immutable backup', 'ransomware protection'.
-  Covers: backup strategies (3-2-1 rule), disaster recovery planning,
-  RPO/RTO definition, backup automation, replication, failover testing,
-  cloud DR (pilot light, warm standby, multi-region), backup validation,
-  compliance (SOC 2, HIPAA, PCI), ransomware recovery.
-  Do NOT use for: database-specific replication (use database-migration),
-  storage architecture design (use storage-infrastructure).
+  Use when the user asks about backup strategy, the 3-2-1 rule, RPO and RTO, disaster recovery plans, pilot light or warm standby, immutable backups, ransomware recovery, or restore testing. Produces a backup and DR plan with tested restore procedures. Not for business continuity programs (use enterprise-business-continuity) or schema migrations (use database-migration).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

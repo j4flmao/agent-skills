@@ -155,7 +155,7 @@ frame_rate_monitoring:
       - "Flutter DevTools → Performance tab"
       - "Flutter Performance Overlay (showPerformanceOverlay)"
     react_native:
-      - "Flipper → Performance plugin"
+      - "React Native DevTools → Performance panel (Flipper is no longer supported)"
       - "react-native-performance-logger"
       - "react-native-fps (custom FPS display)"
       

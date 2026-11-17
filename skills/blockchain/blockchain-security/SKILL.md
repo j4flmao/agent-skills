@@ -539,3 +539,10 @@ contract TimelockController {
 
 ## Phase
 blockchain → blockchain-security
+
+## References
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-smart-contract-security.md` — Smart Contract Security (merged from `blockchain/smart-contract-security`)

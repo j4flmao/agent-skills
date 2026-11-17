@@ -33,7 +33,7 @@ Add when the project grows: production concerns, scaling and team workflows.
 |-------|------|----------------|
 | [`nestjs-architecture`](../../skills/backend/nestjs/architecture/SKILL.md) | `backend/nestjs/architecture` | Structure NestJS applications with module-based architecture — domain modules, shared modules, dynamic modules, monorepo projects, and provider… |
 | [`nestjs-patterns`](../../skills/backend/nestjs/patterns/SKILL.md) | `backend/nestjs/patterns` | Implement NestJS-specific patterns — CQRS, guards/interceptors, event sourcing, custom decorators, microservices transport, and advanced provider… |
-| [`nodejs-prisma`](../../skills/backend/nodejs/prisma/SKILL.md) | `backend/nodejs/prisma` | Design database schemas, write performant queries, manage migrations, implement middleware, and optimize Prisma Client for production. |
+| [`nodejs-prisma`](../../skills/backend/nodejs/prisma/SKILL.md) | `backend/nodejs/prisma` | Design database schemas, write performant queries, manage migrations, implement client extensions, and optimize Prisma Client for production. |
 | [`nodejs-drizzle`](../../skills/backend/nodejs/drizzle/SKILL.md) | `backend/nodejs/drizzle` | Design database schemas, write SQL-like queries, manage migrations, define relations, and optimize Drizzle ORM for production and edge deployment. |
 | [`backend-background-jobs`](../../skills/backend/universal/background-jobs/SKILL.md) | `backend/universal/background-jobs` | Design reliable background job processing with queue topology, retry, concurrency, and monitoring. |
 | [`backend-caching`](../../skills/backend/universal/caching/SKILL.md) | `backend/universal/caching` | Design consistent, production-grade caching layers. |
@@ -75,9 +75,9 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`fullstack-nodejs-react`](../bundles.md#fullstack-nodejs-react) | 223 | Full stack: Node.js backend + React frontend |
-| [`fullstack-nestjs-react`](../bundles.md#fullstack-nestjs-react) | 225 | Full stack: NestJS backend + React frontend |
-| [`backend-stacks`](../bundles.md#backend-stacks) | 83 | Backend frameworks and runtimes: Node (Express/Fastify/Hono/Nest), Bun, Deno, Go, Rust, Python, Java/Kotlin, .NET, PHP, Ruby, Elixir, Swift, Scala |
+| [`fullstack-nodejs-react`](../bundles.md#fullstack-nodejs-react) | 221 | Full stack: Node.js backend + React frontend |
+| [`fullstack-nestjs-react`](../bundles.md#fullstack-nestjs-react) | 223 | Full stack: NestJS backend + React frontend |
+| [`backend-stacks`](../bundles.md#backend-stacks) | 82 | Backend frameworks and runtimes: Node (Express/Fastify/Hono/Nest), Bun, Deno, Go, Rust, Python, Java/Kotlin, .NET, PHP, Ruby, Elixir, Swift, Scala |
 
 ## Combine with
 

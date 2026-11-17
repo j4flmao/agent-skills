@@ -1,7 +1,7 @@
 ---
 name: cloud-native-security-defensive
 description: >
-  Use this skill when the user says 'harden aws account', 'detect cloud intrusion', 'cloudtrail detection', 'service control policy', 'scp guardrails', 'secure azure tenant', 'cloud posture', 'guardduty', 'imdsv2 enforcement', 'least privilege iam'. Hardens AWS/Azure/GCP organizations with preventive guardrails, detective telemetry, and least-privilege IAM, and writes concrete detections and policy code. Do NOT use for: attack-path explanation (cloud-native-security-offensive), CSPM product selection (security-cspm), secret storage design (vault).
+  Use when the user asks to harden an AWS account or Azure tenant, write SCP guardrails, CloudTrail or GuardDuty detections, enforce IMDSv2, apply least-privilege IAM, or improve cloud posture. Produces preventive guardrails, detections and policy code for AWS/Azure/GCP. Not for cloud attack-path analysis (use cloud-native-security-offensive) or secret storage (use vault).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

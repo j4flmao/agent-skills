@@ -58,7 +58,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`management-only`](../bundles.md#management-only) | 66 | Management: PM, BA, QA, QC, security, pentesting, alerting, team-rules |
+| [`management-only`](../bundles.md#management-only) | 65 | Management: PM, BA, QA, QC, security, pentesting, alerting, team-rules |
 
 ## Combine with
 
@@ -67,4 +67,4 @@ Bundles are installed with the same command; each one's full command is on the [
 
 ## Watch out
 
-`management/agile-scrum` duplicates `agile-scrum-kanban`; keep the Kanban one.
+`management/agile-scrum-kanban` duplicates `agile-scrum-kanban`; keep the Kanban one.

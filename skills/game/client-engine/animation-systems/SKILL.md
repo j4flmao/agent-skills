@@ -1,7 +1,11 @@
 ---
 name: animation-systems
 description: >
-  Use this skill when the user says 'animation system', 'skeletal animation', 'skinning', 'animation state machine', 'blend tree', 'root motion', 'IK', 'retargeting', 'animation compression'. Designs runtime character animation: skeleton/skinning, clip compression, state machines and blending, root motion, IK, retargeting and crowd budgets. Do NOT use for: authoring animation in DCC tools, UI/motion design (use design/motion-design), physics ragdoll solvers (use physics-engine).
+  Use when the user asks about a game animation system, skeletal animation,
+  skinning, animation state machines, blend trees, root motion, IK, retargeting
+  or animation compression. Produces runtime animation architecture with CPU
+  budgets. Not for UI motion design (use design-motion-design) or ragdoll
+  physics (use physics-engine).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

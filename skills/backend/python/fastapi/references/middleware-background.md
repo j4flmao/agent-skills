@@ -307,7 +307,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 ```
 
-### Startup Event (Legacy)
+### Startup Event (Legacy, deprecated: do not use in new code; use `lifespan` above)
 ```python
 @app.on_event("startup")
 async def startup():

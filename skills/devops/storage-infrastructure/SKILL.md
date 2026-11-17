@@ -1,15 +1,7 @@
 ---
 name: storage-infrastructure
 description: >
-  Use this skill when the user says 'SAN', 'NAS', 'NVMe-oF', 'iSCSI',
-  'Fibre Channel', 'Ceph', 'MinIO', 'LUN', 'ZFS', 'RAID', 'JBOD',
-  'SSD endurance', 'write amplification', 'thin provisioning',
-  'deduplication', 'storage tiering', 'software-defined storage',
-  'block vs file vs object storage', 'CSI driver', 'StorageClass',
-  'PersistentVolume', 'storage IOPS', 'fio benchmark', 'iostat'.
-  Covers: Storage architecture, protocols, RAID levels, NVMe,
-  software-defined storage with Ceph, CSI drivers for K8s,
-  backup strategies, storage performance benchmarking.
+  Use when the user asks about SAN, NAS, iSCSI, Fibre Channel, NVMe-oF, Ceph, MinIO, ZFS, RAID levels, block vs file vs object storage, SSD endurance, thin provisioning, or fio benchmarks. Produces storage architecture and benchmarking plans. Not for Longhorn on Kubernetes (use longhorn) or backup policy (use backup-dr).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -266,7 +258,7 @@ spec:
     spec:
       containers:
       - name: minio
-        image: minio/minio:latest
+        image: minio/minio:<pinned-tag>
         args:
         - server
         - --console-address=:9001

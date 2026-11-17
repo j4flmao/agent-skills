@@ -1,10 +1,14 @@
 ---
 name: prompt-few-shot
 description: >
-  Use this skill when the user says 'few-shot', 'in-context examples', 'add examples to the prompt', 'example selection', 'demonstrations', 'one-shot', 'model ignores the format', 'dynamic few-shot'. Designs in-context demonstrations: how many, which ones (static vs retrieved), ordering, formatting, label balance, and how they interact with context length and prompt caching. Do NOT use for: reasoning elicitation (prompt-engineering/chain-of-thought), fine-tuning on examples (ai/llm-finetuning), or retrieval of knowledge documents (prompt-engineering/rag-design).
+  Use when the user asks about few-shot or one-shot prompts, writing few-shot examples for a classification
+  prompt, in-context examples, dynamic example selection or a model that ignores the output format. Produces a
+  delimited example block, selection strategy and a zero-shot vs k-shot eval. Not for reasoning prompts (use
+  prompt-chain-of-thought) or fine-tuning (use llm-finetuning).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [prompt-engineering, few-shot, in-context-learning, demonstrations, prompt-caching]
 ---
 

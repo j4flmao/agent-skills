@@ -70,8 +70,8 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`fullstack-golang-vue`](../bundles.md#fullstack-golang-vue) | 218 | Full stack: Go backend + Vue frontend |
-| [`backend-stacks`](../bundles.md#backend-stacks) | 83 | Backend frameworks and runtimes: Node (Express/Fastify/Hono/Nest), Bun, Deno, Go, Rust, Python, Java/Kotlin, .NET, PHP, Ruby, Elixir, Swift, Scala |
+| [`fullstack-golang-vue`](../bundles.md#fullstack-golang-vue) | 216 | Full stack: Go backend + Vue frontend |
+| [`backend-stacks`](../bundles.md#backend-stacks) | 82 | Backend frameworks and runtimes: Node (Express/Fastify/Hono/Nest), Bun, Deno, Go, Rust, Python, Java/Kotlin, .NET, PHP, Ruby, Elixir, Swift, Scala |
 
 ## Combine with
 

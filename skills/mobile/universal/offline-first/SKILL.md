@@ -1,12 +1,11 @@
 ---
 name: mobile-offline-first
 description: >
-  Use this skill when the user says 'offline-first', 'offline mode', 'offline
-  sync', 'local storage', 'offline cache', 'sync strategy', 'conflict
-  resolution', 'offline queue', 'mobile offline', 'local database'. Design
-  offline-capable mobile apps with local storage, sync strategies, conflict
-  resolution, and connectivity detection. Do NOT use for: web offline/PWA or
-  server-side caching.
+  Use when the user asks about offline-first mobile apps, offline mode, syncing
+  local data when the phone comes back online, an outbox queue, conflict
+  resolution or connectivity detection. Produces a local-first data layer and
+  sync protocol. Not for collaborative CRDT merging (use architecture-crdts) or
+  choosing a local database (use mobile-storage).
 compatibility:
   claude-code: true
   cursor: true

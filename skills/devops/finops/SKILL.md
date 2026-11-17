@@ -1,10 +1,7 @@
 ---
 name: devops-finops
-description: |
-  Trigger: "FinOps", "cloud cost", "cost optimization", "cloud spend",
-  "cost allocation", "reserved instance", "savings plan", "cost tagging",
-  "cloud budget", "cost governance", "FinOps framework", "cloud economics"
-  Exclusion: Not for infra provisioning -- use cloud-specific skills.
+description: >
+  Use when the user asks why the AWS bill doubled, to find cloud savings, FinOps, cost allocation and tagging, Savings Plans or reserved instances, rightsizing, budgets and cost anomaly alerts, or unit economics. Produces a cost analysis with prioritized savings. Not for enterprise cost policy (use enterprise-cost-governance) or Kubernetes autoscaling (use devops-kubernetes-autoscaling).
 version: 1.1.0
 author: j4flmao
 license: MIT
@@ -393,6 +390,35 @@ Detection: monthly RI report shows coverage dropped from 65% to 45%. Investigati
 - references/finops-governance.md -- FinOps Governance
 - references/finops-practices.md -- FinOps Practices
 - references/cost-optimization.md -- Cost Optimization
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/finops_optimization.md` — FinOps optimization reference
+- `references/merged-enterprise-finops-cloud-cost.md` — FinOps & Cloud Cost Optimization (merged from `enterprise/finops-cloud-cost`)
+- `references/merged-cloud-cost-optimization.md` — Cloud Cost Optimization (merged from `devops/cloud-cost-optimization`)
+- `references/api_reference.md` — Cloud Billing and Cost APIs Reference (AWS, Azure, GCP, FOCUS)
+- `references/architecture_patterns.md` — Cost-Aware Architecture Patterns
+- `references/cloud-cost-optimization-advanced.md` — Cloud Cost Optimization Advanced Topics
+- `references/cloud-cost-optimization-fundamentals.md` — Cloud Cost Optimization Fundamentals
+- `references/compliance_matrix.md` — FinOps Governance and Compliance Matrix
+- `references/compute-optimization.md` — Compute Cost Optimization
+- `references/configuration_templates.md` — Cost Governance Configuration Templates (Terraform)
+- `references/cost-allocation.md` — Cloud Cost Allocation
+- `references/cost-optimization-2.md` — Cloud Cost Optimization Techniques
+- `references/deployment_strategies.md` — Rolling Out Cost Optimizations Safely
+- `references/performance_tuning.md` — Price-Performance Tuning
+- `references/ref1.md` — Kubernetes Cost Allocation with OpenCost
+- `references/ref2.md` — Commitment Discounts: Savings Plans, Reservations and CUDs
+- `references/ref3.md` — Spot and Preemptible Capacity: Interruption-Tolerant Design
+- `references/ref4.md` — Idle and Orphaned Resource Cleanup and Non-Production Scheduling
+- `references/ref5.md` — Observability Cost Control: Logs, Metrics and Traces
+- `references/ref6.md` — Unit Economics, Showback and Chargeback
+- `references/ref7.md` — Cost Anomaly Detection and Alert Response
+- `references/ref8.md` — Database and Analytics Cost Optimization
+- `references/security_policies.md` — Security Policies for Cost Governance
+- `references/storage-network-optimization.md` — Storage and Network Cost Optimization
+- `references/troubleshooting_guide.md` — Troubleshooting Cloud Cost Problems
 
 ## Handoff
 Hand off to finops for cost visibility and optimization. Hand off to cloud-specific skills (aws/azure/gcp) for resource provisioning at optimized price.

@@ -323,9 +323,9 @@ DELETE FROM outbox_messages
 - Business operation and outbox insert MUST be in the same database transaction. If either fails, both roll back.
 - The message relay is a separate process. Do NOT publish events directly from the application request handler.
 - Use the outbox pattern whenever the application writes to a database AND publishes events/messages. Without it, dual-write failures cause data inconsistency.
-- CDC-based relay (Debezium) for high throughput (>1000 events/sec). Polling-based relay for moderate throughput.
+- CDC-based relay (Debezium) for high throughput or low latency; polling relay (`FOR UPDATE SKIP LOCKED`) for moderate throughput. Measure before choosing.
 - Outbox records are never deleted immediately. Archive or purge after 7 days.
-- Monitor outbox backlog as a health metric. Backlog > 1000 unprocessed messages triggers an alert.
+- Monitor outbox backlog (row count and age of the oldest unpublished row) and alert on a threshold derived from normal load.
 - Consumers always check for duplicate event processing before acting.
 - The outbox table must be in the same database as the business data (same ACID guarantees).
 - Always include correlationId in metadata for distributed tracing.

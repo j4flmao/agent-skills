@@ -9,7 +9,7 @@ Know Your Customer (KYC) and Anti-Money Laundering (AML) compliance are critical
 
 ```python
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 class DocumentType(Enum):
@@ -39,7 +39,7 @@ class VerificationDocument:
     verification_id: str = ""
     result: dict = field(default_factory=dict)
     expires_at: datetime | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 class IdentityVerificationService:
     def __init__(self, providers: dict[str, VerificationProvider]):
@@ -131,7 +131,7 @@ class WatchlistScreener:
             hits=all_hits,
             total_hits=len(all_hits),
             high_risk_hits=[h for h in all_hits if h.risk_level == "high"],
-            screened_at=datetime.utcnow()
+            screened_at=datetime.now(timezone.utc)
         )
 
     async def continuous_monitoring(self, customer_id: str):
@@ -185,7 +185,7 @@ class RiskScorer:
             total_score=normalized,
             risk_tier=risk_tier,
             factors=details,
-            calculated_at=datetime.utcnow()
+            calculated_at=datetime.now(timezone.utc)
         )
 
     def _tier_from_score(self, score: float) -> str:
@@ -346,7 +346,7 @@ class ComplianceCaseManager:
         case = self.cases.get(case_id)
         case.status = "resolved"
         case.resolution = resolution
-        case.resolved_at = datetime.utcnow()
+        case.resolved_at = datetime.now(timezone.utc)
         if resolution.action == "escalate":
             await self._escalate_to_regulator(case, resolution)
         elif resolution.action == "dismiss":
@@ -407,7 +407,7 @@ class RegulatoryReporter:
             },
             "filer": {
                 "organization": "Fintech Corp",
-                "filing_date": datetime.utcnow().isoformat()
+                "filing_date": datetime.now(timezone.utc).isoformat()
             }
         }
 ```

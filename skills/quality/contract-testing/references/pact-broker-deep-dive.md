@@ -19,7 +19,6 @@ The Pact Broker is a central repository for publishing, sharing, and versioning 
 
 ## Docker Setup
 ```yaml
-version: '3.8'
 services:
   postgres:
     image: postgres:16-alpine

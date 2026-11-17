@@ -1,15 +1,7 @@
 ---
 name: cloud-architecture
 description: >
-  Use this skill when the user says 'cloud architecture', 'Well-Architected',
-  'landing zone', 'multi-cloud', 'hybrid cloud', 'cloud design',
-  'cloud patterns', 'microservices', 'event-driven architecture',
-  'resilience patterns', 'cloud migration strategy', 'cloud governance',
-  'cloud security architecture', 'cost-aware architecture'.
-  Covers: Well-Architected Framework (AWS/Azure/GCP), landing zone design,
-  multi-cloud strategy, resilience patterns (circuit breaker, bulkhead, etc.),
-  migration patterns, governance, cloud-native architecture patterns.
-  Do NOT use for: specific cloud provider implementation (use aws/azure/gcp skills).
+  Use when the user asks about cloud architecture, the Well-Architected Framework across AWS/Azure/GCP, landing zones, multi-cloud strategy, cloud governance, or reference architectures. Produces provider-neutral architecture decisions and trade-offs. Not for provider-specific setup (use aws, devops-azure or devops-gcp) or migration waves (use cloud-migration).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

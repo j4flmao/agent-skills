@@ -1,7 +1,10 @@
 ---
 name: cocos2d-patterns
 description: >
-  Use this skill when the user says 'cocos2d-x internals', 'cocos director', 'cocos scene graph', 'cocos render queue', 'cocos memory management'. Explains Cocos2d-x internals — Director loop, scene graph, render queue and auto-batching, event dispatch, reference-counted memory — to design fast code. Do NOT use for: Cocos Creator gameplay scripting (use cocos2d), other engines.
+  Use when the user asks about Cocos2d-x internals: the Director loop, scene
+  graph, render queue and auto-batching, event dispatcher, or Ref/retain/release
+  and autorelease pools. Explains engine internals to write fast C++ game code.
+  Not for Cocos Creator gameplay scripting (use cocos2d).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

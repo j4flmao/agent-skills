@@ -1,8 +1,11 @@
 ---
 name: ios
 description: >
-  Use this skill when the user asks about iOS development, Swift, SwiftUI, UIKit,
-  iOS architecture, MVVM, Coordinator, Core Data, SwiftData, or iOS testing.
+  Use when the user asks about iOS apps, SwiftUI screens and lists, UIKit, async
+  image loading, Observation, navigation, Core Data, SwiftData or XCTest/Swift
+  Testing on iOS. Produces iOS architecture, SwiftUI/UIKit code and tests. Not
+  for Swift language features alone (use lang-swift) or macOS apps (use
+  desktop-swiftui).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -1,19 +1,7 @@
 ---
 name: hybrid-cloud
 description: >
-  Use this skill when the user says 'hybrid cloud', 'hybrid-cloud',
-  'cloud burst', 'on-prem to cloud', 'cloud repatriation', 'hybrid
-  connectivity', 'express route', 'direct connect', 'VPN', 'transit
-  gateway', 'cloud interconnect', 'multi-cloud', 'cross-cloud',
-  'data gravity', 'cloud migration', 'hybrid workload', 'hybrid
-  networking', 'hybrid storage', 'hybrid compute', 'hybrid identity',
-  'cloud agnostic'.
-  Covers: Designing hybrid architectures, connectivity patterns,
-  hybrid identity, hybrid compute orchestration, data synchronization,
-  disaster recovery across environments, repatriation planning, vendor
-  comparison.
-  Do NOT use this for: single-cloud architectures, pure on-prem
-  environments, or basic VPN setup without hybrid context.
+  Use when the user asks about hybrid cloud, on-prem to cloud connectivity, Direct Connect, ExpressRoute, Cloud Interconnect, transit gateways, cloud bursting, hybrid identity, data gravity, or cloud repatriation. Produces hybrid architectures and connectivity designs. Not for migration waves (use cloud-migration) or DC network fabric (use devops-network-infrastructure).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

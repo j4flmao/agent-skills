@@ -220,7 +220,7 @@ class SMSAnalyticsCollector:
             message.status.value, message.segments,
             message.cost, message.delivery_time_ms,
             self._extract_country(message.to_number),
-            message.delivered_at or datetime.utcnow()
+            message.delivered_at or datetime.now(timezone.utc)
         )
 
         self.metrics.increment("sms.sent", tags={

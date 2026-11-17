@@ -23,7 +23,7 @@ Install these first. They cover the everyday work of this role and rarely confli
 | [`backend-database-patterns`](../../skills/backend/universal/database-patterns/SKILL.md) | `backend/universal/database-patterns` | Design efficient, maintainable database schemas and queries. |
 | [`database-migration`](../../skills/devops/database-migration/SKILL.md) | `devops/database-migration` | Plan and execute database migrations including schema changes, cross-engine migration, zero-downtime deployments, and rollback strategies. |
 
-## Level 2 — Professional (5 skills)
+## Level 2 — Professional (4 skills)
 
 Add when the project grows: production concerns, scaling and team workflows.
 
@@ -33,7 +33,6 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`database-internals-mechanics`](../../skills/data/database-internals/SKILL.md) | `data/database-internals` | Explain why a database behaves the way it does under a workload: why random-key inserts hurt a B-tree, why an LSM store has read and space… |
 | [`architecture-postgresql-internals`](../../skills/architecture/databases/postgresql-internals/SKILL.md) | `architecture/databases/postgresql-internals` | Most PostgreSQL production issues (bloat, sudden slowdowns, replication lag, wraparound emergencies, bad plans) are direct consequences of how… |
 | [`architecture-database-scaling`](../../skills/architecture/databases/scaling-and-sharding/SKILL.md) | `architecture/databases/scaling-and-sharding` | Sharding is the most expensive scaling step: it complicates queries, transactions, schema changes, and operations forever. |
-| [`system-design-database-sharding`](../../skills/system-design/database-sharding/SKILL.md) | `system-design/database-sharding` | Sharding splits one logical dataset across independent database servers so writes and storage scale horizontally. |
 
 ## Level 3 — Specialist (5 skills)
 
@@ -57,10 +56,10 @@ Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a 
 npx skills add j4flmao/agent-skills --skill data-relational-database --skill backend-database-patterns --skill database-migration --skill security-data-security --skill security-secrets-management
 ```
 
-**Level 1 + 2 + security baseline (10 skills):**
+**Level 1 + 2 + security baseline (9 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill data-relational-database --skill backend-database-patterns --skill database-migration --skill data-nosql-database --skill database-internals-mechanics --skill architecture-postgresql-internals --skill architecture-database-scaling --skill system-design-database-sharding --skill security-data-security --skill security-secrets-management
+npx skills add j4flmao/agent-skills --skill data-relational-database --skill backend-database-patterns --skill database-migration --skill data-nosql-database --skill database-internals-mechanics --skill architecture-postgresql-internals --skill architecture-database-scaling --skill security-data-security --skill security-secrets-management
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -71,7 +70,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`data-engineering`](../bundles.md#data-engineering) | 45 | Data engineering: pipelines, orchestration, streaming/CDC, lakes and lakehouses, warehousing, modeling, quality, governance |
+| [`data-engineering`](../bundles.md#data-engineering) | 43 | Data engineering: pipelines, orchestration, streaming/CDC, lakes and lakehouses, warehousing, modeling, quality, governance |
 | [`backend-patterns`](../bundles.md#backend-patterns) | 27 | Advanced backend patterns: CQRS, Event Sourcing, Saga, Transactional Outbox + related universal skills |
 
 ## Combine with

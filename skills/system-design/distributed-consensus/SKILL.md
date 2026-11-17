@@ -1,7 +1,11 @@
 ---
 name: distributed-consensus
 description: >
-  Use this skill when the user says 'consensus', 'Raft', 'Paxos', 'leader election', 'split brain', 'quorum', 'etcd', 'ZooKeeper', 'KRaft', 'replicated log', 'linearizable', 'fencing token', 'how many nodes for fault tolerance'. Explains consensus and replication: quorums and failure tolerance, Raft (election, log replication, safety, membership changes), Paxos/Multi-Paxos and ZAB at a design level, leases and fencing, and how to use consensus systems (etcd, ZooKeeper, Consul, KRaft) correctly. Do NOT use for: application-level distributed locks API usage (use backend/universal/distributed-locking), CAP/consistency model selection for app data (use data/relational-database or architecture skills), blockchain consensus (use blockchain-core).
+  Use when the user asks about consensus, Raft leader election, Paxos, quorums,
+  split brain, etcd, ZooKeeper, KRaft, replicated logs, linearizability, fencing
+  tokens or how many nodes tolerate failures. Explains consensus and how to use
+  consensus systems safely. Not for application lock APIs (use
+  backend-distributed-locking) or blockchain consensus (use blockchain-core).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

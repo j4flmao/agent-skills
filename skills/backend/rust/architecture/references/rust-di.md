@@ -257,5 +257,5 @@ let order_service = GenericService::new(Arc::new(PostgresOrderRepository::new(po
 - Service collection with TypeId enables type-based service resolution
 - Generic services work with concrete types when polymorphism is not needed
 - Arc allows shared ownership of services across the application
-- Async traits require #[async_trait] for trait object safety
+- Rust 1.75+ supports `async fn` in traits natively; keep `#[async_trait]` only where you need `dyn Trait` (trait objects), since native async trait methods are not dyn-compatible
 - Container pattern centralizes dependency wiring in a single location

@@ -58,7 +58,7 @@ class TransactionStateMachine:
 ```python
 from dataclasses import dataclass, field
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 @dataclass
@@ -84,8 +84,8 @@ class PaymentTransaction:
     customer_id: str = ""
     merchant_id: str | None = None
     metadata: dict = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: datetime | None = None
 ```
 
@@ -122,7 +122,7 @@ class AuthorizationService:
             )
 
         tx.status = TransactionState.AUTHORIZED
-        tx.updated_at = datetime.utcnow()
+        tx.updated_at = datetime.now(timezone.utc)
 
         auth_hold = await self.ledger.hold_funds(
             account_id=tx.source_account,
@@ -187,7 +187,7 @@ class ClearingEngine:
             raise UnsupportedNetworkError(tx.source_network)
 
         tx.status = TransactionState.PROCESSING
-        tx.updated_at = datetime.utcnow()
+        tx.updated_at = datetime.now(timezone.utc)
 
         clearing_request = {
             "transaction_id": tx.id,
@@ -277,7 +277,7 @@ class SettlementEngine:
             await self.ledger.post_transaction(settlement_tx)
 
             tx.status = TransactionState.SETTLED
-            tx.completed_at = datetime.utcnow()
+            tx.completed_at = datetime.now(timezone.utc)
             tx.metadata["settlement_transaction_id"] = settlement_tx.id
 
             if tx.settlement_currency and tx.settlement_currency != tx.currency:

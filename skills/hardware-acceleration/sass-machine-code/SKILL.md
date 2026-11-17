@@ -1,10 +1,13 @@
 ---
 name: sass-machine-code
 description: >
-  Use this skill when the user says 'sass', 'cuobjdump -sass', 'nvdisasm', 'machine code', 'stall reasons', 'long scoreboard', 'register bank conflict', 'HMMA', 'FFMA', 'instruction mix', 'warp stall'. Reads NVIDIA SASS (native GPU machine code) to explain what the compiler actually generated and maps Nsight Compute per-instruction stall sampling back to source to fix kernel bottlenecks. Do NOT use for: writing PTX or inline asm (ptx-assembly), general kernel design (cuda-programming), Triton kernels (triton-kernels).
+  Use when the user asks about SASS, cuobjdump -sass, nvdisasm, warp stall reasons, long scoreboard, HMMA/HGMMA,
+  FFMA or instruction mix in Nsight Compute. Produces annotated SASS with root cause and a source-level fix. Not
+  for writing PTX or inline asm (use ptx-assembly) or general kernel design (use cuda-programming).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [hardware-acceleration, sass, cuda, nvidia, profiling, gpu-microarchitecture]
 ---
 

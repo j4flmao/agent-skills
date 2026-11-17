@@ -1,10 +1,14 @@
 ---
 name: tensorrt-optimization
 description: >
-  Use this skill when the user says 'tensorrt', 'trt', 'trtexec', 'onnx to tensorrt', 'tensorrt engine', 'tensorrt-llm', 'trt-llm', 'int8 calibration', 'fp8 engine', 'optimization profile', 'dynamic shapes tensorrt'. Builds and tunes NVIDIA TensorRT engines from ONNX (precision, dynamic shapes, explicit quantization, profiling) and serves LLMs with TensorRT-LLM. Do NOT use for: choosing quantization algorithms in depth (extreme-quantization-mastery), KV-cache paging concepts (paged-attention), framework-agnostic model serving platforms (ml-model-serving), custom CUDA kernels (cuda-programming).
+  Use when the user asks about TensorRT, trtexec, ONNX to TensorRT engines, optimization profiles for dynamic
+  shapes, FP8/INT8 engines, Polygraphy or TensorRT-LLM / trtllm-serve. Produces build commands, precision plan
+  and benchmark plan. Not for choosing GPTQ/AWQ in depth (use extreme-quantization-mastery) or serving platforms
+  (use ml-model-serving).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [hardware-acceleration, tensorrt, tensorrt-llm, onnx, inference, nvidia]
 ---
 

@@ -45,14 +45,13 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`frontend-image-optimization`](../../skills/frontend/universal/image-optimization/SKILL.md) | `frontend/universal/image-optimization` | Deliver optimized images that load fast, look crisp on any screen, and minimize bandwidth usage — directly impacting LCP, CLS, and overall page… |
 | [`frontend-bundler-tools`](../../skills/frontend/universal/bundler-tools/SKILL.md) | `frontend/universal/bundler-tools` | Configure and optimize the frontend build pipeline for fast development iteration and lean production bundles -- leveraging modern bundlers,… |
 
-## Level 3 — Specialist (10 skills)
+## Level 3 — Specialist (9 skills)
 
 Add one at a time, only for the problem in front of you. These are deep and narrow.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
 | [`microfrontend`](../../skills/frontend/universal/microfrontend/SKILL.md) | `frontend/universal/microfrontend` | Design microfrontend architectures with integration strategy, shared dependency management, and cross-app communication protocols. |
-| [`micro-frontends-adoption`](../../skills/frontend/advanced-architecture/micro-frontends/SKILL.md) | `frontend/advanced-architecture/micro-frontends` | Micro-frontends apply microservice ideas to the UI: independently built and deployed slices owned by separate teams and composed into one product. |
 | [`react-server-components`](../../skills/frontend/advanced-architecture/react-server-components/SKILL.md) | `frontend/advanced-architecture/react-server-components` | Server Components are a stable part of React 19: components that render ahead of time on the server (per request or at build time) and whose code… |
 | [`react-fiber-architecture`](../../skills/frontend/react/react-fiber/SKILL.md) | `frontend/react/react-fiber` | Fiber is React's reconciler (since React 16): a linked tree of work units that lets React split rendering into interruptible chunks, prioritise… |
 | [`nextjs-internals`](../../skills/frontend/nextjs/internals/SKILL.md) | `frontend/nextjs/internals` | Explain the App Router request lifecycle precisely enough to debug it: how a route is classified static or dynamic, what the RSC payload is, how… |
@@ -87,7 +86,7 @@ Bundles are installed with the same command; each one's full command is on the [
 | Bundle | Skills | Description |
 |--------|--------|-------------|
 | [`frontend-foundations`](../bundles.md#frontend-foundations) | 28 | Frontend foundations for any framework: TypeScript, CSS strategy, responsive design, auth, error handling, security, forms, data fetching, state |
-| [`frontend-frameworks`](../bundles.md#frontend-frameworks) | 24 | Frontend frameworks beyond React/Vue/Angular: Svelte, Solid, Qwik, Astro, Remix, Preact, Lit, Stencil, Ember, htmx, Alpine |
+| [`frontend-frameworks`](../bundles.md#frontend-frameworks) | 23 | Frontend frameworks beyond React/Vue/Angular: Svelte, Solid, Qwik, Astro, Remix, Preact, Lit, Stencil, Ember, htmx, Alpine |
 | [`frontend-only`](../bundles.md#frontend-only) | 66 | Frontend-only: Design system, state, performance, a11y, patterns, microfrontend, testing, all frameworks |
 | [`design-ux`](../bundles.md#design-ux) | 14 | Design and UX: visual design, design systems, accessibility, motion, IA, brand, UX research, theming, visual testing |
 

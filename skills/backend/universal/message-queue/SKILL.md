@@ -365,9 +365,9 @@ async function checkConsumerLag(admin: Admin, groupId: string): Promise<void> {
 - DLQ must have monitoring and alerting. Unattended DLQ = silent data loss.
 - Consumer lag must be monitored. Set alerts for lag > threshold.
 - Never commit offsets before processing is complete (at-least-once).
-- Max message size: 1MB for Kafka, 256KB for SQS, unlimited for RabbitMQ (practical: 10MB).
+- Max message size: Kafka ~1 MB by default (`message.max.bytes`, configurable), SQS 1 MiB (raised from 256 KiB in 2025), RabbitMQ 16 MiB default (`max_message_size`). Put large payloads in object storage and send a reference (claim check).
 - Never produce to a topic that doesn't exist — create topics with proper config first.
-- Use idempotent producers for Kafka (exactly-once semantics to broker).
+- Keep Kafka producer idempotence on (`enable.idempotence=true`, default since Kafka 3.0) with `acks=all`; it removes broker-side duplicates from retries, not end-to-end duplicates.
 
 ## References
   - references/broker-comparison.md — Message Broker Comparison

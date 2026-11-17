@@ -1,15 +1,7 @@
 ---
 name: ansible
 description: >
-  Use this skill when the user says 'Ansible', 'ansible-playbook', 'ansible-galaxy',
-  'playbook', 'inventory', 'role', 'task', 'module', 'ad-hoc command',
-  'configuration management', 'infrastructure automation', 'idempotent',
-  'Ansible Tower', 'AWX', 'Ansible Automation Platform'.
-  Covers: playbooks, roles, inventory management, modules, variables,
-  conditionals, loops, Jinja2 templates, vault encryption, Tower/AWX,
-  collection development, CI/CD integration, idempotent automation.
-  Do NOT use for: Terraform (use terraform), Puppet, Chef, SaltStack, or
-  other configuration management tools.
+  Use when the user asks about Ansible playbooks, roles, inventory, ansible-playbook, ansible-galaxy collections, Jinja2 templates, ansible-vault, AWX or Ansible Automation Platform, or idempotent configuration management. Produces idempotent playbooks, roles and CI checks (ansible-lint, Molecule). Not for provisioning cloud resources (use terraform).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -533,6 +525,11 @@ Ansible playbook YAML, role directory structure, inventory YAML/INI, Jinja2 temp
   - references/ansible-tower.md
   - references/automation-playbooks.md
   - references/inventory-config.md
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-ansible-automation.md` — Ansible Configuration Management (merged from `devops/iac/ansible-automation`)
 
 ## Handoff
 After completing this skill:

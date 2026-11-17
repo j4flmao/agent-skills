@@ -1,7 +1,11 @@
 ---
 name: network-protocols
 description: >
-  Use this skill when the user says 'TCP state', 'TIME_WAIT', 'three-way handshake', 'congestion control', 'CUBIC', 'BBR', 'Nagle', 'TCP_NODELAY', 'retransmission', 'MTU', 'QUIC', 'HTTP/3', 'UDP vs TCP', 'socket tuning', 'tcpdump', 'packet loss'. Explains transport-layer behaviour (TCP state machine, flow and congestion control, loss recovery, MTU) and QUIC, and turns it into socket options, kernel tuning and packet-capture diagnosis. Do NOT use for: HTTP API design (use backend/universal/api-design), service meshes (use devops/service-mesh), XDP/eBPF packet programs (use ebpf-engineering), game netcode (use multiplayer-netcode).
+  Use when the user asks about TCP state, TIME_WAIT, the three-way handshake,
+  congestion control, CUBIC vs BBR, Nagle and TCP_NODELAY, retransmission, MTU,
+  QUIC, HTTP/3, socket tuning or tcpdump. Produces transport-level diagnosis and
+  socket and kernel settings. Not for HTTP API design (use backend-api-design)
+  or game netcode (use multiplayer-netcode).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

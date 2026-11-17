@@ -1,7 +1,11 @@
 ---
 name: mobile-dotnet-maui
 description: >
-  Use this skill when the user says '.NET MAUI', 'MAUI app', 'Xamarin', 'MAUI', 'MAUI page', 'MAUI Shell', 'MAUI MVVM', 'MAUI data binding', 'MAUI collection view'. Build cross-platform mobile apps with .NET MAUI including Shell navigation, MVVM, controls, and deployment. Do NOT use for: ASP.NET Core or Blazor development.
+  Use when the user asks about .NET MAUI apps, MAUI Shell navigation, MVVM with
+  CommunityToolkit, data binding, CollectionView, handlers or migrating from
+  Xamarin.Forms. Produces cross-platform C#/XAML app structure, platform code
+  and release setup. Not for C# language features (use lang-csharp) or ASP.NET
+  Core services (use dotnet-architecture).
 compatibility:
   claude-code: true
   cursor: true

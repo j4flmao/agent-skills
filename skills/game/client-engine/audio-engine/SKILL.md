@@ -1,7 +1,11 @@
 ---
 name: audio-engine
 description: >
-  Use this skill when the user says 'audio engine', 'game audio', 'DSP graph', 'audio mixing', 'ducking', 'spatial audio', 'HRTF', 'reverb', 'voice limiting', 'audio streaming'. Designs the runtime audio engine: DSP graph and buses, spatialization, streaming decode, ducking/mixing, effects and voice/CPU budgets. Do NOT use for: music composition or sound design, middleware authoring workflows in FMOD/Wwise UIs, VoIP chat backends.
+  Use when the user asks about a game audio engine, DSP graph, mixer buses,
+  ducking, spatial audio, HRTF, reverb zones, voice limiting or streaming audio
+  decode. Produces runtime audio engine design with voice and CPU budgets. Not
+  for FMOD/Wwise authoring workflows, music composition or VoIP backends (use
+  backend-web-real-time).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

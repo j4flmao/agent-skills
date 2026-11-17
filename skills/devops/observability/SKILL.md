@@ -1,14 +1,7 @@
 ---
 name: observability
 description: >
-  Use this skill when the user says 'observability', 'logging', 'metrics',
-  'tracing', 'OpenTelemetry', 'Grafana', 'Prometheus', 'structured logs',
-  'distributed tracing', 'monitoring', or when setting up observability for a
-  service. Covers: three pillars (logs, metrics, traces), structured JSON logging,
-  OpenTelemetry SDK setup per stack, SLO/SLI/SLA definitions, and alert design
-  (alert on symptoms, not causes). Works with any language/stack.
-  Do NOT use this for: infrastructure monitoring, database performance, or
-  frontend analytics.
+  Use when the user asks about adding observability to a service: logs, metrics and traces, structured JSON logging, how to instrument services with OpenTelemetry traces per stack, SLIs, and alerting on symptoms not causes. Produces a per-service observability baseline. Not for Collector pipelines and sampling (use devops-opentelemetry) or Prometheus setup (use prometheus-grafana).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

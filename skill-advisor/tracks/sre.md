@@ -46,7 +46,7 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
-| [`sre-chaos-engineering`](../../skills/site-reliability-engineering/chaos-engineering/SKILL.md) | `site-reliability-engineering/chaos-engineering` | Every chaos tool ultimately uses a small set of Linux mechanisms. |
+| [`devops-chaos-engineering`](../../skills/devops/chaos-engineering/SKILL.md) | `devops/chaos-engineering` | Build confidence that the system withstands turbulent conditions by running controlled experiments: state a steady-state hypothesis, inject a… |
 | [`enterprise-business-continuity`](../../skills/enterprise/business-continuity/SKILL.md) | `enterprise/business-continuity` | Define the BCP that keeps the business running through any plausible disruption -- regional outage, vendor collapse, ransomware, key-person loss,… |
 | [`kubernetes-internals`](../../skills/devops/kubernetes-internals/SKILL.md) | `devops/kubernetes-internals` | Kubernetes is a set of independent control loops coordinating through one strongly consistent API. |
 | [`devops-sre-engineer`](../../skills/personas/devops-sre-engineer/SKILL.md) | `personas/devops-sre-engineer` | Adopt the mindset of a Staff DevOps/SRE Engineer: everything as code, zero-downtime CI/CD, SLO/error-budget discipline, deep observability, and… |
@@ -75,8 +75,8 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`sre-reliability`](../bundles.md#sre-reliability) | 20 | Reliability engineering: SLOs, incident response, observability, chaos, capacity, HA, DR, alerting |
-| [`kubernetes-platform`](../bundles.md#kubernetes-platform) | 36 | Kubernetes and platform engineering: clusters, operators, Helm, GitOps, service mesh, autoscaling, policy, IDPs |
+| [`sre-reliability`](../bundles.md#sre-reliability) | 17 | Reliability engineering: SLOs, incident response, observability, chaos, capacity, HA, DR, alerting |
+| [`kubernetes-platform`](../bundles.md#kubernetes-platform) | 31 | Kubernetes and platform engineering: clusters, operators, Helm, GitOps, service mesh, autoscaling, policy, IDPs |
 
 ## Combine with
 
@@ -85,4 +85,4 @@ Bundles are installed with the same command; each one's full command is on the [
 
 ## Watch out
 
-`devops/incident-response` and `site-reliability-engineering/incident-response` overlap: keep the SRE one if you run formal postmortems, otherwise the DevOps one.
+`devops/incident-response` and `devops/incident-response` overlap: keep the SRE one if you run formal postmortems, otherwise the DevOps one.

@@ -1,7 +1,11 @@
 ---
 name: react-native-architecture
 description: >
-  Use this skill when the user says 'React Native New Architecture', 'JSI', 'Fabric', 'TurboModules', 'Codegen', 'bridgeless', 'old bridge', 'interop layer', 'Hermes', 'Yoga', 'shadow tree', 'synchronous native call', 'migrate to new architecture', 'native component spec'. Explains React Native's runtime architecture — JSI, Fabric renderer, TurboModules, Codegen, bridgeless mode, threading and Hermes — and guides library/app migration and native module authoring on it. Do NOT use for: everyday app development, lists, navigation and OTA (use react-native-expertise), Flutter internals (use flutter-internals).
+  Use when the user asks about the React Native New Architecture: JSI, Fabric,
+  TurboModules, Codegen, bridgeless mode, the interop layer, Hermes or migrating
+  a library off the old bridge. Explains the runtime and guides native module
+  and component authoring. Not for everyday app work, navigation or OTA updates
+  (use react-native-expertise).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

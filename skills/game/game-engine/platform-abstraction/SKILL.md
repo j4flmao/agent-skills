@@ -1,7 +1,10 @@
 ---
 name: platform-abstraction
 description: >
-  Use this skill when the user says 'platform abstraction layer', 'PAL', 'cross-platform engine', 'windowing', 'engine filesystem', 'dynamic library loading', 'platform ifdef'. Designs the platform abstraction layer: OS, filesystem, threads, windowing, input devices, timers and dynamic loading across Windows/Linux/macOS/consoles. Do NOT use for: mobile app platform APIs (use mobile skills), build systems (use devops/monorepo or language skills).
+  Use when the user asks about a platform abstraction layer, cross-platform
+  engine code, windowing, engine filesystem, dynamic library loading,
+  high-resolution timers or platform ifdefs. Produces a PAL for Windows, Linux,
+  macOS and consoles. Not for mobile app platform APIs (use mobile-patterns).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

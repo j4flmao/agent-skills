@@ -436,10 +436,10 @@ describe('WebRTC Signaling Server', () => {
 ## Rules
 - SFU for multi-party calls, P2P mesh for 1-1 only. Never use MCU without transcoding requirement.
 - TURN credentials must be time-limited (max 24h TTL). Never use static passwords.
-- Signaling must use WSS (not WS) in production. Certificates on first byte.
+- Signaling must use WSS (not WS) in production, with authenticated connections.
 - Always implement ICE restart on connection loss. Reconnection is mandatory, not optional.
 - Media codec negotiation: prefer H.264 for compatibility, VP9/AV1 for quality-per-bitrate.
-- Bandwidth estimation must be enabled (REMBB or TWCC). Never send without congestion control.
+- Bandwidth estimation must be enabled (transport-wide congestion control/TWCC, or legacy REMB). Never send without congestion control.
 - Monitor: ICE failures, call duration, packet loss, jitter, RTT per peer.
 - Recording: don't record from client-side — record from SFU (server-side) for sync quality.
 - Simulcast for multi-party: encode 3 layers (low/medium/high) so SFU can adapt per receiver.

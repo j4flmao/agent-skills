@@ -413,13 +413,10 @@ def _default_retry_policy():
 
 
 def _calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
-    """Calculate cost based on model pricing."""
-    pricing = {
-        "claude-sonnet-4-20250514": {"input": 3.0 / 1_000_000, "output": 15.0 / 1_000_000},
-        "claude-haiku-35": {"input": 0.25 / 1_000_000, "output": 1.25 / 1_000_000},
-        "gpt-4o": {"input": 2.5 / 1_000_000, "output": 10.0 / 1_000_000},
-    }
-    prices = pricing.get(model, {"input": 0, "output": 0})
+    """Calculate cost from per-token prices loaded from config (prices change; never hardcode)."""
+    prices = MODEL_PRICING.get(model)   # {"<model-id>": {"input": usd_per_token, "output": usd_per_token}}
+    if prices is None:
+        raise KeyError(f"no pricing configured for model {model}")
     return input_tokens * prices["input"] + output_tokens * prices["output"]
 ```
 

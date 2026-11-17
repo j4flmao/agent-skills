@@ -1,19 +1,14 @@
 ---
 name: sandbox-execution
 description: >
-  Use this skill when the user says 'sandbox agent code', 'run untrusted code',
-  'gVisor', 'Firecracker', 'microVM', 'durable execution', 'sandbox snapshot'.
-  Designs, implements, and operates durable execution
-  environments with microVM isolation, snapshotting, forking, and secure agent
-  runtime sandboxes. Covers the sandbox-as-a-tool pattern, Temporal/durable
-  execution frameworks, gVisor/Kata Containers/Firecracker isolation, workspace
-  management, state persistence across sessions, filesystem sandboxing, network
-  isolation, and resource quota enforcement for production agent systems.
-  Do NOT use for: general container image hardening (security/container-security)
-  or Kubernetes admission policy (devops/policy-as-code).
+  Use when the user asks to sandbox agent code, run untrusted code from an LLM, gVisor (runsc), Firecracker
+  microVMs, Kata Containers, durable execution with Temporal, or sandbox snapshot and fork. Produces a sandbox
+  config with isolation level, network and resource limits, plus a durable-execution design. Not for container
+  image hardening (use security-container-security).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 type: skill
 compatibility:
   claude-code: true

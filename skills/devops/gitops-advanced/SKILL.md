@@ -1,16 +1,7 @@
 ---
 name: devops-gitops-advanced
 description: >
-  Use when the user asks about advanced GitOps, multi-cluster GitOps, ArgoCD
-  ApplicationSets, sync waves, sync phases, progressive delivery with GitOps,
-  cluster bootstrapping, or GitOps at scale. Covers: ApplicationSet generators
-  (cluster, git, matrix, SCM provider, pull request), sync wave orchestration,
-  phased rollouts, image updater, multi-cluster management with ArgoCD,
-  cluster bootstrapping with Crossplane/Cluster API, secrets management in
-  GitOps (SealedSecrets, External Secrets, SOPS), and GitOps at enterprise
-  scale with RBAC, projects, and audit.
-  Do NOT use for: basic GitOps introduction (gitops), basic ArgoCD setup
-  (argo-cd), or Flux setup.
+  Use when the user asks about Argo CD ApplicationSets and generators, multi-cluster GitOps, sync waves and hooks at scale, cluster bootstrapping with Cluster API or Crossplane, Argo CD Image Updater, or Sealed Secrets, External Secrets and SOPS in GitOps. Produces fleet-scale GitOps designs. Not for basic Argo CD setup (use argo-cd).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -347,6 +347,12 @@ Cached server state should be normalized by ID to avoid duplication. TanStack Qu
   - references/state-comparison.md — State Management Library Comparison
   - references/state-patterns.md — State Management Patterns
   - references/state-testing.md — State Testing Patterns
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-react-zustand-redux-toolkit.md` — React State: Zustand & Redux Toolkit (merged from `frontend/state-management`)
+
 ## Handoff
 No artifact produced.
 Next skill: frontend-performance — optimize rendering and bundle size.

@@ -1,9 +1,11 @@
 ---
 name: mobile-networking
 description: >
-  Use this skill when the user asks about mobile networking, REST client,
-  GraphQL, offline-first, API caching, retry, pagination, background sync,
-  or API interceptors.
+  Use when the user asks about mobile networking: REST or GraphQL clients,
+  Retrofit, OkHttp, URLSession, Dio, interceptors, token refresh, retries,
+  pagination or response caching on device. Produces a typed API client layer
+  with timeouts and error handling. Not for offline sync design (use
+  mobile-offline-first) or certificate pinning (use mobile-security).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

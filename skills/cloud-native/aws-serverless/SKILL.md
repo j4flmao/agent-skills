@@ -1,7 +1,7 @@
 ---
 name: cloud-native-aws-serverless
 description: >
-  Use this skill when the user says 'aws lambda internals', 'firecracker', 'lambda execution environment', 'lambda concurrency', 'lambda event source mapping', 'lambda function url', 'lambda layers', 'lambda timeout', 'lambda reserved concurrency'. Explains how AWS Lambda runs code (Firecracker microVMs, execution environment lifecycle, concurrency and scaling model) and turns that into correct function design and configuration. Do NOT use for: cold-start tuning only (cloud-native-serverless-cold-starts), Step Functions workflows (cloud-native-serverless-orchestration), multi-cloud serverless platform choice (devops-serverless).
+  Use when the user asks about AWS Lambda internals, Firecracker microVMs, the execution environment lifecycle, concurrency limits, event source mappings, function URLs, layers, or Lambda timeouts. Produces correct Lambda function design and configuration. Not for cold-start tuning (use cloud-native-serverless-cold-starts) or Step Functions (use cloud-native-serverless-orchestration).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

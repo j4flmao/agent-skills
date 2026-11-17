@@ -95,6 +95,8 @@ build-multiarch:
 
 Kaniko builds container images without Docker daemon access (no privileged mode needed).
 
+> Kaniko (GoogleContainerTools) was archived in June 2025 and gets no upstream fixes; if you keep it, use a maintained fork (e.g. Chainguard's) or move to Buildah/BuildKit rootless. GitLab's own docs now recommend Buildah or Podman for daemonless builds.
+
 ### Basic Kaniko Build
 ```yaml
 build-kaniko:
@@ -303,7 +305,7 @@ ENTRYPOINT ["/sbin/tini", "--"]
 
 ## Best Practices
 
-1. **Prefer Kaniko** over Docker-in-Docker for better security (no privileged mode).
+1. **Prefer a daemonless builder** (Buildah, rootless BuildKit, or a maintained Kaniko fork) over Docker-in-Docker (no privileged mode).
 2. **Use multi-stage builds** to minimize final image size.
 3. **Tag with commit SHA** for traceability, plus semantic version tags.
 4. **Enable container scanning** on every push to main.

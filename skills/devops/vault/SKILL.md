@@ -1,14 +1,7 @@
 ---
 name: vault
 description: >
-  Use this skill when the user says 'Vault', 'HashiCorp Vault', 'secrets
-  management', 'dynamic secrets', 'transit engine', 'Vault policy', 'Vault auth
-  method', 'Vault agent', 'Vault injector', 'Vault API', 'kv-v2', 'PKI
-  secrets engine', 'database secrets engine', 'Vault role', 'Vault token'.
-  Covers: Vault setup, secrets engines, policies, auth methods, dynamic secrets,
-  transit encryption, Vault Agent, Vault+Kubernetes integration.
-  Do NOT use this for: AWS Secrets Manager, Azure Key Vault, or non-HashiCorp
-  secret stores.
+  Use when the user asks to store database credentials in HashiCorp Vault, dynamic secrets, KV v2, Transit encryption, the PKI engine, Vault policies, auth methods (Kubernetes, OIDC, AppRole), Vault Agent or the injector. Produces Vault configs and policies. Not for cloud secret stores or overall secrets strategy (use security-secrets-management).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

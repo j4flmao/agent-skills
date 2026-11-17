@@ -1,7 +1,10 @@
 ---
 name: lang-elixir
 description: >
-  Use this skill when the user says 'elixir', 'mix', 'OTP', 'GenServer', 'supervision tree', 'ecto', 'ExUnit', 'mix release', 'BEAM'. Covers the Elixir language, OTP design, Mix tooling, testing and releases. Do NOT use for: Phoenix application architecture (use backend-elixir), Erlang-only codebases, Nerves hardware bring-up.
+  Use when the user asks about Elixir, OTP, GenServer, supervision trees, Mix,
+  Ecto, ExUnit, mix release or the BEAM. Produces idiomatic Elixir modules, OTP
+  process design and release setup. Not for Phoenix and LiveView application
+  architecture (use backend-elixir).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

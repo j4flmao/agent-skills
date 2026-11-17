@@ -1,10 +1,13 @@
 ---
 name: triton-kernels
 description: >
-  Use this skill when the user says 'triton kernel', 'openai triton', '@triton.jit', 'tl.load', 'tl.dot', 'triton autotune', 'fused kernel python', 'custom gpu kernel in python', 'torch.compile triton'. Writes, autotunes, tests and benchmarks Triton GPU kernels (elementwise, reductions, fused ops, matmul) and integrates them with PyTorch. Do NOT use for: Triton Inference Server (ml-model-serving / tensorrt-optimization), CUDA C++ kernels (cuda-programming), PTX/SASS analysis (ptx-assembly, sass-machine-code).
+  Use when the user asks about OpenAI Triton kernels, @triton.jit, tl.load, tl.dot, triton.autotune, fused
+  kernels in Python or torch.compile Inductor kernels. Produces a kernel, PyTorch wrapper, correctness test and
+  do_bench benchmark. Not for Triton Inference Server (use ml-model-serving) or CUDA C++ (use cuda-programming).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [hardware-acceleration, triton, gpu-kernels, pytorch, autotuning]
 ---
 

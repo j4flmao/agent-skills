@@ -1,7 +1,11 @@
 ---
 name: unity
 description: >
-  Use this skill when the user says 'unity', 'unity 6', 'monobehaviour', 'URP', 'HDRP', 'addressables', 'unity performance', 'netcode for gameobjects'. Guides Unity projects: player loop, GameObject/component architecture, URP/HDRP, physics, animation, UI, Addressables, multiplayer and profiling. Do NOT use for: DOTS/Entities/Burst code in depth (use unity-csharp), Unreal or Godot.
+  Use when the user asks about Unity 6, MonoBehaviour, the player loop, URP,
+  HDRP, Addressables, Netcode for GameObjects, Unity physics or Unity Profiler.
+  Produces Unity project architecture, gameplay code and performance fixes. Not
+  for DOTS, Entities and Burst in depth (use unity-csharp) or Unreal (use
+  unreal).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

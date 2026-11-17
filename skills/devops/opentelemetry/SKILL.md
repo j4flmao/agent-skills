@@ -1,14 +1,7 @@
 ---
 name: devops-opentelemetry
 description: >
-  OpenTelemetry observability framework for distributed systems.
-  Covers: OTel concepts (traces, metrics, logs, SDK, API, Collector, OTLP),
-  Collector pipeline (receiver, processor, exporter, batch, sampling,
-  tail sampling, attributes), SDK instrumentation (automatic and manual
-  for Java, Python, Node.js, Go, .NET), trace sampling strategies
-  (head-based, tail-based, probabilistic, consistent), multi-backend
-  export (Jaeger, Zipkin, Prometheus, Datadog, Grafana).
-  Do NOT use for: Vendor-specific APM agent configuration without OTel.
+  Use when the user asks to instrument services with OpenTelemetry traces, OTel SDK auto or manual instrumentation, the OpenTelemetry Collector, OTLP, receivers/processors/exporters, tail sampling, or exporting to Jaeger, Tempo, Prometheus or Datadog. Produces OTel SDK and Collector configs. Not for propagation design across messaging (use cloud-native-distributed-tracing).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -489,6 +482,12 @@ receivers:
   - references/otel-concepts.md — OpenTelemetry Concepts
   - references/sdk-instrumentation.md — OpenTelemetry SDK Instrumentation
   - references/trace-sampling.md — OpenTelemetry Trace Sampling
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-opentelemetry-tracing.md` — OpenTelemetry Tracing Setup (merged from `devops/observability/opentelemetry-tracing`)
+
 ## Handoff
 After completing this skill:
 - Next skill: **devops-apm-observability** — APM platforms receiving OTel data
@@ -582,7 +581,7 @@ exporters:
     endpoint: "0.0.0.0:8889"
     namespace: otel
 
-  logging:
+  debug:                 # the old `logging` exporter was removed; `debug` replaces it
     verbosity: normal
 
 service:
@@ -590,7 +589,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, attributes, batch, tailsampling]
-      exporters: [otlp, logging]
+      exporters: [otlp, debug]
     metrics:
       receivers: [otlp, prometheus]
       processors: [memory_limiter, batch]

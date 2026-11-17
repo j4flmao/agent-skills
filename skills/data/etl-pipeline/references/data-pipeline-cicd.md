@@ -104,7 +104,7 @@ jobs:
         run: dbt docs generate --profiles-dir .
 
       - name: Upload docs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dbt-docs
           path: target/

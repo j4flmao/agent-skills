@@ -1,10 +1,15 @@
 ---
 name: architecture-database-scaling
 description: >
-  Use this skill when the user says 'scale the database', 'sharding', 'shard key', 'consistent hashing', 'read replicas', 'partitioning', 'Citus', 'Vitess', 'resharding', 'hot partition'. Walks the scaling ladder from query/index fixes through vertical scaling, caching, read replicas, and partitioning to horizontal sharding, and designs shard keys, routing, and resharding. Do NOT use for: PostgreSQL engine internals (architecture/databases/postgresql-internals), algorithm-level sharding theory drills (system-design/database-sharding), or NoSQL product selection (data/nosql-database).
+  Use when the user asks how to scale the database, read replicas, table
+  partitioning, sharding, choosing a shard key, Citus, Vitess, resharding or hot
+  partitions. Produces a scaling ladder plan, shard key and routing design. Not
+  for PostgreSQL engine internals (use architecture-postgresql-internals) or
+  NoSQL selection (use data-nosql-database).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [architecture, database, sharding, partitioning, replication, consistent-hashing, scaling]
 ---
 
@@ -109,12 +114,15 @@ class HashRing:
 2. **Cardinality and distribution**: many distinct values, no single value dominating (watch "whale" tenants; give them dedicated shards via a directory).
 3. **Transaction locality**: entities updated together share the key (co-locate orders with their customer).
 4. **Not monotonic** for range strategies (avoid raw timestamps or sequential ids as range keys).
+5. **Stable**: a row whose key changes must move between shards; pick a key that never changes.
 
 ## Cross-Shard Operations
 | Need | Approach |
 |---|---|
 | Query across shards | Scatter-gather with limits/timeouts; better: a separate read model (search index, warehouse) fed by CDC |
 | Global uniqueness (email) | Dedicated lookup table/service, or unique constraint in a global table |
+| Lookup by a secondary key (user by email when sharded by user_id) | Global secondary index: lookup table sharded by that key, kept in sync via outbox/CDC |
+| Schema changes | Roll out to every shard with backward-compatible migrations and online tools (gh-ost, pt-online-schema-change, Vitess Online DDL) |
 | Multi-shard transaction | Avoid by key design; otherwise saga with compensation; 2PC only within systems that support it well |
 | Global IDs | UUIDv7, ULID, or Snowflake-style ids (not per-shard sequences) |
 | Reference data | Replicate small tables to all shards (Citus reference tables) |
@@ -150,6 +158,8 @@ SELECT create_distributed_table('order_items', 'tenant_id', colocate_with => 'or
 3. Verify counts/checksums; briefly block writes for the bucket or use dual-write with idempotency.
 4. Flip the routing map; keep the old copy read-only until verified; then delete.
 
+Vitess `MoveTables`/`Reshard` workflows and the Citus shard rebalancer automate this. Split before a shard nears its storage or throughput ceiling, since moves take time.
+
 ## Anti-Patterns
 - Sharding before fixing indexes, queries, and pooling.
 - Shard key absent from most queries → every request fans out.
@@ -169,3 +179,8 @@ SELECT create_distributed_table('order_items', 'tenant_id', colocate_with => 'or
 - Karger et al., "Consistent Hashing and Random Trees" (STOC 1997); Lamping & Veach, "A Fast, Minimal Memory, Consistent Hash Algorithm" (jump hash, 2014).
 - Kleppmann, "Designing Data-Intensive Applications", ch. 5-6.
 - Citus and Vitess documentation (distribution columns, vindexes, resharding).
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-system-design-database-sharding.md` — logical-shard routing code, routing proxy options and a sharding anti-pattern table (merged from `system-design/database-sharding`)

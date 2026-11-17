@@ -75,7 +75,7 @@ Bundles are installed with the same command; each one's full command is on the [
 | Bundle | Skills | Description |
 |--------|--------|-------------|
 | [`starter-playbooks`](../bundles.md#starter-playbooks) | 7 | End-to-end playbooks: AI SaaS, high-scale e-commerce, web3 dApp, with the core planning and orchestration skills |
-| [`fullstack-nodejs-react`](../bundles.md#fullstack-nodejs-react) | 223 | Full stack: Node.js backend + React frontend |
+| [`fullstack-nodejs-react`](../bundles.md#fullstack-nodejs-react) | 221 | Full stack: Node.js backend + React frontend |
 
 ## Combine with
 

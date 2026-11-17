@@ -80,8 +80,10 @@ deploy:
 
 ### Docker Executor
 ```bash
-# Install on Linux
-curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | bash
+# Install on Linux: the script only adds GitLab's signed apt repository.
+# Download and review it first instead of piping it into a shell.
+curl -fsSLo runner-repo.sh "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh"
+less runner-repo.sh && sudo bash runner-repo.sh
 apt-get install gitlab-runner
 
 # Register

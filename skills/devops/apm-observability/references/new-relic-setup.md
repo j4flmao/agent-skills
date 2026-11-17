@@ -8,8 +8,10 @@ New Relic is an observability platform covering APM, infrastructure, logs, and b
 
 ### Account Setup
 ```bash
-# Install New Relic CLI
-curl -Ls https://download.newrelic.com/install/newrelic-cli/scripts/install.sh | bash
+# Install New Relic CLI (prefer a package manager, e.g. `brew install newrelic-cli`).
+# If you use the vendor script, download and review it before running it:
+curl -fsSLo nr-install.sh https://download.newrelic.com/install/newrelic-cli/scripts/install.sh
+less nr-install.sh && bash nr-install.sh
 
 # Deploy New Relic
 NEW_RELIC_API_KEY=<key> NEW_RELIC_ACCOUNT_ID=<id> newrelic install

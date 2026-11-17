@@ -1,7 +1,11 @@
 ---
 name: go
 description: >
-  Use this skill when the user says 'go build', 'go mod', 'goroutine', 'channel', 'golang concurrency', 'context cancellation', 'go testing', 'go fuzz', 'govulncheck', 'Go service in production'. Covers Go modules and toolchain, concurrency, error handling, testing and production hardening. Do NOT use for: Go web-framework specifics (use backend/golang), Kubernetes operators in Go (use devops/kubernetes-operators).
+  Use when the user asks about Go modules, go build, goroutines, channels,
+  context cancellation, errors.Is/As, Go testing and fuzzing, govulncheck or a
+  Go service in production. Produces idiomatic Go with tests and toolchain
+  setup. Not for Go web service architecture (use golang-architecture) or
+  Kubernetes operators (use devops-kubernetes-operators).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

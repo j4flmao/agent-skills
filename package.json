@@ -1,7 +1,7 @@
 {
   "name": "@j4flmao/agent-skills",
   "version": "1.0.0",
-  "description": "Central mega-repository of 641 AI agent skills.",
+  "description": "Central mega-repository of 587 AI agent skills.",
   "keywords": [
     "agent-skills",
     "claude-code",
@@ -64,13 +64,17 @@
     ".windsurf/"
   ],
   "scripts": {
-    "validate": "npm run validate:governance && npm run validate:skills && npm run docs:check",
+    "validate": "npm run validate:governance && npm run validate:skills && npm run docs:check && npm run eval:routing",
     "lint": "node scripts/validate-skills.js",
     "validate:governance": "node scripts/validate-agent-governance.js",
     "validate:skills": "node scripts/validate-skills.js",
     "docs": "node scripts/generate-docs.js",
     "docs:check": "node scripts/generate-docs.js --check",
-    "pack": "node scripts/pack-skills.js"
+    "pack": "node scripts/pack-skills.js",
+    "eval:routing": "node scripts/eval-routing.js --check",
+    "route": "node scripts/route.js",
+    "eval:live": "node scripts/eval-live.js",
+    "lint:snippets": "node scripts/lint-snippets.js"
   },
-  "skillCount": 641
+  "skillCount": 587
 }

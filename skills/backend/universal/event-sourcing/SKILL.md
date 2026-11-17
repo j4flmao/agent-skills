@@ -395,7 +395,7 @@ Carry forward: event definitions, aggregate design, projection rebuild strategy.
 ```python
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import uuid
 
@@ -427,7 +427,7 @@ class EventStore:
                 event_type=event_data["type"],
                 data=event_data["data"],
                 version=current + 1,
-                timestamp=datetime.utcnow().isoformat() + "Z",
+                timestamp=datetime.now(timezone.utc).isoformat() + "Z",
                 correlation_id=event_data.get("correlation_id", ""),
                 causation_id=event_data.get("causation_id", ""),
             )
@@ -444,7 +444,7 @@ class EventStore:
         return [e for e in self.events if e.event_type in event_types]
 
     def save_snapshot(self, aggregate_id: str, state: Dict, version: int):
-        self.snapshots[aggregate_id] = {"state": state, "version": version, "timestamp": datetime.utcnow().isoformat()}
+        self.snapshots[aggregate_id] = {"state": state, "version": version, "timestamp": datetime.now(timezone.utc).isoformat()}
 
     def get_snapshot(self, aggregate_id: str) -> Optional[Dict]:
         return self.snapshots.get(aggregate_id)

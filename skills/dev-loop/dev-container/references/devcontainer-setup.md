@@ -36,7 +36,7 @@
 
 ## Dockerfile (Multi-Stage)
 ```dockerfile
-FROM node:20-bookworm AS base
+FROM node:24-bookworm AS base
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl git zsh \
     && rm -rf /var/lib/apt/lists/*

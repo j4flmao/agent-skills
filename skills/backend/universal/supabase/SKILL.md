@@ -224,10 +224,9 @@ const { data: { signedUrl } } = await supabase.storage
 ### Step 6: Edge Functions
 ```typescript
 // supabase/functions/hello/index.ts
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_ANON_KEY')!,
@@ -465,18 +464,17 @@ CREATE TRIGGER order_created_trigger
 - Service role key is for server-side/admin operations — never expose to client.
 - Always use parameterized queries or Supabase client — no raw SQL strings in client code.
 - Realtime: enable replication only on tables that need it (performance cost).
-- Storage: public buckets for user content, private buckets for sensitive docs with signed URLs.
+- Storage: private buckets with RLS policies on `storage.objects` by default; public buckets only for content anyone may read; signed URLs for time-limited access.
 - Edge Functions: set `--no-verify-jwt` flag for webhooks, verify JWT manually for custom auth.
 - Use `migration` workflow for production schema changes, never modify via dashboard.
 - Enable PITR for production projects (additional cost).
 - Set up database webhooks for async workflows instead of triggers when possible.
 - Use `EXPLAIN ANALYZE` before adding any new index — verify it's actually used.
 - Never expose service_role_key in client-side code or version control.
-- Keep Edge Functions stateless and < 50ms execution time (cold start excluded).
+- Keep Edge Functions stateless and short; move long work to queues or background tasks (`EdgeRuntime.waitUntil`).
 - Use `auth.uid()` in RLS policies, not `current_user` or `current_setting`.
 - Limit Realtime subscriptions to 100 concurrent channels per client.
-- Test RLS policies with `supabase test` or by simulating auth.uid() values.
-- Set up database webhooks for async workflows instead of triggers when possible.
+- Test RLS policies with pgTAP via `supabase test db`, setting `request.jwt.claims` to simulate users.
 - Enable branching for development workflows (`supabase branches`).
 
 ## References

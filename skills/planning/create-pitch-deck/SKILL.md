@@ -535,7 +535,7 @@ Best,
 - **create-brief** — Write executive briefs for investor follow-up meetings
 - **create-story** — Break down product milestones into development stories
 - **create-tech-spec** — Document technical differentiation claims
-- **create-adr** — Record architecture decisions supporting competitive moat
+- **create-tech-spec** — Record (as ADRs) architecture decisions supporting competitive moat
 
 ## Handoff
 market-analysis, create-roadmap

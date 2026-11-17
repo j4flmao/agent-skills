@@ -1,10 +1,15 @@
 ---
 name: ecs-pattern
 description: >
-  Use this skill when the user says 'ecs pattern', 'archetype storage', 'chunk iteration', 'ecs scheduling', 'bevy ecs', 'entt', 'flecs', 'unity dots architecture'. Deep production ECS engineering: archetype/chunk storage, queries, structural changes, command buffers, scheduling and tuning across EnTT, flecs, Bevy and Unity Entities. Do NOT use for: choosing whether to use ECS at all (use ecs-architecture), Unity-specific C# API details (use unity-csharp).
+  Use when the user asks about ECS, entity component system design, archetype
+  storage, chunk iteration, sparse sets, structural changes, ECS scheduling,
+  Bevy ECS, EnTT or flecs. Produces ECS storage, query and scheduling design
+  with trade-offs. Not for Unity Entities and Burst API details (use
+  unity-csharp).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [game, ecs, archetype, data-oriented, engine]
 ---
 
@@ -58,7 +63,7 @@ private:
 };
 ```
 
-Each `Enemy` is heap-allocated individually. The pointer-chasing heap layout scatters `m_Position` across DRAM. Iterating 10,000 enemies forces the CPU to evict its L1/L2/L3 caches on **every single object**. The CPU does nothing but wait on memory.
+Each `Enemy` is heap-allocated individually. The pointer-chasing heap layout scatters `m_Position` across DRAM. Iterating 10,000 enemies typically costs at least one cache miss per object, and the CPU spends most of the loop waiting on memory.
 
 Impact: once the working set exceeds cache, pointer-chasing iteration is typically an order of magnitude or more slower than streaming over contiguous arrays — measure your own case with a microbenchmark and hardware counters (cache misses) before and after.
 
@@ -81,7 +86,7 @@ Data layout (SoA):          Position[].x = {2.1, 9.4, 5.0, ...}
 
 ### 1.4 Why This is Faster — Cache Lines
 
-A cache line is 64 bytes. A `Position + Velocity` pair in SoA form is 24 bytes. A cache-line fetch delivers **two entities' worth of hot data** instead of two pointers to cold data. This is called a **cache-miss-free stream**.
+A cache line is 64 bytes on x86 and most ARM cores (128 bytes on Apple silicon). With SoA, a `Position` array of `float3` (12 bytes) packs five positions per line, and the `Velocity` array streams in parallel; every byte fetched is used and the hardware prefetcher sees a linear pattern. With scattered objects, each entity costs at least one line fetch, mostly filled with cold fields.
 
 ```mermaid
 %%{init: {"theme": "default", "flowchart": {"useMaxWidth": true}}}%%
@@ -122,26 +127,30 @@ The canonical solution to sparse entity IDs. Two parallel arrays:
 ```cpp
 template<typename T>
 class SparseSet {
-    std::vector<int>  dense;      // component payload, packed by insertion order
-    std::vector<int>  sparse;     // entity -> index into dense
-    std::vector<Entity> entities; // dense -> entity
+    std::vector<T>        dense;    // component payload, packed
+    std::vector<uint32_t> sparse;   // entity index -> index into dense
+    std::vector<Entity>   entities; // dense index -> entity
 public:
-    void add(Entity e, T comp)  {
-        sparse[e.id] = dense.size();
-        dense.push_back(comp);
+    void add(Entity e, T comp) {
+        if (e.id >= sparse.size()) sparse.resize(e.id + 1);
+        sparse[e.id] = static_cast<uint32_t>(dense.size());
+        dense.push_back(std::move(comp));
         entities.push_back(e);
     }
     void remove(Entity e) {
-        int idx = sparse[e.id];
-        dense[idx] = dense.back(); dense.pop_back();
-        entities[idx] = entities.back(); entities.pop_back();
-        sparse[entities[idx].id] = idx;
+        const uint32_t idx = sparse[e.id];
+        const Entity last = entities.back();
+        dense[idx] = std::move(dense.back());     // swap-remove keeps dense packed
+        entities[idx] = last;
+        sparse[last.id] = idx;
+        dense.pop_back();
+        entities.pop_back();
     }
     T& get(Entity e) { return dense[sparse[e.id]]; }
 };
 ```
 
-`sparse` maps entity → index; `dense` packs only *live* components. Destruction swaps the last element into the hole (O(1)) — exactly how EnTT, Bevy, and flecs remove entities.
+`sparse` maps entity → index; `dense` packs only *live* components. Removal swaps the last element into the hole (O(1)). EnTT pools work this way, and archetype tables in Bevy and flecs also swap-remove rows.
 
 ### 2.3 Archetype / Chunk-Based Storage (Unity DOTS, Bevy, Unreal Mass)
 
@@ -152,7 +161,7 @@ Archetype A = {Position, Velocity}         archetype_id = hash([Position, Veloci
 Archetype B = {Position, Velocity, Health}
 ```
 
-Each archetype owns contiguous "chunk" blocks (typically 4KB–16KB) that are pure SoA:
+Each archetype owns contiguous "chunk" blocks (Unity Entities uses 16 KB chunks) that are pure SoA:
 
 ```
 Chunk (16 KB):
@@ -190,20 +199,30 @@ EnTT (the most popular single-header ECS) uses a **grouped sparse set** storage:
 Generation counters prevent a recycled ID from silently colliding with a stale reference:
 
 ```cpp
-uint32_t index      = id & 0xFFFF;       // low 16 bits = index
-uint32_t generation = (id >> 16);        // high 16 bits = version
+struct Entity { uint32_t index; uint32_t generation; };
 
-Entity create(uint32_t& nextIndex, std::vector<uint32_t>& generation) {
-    uint32_t idx = freeList;               // reuse a freed slot
-    uint32_t gen = generation[idx];        // bump the version
-    generation[idx] = gen + 1;
-    freeList = ...;                        // consume next freed slot
-    return pack(idx, gen);
-}
-
-bool isValid(Entity e, const std::vector<uint32_t>& generation) {
-    return generation[e.index()] == e.generation();  // stale ID detected
-}
+class EntityAllocator {
+    std::vector<uint32_t> generation_;   // current generation per slot
+    std::vector<uint32_t> free_;         // recycled slot indices
+public:
+    Entity create() {
+        if (!free_.empty()) {
+            const uint32_t idx = free_.back();
+            free_.pop_back();
+            return {idx, generation_[idx]};
+        }
+        generation_.push_back(0);
+        return {static_cast<uint32_t>(generation_.size() - 1), 0};
+    }
+    void destroy(Entity e) {
+        if (!isValid(e)) throw std::logic_error("destroy of stale entity");
+        ++generation_[e.index];           // invalidates every outstanding handle
+        free_.push_back(e.index);
+    }
+    bool isValid(Entity e) const {
+        return e.index < generation_.size() && generation_[e.index] == e.generation;
+    }
+};
 ```
 
 ## 4. Systems & Scheduling
@@ -220,7 +239,7 @@ A system declares the components it reads (`Reads`) and writes (`Writes`). The s
 // Bevy style
 fn movement_system(time: Res<Time>, mut query: Query<(&mut Transform, &Velocity)>) {
     for (mut transform, velocity) in query.iter_mut() {
-        transform.translation += velocity.dir * time.delta_seconds();
+        transform.translation += velocity.dir * time.delta_secs();
     }
 }
 ```
@@ -240,8 +259,8 @@ flowchart LR
 ```
 
 - **Bevy**: uses a multithreaded executor that discovers parallelism from system signatures at runtime (startup systems vs. update systems).
-- **Unity DOTS**: the player loop owns a system group; `BurstCompilerOptions` + `Entities.ForEach` + `ISystem` schedule onto the main thread or job threads.
-- **flecs**: uses a flat graph + phases (OnUpdate / PostUpdate) and supports *pipelining* where systems from multiple frames overlap.
+- **Unity Entities**: systems live in system groups inside the player loop; `ISystem` code runs on the main thread and schedules `IJobEntity`/`IJobChunk` jobs onto worker threads with dependencies tracked per component type.
+- **flecs**: a pipeline orders systems by phase (OnLoad … OnUpdate … OnStore) and inserts sync points for deferred commands; multi-threaded systems split matched tables across worker threads.
 
 ## 4.3 System Ordering Patterns
 
@@ -291,12 +310,15 @@ Design each system to touch the *minimum* set of components. `MovementSystem` sh
 Contiguous SoA arrays vectorize trivially:
 
 ```cpp
-// With -O3 / -ftree-vectorize, the compiler emits AVX2 for this loop:
-for (size_t i = 0; i < n; i += 8) {
+// The scalar SoA loop above auto-vectorizes at -O2/-O3. Hand-written AVX2 equivalent:
+const __m256 vdt = _mm256_set1_ps(dt);
+size_t i = 0;
+for (; i + 8 <= n; i += 8) {
     __m256 xs = _mm256_loadu_ps(x + i);
     __m256 vs = _mm256_loadu_ps(vx + i);
-    _mm256_storeu_ps(x + i, _mm256_add_ps(xs, _mm256_mul_ps(vs, _mm256_set1_ps(dt))));
+    _mm256_storeu_ps(x + i, _mm256_add_ps(xs, _mm256_mul_ps(vs, vdt)));
 }
+for (; i < n; ++i) x[i] += vx[i] * dt;   // scalar tail
 ```
 
 Even better: `#pragma omp simd` or `[BurstCompile]` in Unity (which generates ARM NEON / AVX2 automatically).
@@ -322,7 +344,7 @@ struct Archetype {
 };
 
 class World {
-    std::vector<Archetype> archetypes;
+    std::vector<Archetype> archetypes{Archetype{0, {}, {}, {}}};   // archetype 0 = {Pos, Vel}
     std::unordered_map<uint32_t, uint32_t> entityToArchetype;
 
 public:
@@ -363,9 +385,9 @@ int main() {
 ### 7.1 Unity DOTS (Entities, SubScene, Jobs, Burst)
 
 - **EntityManager**: create/destroy entities, add/remove components.
-- **Archetype chunks**: 4 KB chunks of SoA data; moving an entity across archetype is a chunk-to-chunk copy.
-- **WriteGroup**: lets you suppress the "last writer wins" conflict when two systems write the same component (e.g., blending `LocalToWorld` from two sources).
-- **Burst**: LLVM-based compiler that vectorizes `Entities.ForEach` and `IJobEntity` to SIMD.
+- **Archetype chunks**: 16 KB chunks of SoA data; moving an entity to another archetype is a chunk-to-chunk copy.
+- **WriteGroup**: lets a custom system take over writing a component (e.g. `LocalToWorld`) by excluding those entities from the default system's query.
+- **Burst**: LLVM-based compiler for jobs and `ISystem` code (`IJobEntity`, `SystemAPI.Query`); `Entities.ForEach` is obsolete since Entities 1.4 (use `IJobEntity` or `SystemAPI.Query`).
 
 ```csharp
 [BurstCompile]
@@ -379,18 +401,17 @@ partial struct MovementJob : IJobEntity {
 
 ### 7.2 Bevy (Rust)
 
-- Systems, bundles, queries with runtime automatic parallelism.
+- Systems are plain functions; the scheduler runs systems in parallel based on their declared query access. Required components (Bevy 0.15+) largely replace bundles for spawning.
 - **Spawn**: `commands.spawn((Transform::default(), Velocity::default()))`.
 - **Query filters**: `Query<(&Transform, &Velocity), Without<Frozen>>`.
 - **States**: app states gate system sets.
-- **ECPLES**: components and systems are functions + data; the scheduler is built per `App`.
 
 ### 7.3 Unreal Mass
 
 - Unreal Engine's data-oriented entity framework; `UMassEntitySubsystem`, `FMassEntityManager`.
-- Fragments (components) stored in tasteless SoA "chunks", entities as `FMassEntityHandle`.
+- Fragments (components) are stored in archetype chunks; entities are `FMassEntityHandle`s.
 - **Processors** (systems) declared with `UMassProcessor` and `UCLASS()` markers.
-- **Behavior**: `UMassObserver` reacts to fragment add/remove.
+- **Observers**: `UMassObserverProcessor` subclasses react to fragment add/remove.
 
 ## 8. When ECS is the Wrong Tool
 
@@ -428,7 +449,7 @@ flowchart TD
     A -->|No| C{Migrated rarely (<1%)?}
     C -->|Yes| D[Runtime add: compile-time known]
     C -->|No| E[Model as optional/tag component to avoid churn]
-    D --> F[Archetype migration cost: ~100ns/entity]
+    D --> F[Each add/remove copies the entity's components to another archetype]
     E --> F
 ```
 
@@ -450,7 +471,7 @@ flowchart TD
 
 ### 11.1 Rendering ECS State
 
-- **Snapshots**: Unity `EntityDebugger`, Bevy `bevy_ecs_debug_commands` + `bevy_inspector_egui` (World inspector), EnTT `entt::registry::view`.
+- **Inspectors**: Unity Entities Hierarchy, Inspector and Systems windows; Bevy `bevy-inspector-egui` world inspector; flecs Explorer (web UI via the REST module); EnTT has no built-in inspector, so dump registries in dev builds.
 - **Visualize archetypes**: dump per-archetype chunk counts, entity counts, and cache line utilization in dev builds.
 
 ### 11.2 Performance Profiling
@@ -465,7 +486,7 @@ flowchart TD
 For deterministic replay (netcode/lockstep, replays):
 - Fixed timestep everywhere (accumulator pattern).
 - Fix iteration order (stable sort of dense arrays by component data).
-- Avoid floats across platforms — use fixed-point for anything replicated.
+- Floating point is deterministic only with the same binary, compiler flags and instruction set; for cross-platform lockstep use fixed-point (or a strictly controlled float setup) for replicated state.
 
 ## 12. Production Considerations
 
@@ -473,10 +494,10 @@ For deterministic replay (netcode/lockstep, replays):
 2. **Input buffering**: capture input as components (`PlayerInputCommand`), so systems never read raw input directly.
 3. **Networking**: serialize component snapshots, not entities; version the serialization format.
 4. **Loading**: parallel streaming of archetype chunks; only activate systems after data is resident.
-5. **Hot-reload**: systems that are `#[no_mangle]`-exported can be DLL-reloaded for live iteration (UE4 modules, Unity Burst assemblies).
+5. **Hot-reload**: keep system code in a reloadable module (DLL/shared library) and component data in the host, so code can be swapped without losing world state.
 6. **Memory budget**: preallocate chunk pools; track fragmentation of dense arrays.
-7. **Burst / IL2CPP differences**: Unity jobs compile to LLVM; keep code branch-free for vectorizer gains.
-8. **Field precision**: `f32` positions drift over long sessions; quantize or use `f64` for world coordinates near origin.
+7. **Burst vs IL2CPP**: Burst compiles jobs through LLVM, IL2CPP compiles the rest of the C# through C++; check the Burst Inspector to confirm loops vectorized.
+8. **Large-world precision**: `f32` loses precision far from the origin (centimetre steps at tens of kilometres); use origin rebasing or `f64` world coordinates with camera-relative rendering.
 
 ## 13. Advanced ECS Techniques
 
@@ -490,7 +511,8 @@ fn render_cull(
     camera: Query<&Transform, With<MainCamera>>,
     mut query: Query<(&Transform, &mut Visible), Without<MainCamera>>,
 ) {
-    let cam_pos = camera.single().translation;
+    let Ok(cam) = camera.single() else { return };   // Bevy 0.16+: single() returns Result
+    let cam_pos = cam.translation;
     for (transform, mut visible) in query.iter_mut() {
         let dist2 = transform.translation.distance_squared(cam_pos);
         visible.is_visible = dist2 < CULL_DISTANCE_SQ;
@@ -569,19 +591,12 @@ ECS data must feed physics and audio engines without copies:
 
 Keep these as boundary systems; do not let physics/audio own component memory.
 
-## 14. Benchmark Cheat-Sheet (Numbers to Know)
+## 14. Measuring Instead of Guessing
 
-| Operation | Rough cost (modern desktop CPU) |
-|-----------|--------------------------------|
-| Entity create/destroy | ~20–60 ns |
-| Archetype migration (1 component) | ~100–500 ns |
-| Iterate 1M entities (one component, SIMD) | ~1–3 ms |
-| Iterate 1M entities (2 components, SoA) | ~2–5 ms |
-| Snapshot 1M entities serialization | ~5–15 ms |
-| Rebuild spatial hash (1M entities) | ~2–8 ms |
-| Command buffer playback (10k ops) | ~0.5–2 ms |
-
-**Budget rule**: simulation should stay under 4 ms/frame at 60 FPS (leave ~8 ms for render, 4 ms headroom). If your ECS core exceeds 4 ms, you are memory-bound — fix layout, not logic.
+Costs of entity creation, archetype migration and iteration vary by library, component size and CPU, so measure on the target with your own component layout:
+- Benchmark iteration of 1M entities with one and with two components; a memory-bound loop scales with bytes touched, not entity count.
+- Measure structural-change cost separately (add/remove one component in bulk via a command buffer).
+- Budget rule: give simulation an explicit slice of the frame (for example about a quarter of 16.6 ms at 60 FPS) and treat a memory-bound ECS core as a layout problem first.
 
 ## 15. Rules for ECS Work in This Repo
 
@@ -599,3 +614,9 @@ Keep these as boundary systems; do not let physics/audio own component memory.
 - `references/bevy-ecs-patterns.md` — queries, bundles, states, commands, ECS in Rust
 - `references/entt-and-flecs.md` — sparse sets, groups, observers, events
 - `references/ecs-netcode.md` — snapshot replication, rollback, lockstep with ECS
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-ecs-architecture.md` — query matching, change detection, events, serialization and a library comparison (merged from `game/ecs-architecture`)
+- `references/ecs-architecture.md` — short ECS primer and rules

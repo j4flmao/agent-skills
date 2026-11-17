@@ -59,7 +59,7 @@ When storing prompts, metadata is critical for rollback and auditing.
 version: 2.1.0 # Semantic versioning
 name: customer_support_triage
 description: Analyzes inbound tickets and routes to correct department.
-model_target: gpt-4-turbo
+model_target: <model-id>   # pin an exact, current model version
 author: data-science-team
 created_at: 2023-11-15T10:00:00Z
 system_instruction: |

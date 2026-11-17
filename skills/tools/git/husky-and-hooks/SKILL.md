@@ -1,7 +1,11 @@
 ---
 name: husky-and-hooks
 description: >
-  Use this skill when the user says 'git hooks', 'husky', 'lint-staged', 'pre-commit hook', 'commit-msg hook', 'commitlint', 'pre-push', 'lefthook', 'pre-commit framework', 'hooks not running', 'skip hooks', 'core.hooksPath'. Sets up and debugs client-side Git hooks: how hooks work, Husky v9 for JS repos, lint-staged for staged-file checks, commitlint for Conventional Commits, language-agnostic alternatives (pre-commit, lefthook), performance and CI parity. Do NOT use for: server-side CI pipelines (use devops/github-actions or devops/gitlab-ci), linter rule configuration itself (use tools/eslint or language skills), branching policy (use advanced-workflows).
+  Use when the user asks about git hooks, Husky, lint-staged, pre-commit or
+  commit-msg hooks, commitlint, pre-push, lefthook, the pre-commit framework,
+  core.hooksPath or hooks not running. Produces client-side hook setup that
+  matches CI. Not for CI pipelines (use github-actions or devops-gitlab-ci) or
+  branching policy (use advanced-workflows).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -10,7 +10,7 @@ Reconciliation is the process of comparing two sets of records to ensure they ma
 ```python
 from dataclasses import dataclass, field
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 class ReconciliationSource(Enum):
@@ -257,7 +257,7 @@ class ReconciliationWorkflow:
 
     async def run_reconciliation(self, run: ReconciliationRun):
         run.status = "running"
-        run.started_at = datetime.utcnow()
+        run.started_at = datetime.now(timezone.utc)
         await self.storage.save_run(run)
         internal = await self.storage.load_internal(run)
         external = await self.storage.load_external(run)
@@ -267,7 +267,7 @@ class ReconciliationWorkflow:
         run.unmatched_external = len(result.unmatched_external)
         run.discrepancies = len(result.discrepancies)
         run.status = "completed"
-        run.completed_at = datetime.utcnow()
+        run.completed_at = datetime.now(timezone.utc)
         await self.storage.save_run(run)
         await self.storage.save_result(result)
         if result.discrepancies:

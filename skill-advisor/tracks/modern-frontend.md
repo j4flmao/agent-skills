@@ -72,7 +72,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`frontend-frameworks`](../bundles.md#frontend-frameworks) | 24 | Frontend frameworks beyond React/Vue/Angular: Svelte, Solid, Qwik, Astro, Remix, Preact, Lit, Stencil, Ember, htmx, Alpine |
+| [`frontend-frameworks`](../bundles.md#frontend-frameworks) | 23 | Frontend frameworks beyond React/Vue/Angular: Svelte, Solid, Qwik, Astro, Remix, Preact, Lit, Stencil, Ember, htmx, Alpine |
 
 ## Combine with
 

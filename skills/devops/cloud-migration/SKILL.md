@@ -1,14 +1,7 @@
 ---
 name: cloud-migration
 description: >
-  Use this skill when the user says 'cloud migration', 'migrate to cloud',
-  'lift and shift', 'rehost', 'replatform', 'refactor', 'rearchitect',
-  '7 Rs', 'migration strategy', 'AWS MGN', 'Azure Migrate', 'Google Migrate',
-  'Database Migration Service', 'storage migration', 'cutover', 'migration testing'.
-  Covers: 7 Rs migration strategies, migration assessment, workload discovery,
-  migration tools, cutover planning, post-migration optimization, migration testing,
-  database migration, data transfer, rollback planning.
-  Do NOT use for: specific cloud provider implementation (use aws/azure/gcp).
+  Use when the user asks about cloud migration, lift and shift, the 7 Rs (rehost, replatform, refactor), AWS MGN, Azure Migrate, migration waves, discovery and assessment, or cutover planning. Produces a migration plan with waves, tooling and rollback. Not for database schema migrations (use database-migration) or hybrid connectivity (use hybrid-cloud).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -350,99 +343,42 @@ aws dms stop-replication-task \
 psql -h production-db.xxx.rds.amazonaws.com \
   -c "SELECT count(*) FROM orders;"
 
-# 5. Point app to target
-aws rds modify-db-instance \
-  --db-instance-identifier production-db \
-  --new-db-instance-identifier production-db-primary
+# 5. Point the app at the target (DNS/connection-string switch, not a DB rename)
+kubectl -n production set env deployment/app-service   DATABASE_HOST=production-db.xxx.rds.amazonaws.com
 
-# 6. Start application on target
-kubectl -n production set image deployment/app-service \
-  app=myapp:latest
+# 6. Roll out with an immutable, reviewed image tag (never :latest)
+kubectl -n production rollout status deployment/app-service
 
 # 7. Verify
 curl -f https://app.example.com/health
 ```
 
-### Step 5: Large Data Transfer — AWS Snowball
+### Step 5: Large Data Transfer
+Pick the transfer path from data volume and available bandwidth (time ≈ size / usable throughput):
+- **Online** (preferred when the link allows): AWS DataSync, `aws s3 sync`, Azure AzCopy / Data Box Gateway, GCP Storage Transfer Service. Encrypt in transit, throttle during business hours, verify with checksums or object counts.
+- **Offline appliances** for very large one-time loads: AWS Snow Family, Azure Data Box, Google Transfer Appliance. Availability and supported device types change; check the provider's current offering before planning around one.
+- **Database data**: use the database engine's replication or a migration service (AWS DMS, Azure Database Migration Service, GCP Database Migration Service) so CDC keeps the target in sync until cutover.
+
 ```bash
-# Create Snowball import job
-aws snowball create-job \
-  --job-type IMPORT \
-  --resources '{"S3Resources":[{"BucketArn":"arn:aws:s3:::migration-data"}]}' \
-  --role-arn "arn:aws:iam::123456789012:role/snowball-role" \
-  --shipping-option SECOND_DAY \
-  --address-id ADDR123
-
-# Get job manifest
-aws snowball get-job-manifest --job-id JOB123
-
-# Unlock and transfer data (on Snowball device)
-# Use the Snowball Client on the device:
-snowballEdge list-buckets
-snowballEdge cp /data/large-dataset s3://migration-data/large-dataset/ --recursive
-
-# After return, verify data
-aws s3 sync s3://migration-data/large-dataset/ /data/verify/
+# Online example: incremental copy, then a verification pass with no transfer
+aws s3 sync /data/large-dataset s3://migration-data/large-dataset/
+aws s3 sync /data/large-dataset s3://migration-data/large-dataset/ --dryrun   # should list nothing
 ```
 
-### Step 6: Azure Migrate — Server Assessment
+### Step 6: Azure Migrate — Discovery and Assessment
+1. Create an Azure Migrate project in the portal (or with Bicep/ARM).
+2. Deploy the Azure Migrate appliance on-premises (VMware, Hyper-V or physical) to discover servers, dependencies and performance data.
+3. Create a performance-based assessment (sizing on a percentile of collected utilization, target region, pricing options).
+4. Replicate and migrate servers with the Migration and modernization tool; run a test migration into an isolated VNet before the real cutover.
+
+### Step 7: GCP — Migrate to Virtual Machines
 ```bash
-# Download and configure Azure Migrate appliance
-# Run assessment
-az assessment create \
-  --assessment-name "onprem-migration" \
-  --project-name "MigrationProject" \
-  --resource-group "migration-rg" \
-  --sizing-criteria "PerformanceBased" \
-  --percentile "Percentile95" \
-  --time-range "Month" \
-  --currency "USD" \
-  --azure-location "eastus" \
-  --offer-code "MSFT-AZR-0003P" \
-  --reserved-instance "None" \
-  --vm-uptime "{\"daysPerMonth\": 30, \"hoursPerDay\": 24}"
-
-# Create migration plan
-az migration plan create \
-  --migration-plan-name "production-workloads" \
-  --resource-group "migration-rg" \
-  --project-name "MigrationProject"
+gcloud services enable vmmigration.googleapis.com
 ```
-
-### Step 7: GCP Migration — Migrate for Compute
-```bash
-# Install Migrate for Compute (formerly Velostrata)
-gcloud services enable migrate.googleapis.com
-
-# Create migration source
-gcloud migrate sources create \
-  --project=$PROJECT_ID \
-  --source-name="onprem-vcenter" \
-  --source-type="vsphere" \
-  --host="10.0.0.1" \
-  --insecure=true
-
-# Create migration wave
-gcloud migrate waves create \
-  --project=$PROJECT_ID \
-  --wave-name="wave-1-pilot" \
-  --source-name="onprem-vcenter" \
-  --target-project=$TARGET_PROJECT \
-  --target-zone="us-central1-a" \
-  --target-network="production-vpc"
-
-# Start replication
-gcloud migrate replications start \
-  --project=$PROJECT_ID \
-  --wave-name="wave-1-pilot"
-
-# Test cutover
-gcloud migrate cutovers start \
-  --project=$PROJECT_ID \
-  --wave-name="wave-1-pilot" \
-  --cutover-name="cutover-test-1" \
-  --dry-run=true
-```
+1. Register the source (vSphere via the Migrate Connector appliance, or AWS/Azure as sources) in the Migrate to Virtual Machines console.
+2. Trust vCenter with its real CA certificate; do not disable TLS verification for the connector.
+3. Group VMs into migration groups (waves), configure target project, zone, network and machine type.
+4. Start replication, run a **test clone** into an isolated network, then cut over and keep the source powered off (not deleted) until validation completes.
 
 ### Step 8: Post-Migration Optimization
 ```python

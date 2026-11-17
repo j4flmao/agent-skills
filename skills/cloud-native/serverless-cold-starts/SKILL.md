@@ -1,7 +1,7 @@
 ---
 name: cloud-native-serverless-cold-starts
 description: >
-  Use this skill when the user says 'lambda cold start', 'cold start latency', 'provisioned concurrency', 'snapstart', 'optimize serverless startup', 'init duration', 'graalvm native lambda', 'azure functions cold start', 'cloud run cold start', 'min instances'. Diagnoses and reduces serverless cold-start latency and cost: measuring Init Duration, slimming init code, runtime/packaging choices, SnapStart, provisioned concurrency / minimum instances. Do NOT use for: Lambda concurrency and event-source design (cloud-native-aws-serverless), edge isolate runtimes (cloud-native-cloudflare-workers).
+  Use when the user asks to reduce Lambda cold start latency, Init Duration, provisioned concurrency, SnapStart, GraalVM native Lambdas, Azure Functions or Cloud Run cold starts, or min instances. Produces a measured cold-start diagnosis and fixes for init code, packaging and runtime. Not for Lambda concurrency and event sources (use cloud-native-aws-serverless).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -1,7 +1,11 @@
 ---
 name: matchmaking-lobby
 description: >
-  Use this skill when the user says 'matchmaking', 'lobby', 'skill rating', 'elo', 'glicko', 'trueskill', 'party system', 'queue times'. Designs matchmaking and lobbies: skill rating, match formation, queue relaxation, region/ping routing, party state and server hand-off. Do NOT use for: in-match netcode (use multiplayer-netcode), server fleet autoscaling (use scaling-architecture).
+  Use when the user asks about matchmaking, lobbies, Elo, Glicko, TrueSkill,
+  skill rating, region or ping based queues, party systems or queue times.
+  Produces rating, match formation and queue relaxation design. Not for in-match
+  netcode (use multiplayer-netcode) or server fleet autoscaling (use
+  scaling-architecture).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -137,13 +137,15 @@ void OnCorrection(Registry& reg, FrameState& ring) {
 
 ## Bandwidth Budget Guidelines
 
-| Entities/snapshot | 60 players | Bitrate @ 60Hz |
-|-------------------|-----------|----------------|
-| 1,000 entities × 64 B (Position, Rot, Health) | 40 KB/frame | **~2.4 Mbps** |
-| With delta compression (10% changed) | 4 KB/frame | 240 Kbps |
-| With camera-cornering (cull far entities) | 2 KB/frame | 120 Kbps |
+Bitrate per client = bytes per snapshot × snapshot rate × 8. Worked example for one client:
 
-Target < 100 Kbps per client for 60 FPS on mobile.
+| Snapshot content | Bytes/snapshot | At 60 Hz | At 20 Hz |
+|------------------|----------------|----------|----------|
+| 1,000 entities × 64 B, no compression | 64 KB | ~31 Mbps | ~10 Mbps |
+| Delta-compressed, 10% of entities changed | 6.4 KB | ~3.1 Mbps | ~1 Mbps |
+| Delta + interest management (200 relevant entities, 10% changed) | ~1.3 KB | ~0.6 Mbps | ~0.2 Mbps |
+
+Quantization (16-bit positions, smallest-three quaternions) shrinks the per-entity size further. Pick a budget per platform and measure; mobile networks need much lower targets than LAN.
 
 ## Networking in DOTS (Netcode for Entities)
 

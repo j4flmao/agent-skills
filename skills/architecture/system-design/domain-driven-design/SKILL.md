@@ -1,7 +1,11 @@
 ---
 name: architecture-domain-driven-design
 description: >
-  Use this skill when the user says 'DDD', 'domain-driven design', 'bounded context', 'aggregate', 'aggregate root', 'ubiquitous language', 'context map', 'anti-corruption layer', 'event storming', 'value object'. Applies strategic DDD (subdomains, bounded contexts, context maps) and tactical DDD (aggregates, entities, value objects, domain events, repositories) to model complex business logic. Do NOT use for: simple CRUD apps where DDD adds ceremony, service decomposition mechanics (architecture/system-design/microservices-patterns), or layering/folder structure only (backend/universal/clean-architecture).
+  Use when the user asks about DDD, domain-driven design, bounded contexts,
+  aggregates and aggregate roots, ubiquitous language, context maps,
+  anti-corruption layers, event storming or value objects. Produces strategic
+  and tactical domain models. Not for simple CRUD apps or folder layering (use
+  backend-clean-architecture) or service decomposition (use microservices).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -1,10 +1,7 @@
 ---
 name: devops-pulumi
 description: >
-  Pulumi Infrastructure as Code using real programming languages (TypeScript, Python, Go, C#).
-  Covers: Pulumi CLI, stack management, state backends, AWS/Azure/GCP providers, Kubernetes provider,
-  component resources, Automation API, secrets, policy as code, migration from Terraform.
-  Do NOT use for: Terraform, CloudFormation, or other IaC tools not using Pulumi.
+  Use when the user asks about Pulumi, Pulumi stacks and config, state backends, ComponentResource, the Automation API, Pulumi ESC and secrets, CrossGuard policy packs, or migrating from Terraform to Pulumi. Produces Pulumi programs in TypeScript, Python, Go or C#. Not for Terraform HCL (use terraform).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

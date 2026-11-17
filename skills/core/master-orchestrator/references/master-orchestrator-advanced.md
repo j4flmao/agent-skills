@@ -10,7 +10,7 @@ Use a chain only when step N needs the output of step N-1.
 |---------|---------------|-------------|
 | Spec then build | `planning/create-tech-spec` → `backend/go/architecture` | Implementation needs decisions |
 | Contract first | `backend/universal/api-design` → `frontend/universal/data-fetching` | Client follows the API shape |
-| Build then ship | `devops/docker` → `devops/cicd-pipeline` → `devops/kubernetes` | Image before pipeline before cluster |
+| Build then ship | `devops/docker-patterns` → `devops/cicd-pipeline` → `devops/kubernetes` | Image before pipeline before cluster |
 | Harden | `security/threat-modeling` → `dev-loop/security-auditor` | Threats define what to audit |
 
 Composition rules:
@@ -22,7 +22,7 @@ Composition rules:
 ## 2. Conflict Resolution
 
 ### Overlapping skills
-Several directories cover similar ground (e.g. `devops/gitops`, `devops/gitops-advanced`, `cloud-native/gitops`; `quality/e2e-testing` and `frontend/e2e-testing`). Tie-break in this order:
+Several directories cover similar ground (e.g. `devops/gitops`, `devops/gitops-advanced`, `devops/argo-cd`; `quality/quality-e2e-testing` and `frontend/universal/testing`). Tie-break in this order:
 
 1. **Explicit mention** — the user names a tool or skill.
 2. **Specificity** — `devops/gitops-advanced` beats `devops/gitops` only when the request contains an advanced trigger (ApplicationSet, multi-cluster).

@@ -1,18 +1,7 @@
 ---
 name: consul
 description: >
-  Use this skill when the user says 'consul', 'hashicorp consul',
-  'consul cluster', 'consul service discovery', 'consul DNS',
-  'consul health check', 'consul KV', 'consul ACL', 'consul connect',
-  'consul service mesh', 'consul intention', 'mesh gateway',
-  'consul federation', 'admin partition', 'consul raft',
-  'consul snapshot', 'consul on kubernetes', 'consul-template',
-  'consul-terraform-sync', 'consul ESM'.
-  Covers: HashiCorp Consul service discovery, health checking, KV store,
-  sessions and leader election, ACLs and security, Connect service mesh
-  (mTLS, intentions, Envoy), federation across datacenters, snapshots and
-  upgrades, and deployment on Kubernetes with Helm, Terraform, and
-  consul-terraform-sync.
+  Use when the user asks about HashiCorp Consul, service discovery, Consul DNS, health checks, Consul KV, ACLs, service mesh intentions, mesh gateways, WAN federation, admin partitions, or consul-template. Produces Consul configs and operations runbooks. Not for Istio or Linkerd (use devops-service-mesh) or Nomad scheduling (use nomad).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

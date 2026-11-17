@@ -491,6 +491,12 @@ Primary ecosystem?
   - references/medallion-architecture.md — Medallion Architecture Reference
   - references/lakehouse-architecture-patterns.md — Lakehouse Architecture Patterns
   - references/lakehouse-performance-optimization.md — Performance Optimization Reference
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/apache-iceberg.md` — Apache Iceberg (Open Table Format)
+
 ## Architecture Decision Trees
 
 ```

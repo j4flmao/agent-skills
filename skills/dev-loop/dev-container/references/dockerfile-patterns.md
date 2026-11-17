@@ -6,7 +6,7 @@
 
 ```dockerfile
 # Base stage — shared deps
-FROM node:20-bookworm AS base
+FROM node:24-bookworm AS base
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -135,7 +135,7 @@ volumes:
 RUN apt-get update && apt-get install -y ...
 
 # 2. Language runtime
-FROM node:20-bookworm
+FROM node:24-bookworm
 
 # 3. Package manifests (change with dependencies)
 COPY package.json package-lock.json ./
@@ -155,7 +155,7 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 USER appuser
 
 # Minimal base images for production
-FROM node:20-alpine          # Node.js
+FROM node:24-alpine          # Node.js
 FROM python:3.12-slim        # Python
 FROM alpine:3.20             # Static binaries
 FROM scratch                 # Go/Rust compiled

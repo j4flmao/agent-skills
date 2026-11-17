@@ -70,7 +70,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`ml-engineering`](../bundles.md#ml-engineering) | 24 | Machine learning and data science: classical/deep learning, features, evaluation, serving, MLOps, experimentation |
+| [`ml-engineering`](../bundles.md#ml-engineering) | 23 | Machine learning and data science: classical/deep learning, features, evaluation, serving, MLOps, experimentation |
 
 ## Combine with
 

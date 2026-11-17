@@ -580,7 +580,7 @@ spec:
     spec:
       containers:
         - name: preflight
-          image: bitnami/kubectl:latest
+          image: registry.k8s.io/kubectl:<pinned-version>   # pin; avoid :latest
           command:
             - sh
             - -c
@@ -707,7 +707,7 @@ spec:
       serviceAccountName: {{ include "chart.fullname" . }}-cleanup
       containers:
         - name: cleanup
-          image: bitnami/kubectl:latest
+          image: registry.k8s.io/kubectl:<pinned-version>
           command:
             - sh
             - -c
@@ -723,7 +723,7 @@ spec:
 |-------|------|----------|
 | `busybox` | 1.2MB | Basic connectivity, wget |
 | `curlimages/curl` | 5MB | HTTP health checks |
-| `bitnami/kubectl` | 60MB | Kubernetes API operations |
+| `registry.k8s.io/kubectl` | small | Kubernetes API operations |
 | `bitnami/postgresql` | 250MB | Database connectivity tests |
 | `fullstory/grpcurl` | 30MB | gRPC health checks |
 | `alpine/openssl` | 7MB | TLS certificate validation |

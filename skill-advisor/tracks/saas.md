@@ -25,13 +25,12 @@ Install these first. They cover the everyday work of this role and rarely confli
 | [`backend-api-design`](../../skills/backend/universal/api-design/SKILL.md) | `backend/universal/api-design` | Design consistent, production-grade REST or GraphQL APIs. |
 | [`ecommerce-payment-processing`](../../skills/ecommerce/payment-processing/SKILL.md) | `ecommerce/payment-processing` | Implement payment processing: gateway integration, subscription management, PCI DSS compliance, payment orchestration, fraud detection, and… |
 
-## Level 2 — Professional (6 skills)
+## Level 2 — Professional (5 skills)
 
 Add when the project grows: production concerns, scaling and team workflows.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
-| [`enterprise-multi-tenant`](../../skills/enterprise/multi-tenant/SKILL.md) | `enterprise/multi-tenant` | Designs and enforces tenant isolation, lifecycle management, and cross-tenant operational patterns. |
 | [`backend-feature-flags`](../../skills/backend/universal/feature-flags/SKILL.md) | `backend/universal/feature-flags` | Design feature flag systems with lifecycle management, targeting, and risk controls. |
 | [`product-pricing-strategy`](../../skills/product/pricing-strategy/SKILL.md) | `product/pricing-strategy` | Designs product pricing strategy including value metric identification, model selection, packaging, and willingness-to-pay research. |
 | [`product-onboarding-flow`](../../skills/product/onboarding-flow/SKILL.md) | `product/onboarding-flow` | Designs and optimizes user onboarding flows including activation milestones, funnel mapping, progressive disclosure, and experimentation. |
@@ -59,10 +58,10 @@ Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a 
 npx skills add j4flmao/agent-skills --skill backend-multi-tenancy --skill backend-authorization --skill backend-api-design --skill ecommerce-payment-processing --skill security-api-security --skill security-data-security --skill security-secrets-management
 ```
 
-**Level 1 + 2 + security baseline (13 skills):**
+**Level 1 + 2 + security baseline (12 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill backend-multi-tenancy --skill backend-authorization --skill backend-api-design --skill ecommerce-payment-processing --skill enterprise-multi-tenant --skill backend-feature-flags --skill product-pricing-strategy --skill product-onboarding-flow --skill rate-limiting --skill backend-webhooks --skill security-api-security --skill security-data-security --skill security-secrets-management
+npx skills add j4flmao/agent-skills --skill backend-multi-tenancy --skill backend-authorization --skill backend-api-design --skill ecommerce-payment-processing --skill backend-feature-flags --skill product-pricing-strategy --skill product-onboarding-flow --skill rate-limiting --skill backend-webhooks --skill security-api-security --skill security-data-security --skill security-secrets-management
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -75,7 +74,7 @@ Bundles are installed with the same command; each one's full command is on the [
 |--------|--------|-------------|
 | [`backend-patterns`](../bundles.md#backend-patterns) | 27 | Advanced backend patterns: CQRS, Event Sourcing, Saga, Transactional Outbox + related universal skills |
 | [`access-control`](../bundles.md#access-control) | 7 | Authentication and authorization: auth patterns, RBAC, ABAC, fine-grained policies, identity providers, zero trust identity |
-| [`fintech-payments`](../bundles.md#fintech-payments) | 13 | Fintech and payments: ledgers, payment processing, checkout, idempotency, audit trails, data masking, compliance |
+| [`fintech-payments`](../bundles.md#fintech-payments) | 11 | Fintech and payments: ledgers, payment processing, checkout, idempotency, audit trails, data masking, compliance |
 
 ## Combine with
 

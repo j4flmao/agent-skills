@@ -1,10 +1,14 @@
 ---
 name: extreme-quantization-mastery
 description: >
-  Use this skill when the user says 'quantization', 'int4', 'int8', 'fp8', 'fp4', 'nvfp4', 'mxfp4', 'gptq', 'awq', 'smoothquant', 'w4a16', 'w8a8', 'bitsandbytes', 'nf4'. Selects and applies low-bit weight/activation/KV-cache quantization for LLM inference and training on NVIDIA hardware, and validates accuracy loss. Do NOT use for: generic quantization theory for model formats (ai model-quantization skill), TensorRT engine building (tensorrt-optimization), KV-cache paging (paged-attention), fine-tuning workflows (ml-deep-learning).
+  Use when the user asks about FP8, INT4, NVFP4, MXFP4, GPTQ, AWQ, SmoothQuant, W4A16, W8A8, NF4 or bitsandbytes
+  for LLMs on NVIDIA GPUs. Produces a quantization recipe, code and accuracy-eval plan matched to the GPU and
+  serving engine. Not for format/GGUF basics (use llm-model-quantization) or TensorRT engines (use
+  tensorrt-optimization).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [hardware-acceleration, quantization, fp8, int4, gptq, awq, llm-inference]
 ---
 

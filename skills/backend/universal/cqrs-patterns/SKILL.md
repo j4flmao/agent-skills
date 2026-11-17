@@ -504,7 +504,7 @@ describe('GetOrderQueryHandler', () => {
 - Mediator pipeline behaviors are for cross-cutting concerns (logging, validation, tx), not business logic.
 
 ## References
-- Related skills: `skills/backend/universal/event-sourcing/SKILL.md`, `skills/backend/universal/transactional-outbox/SKILL.md`, `skills/backend/universal/design-patterns/microservices/SKILL.md`.
+- Related skills: `skills/backend/universal/event-sourcing/SKILL.md`, `skills/backend/universal/transactional-outbox/SKILL.md`, `skills/backend/universal/microservices/references/merged-microservice-design-patterns.md`.
 
 ## Handoff
 No artifact produced.

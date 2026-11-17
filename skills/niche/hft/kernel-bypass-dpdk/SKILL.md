@@ -70,3 +70,10 @@ flowchart TD
     E -->|"Direct Memory Access"| F
     G -.->|"Reads Directly"| F
 ```
+
+## References
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/kernel-bypass.md` — Kernel Bypass (DPDK, AF_XDP)

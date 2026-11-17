@@ -1,10 +1,14 @@
 ---
 name: multimodal-pipelines
 description: >
-  Use this skill when the user says 'multimodal pipeline', 'vision-language model', 'VLM', 'LLaVA', 'Qwen-VL', 'send images to an LLM', 'audio LLM', 'document understanding with images', 'screenshot understanding'. Prototypes pipelines that feed images and audio to models: how VLMs and audio-LLMs fuse modalities, when to use native multimodal models vs OCR/ASR-then-text, preprocessing, serving with vLLM's OpenAI-compatible API, and evaluation. Do NOT use for: image generation (ai/genai-vision), classic CV training (ml computer-vision), or embedding/vector search of images (ai/llm-engineering/rag-architecture).
+  Use when the user asks about a vision-language model (VLM), LLaVA, Qwen-VL, sending images or screenshots to
+  an LLM, audio LLMs, Whisper + LLM or multimodal document extraction. Produces a native-vs-OCR/ASR pipeline
+  design, vLLM serving and client code, and an eval set. Not for image generation (use genai-vision) or training
+  CV models (use ml-computer-vision).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [rnd, ai-agents, multimodal-pipelines, vlm, llava, whisper, vision, audio]
 ---
 

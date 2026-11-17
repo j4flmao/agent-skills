@@ -1,7 +1,11 @@
 ---
 name: mobile-kotlin-multiplatform
 description: >
-  Use this skill when the user says 'Kotlin Multiplatform', 'KMP', 'Compose Multiplatform', 'shared Kotlin', 'KMP module', 'expect/actual', 'commonMain', 'KMP project', 'multiplatform library'. Build cross-platform mobile apps with Kotlin Multiplatform sharing business logic, Compose Multiplatform UI, and platform-specific integrations. Do NOT use for: Android-only or iOS-only app development.
+  Use when the user asks about Kotlin Multiplatform, KMP, Compose Multiplatform,
+  commonMain, expect/actual, shared Kotlin modules for Android and iOS, Ktor
+  client or SQLDelight. Produces KMP module layout, shared logic and platform
+  interop. Not for Android-only apps (use android) or Kotlin language features
+  (use lang-kotlin).
 compatibility:
   claude-code: true
   cursor: true

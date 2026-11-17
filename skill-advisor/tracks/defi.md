@@ -12,25 +12,22 @@ These skills make the agent apply this domain's security practices by default. T
 |-------|------|----------------|
 | [`blockchain-security`](../../skills/blockchain/blockchain-security/SKILL.md) | `blockchain/blockchain-security` | Guide blockchain-specific security analysis covering smart contract auditing, DeFi threat modeling, economic security, incident response, formal… |
 
-## Level 1 — Essentials (4 skills)
+## Level 1 — Essentials (3 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
 | [`blockchain-defi`](../../skills/blockchain/blockchain-defi/SKILL.md) | `blockchain/blockchain-defi` | Guide decentralized finance protocol design, analysis, and implementation. |
-| [`smart-contract-security`](../../skills/blockchain/smart-contract-security/SKILL.md) | `blockchain/smart-contract-security` | Explain the highest-impact Solidity security controls — Checks-Effects-Interactions with a reentrancy guard, oracle-manipulation resistance, and a… |
 | [`blockchain-application`](../../skills/blockchain/blockchain-application/SKILL.md) | `blockchain/blockchain-application` | Guide smart contract development across all major blockchain platforms. |
 | [`blockchain-testing`](../../skills/blockchain/blockchain-testing/SKILL.md) | `blockchain/blockchain-testing` | Guide blockchain smart contract testing covering the full testing pyramid: unit tests, integration tests, fuzz tests, invariant tests, formal… |
 
-## Level 2 — Professional (5 skills)
+## Level 2 — Professional (3 skills)
 
 Add when the project grows: production concerns, scaling and team workflows.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
-| [`defi-protocols`](../../skills/blockchain/defi-protocols/SKILL.md) | `blockchain/defi-protocols` | Explain the core on-chain primitives of DeFi: the constant-product AMM invariant and swap pricing (with fees), and over-collateralized lending… |
-| [`defi-smart-contracts`](../../skills/niche/fintech-web3/defi-smart-contracts/SKILL.md) | `niche/fintech-web3/defi-smart-contracts` | Explain the deterministic pricing math behind automated market makers (constant-product invariant, slippage, impermanent loss) and the security… |
 | [`blockchain-patterns`](../../skills/blockchain/blockchain-patterns/SKILL.md) | `blockchain/blockchain-patterns` | Catalog and guide the selection of blockchain design patterns covering token standards, contract upgradeability, scaling solutions, cross-chain… |
 | [`blockchain-cross-chain`](../../skills/blockchain/blockchain-cross-chain/SKILL.md) | `blockchain/blockchain-cross-chain` | Guide cross-chain protocol selection, bridge architecture, and interoperability design. |
 | [`blockchain-data-indexing`](../../skills/blockchain/blockchain-data-indexing/SKILL.md) | `blockchain/blockchain-data-indexing` | Guide the selection and implementation of blockchain data indexing solutions. |
@@ -49,16 +46,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 + security baseline (5 skills):**
+**Level 1 + security baseline (4 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill blockchain-defi --skill smart-contract-security --skill blockchain-application --skill blockchain-testing --skill blockchain-security
+npx skills add j4flmao/agent-skills --skill blockchain-defi --skill blockchain-application --skill blockchain-testing --skill blockchain-security
 ```
 
-**Level 1 + 2 + security baseline (10 skills):**
+**Level 1 + 2 + security baseline (7 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill blockchain-defi --skill smart-contract-security --skill blockchain-application --skill blockchain-testing --skill defi-protocols --skill defi-smart-contracts --skill blockchain-patterns --skill blockchain-cross-chain --skill blockchain-data-indexing --skill blockchain-security
+npx skills add j4flmao/agent-skills --skill blockchain-defi --skill blockchain-application --skill blockchain-testing --skill blockchain-patterns --skill blockchain-cross-chain --skill blockchain-data-indexing --skill blockchain-security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -69,7 +66,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`blockchain-all`](../bundles.md#blockchain-all) | 20 | All blockchain skills: core, cryptography, Ethereum, Bitcoin, patterns, application, web3, testing, infrastructure, security, management, Solana, DeFi, cross-chain, ZK, data indexing |
+| [`blockchain-all`](../bundles.md#blockchain-all) | 16 | All blockchain skills: core, cryptography, Ethereum, Bitcoin, patterns, application, web3, testing, infrastructure, security, management, Solana, DeFi, cross-chain, ZK, data indexing |
 
 ## Combine with
 

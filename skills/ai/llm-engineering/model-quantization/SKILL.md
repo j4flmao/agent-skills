@@ -1,10 +1,14 @@
 ---
 name: llm-model-quantization
 description: >
-  Use this skill when the user says 'quantize a model', 'GPTQ', 'AWQ', 'GGUF', 'Q4_K_M', 'INT4 / INT8 / FP8 weights', 'NF4', 'bitsandbytes', 'model too big for my GPU'. Explains how weight (and activation) quantization works, compares GPTQ, AWQ, GGUF k-quants, bitsandbytes NF4, and FP8, and gives working commands to produce and serve quantized models with an evaluation gate. Do NOT use for: KV cache sizing (ai/llm-engineering/kv-cache), QLoRA fine-tuning workflows (ai/llm-finetuning), or running local models end to end (rnd/ai-agents/local-slm-inference).
+  Use when the user asks to quantize a model, GGUF, Q4_K_M, llama-quantize, GPTQ, AWQ, NF4, bitsandbytes,
+  INT8/FP8 weights or a model too big for the GPU. Produces format choice per engine, quantization commands,
+  memory estimate and an eval gate. Not for NVFP4/FP8 kernel-level tuning (use extreme-quantization-mastery) or
+  QLoRA training (use llm-finetuning).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, llm, quantization, gptq, awq, gguf, fp8, inference]
 ---
 

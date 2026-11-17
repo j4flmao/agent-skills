@@ -319,7 +319,7 @@ technology_reference_model:
     compute:
       - "AWS EC2 (Linux: Amazon Linux 2023)"
       - "AWS EKS (Kubernetes 1.28+)"
-      - "AWS Lambda (Node.js 20, Python 3.12)"
+      - "AWS Lambda (Node.js 24, Python 3.13)"
     database:
       - "Primary: Amazon Aurora PostgreSQL"
       - "NoSQL: Amazon DynamoDB"

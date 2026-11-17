@@ -1,10 +1,14 @@
 ---
 name: flash-attention
 description: >
-  Use this skill when the user says 'flashattention', 'flash attention', 'flash_attn', 'sdpa', 'scaled_dot_product_attention', 'online softmax', 'io-aware attention', 'attention memory', 'long context attention kernel'. Explains and applies FlashAttention (tiling, online softmax, recomputation), picks the right implementation (PyTorch SDPA, flash-attn package, FA3 on Hopper, FA4 on Blackwell) and diagnoses why it is not being used. Do NOT use for: KV-cache memory management in serving (paged-attention), writing generic kernels (cuda-programming, triton-kernels), quantization (extreme-quantization-mastery).
+  Use when the user asks about FlashAttention, flash_attn, SDPA, scaled_dot_product_attention backends, online
+  softmax, FA2/FA3/FA4 or attention OOM at long context. Produces the right exact-attention path, config and a
+  check that the flash kernel really runs. Not for KV-cache paging in serving (use paged-attention) or custom
+  kernels (use triton-kernels).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [hardware-acceleration, flash-attention, attention, transformers, gpu, memory]
 ---
 

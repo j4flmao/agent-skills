@@ -1,7 +1,7 @@
 ---
 name: cloud-native-kubernetes-mastery
 description: >
-  Use this skill when the user says 'kubernetes mastery', 'production-ready helm chart', 'helm chart best practices', 'helm template helpers', 'values schema', 'kubebuilder scaffold', 'write a kubernetes operator in go', 'chart plus operator', 'advanced helm templating'. Combines production Helm chart engineering (helpers, values.schema.json, tests, upgrade-safe templates) with a kubebuilder-based operator scaffold for teams shipping both. Do NOT use for: operator theory (cloud-native-k8s-operators), full operator lifecycle/OLM (devops-kubernetes-operators), Helm release management with helmfile/CI (helm-patterns).
+  Use when the user asks for a production-ready Helm chart, Helm template helpers, values.schema.json, chart tests, a kubebuilder scaffold, or writing a Kubernetes operator in Go next to a chart. Produces an upgrade-safe chart plus an operator skeleton. Not for operator lifecycle and OLM (use devops-kubernetes-operators) or helmfile releases (use helm-patterns).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -186,7 +186,7 @@ type Cache struct {
 	Status CacheStatus `json:"status,omitempty"`
 }
 ```
-The reconcile loop itself (get → build desired → create/update → status conditions) is shown in `skills/cloud-native/k8s-operators/SKILL.md`. Generated RBAC comes from `// +kubebuilder:rbac:groups=...` markers above `Reconcile`.
+The reconcile loop itself (get → build desired → create/update → status conditions) is shown in `skills/devops/kubernetes-operators/references/merged-cloud-native-k8s-operators.md`. Generated RBAC comes from `// +kubebuilder:rbac:groups=...` markers above `Reconcile`.
 
 ## Shipping an Operator with Helm
 - Put CRDs in `crds/` only if you accept that Helm never upgrades them; otherwise template CRDs (with `helm.sh/resource-policy: keep`) or manage them separately.
@@ -207,4 +207,4 @@ The reconcile loop itself (get → build desired → create/update → status co
 - [ ] Chart and app versions bumped independently (SemVer).
 
 ## References
-- Related skills: `skills/devops/helm-patterns/SKILL.md`, `skills/cloud-native/k8s-operators/SKILL.md`, `skills/devops/kubernetes-operators/SKILL.md`.
+- Related skills: `skills/devops/helm-patterns/SKILL.md`, `skills/devops/kubernetes-operators/references/merged-cloud-native-k8s-operators.md`, `skills/devops/kubernetes-operators/SKILL.md`.

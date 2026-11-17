@@ -1,7 +1,11 @@
 ---
 name: lang-assembly
 description: >
-  Use this skill when the user says 'assembly', 'asm', 'x86-64', 'ARM64', 'AArch64', 'calling convention', 'System V ABI', 'Windows x64 ABI', 'registers', 'read disassembly', 'objdump', 'Compiler Explorer', 'inline asm', 'stack frame'. Reads and writes x86-64 and AArch64 assembly: calling conventions (System V, Microsoft x64, AAPCS64), stack frames, reading compiler output to explain performance or bugs, writing small hand-tuned routines, and assembler syntax differences. Do NOT use for: microarchitecture tuning theory (use cpu-architecture), compiler implementation (use compiler-design), kernel entry paths in depth (use kernel-development).
+  Use when the user asks about assembly, x86-64 or AArch64 code, calling
+  conventions, System V or Windows x64 ABI, reading disassembly, objdump,
+  Compiler Explorer, inline asm or stack frames. Produces annotated assembly and
+  small hand-written routines. Not for microarchitecture tuning (use
+  cpu-architecture) or compiler implementation (use compiler-design).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

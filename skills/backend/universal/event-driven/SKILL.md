@@ -407,6 +407,14 @@ metrics.histogram('events.latency_ms', latency, { eventType });
   - references/event-schema-management.md — Event Schema Management
   - references/messaging-patterns.md — Messaging & Event-Driven Patterns
   - references/saga-choreography.md — Saga and Choreography Patterns
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-architecture-event-driven.md` — Event-Driven Architecture (merged from `architecture/event-driven`)
+- `references/merged-backend-event-driven-architecture.md` — Event-Driven Architecture (merged from `backend/event-driven-architecture`)
+- `references/cqrs-event-sourcing.md` — CQRS and Event Sourcing
+
 ## Handoff
 No artifact produced.
 Next skill: backend-testing — test event consumers, idempotency, DLQ handling.

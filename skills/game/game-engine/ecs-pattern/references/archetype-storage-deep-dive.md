@@ -7,7 +7,7 @@ description: Internal architecture of archetype-based ECS storage — chunk desi
 
 ## The Chunk-Based Memory Model
 
-Every archetype owns contiguous "chunk" blocks. Chunks are fixed-size memory regions (typically 4 KB or 16 KB) that store raw component data in SoA form for one archetype's entities.
+Every archetype owns contiguous "chunk" blocks. Chunks are fixed-size memory regions (Unity Entities uses 16 KB; other engines choose their own size) that store raw component data in SoA form for one archetype's entities.
 
 ```
 Archetype { Position, Velocity, Health }   (component set = archetype key)

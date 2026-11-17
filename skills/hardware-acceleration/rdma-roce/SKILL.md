@@ -1,10 +1,13 @@
 ---
 name: rdma-roce
 description: >
-  Use this skill when the user says 'rdma', 'roce', 'rocev2', 'infiniband', 'gpudirect rdma', 'ibverbs', 'pfc', 'ecn', 'dcqcn', 'lossless ethernet', 'nccl ib', 'queue pair'. Explains the RDMA verbs data path and RoCEv2 encapsulation, and designs/validates GPU cluster fabrics (lossless Ethernet with PFC + ECN/DCQCN, or InfiniBand) for NCCL collective traffic. Do NOT use for: choosing parallelism strategies (distributed-training), general Kubernetes networking or service meshes (devops), TCP application performance.
+  Use when the user asks about RDMA, RoCEv2, InfiniBand, GPUDirect RDMA, ibverbs, PFC, ECN/DCQCN, lossless
+  Ethernet or NCCL falling back to NET/Socket. Produces a fabric checklist, validation commands (perftest,
+  nccl-tests) and NCCL env settings. Not for choosing DDP/FSDP parallelism (use distributed-training).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [hardware-acceleration, rdma, rocev2, infiniband, gpudirect, nccl, networking]
 ---
 

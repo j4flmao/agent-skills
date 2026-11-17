@@ -497,6 +497,8 @@ val async: Unit = task.runAsync {
 
 ## Akka Streams
 
+> Play 3.x and most open-source Scala stacks now use Apache Pekko, the Apache-licensed fork of Akka 2.6 (Akka moved to the BSL licence in 2022). The APIs below are identical under `org.apache.pekko.*`; use Pekko unless you hold an Akka licence.
+
 ### Source, Flow, Sink
 
 ```scala

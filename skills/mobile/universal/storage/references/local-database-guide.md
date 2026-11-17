@@ -460,9 +460,12 @@ sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS secrets (id INTEGER PRIMARY KEY, va
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 Future<Database> openEncryptedDb() async {
+  // Generate a random key once and keep it in Keychain/Keystore
+  // (e.g. flutter_secure_storage); never hardcode it.
+  final password = await loadOrCreateDbKey();
   return openDatabase(
     join(await getDatabasesPath(), 'encrypted.db'),
-    password: 'secure-passphrase',
+    password: password,
     version: 1,
     onCreate: (db, version) async {
       await db.execute('''

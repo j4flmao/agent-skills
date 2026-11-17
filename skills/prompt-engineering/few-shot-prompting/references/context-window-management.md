@@ -67,7 +67,7 @@ The process of assembling the context window must be dynamic, reacting to the si
 When the budget is tight, how do we decide what to cut?
 
 1.  **FIFO (First In, First Out) for Chat History**: In conversational few-shot scenarios, older turns are evicted first.
-2.  **Least Relevant Example Eviction**: If using dynamic example selection (see `example-selection-architectures.md`), drop the example with the lowest similarity score first.
+2.  **Least Relevant Example Eviction**: If using dynamic example selection (see the dynamic few-shot section of the parent SKILL.md), drop the example with the lowest similarity score first.
 3.  **Intra-Example Truncation**: Instead of dropping an entire example, truncate lengthy parts of the example's input or output, replacing them with `...[truncated]...`.
 
 ## 3. Implementation (TypeScript)
@@ -75,7 +75,7 @@ When the budget is tight, how do we decide what to cut?
 This robust TypeScript class handles token-aware prompt assembly.
 
 ```typescript
-import { encode } from 'tiktoken'; // Assuming tiktoken is available
+import { encode } from 'gpt-tokenizer'; // o200k_base by default; use your provider's tokenizer for non-OpenAI models
 
 export interface PromptComponent {
   role: 'system' | 'user' | 'assistant';
@@ -172,16 +172,20 @@ export class ContextManager {
 A Python implementation focusing on dynamic formatting and context window safety.
 
 ```python
+import logging
+
 import tiktoken
 from typing import List, Dict, Tuple
 
 class TokenizerWrapper:
-    def __init__(self, model_name: str = "gpt-3.5-turbo"):
+    # tiktoken covers OpenAI models only; for other providers use their token-counting
+    # API (e.g. Anthropic's count_tokens endpoint) or the model's own tokenizer.
+    def __init__(self, model_name: str = "gpt-4o"):
         try:
             self.encoding = tiktoken.encoding_for_model(model_name)
         except KeyError:
-            print("Warning: model not found. Using cl100k_base encoding.")
-            self.encoding = tiktoken.get_encoding("cl100k_base")
+            logging.warning("tiktoken has no mapping for %s; falling back to o200k_base", model_name)
+            self.encoding = tiktoken.get_encoding("o200k_base")
 
     def count(self, text: str) -> int:
         return len(self.encoding.encode(text))

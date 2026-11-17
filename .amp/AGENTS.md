@@ -1,6 +1,6 @@
 # j4flmao/agent-skills — Amp guidance
 
-641 skills across all phases. Each `skills/<area>/<name>/SKILL.md` defines trigger keywords, rules, and response format.
+587 skills across all phases. Each `skills/<area>/<name>/SKILL.md` defines trigger keywords, rules, and response format.
 
 ## Use
 
@@ -40,5 +40,6 @@ See @bundles/bundle-definitions.json for 15 skill bundles.
 
 
 ## [MANDATORY] CORE STANDARDS
-You MUST abide by all engineering rules defined in the ules/ directory of this agent configuration folder. 
+You MUST abide by all engineering rules defined in the 
+ules/ directory of this agent configuration folder. 
 These rules cover Code Quality, Testing, RAG, Multi-Agent architectures, ML/GPU, Distributed Systems, Cryptography, eBPF, Databases, ZKP, and Embedded systems.

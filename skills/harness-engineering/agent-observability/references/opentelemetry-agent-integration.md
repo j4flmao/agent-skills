@@ -395,13 +395,13 @@ class AgentSpanManager:
 ### 4.1 LLM Semantic Conventions
 
 The OpenTelemetry community has proposed semantic conventions for GenAI/LLM operations.
-Below is the recommended attribute set:
+Below is the recommended attribute set. `gen_ai.*` names follow the semconv (still in Development status, so pin the version you emit); `app.llm.*` names are custom extensions for cost, which the semconv does not define:
 
 ```yaml
 # Semantic conventions for LLM spans (based on OTel GenAI SIG)
 
 # Request attributes
-gen_ai.system: "openai"             # Provider: openai, anthropic, google, etc.
+gen_ai.provider.name: "openai"      # Provider: openai, anthropic, gcp.gemini, etc. (older semconv: gen_ai.system)
 gen_ai.request.model: "gpt-4o"      # Requested model
 gen_ai.request.max_tokens: 4096     # Max output tokens
 gen_ai.request.temperature: 0.7     # Sampling temperature
@@ -418,12 +418,12 @@ gen_ai.response.finish_reasons: ["stop"]     # Why generation stopped
 # Usage attributes
 gen_ai.usage.input_tokens: 1250      # Prompt/input tokens
 gen_ai.usage.output_tokens: 340      # Completion/output tokens
-gen_ai.usage.total_tokens: 1590      # Total tokens
+app.llm.usage.total_tokens: 1590    # custom: not part of the GenAI semconv
 
 # Cost attributes (custom)
-gen_ai.cost.input_cost_usd: 0.00375   # Cost for input tokens
-gen_ai.cost.output_cost_usd: 0.0102   # Cost for output tokens
-gen_ai.cost.total_cost_usd: 0.01395   # Total cost
+app.llm.cost.input_cost_usd: 0.00375   # Cost for input tokens
+app.llm.cost.output_cost_usd: 0.0102   # Cost for output tokens
+app.llm.cost.total_cost_usd: 0.01395   # Total cost
 
 # Agent-specific attributes (custom)
 agent.step.index: 3                    # Step number in reasoning chain
@@ -442,19 +442,15 @@ from opentelemetry.trace import Span
 from typing import Optional
 
 
-# Token pricing per 1M tokens (as of 2026)
-TOKEN_PRICING = {
-    "gpt-4o": {"input": 2.50, "output": 10.00},
-    "gpt-4o-mini": {"input": 0.15, "output": 0.60},
-    "gpt-4.1": {"input": 2.00, "output": 8.00},
-    "gpt-4.1-mini": {"input": 0.40, "output": 1.60},
-    "gpt-4.1-nano": {"input": 0.10, "output": 0.40},
-    "claude-sonnet-4-20250514": {"input": 3.00, "output": 15.00},
-    "claude-3-5-haiku-20241022": {"input": 0.80, "output": 4.00},
-    "claude-opus-4-20250514": {"input": 15.00, "output": 75.00},
-    "gemini-2.5-pro": {"input": 1.25, "output": 10.00},
-    "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
-}
+import json
+import os
+
+# USD per 1M tokens per model id. Prices and cache discounts change often and differ per
+# provider, so load them from versioned config instead of hardcoding them here, e.g.
+# {"<model-id>": {"input": 0.0, "output": 0.0, "cached_input": 0.0}}
+TOKEN_PRICING: dict[str, dict[str, float]] = json.loads(
+    open(os.environ["LLM_PRICING_FILE"], encoding="utf-8").read()
+)
 
 
 def set_llm_request_attributes(
@@ -466,7 +462,7 @@ def set_llm_request_attributes(
     top_p: float = 0.95,
 ) -> None:
     """Set standard LLM request attributes on a span."""
-    span.set_attribute("gen_ai.system", system)
+    span.set_attribute("gen_ai.provider.name", system)  # was gen_ai.system before semconv 1.37
     span.set_attribute("gen_ai.request.model", model)
     span.set_attribute("gen_ai.request.max_tokens", max_tokens)
     span.set_attribute("gen_ai.request.temperature", temperature)
@@ -488,10 +484,10 @@ def set_llm_response_attributes(
     span.set_attribute("gen_ai.response.finish_reasons", [finish_reason])
     span.set_attribute("gen_ai.usage.input_tokens", input_tokens)
     span.set_attribute("gen_ai.usage.output_tokens", output_tokens)
-    span.set_attribute("gen_ai.usage.total_tokens", input_tokens + output_tokens)
+    span.set_attribute("app.llm.usage.total_tokens", input_tokens + output_tokens)
 
     if cached_tokens > 0:
-        span.set_attribute("gen_ai.usage.cached_tokens", cached_tokens)
+        span.set_attribute("app.llm.usage.cached_tokens", cached_tokens)
         span.set_attribute("agent.cache.hit", True)
 
     # Calculate cost
@@ -499,13 +495,13 @@ def set_llm_response_attributes(
     if pricing:
         effective_input = input_tokens - cached_tokens
         input_cost = (effective_input / 1_000_000) * pricing["input"]
-        cached_cost = (cached_tokens / 1_000_000) * pricing["input"] * 0.1  # 90% discount
+        cached_cost = (cached_tokens / 1_000_000) * pricing["cached_input"]  # provider-specific rate
         output_cost = (output_tokens / 1_000_000) * pricing["output"]
         total_cost = input_cost + cached_cost + output_cost
 
-        span.set_attribute("gen_ai.cost.input_cost_usd", round(input_cost, 6))
-        span.set_attribute("gen_ai.cost.output_cost_usd", round(output_cost, 6))
-        span.set_attribute("gen_ai.cost.total_cost_usd", round(total_cost, 6))
+        span.set_attribute("app.llm.cost.input_cost_usd", round(input_cost, 6))
+        span.set_attribute("app.llm.cost.output_cost_usd", round(output_cost, 6))
+        span.set_attribute("app.llm.cost.total_cost_usd", round(total_cost, 6))
 ```
 
 ---

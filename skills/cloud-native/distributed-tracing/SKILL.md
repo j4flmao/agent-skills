@@ -1,7 +1,7 @@
 ---
 name: cloud-native-distributed-tracing
 description: >
-  Use this skill when the user says 'implement distributed tracing', 'trace context', 'traceparent', 'baggage', 'tail sampling', 'head sampling', 'trace kafka messages', 'jaeger tracing', 'trace correlation', 'span links'. Designs end-to-end distributed tracing with OpenTelemetry: W3C context propagation across HTTP, gRPC and messaging, sampling strategy, and collector topology. Do NOT use for: OpenTelemetry SDK setup basics (opentelemetry-tracing), full OTel platform rollout (devops-opentelemetry), metrics/alerting (prometheus-grafana).
+  Use when the user asks about traceparent and W3C trace context, baggage, tail vs head sampling, tracing Kafka messages, span links, or Jaeger/Tempo trace correlation across services. Produces an end-to-end tracing design: propagation, sampling and collector topology. Not for OTel SDK and Collector rollout (use devops-opentelemetry) or metrics alerting (use prometheus-grafana).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

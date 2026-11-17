@@ -33,7 +33,13 @@ None. This skill produces no files. It emits a routing decision as text.
 ### Response Format
 The agent MUST output exactly one of the following templates. No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick. No explanations.
 
-Skills are identified by their directory under `skills/` (e.g. `dev-loop/code-review` = `skills/dev-loop/code-review/SKILL.md`); every route below uses that form. When a request matches nothing below, consult the Quick Map in `.claude/rules/routing.md` or list `skills/<category>/`.
+Skills are identified by their directory under `skills/` (e.g. `dev-loop/code-review` = `skills/dev-loop/code-review/SKILL.md`); every route below uses that form. When unsure, or when a request matches nothing below, rank candidates with the retriever and read the top 1–2 results before routing:
+
+```bash
+node scripts/route.js "<the user's request>"   # top 5 skills by name + description
+```
+
+If the retriever is unavailable, consult the Quick Map in `.claude/rules/routing.md` or list `skills/<category>/`. Before emitting a route, confirm `skills/<route>/SKILL.md` exists.
 
 Template A — Route to a single skill:
 ```
@@ -425,7 +431,7 @@ State: User asks about Dependabot, Renovate, dependency updates, vulnerability s
   Reason: "Dependency management automation request."
 
 State: User asks about API documentation, Swagger, OpenAPI, API spec generation.
-  Route: `devops/api-documentation`
+  Route: `backend/universal/openapi-documentation`
   Reason: "API documentation generation request."
 
 State: User asks about observability, tracing, OpenTelemetry, distributed tracing, span.
@@ -589,7 +595,7 @@ State: User asks about search, Elasticsearch, Meilisearch, search indexing.
   Reason: "Search request."
 
 State: User asks about data streaming, Kafka, stream processing, event streaming.
-  Route: `backend/universal/data-streaming`
+  Route: `data/streaming`
   Reason: "Data streaming request."
 
 State: User asks about file storage, object storage, S3, file upload.
@@ -621,7 +627,7 @@ State: User asks about OpenAPI, Swagger, API specification.
   Reason: "OpenAPI documentation request."
 
 State: User asks about contract testing, Pact, consumer-driven contracts.
-  Route: `backend/universal/contract-testing`
+  Route: `quality/contract-testing`
   Reason: "Contract testing request."
 
 State: User asks about idempotency, idempotent API, duplicate detection.
@@ -673,7 +679,7 @@ State: User asks about event sourcing, event store, event stream, rehydrate, eve
   Reason: "Event sourcing request."
 
 State: User asks about saga, distributed transaction, choreography saga, orchestration saga, compensating transaction, saga state machine, long running transaction.
-  Route: `architecture/system-design/microservices-patterns`
+  Route: `backend/universal/microservices`
   Reason: "Saga patterns request."
 
 State: User asks about transactional outbox, outbox pattern, reliable event publishing, dual write, CDC outbox, message relay, outbox table.
@@ -721,7 +727,7 @@ State: User asks about incident response, on-call, PagerDuty, incident managemen
   Reason: "Incident response request."
 
 State: User asks about cost-benefit, ROI, TCO, cost analysis.
-  Route: `management/cost-benefit`
+  Route: `planning/cost-benefit`
   Reason: "Cost-benefit analysis request."
 
 State: User asks about hiring, interview, recruitment, technical screen.
@@ -965,7 +971,7 @@ State: User asks about Kubernetes for data, K8s data workloads, Spark on K8s, da
   Reason: "Kubernetes for data request."
 
 State: User asks about cloud cost optimization, cloud spend, cost reduction, cloud billing.
-  Route: `devops/cloud-cost-optimization`
+  Route: `devops/finops`
   Reason: "Cloud cost optimization request."
 
 State: User asks about cloud architecture, landing zone, well-architected framework, cloud foundation, multi-cloud, cloud governance.
@@ -1283,7 +1289,7 @@ State: User asks about compliance, audit, SOC2, ISO27001, GDPR.
   Reason: "Compliance/audit request."
 
 State: User asks about multi-tenant, SaaS architecture, tenant isolation.
-  Route: `enterprise/multi-tenant`
+  Route: `backend/universal/multi-tenancy`
   Reason: "Multi-tenant request."
 
 State: User asks about enterprise integration, legacy integration, ESB.
@@ -1542,6 +1548,7 @@ Read project files:
 - End EVERY response with exactly one of the three templates in Response Format.
 - If multiple skills could apply, pick the one with the highest priority (earliest phase).
 - If you cannot determine the stack, ask. Do not guess.
+- If no State in Step 2 clearly matches, run `node scripts/route.js "<request>"` and route to its top result (or Template C with the top two as options).
 - Never explain why you chose the skill. The template already contains "Reason."
 - If the user asks a question outside routing (e.g., "how do I do X"), respond with: "That question should be handled by {skill-name}. Activate that skill with: {trigger phrase}"
 

@@ -195,3 +195,8 @@ Document limits, return `Retry-After`, and require clients to back off with expo
 - [Queuing and prioritization](references/rate-limiting-queuing.md)
 - [Backpressure](references/backpressure.md)
 - [Monitoring](references/rate-limiting-monitoring.md)
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-system-design-rate-limiting.md` — Rate Limiting (System Design) (merged from `system-design/rate-limiting`)

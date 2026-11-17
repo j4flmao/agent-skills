@@ -1,9 +1,11 @@
 ---
 name: android
 description: >
-  Use this skill when the user asks about Android development, Kotlin, Jetpack
-  Compose, Android architecture, MVVM, Clean Architecture, Room, Hilt, Retrofit,
-  or Android testing.
+  Use when the user asks about Android apps in Kotlin, Jetpack Compose screens,
+  navigation and ViewModel, Hilt, Room, Retrofit/OkHttp, WorkManager or Android
+  testing. Produces Android architecture, Compose UI and data-layer code
+  following current Jetpack guidance. Not for Kotlin language features alone
+  (use lang-kotlin) or shared KMP code (use mobile-kotlin-multiplatform).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

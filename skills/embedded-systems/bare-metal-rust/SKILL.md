@@ -1,7 +1,11 @@
 ---
 name: bare-metal-rust
 description: >
-  Use this skill when the user says 'embedded rust', 'no_std', 'cortex-m rust', 'embedded-hal', 'PAC', 'svd2rust', 'RTIC', 'Embassy', 'probe-rs', 'defmt', 'rust on microcontroller'. Builds and reviews `#![no_std]` firmware in Rust: crate layers (PAC/HAL/BSP), safe sharing between interrupts and main code, concurrency frameworks (RTIC, Embassy), allocation-free collections, and the flash/debug toolchain. Do NOT use for: general Rust application code (use lang-rust), C firmware (use c-cpp-patterns), RTOS theory (use rtos-fundamentals).
+  Use when the user asks about embedded Rust, no_std firmware, Cortex-M Rust,
+  embedded-hal, PAC and svd2rust, RTIC, Embassy, probe-rs or defmt. Produces
+  no_std firmware with safe interrupt sharing and a flash/debug toolchain. Not
+  for general Rust application code (use lang-rust) or C firmware (use
+  c-cpp-patterns).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -4,9 +4,8 @@
 
 ```typescript
 // entrypoint.ts — Deno Deploy entry
-import { serve } from 'https://deno.land/std@0.220.0/http/server.ts';
 
-serve((req) => {
+Deno.serve((req) => {
   const url = new URL(req.url);
   if (url.pathname === '/health') {
     return new Response(JSON.stringify({ status: 'ok' }), {
@@ -160,13 +159,13 @@ Deno.addSignalListener('SIGTERM', () => {
   ac.abort();
 });
 
-serve((req) => app.fetch(req), { signal: ac.signal, port: 8000 });
+Deno.serve((req) => app.fetch(req), { signal: ac.signal, port: 8000 });
 ```
 
 ## Health Checks
 
 ```typescript
-serve((req) => {
+Deno.serve((req) => {
   const url = new URL(req.url);
   if (url.pathname === '/health') {
     const healthy = dbConnected();

@@ -191,7 +191,7 @@ import { oakCors } from 'https://deno.land/x/cors@v1.2.2/mod.ts';
 app.use(oakCors({ origin: 'https://example.com' }));
 
 // Static files
-import { send } from 'oak/send.ts';
+import { send } from '@oak/oak';
 app.use(async (ctx, next) => {
   const path = ctx.request.url.pathname;
   if (path.startsWith('/static')) {

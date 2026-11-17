@@ -433,6 +433,13 @@ Recommended hardware:
   - references/zk-rollup-architecture.md — ZK Rollup Architecture
   - references/zkevm-types.md — zkEVM Types
 
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-zero-knowledge-proofs.md` — Zero-Knowledge Proofs (merged from `blockchain/zero-knowledge-proofs`)
+- `references/zk-rollups.md` — ZK-Rollups (Layer 2 Scaling)
+- `references/zk-snarks.md` — Zero-Knowledge Proofs (zk-SNARKs & zk-STARKs)
+
 ## Architecture Decision Trees
 
 ```

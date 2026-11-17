@@ -392,7 +392,7 @@ Primary DB is relational (JPA/JDBC)?
 | Startup time | 2-4s | 2-4s | <0.3s |
 | Memory footprint | ~150MB | ~150MB | ~50MB |
 | GraalVM support | Limited | Limited | First-class |
-| Reactive support | No | Yes | Yes (via RESTEasy Reactive) |
+| Reactive support | No | Yes | Yes (via Quarkus REST) |
 | JPA support | Full | Via Hibernate Reactive | Via Panache |
 | Testing | @SpringBootTest | @WebFluxTest | @QuarkusTest |
 | OpenAPI | springdoc-openapi | springdoc-openapi | SmallRye OpenAPI |

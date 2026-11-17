@@ -71,8 +71,8 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`fullstack-rails-svelte`](../bundles.md#fullstack-rails-svelte) | 216 | Full stack: Ruby on Rails backend + SvelteKit frontend |
-| [`backend-stacks`](../bundles.md#backend-stacks) | 83 | Backend frameworks and runtimes: Node (Express/Fastify/Hono/Nest), Bun, Deno, Go, Rust, Python, Java/Kotlin, .NET, PHP, Ruby, Elixir, Swift, Scala |
+| [`fullstack-rails-svelte`](../bundles.md#fullstack-rails-svelte) | 214 | Full stack: Ruby on Rails backend + SvelteKit frontend |
+| [`backend-stacks`](../bundles.md#backend-stacks) | 82 | Backend frameworks and runtimes: Node (Express/Fastify/Hono/Nest), Bun, Deno, Go, Rust, Python, Java/Kotlin, .NET, PHP, Ruby, Elixir, Swift, Scala |
 
 ## Combine with
 

@@ -1,7 +1,10 @@
 ---
 name: anti-cheat-server
 description: >
-  Use this skill when the user says 'anti-cheat', 'server-side validation', 'cheat detection', 'speed hack', 'aimbot detection', 'ban system'. Designs server-side anti-cheat: authoritative validation, client integrity signals, anomaly detection, evidence capture and ban/escalation pipelines. Do NOT use for: kernel-level client anti-cheat drivers, general web fraud detection.
+  Use when the user asks about server-side anti-cheat, validating client
+  actions, speed hack or aimbot detection, cheat telemetry, replay evidence or
+  ban systems. Produces authoritative validation, anomaly detection and ban
+  pipelines. Not for kernel-level client anti-cheat drivers or web fraud.
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -572,8 +572,8 @@ Use `RefreshDatabase` or `DatabaseTransactions` trait for isolation. Use `Http` 
 - Service classes are constructor-injected into controllers.
 - Queue jobs use typed constructor properties and `$tries`/`$backoff` for retry config.
 - API routes return JSON responses with `Resource` classes for DTO transformation.
-- Exception handling via `Handler::render()` for consistent error responses.
-- Caching with `Cache::tags()` for invalidatable cache groups.
+- Exception handling in `bootstrap/app.php` via `->withExceptions()` (Laravel 11+; `App\Exceptions\Handler` only in Laravel 10 and older).
+- Caching with `Cache::tags()` for invalidatable groups (Redis/Memcached stores only; file and database stores do not support tags).
 - All DB queries use eager loading (`with()`) to prevent N+1.
 - Migrations are always backward-compatible — never drop columns without deprecation.
 

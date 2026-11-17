@@ -1,7 +1,7 @@
 ---
 name: cloud-native-cloudflare-workers
 description: >
-  Use this skill when the user says 'cloudflare workers', 'v8 isolates', 'edge function', 'wrangler', 'durable objects', 'workers kv', 'd1 database', 'r2 storage', 'edge compute', 'run code at the edge'. Designs and writes Cloudflare Workers applications, choosing the right storage primitive (KV, D1, R2, Durable Objects, Queues) and respecting the isolate runtime's limits. Do NOT use for: CDN caching rules only (devops cdn-edge), AWS Lambda/Lambda@Edge (cloud-native-aws-serverless), general serverless platform comparison (devops-serverless).
+  Use when the user asks about Cloudflare Workers, wrangler, Durable Objects, Workers KV, D1, R2, Queues, V8 isolates, or running code at the edge. Produces Workers code and picks the right storage primitive within isolate limits. Not for CDN caching rules (use cdn-edge) or AWS Lambda (use cloud-native-aws-serverless).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

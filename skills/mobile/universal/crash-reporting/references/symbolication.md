@@ -17,11 +17,11 @@ DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
 ### Manual Upload — Sentry
 
 ```bash
-# Install sentry-cli
-curl -sL https://sentry.io/get-cli/ | bash
+# Install sentry-cli from a package manager (pinned), not curl | bash
+brew install getsentry/tools/sentry-cli      # or: npm install --save-dev @sentry/cli@<version>
 
-# Upload dSYM
-sentry-cli upload-dif --org myorg --project myproject /path/to/dSYMs
+# Auth token comes from the CI secret store: export SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN}
+sentry-cli debug-files upload --org myorg --project myproject /path/to/dSYMs
 ```
 
 ### Manual Upload — Crashlytics

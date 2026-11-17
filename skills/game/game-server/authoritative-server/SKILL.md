@@ -1,7 +1,11 @@
 ---
 name: authoritative-server
 description: >
-  Use this skill when the user says 'authoritative server', 'server tick loop', 'server reconciliation', 'lag compensation', 'dedicated server', 'input authority'. Designs authoritative game servers: tick loop, world state and snapshots, input authority, reconciliation/rollback, lag compensation and session handling. Do NOT use for: client-side prediction details (use multiplayer-netcode), fleet scaling (use scaling-architecture).
+  Use when the user asks about an authoritative game server, dedicated server,
+  server tick loop, snapshots, input authority, server reconciliation, rollback
+  or lag compensation on the server. Produces tick loop and world-state design.
+  Not for client-side prediction (use multiplayer-netcode) or fleet scaling (use
+  scaling-architecture).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -118,7 +122,7 @@ Snapshot minimal components:
 - Compressed position: quantized to a fixed grid (e.g. int16/int32 at 1 cm), sent as deltas against the acked baseline.
 - Entities unchanged since last snapshot: omitted (per-entity dirty flags).
 
-See `game-engine-multiplayer-netcode` for engine-level replication formats.
+See `multiplayer-netcode` for engine-level replication formats.
 
 ## 5. Reconciliation, Rollback & Lag Compensation
 

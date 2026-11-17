@@ -232,7 +232,7 @@ class ApiResponse(BaseModel, Generic[T]):
             data=data,
             metadata=ResponseMetadata(
                 requestId=request_id,
-                timestamp=datetime.utcnow().isoformat() + "Z"
+                timestamp=datetime.now(timezone.utc).isoformat() + "Z"
             )
         )
 
@@ -243,7 +243,7 @@ class ApiResponse(BaseModel, Generic[T]):
             error=ApiError(code=code, message=message, traceId=trace_id),
             metadata=ResponseMetadata(
                 requestId=trace_id,
-                timestamp=datetime.utcnow().isoformat() + "Z"
+                timestamp=datetime.now(timezone.utc).isoformat() + "Z"
             )
         )
 ```
@@ -417,7 +417,7 @@ async def validation_handler(request: Request, exc: RequestValidationError):
             "success": False,
             "data": None,
             "error": {"code": "VALIDATION_ERROR", "message": "Validation failed", "details": details},
-            "metadata": {"requestId": request.headers.get("x-request-id", ""), "timestamp": datetime.utcnow().isoformat() + "Z"}
+            "metadata": {"requestId": request.headers.get("x-request-id", ""), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"}
         }
     )
 ```

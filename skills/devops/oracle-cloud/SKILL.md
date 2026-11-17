@@ -1,20 +1,7 @@
 ---
 name: oracle-cloud
 description: >
-  Use this skill when the user says 'oracle cloud', 'oci', 'oracle
-  cloud infrastructure', 'oracle database cloud', 'oci compute',
-  'oci networking', 'oci storage', 'oci identity', 'oci iam',
-  'oracle autonomous database', 'oci load balancer', 'oci dns',
-  'oci functions', 'oci container engine', 'oke', 'oracle
-  kubernetes', 'oci terraform', 'oci resource manager', 'oracle
-  cloud regions', 'oci fastconnect', 'oci vcn', 'oci security
-  list', 'oci nsg', 'oci bastion', 'oci vault', 'oci waf',
-  'oci email delivery', 'oci object storage', 'oci block volume',
-  'oci file storage', 'oci budget', 'oci cost analysis',
-  'oci announcements', 'oci support'.
-  Covers: Oracle Cloud Infrastructure (OCI) resources, networking,
-  compute, storage, IAM, OKE (Kubernetes), Autonomous Database,
-  and governance.
+  Use when the user asks about Oracle Cloud Infrastructure (OCI), compartments and IAM policies, VCN, security lists and NSGs, OKE, Autonomous Database, OCI Object Storage, FastConnect, Resource Manager, or the oci Terraform provider. Produces OCI architectures and IaC. Not for AWS (use aws) or IBM Cloud (use ibm-cloud).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -448,7 +435,7 @@ resource "oci_monitoring_alarm" "cpu_high" {
 ## Handoff
 - `devops-terraform` for Terraform state and module patterns for OCI.
 - `devops-kubernetes` for workload deployment on OKE clusters.
-- `devops-docker` for containerizing applications for OKE.
+- `docker-patterns` for containerizing applications for OKE.
 - `devops-hybrid-cloud` for connecting OCI with on-prem or other clouds.
 - `devops-backup-dr` for OCI-based backup and DR strategies.
 - `devops-observability` for OCI logging and monitoring integration.

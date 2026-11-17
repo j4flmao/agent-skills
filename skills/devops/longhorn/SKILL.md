@@ -1,7 +1,7 @@
 ---
 name: longhorn
 description: >
-  Use this skill when deploying and managing Longhorn distributed storage on Kubernetes -- installation, volume management, backup, disaster recovery, performance tuning, monitoring. This skill enforces: minimum 3 nodes for production, replica count 3 for all production volumes, S3-compatible backup target, monitoring alerts for volume degraded and disk space. Do NOT use for: non-Kubernetes storage solutions, other CSI drivers, cloud-managed storage (EBS, GCE PD).
+  Use when the user asks about Longhorn on Kubernetes, Longhorn volumes and replicas, backup targets (S3 or NFS), recurring snapshots, disaster recovery volumes, the V2 data engine, Longhorn performance, or degraded volumes. Produces Longhorn install, StorageClass and backup configs. Not for Ceph or SAN design (use storage-infrastructure).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"

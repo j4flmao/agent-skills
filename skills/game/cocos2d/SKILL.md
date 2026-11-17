@@ -1,7 +1,11 @@
 ---
 name: cocos2d
 description: >
-  Use this skill when the user says 'cocos2d', 'cocos2d-x', 'cocos creator', 'cocos game', 'cocos build'. Guides Cocos Creator 3.x / Cocos2d-x projects: node tree and components, rendering and batching, physics, UI, multi-platform builds and mobile performance. Do NOT use for: Cocos2d-x engine internals (use cocos2d-patterns), Unity/Godot/Unreal projects.
+  Use when the user asks about Cocos Creator 3.x, Cocos2d-x, a Cocos game, node
+  and component scripting in TypeScript, Cocos builds for web or mobile, or
+  Cocos performance. Produces Cocos project structure, gameplay code and build
+  settings. Not for Cocos2d-x engine internals (use cocos2d-patterns) or other
+  engines (use unity or godot).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

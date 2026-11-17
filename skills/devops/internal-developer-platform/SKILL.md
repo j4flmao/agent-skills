@@ -1,13 +1,7 @@
 ---
 name: devops-internal-developer-platform
 description: >
-  Deep dive into IDP design: golden path architecture, platform APIs, Backstage
-  plugin development, software templates, tech docs, service catalog design,
-  platform adoption, and developer experience measurement. Covers: Scaffolder
-  custom actions, catalog entity modeling, Backstage backend plugin development,
-  permission framework, techdocs customization, and platform maturity assessment.
-  Do NOT use for: surface-level platform engineering overview (platform-engineering),
-  CI/CD pipeline tooling (cicd-pipeline), or Kubernetes cluster management.
+  Use when the user asks to build an internal developer portal with Backstage, Backstage plugins, software templates and Scaffolder custom actions, the software catalog entity model, TechDocs, the permission framework, or golden path templates. Produces Backstage implementation designs. Not for platform team strategy and maturity (use devops-platform-engineering).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

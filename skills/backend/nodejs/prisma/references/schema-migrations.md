@@ -14,7 +14,7 @@
 | Prisma Type | PostgreSQL | Use Case |
 |------------|-----------|----------|
 | `String` | `text` | Names, emails, IDs |
-| `String @id @default(uuid())` | `uuid` | Primary keys |
+| `String @id @default(uuid(7))` | `uuid` | Primary keys |
 | `String @id @default(cuid())` | `text` | Alternative PK |
 | `Int` | `integer` | Counts, ages |
 | `Float` | `double precision` | Non-precise decimals |
@@ -29,7 +29,7 @@
 
 ```prisma
 model Example {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid(7)) @db.Uuid
   uniqueCol String   @unique
   mapCol    String   @map("mapped_column_name")
   default   Int      @default(0)
@@ -46,12 +46,12 @@ model Example {
 ### 1:1
 ```prisma
 model User {
-  id      String    @id @default(uuid())
+  id      String    @id @default(uuid(7))
   profile Profile?
 }
 
 model Profile {
-  id     String @id @default(uuid())
+  id     String @id @default(uuid(7))
   userId String @unique
   user   User   @relation(fields: [userId], references: [id])
 }
@@ -60,12 +60,12 @@ model Profile {
 ### 1:N (standard)
 ```prisma
 model Customer {
-  id     String  @id @default(uuid())
+  id     String  @id @default(uuid(7))
   orders Order[]
 }
 
 model Order {
-  id         String   @id @default(uuid())
+  id         String   @id @default(uuid(7))
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id])
 }
@@ -74,12 +74,12 @@ model Order {
 ### M:N (implicit — no extra fields)
 ```prisma
 model Post {
-  id       String  @id @default(uuid())
+  id       String  @id @default(uuid(7))
   authors  Author[]
 }
 
 model Author {
-  id    String @id @default(uuid())
+  id    String @id @default(uuid(7))
   posts Post[]
 }
 // Prisma creates _PostToAuthor junction table automatically
@@ -88,13 +88,13 @@ model Author {
 ### M:N (explicit — with extra fields)
 ```prisma
 model Student {
-  id        String             @id @default(uuid())
+  id        String             @id @default(uuid(7))
   name      String
   enrollments Enrollment[]
 }
 
 model Course {
-  id          String       @id @default(uuid())
+  id          String       @id @default(uuid(7))
   title       String
   enrollments Enrollment[]
 }
@@ -114,7 +114,7 @@ model Enrollment {
 ### Self-referential
 ```prisma
 model Category {
-  id       String     @id @default(uuid())
+  id       String     @id @default(uuid(7))
   name     String
   parentId String?
   parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
@@ -258,13 +258,13 @@ datasource db { provider = "postgresql" url = env("DATABASE_URL") }
 
 // prisma/schema/user.prisma
 model User {
-  id   String @id @default(uuid())
+  id   String @id @default(uuid(7))
   name String
 }
 
 // prisma/schema/post.prisma
 model Post {
-  id       String @id @default(uuid())
+  id       String @id @default(uuid(7))
   title    String
   authorId String
   author   User   @relation(fields: [authorId], references: [id])

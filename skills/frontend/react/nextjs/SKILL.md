@@ -506,6 +506,11 @@ export const metadata: Metadata = { title: 'Page Title' }
   - references/nextjs-app-router-patterns.md
   - references/nextjs-data-fetching-caching.md
 
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-nextjs-server-components.md` — Next.js Server Components in Practice (merged from `web/nextjs-server-components`)
+
 ## Handoff
 No artifact produced.
 Next skill: frontend-testing.

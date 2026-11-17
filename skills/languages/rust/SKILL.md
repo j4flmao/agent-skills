@@ -1,7 +1,11 @@
 ---
 name: lang-rust
 description: >
-  Use this skill when the user says 'Rust', 'cargo', 'borrow checker', 'lifetimes', 'ownership', 'traits', 'generics Rust', 'Result and ?', 'thiserror', 'anyhow', 'tokio', 'async Rust', 'Send Sync', 'unsafe Rust', 'clippy', 'Rust 2024 edition'. Writes and reviews idiomatic Rust: ownership and borrowing, lifetimes, traits and generics, error handling, async with Tokio, concurrency with Send/Sync, unsafe boundaries, Cargo workspaces, testing and tooling. Do NOT use for: Rust web framework architecture (use backend/rust/*), no_std firmware (use bare-metal-rust), Tauri desktop apps (use desktop/tauri).
+  Use when the user asks about Rust, cargo, the borrow checker, lifetimes,
+  ownership, traits and generics, Result and ?, thiserror/anyhow, Tokio async
+  Rust, Send/Sync, unsafe Rust, clippy or the Rust 2024 edition. Produces
+  idiomatic Rust with tests. Not for Rust web architecture (use
+  rust-architecture) or no_std firmware (use bare-metal-rust).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

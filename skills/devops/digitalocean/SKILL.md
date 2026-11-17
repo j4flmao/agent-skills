@@ -1,12 +1,7 @@
 ---
 name: digitalocean
 description: >
-  Use this skill when the user says 'DigitalOcean', 'DO', 'Droplet', 'DOKS',
-  'App Platform', 'Spaces', 'Managed Database', 'Floating IP', 'Cloud Firewall',
-  'doctl', 'Terraform DigitalOcean', 'VPC', 'Load Balancer', 'DNS', 'Container
-  Registry', 'Functions'. Covers: core DO services, Droplets, networking,
-  managed databases, Kubernetes, App Platform, infrastructure tooling.
-  Do NOT use this for: AWS, Azure, GCP, or other cloud providers.
+  Use when the user asks about DigitalOcean, Droplets, DOKS, App Platform, Spaces, managed databases, reserved IPs, cloud firewalls, doctl, or the Terraform digitalocean provider. Produces DigitalOcean infrastructure and IaC. Not for AWS (use aws) or Hetzner (use hetzner-cloud).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -77,7 +72,7 @@ No preamble. No postamble. No explanations. No filler/hedging/transitions.
 - Multi-tier app: VPC + Cloud Firewall + Load Balancer.
 - Private database: VPC + database firewall rules.
 - Global presence: Spaces CDN + multiple regions + DNS failover.
-- High availability: Load Balancer + multi-droplet backend + Floating IP.
+- High availability: Load Balancer + multi-droplet backend + Reserved IP (formerly Floating IP).
 
 ## Core Workflow
 
@@ -412,7 +407,7 @@ resource "digitalocean_monitor_alert" "disk" {
 | Cloud Firewall | Security Groups | NSG | VPC Firewall Rules |
 | Load Balancer | ALB/NLB | Load Balancer | Cloud LB |
 | VPC | VPC | VNet | VPC |
-| Floating IP | Elastic IP | Public IP | Static IP |
+| Reserved IP | Elastic IP | Public IP | Static IP |
 | Functions | Lambda | Functions | Cloud Functions |
 | Spaces CDN | CloudFront | CDN | Cloud CDN |
 | Monitoring | CloudWatch | Monitor | Cloud Monitoring |
@@ -458,7 +453,7 @@ Without tags (environment, project, team), cost allocation and resource manageme
 - Managed database with 2-3 nodes and automatic failover.
 - Spaces with CDN for static assets.
 - DNS failover with health checks.
-- Floating IP for manual failover scenarios.
+- Reserved IP for manual failover scenarios.
 
 ### Security
 - Always use Cloud Firewall -- never rely on Droplet-level iptables alone.
@@ -476,7 +471,7 @@ Without tags (environment, project, team), cost allocation and resource manageme
 - Right-size based on 14-day DO monitoring data.
 - Use Reserved Droplets for baseline capacity (up to 30% discount).
 - Enable backups only on critical Droplets.
-- Clean up unattached volumes and unused Floating IPs.
+- Clean up unattached volumes and unused Reserved IPs.
 
 ## Troubleshooting
 
@@ -514,7 +509,7 @@ Without tags (environment, project, team), cost allocation and resource manageme
 - Use Terraform for all infrastructure -- never manual control panel changes.
 - Test backup restoration at least quarterly.
 - Set budget alerts for all projects.
-- Use Floating IP for zero-downtime manual failover scenarios.
+- Use a Reserved IP for zero-downtime manual failover scenarios.
 
 ## References
 - references/app-platform.md -- App Platform

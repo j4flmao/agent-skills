@@ -25,6 +25,8 @@ tests/
 
 ```python
 # tests/load/locustfile.py
+import os
+
 from locust import HttpUser, task, between
 from locust.env import Environment
 
@@ -44,7 +46,7 @@ class WebsiteUser(HttpUser):
     def login(self):
         self.client.post("/api/login", json={
             "email": "test@example.com",
-            "password": "password123",
+            "password": os.environ["LOAD_TEST_PASSWORD"],
         })
 ```
 
@@ -66,6 +68,8 @@ locust --host=http://localhost:3000 --headless --csv=results/load-test
 ### Authenticated User
 ```python
 # users.py
+import os
+
 from locust import HttpUser, task, between
 from locust.exception import StopUser
 
@@ -76,7 +80,7 @@ class AuthenticatedUser(HttpUser):
     def on_start(self):
         response = self.client.post("/api/login", json={
             "email": self.email,
-            "password": "password123",
+            "password": os.environ["LOAD_TEST_PASSWORD"],
         })
         if response.status_code != 200:
             raise StopUser("Login failed")

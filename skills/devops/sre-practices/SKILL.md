@@ -1,16 +1,7 @@
 ---
 name: devops-sre-practices
 description: >
-  Use when the user asks about Site Reliability Engineering, SRE, SLI, SLO,
-  error budgets, toil reduction, reliability engineering, incident analysis,
-  postmortems, production readiness, reliability dashboards, service level
-  objectives, burn rate alerts, multi-window multi-burn-rate SLOs, or
-  reliability maturity. This skill enforces: SLI/SLO definitions per service,
-  error budget tracking with burn rate alerts, toil measurement and
-  automation, blameless postmortems with action tracking, and production
-  readiness reviews.
-  Do NOT use for: general monitoring (monitoring), incident response tools
-  (incident-response), or chaos engineering (chaos-engineering).
+  Use when the user asks about SRE practices, starting an SRE program, toil reduction, production readiness reviews, reliability maturity, SLOs and an error budget policy across many services, or blameless postmortem culture. Produces an SRE operating model and adoption plan. Not for SLI math and burn-rate alerts (use sre-sli-slo-management) or incident process (use devops-incident-response).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

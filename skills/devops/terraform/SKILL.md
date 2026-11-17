@@ -1,7 +1,7 @@
 ---
 name: terraform
 description: >
-  Use this skill when provisioning infrastructure with Terraform — module structure, state management, remote backends, workspaces, CI/CD integration, policy as code. This skill enforces: environment directory structure, remote backends with state locking, semantic versioning for modules, no hardcoded values, sensitive output marking, plan review before apply. Do NOT use for: configuration management (use Ansible), Kubernetes application deployment (use Helm), non-HashiCorp IaC tools.
+  Use when the user asks for a Terraform module (for example a VPC with remote state), state backends and locking, workspaces, terraform plan in CI, module versioning, import and moved blocks, or OpenTofu. Produces module layouts, backend configs and CI review flows. Not for Pulumi (use devops-pulumi) or configuration management (use ansible).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -516,5 +516,11 @@ resource "aws_db_instance" "this" {
   - references/terraform-fundamentals.md — Terraform Fundamentals
   - references/terraform-modules.md — Terraform Module Design
   - references/terraform-state.md — Terraform State Management
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-terraform-patterns.md` — Terraform IaC Patterns (merged from `devops/iac/terraform-patterns`)
+
 ## Handoff
 Hand off to `devops/helm-patterns/SKILL.md` for K8s application deployment. Hand off to `devops/ansible/SKILL.md` for post-provisioning configuration.

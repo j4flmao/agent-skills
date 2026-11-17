@@ -52,7 +52,7 @@ class ImportWorkflow:
 
 ```python
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 @dataclass
@@ -74,8 +74,8 @@ class ImportJob:
     started_at: datetime | None = None
     completed_at: datetime | None = None
     created_by: str = ""
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 ```
 
 ## Workflow Orchestrator
@@ -93,7 +93,7 @@ class ImportOrchestrator:
 
     async def start_import(self, job: ImportJob) -> ImportJob:
         job.status = ImportStatus.UPLOADED
-        job.started_at = datetime.utcnow()
+        job.started_at = datetime.now(timezone.utc)
         await self.storage.save_job(job)
         asyncio.create_task(self._run_workflow(job))
         return job
@@ -109,7 +109,7 @@ class ImportOrchestrator:
             job.error_details.append({
                 "stage": "workflow",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
             await self.storage.save_job(job)
             await self._rollback(job)
@@ -131,7 +131,7 @@ class ImportOrchestrator:
                 job.error_details.append({
                     "row": record["row_number"],
                     "errors": [e.code for e in errors],
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 })
             else:
                 batch.append(record["data"])
@@ -198,7 +198,7 @@ class DataProcessor:
                 job.error_details.append({
                     "batch": batch_number,
                     "error": str(e),
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 })
                 await self._handle_batch_error(job, batch, e, storage)
             await storage.save_job(job)
@@ -210,7 +210,7 @@ class DataProcessor:
         else:
             job.status = ImportStatus.PROCESSING_ERROR
 
-        job.completed_at = datetime.utcnow()
+        job.completed_at = datetime.now(timezone.utc)
         await storage.save_job(job)
         return job
 
@@ -268,7 +268,7 @@ class RollbackManager:
             job.error_details.append({
                 "stage": "rollback",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
         await self.storage.save_job(job)
 ```
@@ -301,7 +301,7 @@ class ProgressTracker:
     def _estimate_remaining(self, job: ImportJob) -> int | None:
         if job.processed_rows <= 0 or not job.started_at:
             return None
-        elapsed = (datetime.utcnow() - job.started_at).total_seconds()
+        elapsed = (datetime.now(timezone.utc) - job.started_at).total_seconds()
         rate = job.processed_rows / elapsed if elapsed > 0 else 0
         remaining = job.total_rows - job.processed_rows
         return int(remaining / rate) if rate > 0 else None

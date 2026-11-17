@@ -1,10 +1,14 @@
 ---
 name: local-slm-inference
 description: >
-  Use this skill when the user says 'run a model locally', 'local SLM', 'llama.cpp', 'Ollama', 'GGUF', 'offload layers to GPU', 'n-gpu-layers', 'KV cache on CPU', 'LM Studio', 'on-device LLM'. Prototypes local small-language-model inference: picking model size and GGUF quant for the hardware, splitting layers and KV cache between GPU and CPU, KV cache quantization, context sizing, and exposing an OpenAI-compatible endpoint. Do NOT use for: multi-GPU production serving (ai/llm-engineering/kv-cache with vLLM), producing quantized weights (ai/llm-engineering/model-quantization), or fine-tuning (ai/llm-finetuning).
+  Use when the user asks to run a model locally with llama.cpp, llama-server, Ollama, GGUF quants, -ngl /
+  n-gpu-layers, KV cache offload, num_ctx or LM Studio. Produces model and quant choice, memory budget, launch
+  command or Modelfile and a llama-bench plan. Not for multi-GPU production serving (use
+  llm-kv-cache-paged-attention) or making quantized weights (use llm-model-quantization).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [rnd, ai-agents, local-slm-inference, llama-cpp, ollama, gguf, kv-cache]
 ---
 

@@ -1,0 +1,10 @@
+{
+  "min": {
+    "description_top1": 0.75,
+    "description_top5": 0.93,
+    "description_mrr": 0.82
+  },
+  "max": {
+    "description_false_trigger": 0.25
+  }
+}

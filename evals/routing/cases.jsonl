@@ -1,0 +1,142 @@
+{"prompt": "write a one-page brief for a food delivery app", "expect": ["planning/create-brief"]}
+{"prompt": "turn this idea into a PRD with user stories and acceptance criteria", "expect": ["planning/create-prd", "planning/create-story"]}
+{"prompt": "I need a technical design doc for the new billing service", "expect": ["planning/create-tech-spec"]}
+{"prompt": "model our refund approval process as a BPMN diagram", "expect": ["planning/bpmn-modeling"]}
+{"prompt": "write Gherkin scenarios for the login feature", "expect": ["planning/bdd-atdd"]}
+{"prompt": "is it worth migrating to the cloud? calculate ROI and TCO", "expect": ["planning/cost-benefit"]}
+{"prompt": "build a quarterly product roadmap", "expect": ["planning/create-roadmap"]}
+{"prompt": "design REST endpoints for an orders API with pagination and errors", "expect": ["backend/universal/api-design", "backend/universal/api-response"]}
+{"prompt": "the payment endpoint charges twice when the client retries", "expect": ["backend/universal/idempotency"]}
+{"prompt": "add a Redis cache in front of the product catalog query", "expect": ["backend/universal/caching"]}
+{"prompt": "protect the public API from abuse with request throttling", "expect": ["backend/universal/rate-limiting"]}
+{"prompt": "process image uploads in a background worker with retries", "expect": ["backend/universal/background-jobs"]}
+{"prompt": "our database write and Kafka publish get out of sync", "expect": ["backend/universal/transactional-outbox"]}
+{"prompt": "split read and write models for the reporting module", "expect": ["backend/universal/cqrs-patterns"]}
+{"prompt": "store every account change as an append-only event log", "expect": ["backend/universal/event-sourcing"]}
+{"prompt": "add a circuit breaker around the flaky inventory service", "expect": ["backend/universal/resilience-patterns"]}
+{"prompt": "two workers process the same job; I need a distributed lock", "expect": ["backend/universal/distributed-locking"]}
+{"prompt": "design role based permissions for admins, editors and viewers", "expect": ["backend/universal/authorization", "security/rbac"]}
+{"prompt": "implement JWT login with refresh tokens", "expect": ["backend/universal/auth-patterns", "frontend/universal/authentication"]}
+{"prompt": "receive Stripe webhooks safely and verify signatures", "expect": ["backend/universal/webhooks", "ecommerce/payment-processing"]}
+{"prompt": "each customer must only see their own data in our SaaS", "expect": ["backend/universal/multi-tenancy"]}
+{"prompt": "write an OpenAPI spec for this service", "expect": ["backend/universal/openapi-documentation"]}
+{"prompt": "define protobuf messages and a gRPC service for user lookup", "expect": ["backend/universal/grpc-patterns"]}
+{"prompt": "fix N+1 queries in our GraphQL resolvers", "expect": ["backend/universal/graphql-patterns"]}
+{"prompt": "compose several GraphQL subgraphs into one supergraph", "expect": ["backend/universal/api/graphql-federation"]}
+{"prompt": "structure a NestJS module with providers and guards", "expect": ["backend/nestjs/architecture", "backend/nestjs/patterns"]}
+{"prompt": "set up a FastAPI project with dependency injection and Pydantic models", "expect": ["backend/python/fastapi"]}
+{"prompt": "Django ORM query is slow, help with select_related", "expect": ["backend/python/django"]}
+{"prompt": "organize a Go service with clean package boundaries", "expect": ["backend/go/architecture", "backend/go/patterns"]}
+{"prompt": "Spring Boot service layer and transaction boundaries", "expect": ["backend/spring-boot/architecture", "backend/spring-boot/patterns"]}
+{"prompt": "write a Laravel Eloquent model with relationships", "expect": ["backend/php/laravel"]}
+{"prompt": "Rails ActiveRecord callbacks are getting out of hand", "expect": ["backend/ruby/rails"]}
+{"prompt": "Prisma schema migration for a new orders table", "expect": ["backend/nodejs/prisma"]}
+{"prompt": "build an Elysia API on Bun with typed routes", "expect": ["backend/elysia/architecture", "backend/elysia/patterns", "backend/bun"]}
+{"prompt": "Phoenix LiveView with GenServer state", "expect": ["backend/elixir", "languages/elixir"]}
+{"prompt": "set row level security policies in Supabase", "expect": ["backend/universal/supabase"]}
+{"prompt": "send password reset emails that do not land in spam", "expect": ["backend/transactional-email"]}
+{"prompt": "import a 2 million row CSV without locking the table", "expect": ["backend/bulk-import"]}
+{"prompt": "build a video call feature with WebRTC", "expect": ["backend/web-real-time"]}
+{"prompt": "live chat with socket.io and rooms", "expect": ["backend/universal/websocket-patterns"]}
+{"prompt": "React component re-renders too often, how do I structure state", "expect": ["frontend/react/architecture", "frontend/universal/state-management"]}
+{"prompt": "Next.js App Router server components and caching", "expect": ["frontend/react/nextjs", "frontend/advanced-architecture/react-server-components", "frontend/nextjs/internals"]}
+{"prompt": "Vue 3 composables for shared logic", "expect": ["frontend/vue/architecture", "frontend/vue/patterns"]}
+{"prompt": "Angular signals and standalone components", "expect": ["frontend/angular/architecture", "frontend/angular/patterns"]}
+{"prompt": "SvelteKit load functions and form actions", "expect": ["frontend/svelte/sveltekit"]}
+{"prompt": "build a content site with Astro islands", "expect": ["frontend/astro/architecture", "frontend/astro/patterns"]}
+{"prompt": "make this page pass WCAG 2.2 AA", "expect": ["design/accessibility", "frontend/universal/accessibility"]}
+{"prompt": "our LCP is 4 seconds, improve Core Web Vitals", "expect": ["web/performance", "frontend/universal/performance"]}
+{"prompt": "set up dark mode with CSS variables", "expect": ["frontend/universal/theming"]}
+{"prompt": "validate a signup form with react-hook-form and zod", "expect": ["frontend/universal/form-handling"]}
+{"prompt": "cache server data on the client with TanStack Query", "expect": ["frontend/universal/data-fetching"]}
+{"prompt": "configure Tailwind v4 theme tokens", "expect": ["frontend/universal/tailwind-css"]}
+{"prompt": "document our button variants in Storybook", "expect": ["frontend/universal/storybook"]}
+{"prompt": "split the web app into independently deployed micro frontends", "expect": ["frontend/universal/microfrontend"]}
+{"prompt": "prevent XSS and set a content security policy", "expect": ["frontend/universal/security", "cybersecurity/owasp-web-security"]}
+{"prompt": "make the site installable and work offline", "expect": ["frontend/universal/pwa"]}
+{"prompt": "the UI looks AI-generated, make it look designed", "expect": ["design/visual-design"]}
+{"prompt": "define primitive, semantic and component design tokens", "expect": ["frontend/universal/design-system", "design/design-systems"]}
+{"prompt": "catch unintended UI changes with screenshot diffs in CI", "expect": ["quality/visual-testing"]}
+{"prompt": "SwiftUI list screen with async image loading on iOS", "expect": ["mobile/ios"]}
+{"prompt": "Jetpack Compose navigation and ViewModel on Android", "expect": ["mobile/android"]}
+{"prompt": "Flutter state management with Riverpod", "expect": ["mobile/flutter"]}
+{"prompt": "Expo app with deep links into a product page", "expect": ["mobile/react-native", "mobile/universal/deep-linking"]}
+{"prompt": "send push notifications through APNs and FCM", "expect": ["mobile/universal/push-notifications"]}
+{"prompt": "sync local data when the phone comes back online", "expect": ["mobile/universal/offline-first"]}
+{"prompt": "add subscriptions with StoreKit and Play Billing", "expect": ["mobile/universal/in-app-purchase"]}
+{"prompt": "release the app to TestFlight from CI", "expect": ["mobile/universal/deployment"]}
+{"prompt": "build a desktop app with Tauri and a Rust backend", "expect": ["desktop/tauri"]}
+{"prompt": "Electron main and renderer IPC security", "expect": ["desktop/electron"]}
+{"prompt": "write a multi-stage Dockerfile for a Node service", "expect": ["devops/docker-patterns"]}
+{"prompt": "Kubernetes deployment keeps getting OOMKilled", "expect": ["devops/kubernetes", "devops/kubernetes-internals"]}
+{"prompt": "package the app as a Helm chart with values per environment", "expect": ["devops/helm-patterns"]}
+{"prompt": "Terraform module for a VPC with remote state", "expect": ["devops/terraform"]}
+{"prompt": "GitHub Actions workflow to test and deploy on push", "expect": ["devops/github-actions", "devops/cicd-pipeline"]}
+{"prompt": "sync cluster state from git with Argo CD", "expect": ["devops/argo-cd", "devops/gitops"]}
+{"prompt": "scale pods on queue length with KEDA", "expect": ["devops/kubernetes-autoscaling", "cloud-native/event-driven-scaling"]}
+{"prompt": "roll out a canary release with automatic rollback", "expect": ["devops/progressive-delivery"]}
+{"prompt": "store database credentials in HashiCorp Vault", "expect": ["devops/vault", "security/secrets-management"]}
+{"prompt": "instrument services with OpenTelemetry traces", "expect": ["devops/opentelemetry", "devops/observability"]}
+{"prompt": "define SLOs and an error budget policy", "expect": ["site-reliability-engineering/sli-slo-management", "devops/sre-practices"]}
+{"prompt": "we had an outage; write the postmortem and on-call process", "expect": ["devops/incident-response"]}
+{"prompt": "our AWS bill doubled, find savings", "expect": ["devops/finops"]}
+{"prompt": "reduce Lambda cold start latency", "expect": ["cloud-native/serverless-cold-starts", "devops/serverless"]}
+{"prompt": "enforce admission policies with OPA Gatekeeper", "expect": ["devops/policy-as-code"]}
+{"prompt": "build an internal developer portal with Backstage", "expect": ["devops/platform-engineering", "devops/internal-developer-platform"]}
+{"prompt": "run a threat model for the new checkout flow", "expect": ["security/threat-modeling"]}
+{"prompt": "add SAST and dependency scanning to the pipeline", "expect": ["security/sast-dast", "security/devsecops"]}
+{"prompt": "generate an SBOM for our container images", "expect": ["security/sbom"]}
+{"prompt": "write a Sigma detection rule for suspicious PowerShell", "expect": ["security/detection-engineering", "security/siem-engineering"]}
+{"prompt": "prepare evidence for a SOC 2 audit", "expect": ["enterprise/compliance-audit"]}
+{"prompt": "design a star schema for sales analytics", "expect": ["data/dimensional-modeling", "data/data-warehouse"]}
+{"prompt": "orchestrate a daily ETL with Airflow and dbt", "expect": ["data/etl-pipeline", "data/etl-pipelines"]}
+{"prompt": "stream database changes with Debezium into Kafka", "expect": ["data/streaming"]}
+{"prompt": "choose between Iceberg and Delta for our lakehouse", "expect": ["data/data-lakehouse", "data/data-lake"]}
+{"prompt": "add data quality checks to the pipeline", "expect": ["data/data-quality", "data/data-testing"]}
+{"prompt": "pick an index type for vector similarity search", "expect": ["data/vector-databases"]}
+{"prompt": "explain MVCC and the write-ahead log", "expect": ["data/database-internals", "architecture/databases/postgresql-internals"]}
+{"prompt": "is this A/B test result statistically significant", "expect": ["data-science/experimentation", "product/ab-testing", "data-science/statistical-analysis"]}
+{"prompt": "train a gradient boosting model on tabular data", "expect": ["ml/classical-ml"]}
+{"prompt": "serve a PyTorch model with batching and autoscaling", "expect": ["ml/model-serving", "ml/inference-optimization"]}
+{"prompt": "forecast weekly demand for the next quarter", "expect": ["ml/time-series"]}
+{"prompt": "build a RAG pipeline over our documentation", "expect": ["ai/llm-engineering/rag-architecture", "prompt-engineering/rag-design"]}
+{"prompt": "fine-tune an open model with LoRA", "expect": ["ai/llm-finetuning"]}
+{"prompt": "design an agent that calls tools and keeps memory", "expect": ["ai/ai-agents", "ai/ai-agents/core-architectures", "ai/ai-agents/tool-calling-principles", "ai/ai-agents/memory-systems"]}
+{"prompt": "write few-shot examples for a classification prompt", "expect": ["prompt-engineering/few-shot-prompting"]}
+{"prompt": "defend our chatbot against prompt injection", "expect": ["rnd/security/ai-defense-mechanisms", "rnd/security/adversarial-prompting"]}
+{"prompt": "write a CUDA kernel for matrix multiplication", "expect": ["hardware-acceleration/cuda-programming"]}
+{"prompt": "write a Solidity ERC-20 with upgradeable proxy", "expect": ["blockchain/blockchain-application", "blockchain/blockchain-patterns"]}
+{"prompt": "audit this smart contract for reentrancy", "expect": ["blockchain/blockchain-security"]}
+{"prompt": "write a Circom circuit for a Merkle proof", "expect": ["blockchain/blockchain-zk"]}
+{"prompt": "Unity ECS with Burst jobs", "expect": ["game/game-development/unity-csharp", "game/unity", "game/game-engine/ecs-pattern"]}
+{"prompt": "client-side prediction and server reconciliation for a shooter", "expect": ["game/multiplayer-netcode", "game/game-server/authoritative-server"]}
+{"prompt": "Vulkan swapchain recreation on window resize", "expect": ["game/game-development/vulkan"]}
+{"prompt": "matchmaking with Elo and region based queues", "expect": ["game/game-server/matchmaking-lobby"]}
+{"prompt": "FreeRTOS task priorities and ISR-safe queues", "expect": ["embedded-systems/rtos"]}
+{"prompt": "write an eBPF XDP program to drop packets", "expect": ["niche/low-level/ebpf-xdp-networking", "low-level/ebpf-engineering"]}
+{"prompt": "explain Raft leader election", "expect": ["system-design/distributed-consensus"]}
+{"prompt": "implement Grover's search in Qiskit", "expect": ["quantum-computing/grovers-algorithm", "quantum-computing/qiskit-framework"]}
+{"prompt": "review this pull request for bugs", "expect": ["dev-loop/code-review"]}
+{"prompt": "this function is 300 lines, refactor it safely", "expect": ["dev-loop/refactor-guide"]}
+{"prompt": "the service leaks memory, help me find the cause", "expect": ["dev-loop/debugging-strategy", "dev-loop/performance-profiler"]}
+{"prompt": "write a README for this repository", "expect": ["dev-loop/readme-writer"]}
+{"prompt": "resolve a messy git rebase conflict", "expect": ["tools/git/conflict-resolution", "dev-loop/git-workflow"]}
+{"prompt": "write unit tests with mocks for this class", "expect": ["quality/unit-testing"]}
+{"prompt": "end to end tests with Playwright for checkout", "expect": ["quality/quality-e2e-testing"]}
+{"prompt": "load test the API with k6", "expect": ["quality/load-testing"]}
+{"prompt": "consumer driven contract tests with Pact", "expect": ["quality/contract-testing"]}
+{"prompt": "run a sprint retrospective that produces actions", "expect": ["management/sprint-retro"]}
+{"prompt": "set OKRs for the engineering team", "expect": ["management/okr-kpi"]}
+{"prompt": "plan interviews for a senior backend hire", "expect": ["management/hiring"]}
+{"prompt": "price our SaaS tiers", "expect": ["product/pricing-strategy"]}
+{"prompt": "improve activation in the first-run experience", "expect": ["product/onboarding-flow", "product/growth-engineering"]}
+{"prompt": "migrate a legacy monolith with the strangler fig pattern", "expect": ["enterprise/legacy-migration"]}
+{"prompt": "add JSON-LD structured data for product pages", "expect": ["seo/structured-data", "frontend/universal/seo"]}
+{"prompt": "what is the weather in Hanoi today", "expect": []}
+{"prompt": "translate this sentence into French", "expect": []}
+{"prompt": "recommend a good pho restaurant", "expect": []}
+{"prompt": "what is 17 times 23", "expect": []}
+{"prompt": "write a poem about autumn", "expect": []}
+{"prompt": "who won the world cup in 2018", "expect": []}
+{"prompt": "summarize the plot of Hamlet", "expect": []}
+{"prompt": "help me plan a birthday party", "expect": []}

@@ -38,14 +38,12 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`frontend-testing`](../../skills/frontend/universal/testing/SKILL.md) | `frontend/universal/testing` | Test user behavior, not implementation. |
 | [`mobile-testing`](../../skills/mobile/universal/testing/SKILL.md) | `mobile/universal/testing` | Design comprehensive mobile test strategies following the test pyramid — unit, widget/component, integration, and E2E — with proper mocking,… |
 
-## Level 3 — Specialist (6 skills)
+## Level 3 — Specialist (4 skills)
 
 Add one at a time, only for the problem in front of you. These are deep and narrow.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
-| [`qa-chaos-engineering`](../../skills/quality-assurance/testing-strategies/chaos-engineering/SKILL.md) | `quality-assurance/testing-strategies/chaos-engineering` | Gain evidence that a system tolerates real failures (instance loss, latency, dependency outage, resource exhaustion) by running controlled… |
-| [`qa-e2e-playwright`](../../skills/quality-assurance/testing-strategies/e2e-playwright/SKILL.md) | `quality-assurance/testing-strategies/e2e-playwright` | Write fast, non-flaky end-to-end tests with Playwright Test: each test runs in an isolated browser context, actions auto-wait for actionability,… |
 | [`planning-bdd-atdd`](../../skills/planning/bdd-atdd/SKILL.md) | `planning/bdd-atdd` | Drive development through shared examples and executable specifications using Behavior-Driven Development and Acceptance Test-Driven Development. |
 | [`qa`](../../skills/management/qa/SKILL.md) | `management/qa` | Design and manage testing activities: test strategy, test case design, defect management, test metrics, and automation strategy. |
 | [`qc`](../../skills/management/qc/SKILL.md) | `management/qc` | Enforce code quality standards through quality gates, static analysis, peer reviews, and quality metrics automation. |
@@ -75,7 +73,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`quality-testing`](../bundles.md#quality-testing) | 20 | Quality engineering: unit, integration, contract, E2E, visual, load, property-based, regression, smoke, acceptance testing |
+| [`quality-testing`](../bundles.md#quality-testing) | 16 | Quality engineering: unit, integration, contract, E2E, visual, load, property-based, regression, smoke, acceptance testing |
 
 ## Combine with
 
@@ -85,4 +83,4 @@ Bundles are installed with the same command; each one's full command is on the [
 
 ## Watch out
 
-`quality/e2e-testing` and `quality/quality-e2e-testing` overlap; keep `quality-e2e-testing`.
+`quality/quality-e2e-testing` and `quality/quality-e2e-testing` overlap; keep `quality-e2e-testing`.

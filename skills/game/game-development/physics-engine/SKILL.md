@@ -1,7 +1,11 @@
 ---
 name: physics-engine
 description: >
-  Use this skill when the user says 'physics engine', 'collision detection', 'broad phase', 'narrow phase', 'GJK', 'EPA', 'constraint solver', 'rigid body', 'character controller', 'CCD'. Explains and designs rigid-body physics: broad/narrow phase, contact generation, constraint solvers, integration, sleeping, CCD, character controllers and scene queries. Do NOT use for: engine-specific physics settings only (use unity/unreal/godot), cloth/fluids research.
+  Use when the user asks about a physics engine, collision detection, broad
+  phase, narrow phase, GJK, EPA, constraint solvers, rigid bodies, CCD,
+  character controllers or Jolt/PhysX internals. Produces rigid-body physics
+  design and solver code. Not for engine-specific physics settings (use unity,
+  unreal or godot).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

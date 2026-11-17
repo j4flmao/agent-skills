@@ -1,7 +1,11 @@
 ---
 name: compiler-design
 description: >
-  Use this skill when the user says 'compiler', 'lexer', 'parser', 'AST', 'grammar', 'LLVM IR', 'SSA', 'optimization pass', 'code generation', 'register allocation', 'write an interpreter', 'MLIR', 'type checker'. Designs compilers and interpreters end to end: lexing and parsing strategies, AST and semantic analysis, IR design (SSA, LLVM IR), optimisation passes with the new pass manager, code generation and register allocation, plus testing. Do NOT use for: reading assembly output for performance only (use lang-assembly), CPU microarchitecture (use cpu-architecture), GPU kernel tuning.
+  Use when the user asks about writing a compiler or interpreter, lexers,
+  parsers, ASTs, grammars, type checkers, SSA, LLVM IR, MLIR, optimization
+  passes or register allocation. Produces compiler pipeline design and working
+  front-end and IR code. Not for reading assembly output (use lang-assembly) or
+  CPU microarchitecture (use cpu-architecture).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -142,3 +146,11 @@ Run with `opt -passes='default<O2>'` or register plugins via `-load-pass-plugin`
 - [ ] IR in SSA; verifier runs after passes in debug
 - [ ] Target ABI followed for FFI
 - [ ] Fuzzing of parser and optimiser in CI
+
+## References
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/compiler-llvm.md` — Compiler Design & LLVM
+- `references/lsp-protocol.md` — Language Server Protocol (LSP)

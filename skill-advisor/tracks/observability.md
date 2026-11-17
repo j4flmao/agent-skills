@@ -23,14 +23,13 @@ Install these first. They cover the everyday work of this role and rarely confli
 | [`backend-structured-logging`](../../skills/backend/universal/structured-logging/SKILL.md) | `backend/universal/structured-logging` | Design structured JSON logging with consistent schema, context propagation, and sampling. |
 | [`alerting`](../../skills/management/alerting/SKILL.md) | `management/alerting` | Design alert rules following the RED/USE method with severity classification, threshold tuning, notification routing, and escalation paths. |
 
-## Level 2 — Professional (5 skills)
+## Level 2 — Professional (4 skills)
 
 Add when the project grows: production concerns, scaling and team workflows.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
 | [`prometheus-grafana`](../../skills/devops/observability/prometheus-grafana/SKILL.md) | `devops/observability/prometheus-grafana` | Collect numeric time series by pulling (scraping) /metrics endpoints, query them with PromQL, alert through Alertmanager, and visualize in Grafana. |
-| [`opentelemetry-tracing`](../../skills/devops/observability/opentelemetry-tracing/SKILL.md) | `devops/observability/opentelemetry-tracing` | Get useful traces from a service quickly: auto-instrument frameworks and clients, add a few manual spans around business operations, export via… |
 | [`apm-observability`](../../skills/devops/apm-observability/SKILL.md) | `devops/apm-observability` | Design and implement observability for distributed systems using metrics, traces, and logs with OpenTelemetry, SLI/SLO frameworks, and actionable… |
 | [`cloud-native-distributed-tracing`](../../skills/cloud-native/distributed-tracing/SKILL.md) | `cloud-native/distributed-tracing` | Make every request traceable across services, queues, and async jobs without unbounded cost. |
 | [`sre-sli-slo-management`](../../skills/site-reliability-engineering/sli-slo-management/SKILL.md) | `site-reliability-engineering/sli-slo-management` | Express reliability as a ratio of good events to valid events, set a target users would actually notice, and alert on how fast the error budget is… |
@@ -55,10 +54,10 @@ Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a 
 npx skills add j4flmao/agent-skills --skill observability --skill devops-opentelemetry --skill backend-structured-logging --skill alerting --skill backend-data-masking
 ```
 
-**Level 1 + 2 + security baseline (10 skills):**
+**Level 1 + 2 + security baseline (9 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill observability --skill devops-opentelemetry --skill backend-structured-logging --skill alerting --skill prometheus-grafana --skill opentelemetry-tracing --skill apm-observability --skill cloud-native-distributed-tracing --skill sre-sli-slo-management --skill backend-data-masking
+npx skills add j4flmao/agent-skills --skill observability --skill devops-opentelemetry --skill backend-structured-logging --skill alerting --skill prometheus-grafana --skill apm-observability --skill cloud-native-distributed-tracing --skill sre-sli-slo-management --skill backend-data-masking
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -69,7 +68,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`sre-reliability`](../bundles.md#sre-reliability) | 20 | Reliability engineering: SLOs, incident response, observability, chaos, capacity, HA, DR, alerting |
+| [`sre-reliability`](../bundles.md#sre-reliability) | 17 | Reliability engineering: SLOs, incident response, observability, chaos, capacity, HA, DR, alerting |
 
 ## Combine with
 

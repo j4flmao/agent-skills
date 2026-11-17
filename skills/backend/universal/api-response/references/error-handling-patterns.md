@@ -129,7 +129,7 @@ async def not_found_handler(request: Request, exc: NotFoundException):
             },
             "metadata": {
                 "requestId": request.headers.get("x-request-id", ""),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "version": "1.0"
             }
         }

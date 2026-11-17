@@ -2,8 +2,12 @@
 
 ## Installation
 ```bash
-curl -sL https://istio.io/downloadIstio | sh -
-export PATH=$PWD/istio-1.20/bin:$PATH
+# Pin the version you tested; download and review the script instead of piping it to sh,
+# or install istioctl from a package manager / the GitHub release archive.
+export ISTIO_VERSION=<tested-version>
+curl -fsSLo downloadIstio.sh https://istio.io/downloadIstio
+ISTIO_VERSION=$ISTIO_VERSION sh downloadIstio.sh
+export PATH=$PWD/istio-$ISTIO_VERSION/bin:$PATH
 
 istioctl install --set profile=demo -y      # dev
 istioctl install --set profile=default -y    # prod

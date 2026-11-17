@@ -72,7 +72,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`security-all`](../bundles.md#security-all) | 30 | All security skills: SAST/DAST, SBOM, secrets, container, API, data, Zero Trust, EDR, SOC, SIEM, SOAR, Threat Intel |
+| [`security-all`](../bundles.md#security-all) | 29 | All security skills: SAST/DAST, SBOM, secrets, container, API, data, Zero Trust, EDR, SOC, SIEM, SOAR, Threat Intel |
 | [`soc-all`](../bundles.md#soc-all) | 18 | SOC: operations, SIEM engineering, SOAR automation, threat intelligence, EDR/XDR |
 | [`access-control`](../bundles.md#access-control) | 7 | Authentication and authorization: auth patterns, RBAC, ABAC, fine-grained policies, identity providers, zero trust identity |
 | [`advanced-security-bundle`](../bundles.md#advanced-security-bundle) | 11 | Advanced security skills including red team, blue team, and cloud attacks (educational) |

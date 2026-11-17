@@ -154,7 +154,7 @@ app.get("/rooms/:id", ({ params }) => ({
 import { jwt } from "@elysiajs/jwt";
 
 const app = new Elysia()
-  .use(jwt({ secret: "secret" }))
+  .use(jwt({ secret: process.env.JWT_SECRET! }))
   .use(ws())
   .ws("/ws", {
     async open(ws) {

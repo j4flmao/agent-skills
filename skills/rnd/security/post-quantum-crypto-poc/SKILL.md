@@ -1,10 +1,14 @@
 ---
 name: post-quantum-crypto-poc
 description: >
-  Use this skill when the user says 'PQC proof of concept', 'hybrid TLS', 'X25519MLKEM768', 'ML-KEM in TLS', 'test post-quantum handshake', 'liboqs', 'oqs-provider', 'OpenSSL 3.5 PQC', 'harvest now decrypt later test'. Builds a hands-on PoC of post-quantum and hybrid key exchange and signatures: enabling X25519MLKEM768 in TLS stacks, running ML-KEM/ML-DSA with liboqs, measuring handshake size/latency, and finding middlebox/interop breakage. Do NOT use for: migration strategy, inventory, and standards overview (quantum-computing/post-quantum-crypto), or general TLS hardening (security skills).
+  Use when the user asks for a PQC proof of concept, hybrid TLS, X25519MLKEM768, ML-KEM in TLS, ML-DSA tests,
+  liboqs, oqs-provider or OpenSSL 3.5 post-quantum handshakes. Produces PoC commands, an interop test matrix and
+  handshake size/latency measurements. Not for migration strategy and standards overview (use
+  post-quantum-crypto).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [rnd, security, post-quantum-crypto-poc, ml-kem, ml-dsa, hybrid-tls, liboqs]
 ---
 

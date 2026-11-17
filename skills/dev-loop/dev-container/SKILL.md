@@ -67,7 +67,7 @@ Files: .devcontainer/devcontainer.json {+ Dockerfile, compose.yaml}
 ```
 What is the project type?
 ├── Single runtime, no services → Dockerfile-based
-│   base: mcr.microsoft.com/devcontainers/typescript-node:20
+│   base: mcr.microsoft.com/devcontainers/typescript-node:24
 │   → apt install tools → npm install → done
 ├── Single runtime + databases → Docker Compose
 │   app container + postgres + redis containers
@@ -113,7 +113,7 @@ Docker Compose (optional multi-service)
   "name": "My App Dev Container",
 
   // Option A: Use a pre-built dev container image
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:24",
 
   // Option B: Build from Dockerfile
   // "build": {
@@ -304,7 +304,7 @@ echo "✅ Development environment ready!"
 // .devcontainer/devcontainer.json (Codespaces-optimized)
 {
   "name": "My App",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:24",
 
   // Codespaces machine type recommendation
   "hostRequirements": {
@@ -349,7 +349,7 @@ JetBrains IDEs (via Gateway or the IDE's Dev Containers support) read the same `
 ```jsonc
 {
   "name": "My App",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:24",
   "forwardPorts": [3000, 5432],
   "customizations": {
     "jetbrains": { "backend": "WebStorm" }
@@ -430,7 +430,7 @@ jobs:
 ```jsonc
 {
   "name": "My Monorepo",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
   "workspaceFolder": "/workspaces/myapp",
   "customizations": { "vscode": { "extensions": ["dbaeumer.vscode-eslint"] } },
   "postCreateCommand": "npm install --workspaces"
@@ -465,14 +465,14 @@ Hand off to `dev-loop-git-workflow` for Git credential configuration. Hand off t
 ### Dockerfile Optimization
 `dockerfile
 # Multi-stage build for smaller final image
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:24-alpine
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
@@ -484,7 +484,7 @@ CMD ["node", "dist/server.js"]
 `json
 {
   "name": "Full Stack Dev Container",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:24",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/git-lfs:1": {},

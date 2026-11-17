@@ -18,19 +18,19 @@ Cron Expressions:
 ```
 
 ```python
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from croniter import croniter
 
 class TimeBasedSchedule:
     def __init__(self, cron_expression: str):
         self.cron = cron_expression
-        self.iter = croniter(cron_expression, datetime.utcnow())
+        self.iter = croniter(cron_expression, datetime.now(timezone.utc))
 
     def next_run(self) -> datetime:
         return self.iter.get_next(datetime)
 
     def should_run(self, last_run: datetime | None) -> bool:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         next_run = self.iter.get_next(datetime)
         return now >= next_run
 ```
@@ -69,7 +69,7 @@ class HybridSchedule:
         self.last_triggered: datetime | None = None
 
     def should_generate(self, event: dict | None = None) -> bool:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         if self.last_triggered and (now - self.last_triggered) < self.cooldown:
             return False
         if self.time_schedule.should_run(self.last_triggered):
@@ -166,7 +166,7 @@ class EmailDelivery:
         return DeliveryResult(
             status="sent",
             recipients=recipients,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
     def _build_body(self, report: ReportResult) -> str:
@@ -216,7 +216,7 @@ class SlackDelivery:
                     if not result.get("ok"):
                         raise SlackDeliveryError(result.get("error"))
 
-        return DeliveryResult(status="sent", channels=channels, timestamp=datetime.utcnow())
+        return DeliveryResult(status="sent", channels=channels, timestamp=datetime.now(timezone.utc))
 
     def _extract_summary(self, report: ReportResult) -> str:
         return f"*Generated:* {report.generated_at}\n*Period:* {report.period_start} → {report.period_end}\n*Records:* {report.record_count:,}"
@@ -308,7 +308,7 @@ class InProcessScheduler:
     async def _run_loop(self, schedule: ReportSchedule):
         while self._running:
             try:
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 if schedule.next_run_at and now >= schedule.next_run_at:
                     await self._execute(schedule)
                     schedule.last_run_at = now
@@ -370,7 +370,7 @@ class SchedulerHealth:
                 issues.append(f"Last execution failed: {last.error_message}")
 
             if schedule.next_run_at:
-                delay = (datetime.utcnow() - schedule.next_run_at).total_seconds()
+                delay = (datetime.now(timezone.utc) - schedule.next_run_at).total_seconds()
                 if delay > 300:
                     issues.append(f"Overdue by {delay:.0f}s")
                     status = "delayed"
@@ -476,7 +476,7 @@ class DeadlineManager:
                                 coro: callable) -> Any:
         timeout = schedule.parameters.get("timeout", self.default_timeout)
         execution_id = str(uuid.uuid4())
-        self.running[execution_id] = datetime.utcnow()
+        self.running[execution_id] = datetime.now(timezone.utc)
 
         try:
             result = await asyncio.wait_for(coro(), timeout=timeout)
@@ -489,7 +489,7 @@ class DeadlineManager:
             self.running.pop(execution_id, None)
 
     async def cancel_stale_schedules(self, max_runtime: int = 600):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         for eid, started in list(self.running.items()):
             elapsed = (now - started).total_seconds()
             if elapsed > max_runtime:
@@ -546,7 +546,7 @@ class RateLimiter:
         self.semaphore = asyncio.Semaphore(max_concurrent)
         self.rate_limit = rate_per_minute
         self.tokens = rate_per_minute
-        self.last_refill = datetime.utcnow()
+        self.last_refill = datetime.now(timezone.utc)
 
     async def acquire(self):
         await self._refill_tokens()
@@ -558,7 +558,7 @@ class RateLimiter:
             return True
 
     async def _refill_tokens(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         elapsed = (now - self.last_refill).total_seconds()
         refill = int(elapsed / 60 * self.rate_limit)
         if refill > 0:

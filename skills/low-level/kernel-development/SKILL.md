@@ -1,7 +1,11 @@
 ---
 name: kernel-development
 description: >
-  Use this skill when the user says 'kernel module', 'Linux driver', 'device driver', 'ring 0', 'system call', 'interrupt handler', 'spinlock', 'RCU', 'kernel panic', 'oops', 'write an OS', 'bootloader', 'page tables', 'Rust for Linux'. Covers OS internals and Linux kernel development: privilege levels, syscalls, interrupts and deferred work, kernel memory allocation, synchronisation (spinlocks, mutexes, RCU), loadable modules and drivers, debugging, and hobby-OS bring-up. Do NOT use for: eBPF programs (use ebpf-engineering), user-space performance (use cpu-architecture), RTOS firmware (use rtos).
+  Use when the user asks about Linux kernel modules, device drivers, system
+  calls, interrupt handlers, spinlocks, RCU, kernel oops or panic, Rust for
+  Linux, bootloaders, page tables or writing a hobby OS. Produces kernel code
+  and debugging steps. Not for eBPF programs (use ebpf-engineering) or RTOS
+  firmware (use rtos).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -1,7 +1,10 @@
 ---
 name: render-graph
 description: >
-  Use this skill when the user says 'render graph', 'frame graph', 'transient resources', 'barriers', 'async compute', 'GPU-driven rendering', 'command lists'. Designs render/frame graphs: pass declaration, resource lifetimes and aliasing, automatic barriers, queues and async compute, and GPU-driven rendering. Do NOT use for: raw Vulkan API usage (use vulkan), shader authoring.
+  Use when the user asks about a render graph, frame graph, transient resource
+  aliasing, automatic barriers, async compute, GPU-driven rendering or command
+  list recording. Produces render graph design with pass and resource lifetimes.
+  Not for raw Vulkan API usage (use vulkan).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

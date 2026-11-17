@@ -134,7 +134,7 @@ tests/
 ```python
 from dataclasses import dataclass, field
 from uuid import uuid4, UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 @dataclass
 class User:
@@ -142,7 +142,7 @@ class User:
     email: str = ""
     name: str = ""
     is_active: bool = True
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     @classmethod
     def create(cls, email: str, name: str) -> "User":
@@ -160,7 +160,7 @@ class Order:
     status: str = "pending"
     total: float = 0.0
     items: list = field(default_factory=list)
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def add_item(self, product: str, price: float, quantity: int) -> None:
         self.items.append({"product": product, "price": price, "quantity": quantity})
@@ -229,7 +229,7 @@ class SqlAlchemyUserRepository(UserRepository):
 ```python
 from pydantic import BaseModel, EmailStr, ConfigDict
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 from domain.entities import User
 
 class CreateUserRequest(BaseModel):

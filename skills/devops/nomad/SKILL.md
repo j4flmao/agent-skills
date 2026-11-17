@@ -1,21 +1,7 @@
 ---
 name: nomad
 description: >
-  Use this skill when the user says 'nomad', 'hashicorp nomad',
-  'nomad job', 'nomad cluster', 'nomad server', 'nomad client',
-  'nomad namespace', 'nomad ACL', 'nomad autoscaler', 'nomad
-  pack', 'nomad consul', 'nomad vault', 'nomad CSI', 'nomad
-  batch job', 'nomad system job', 'nomad service job',
-  'nomad periodic job', 'nomad parameterized job',
-  'nomad scaling', 'nomad canary', 'nomad update',
-  'nomad drain', 'nomad eval', 'nomad allocation',
-  'nomad volume', 'nomad host volume', 'nomad secrets',
-  'nomad template', 'nomad artifact', 'nomad dispatch',
-  'CNI', 'nomad networking', 'nomad service discovery',
-  'nomad connect', 'nomad consul connect', 'nomad envoy'.
-  Covers: HashiCorp Nomad job scheduling, cluster operations,
-  ACLs, secrets integration, CSI volumes, autoscaling, canary
-  deployments, networking with Consul Connect.
+  Use when the user asks about HashiCorp Nomad, Nomad job specs (service, batch, system, periodic, parameterized), ACLs, Nomad Variables, Vault or Consul integration, CSI and host volumes, canary updates, node drain, or the Nomad Autoscaler. Produces Nomad job files and cluster operations. Not for Kubernetes (use kubernetes) or Consul service mesh (use consul).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

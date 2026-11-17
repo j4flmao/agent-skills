@@ -159,7 +159,9 @@ class DistributedScheduler {
   }
 
   async getSchedulerStatus(): Promise<SchedulerStatus[]> {
-    const keys = await this.redis.keys('scheduler:lock:*');
+    const keys: string[] = [];
+    // SCAN in batches (ioredis scanStream); KEYS blocks Redis on large keyspaces
+    for await (const batch of this.redis.scanStream({ match: 'scheduler:lock:*', count: 500 })) keys.push(...batch);
     const statuses: SchedulerStatus[] = [];
 
     for (const key of keys) {

@@ -1,7 +1,7 @@
 ---
 name: devops-chaos-engineering
 description: >
-  Use this skill when the user says 'chaos engineering', 'chaos experiment', 'gameday', 'chaos mesh', 'litmus', 'aws fault injection service', 'resilience testing', 'chaos in ci', 'steady state hypothesis', 'start a chaos program'. Plans and runs chaos engineering: steady-state hypotheses, experiment design, tool selection (Chaos Mesh, LitmusChaos, AWS FIS, Azure Chaos Studio, Gremlin), GameDays, and automated resilience checks in CI/CD. Do NOT use for: kernel/network fault-injection mechanics (sre-chaos-engineering), load testing (quality load-testing), DR failover drills of backups (backup-dr).
+  Use when the user asks about chaos engineering, chaos experiments, GameDays, Chaos Mesh, LitmusChaos, AWS Fault Injection Service, Azure Chaos Studio, steady-state hypotheses, or chaos in CI. Produces experiment designs, tool choice and a chaos program. Not for load testing (use quality-load-testing) or backup restore drills (use backup-dr).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -167,3 +167,9 @@ Gate releases on resilience regressions in staging; keep prod experiments schedu
 - `references/chaos-tools.md`
 - `references/chaos-practices.md`
 - `references/chaos-cicd.md`
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-qa-chaos-engineering.md` — Chaos Engineering & Fault Injection (merged from `quality-assurance/testing-strategies/chaos-engineering`)
+- `references/merged-sre-chaos-engineering.md` — Chaos Engineering: Fault-Injection Mechanics (merged from `site-reliability-engineering/chaos-engineering`)

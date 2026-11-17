@@ -1,13 +1,7 @@
 ---
 name: docker-patterns
 description: >
-  Use this skill when the user says 'Dockerfile', 'Docker', 'Docker Compose',
-  'containerize', 'container', 'docker build', 'multi-stage build',
-  'docker-compose.yml', or when containerizing an application. Covers: multi-stage
-  builds, non-root users, .dockerignore, layer caching, health checks, Docker
-  Compose for development, and production vs development separation. Works with
-  any language/stack. Do NOT use this for: Kubernetes (use kubernetes-patterns),
-  CI/CD pipeline design, or infrastructure provisioning.
+  Use when the user asks to write a Dockerfile, a multi-stage Dockerfile for a Node, Python or Go service, Docker Compose, .dockerignore, non-root containers, layer caching, BuildKit cache mounts, or image healthchecks. Produces small, secure Dockerfiles and Compose files. Not for container internals like cgroups (use docker-internals) or Kubernetes manifests (use cloud-native-kubernetes-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -424,6 +418,15 @@ alpine: smallest with apk, musl libc compatibility issues possible. slim: debian
 - references/docker-patterns-fundamentals.md -- Docker Patterns Fundamentals
 - references/dockerfile-guide.md -- Dockerfile Best Practices
 - references/image-optimization.md -- Image Optimization
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-devops-docker.md` — Docker (merged from `devops/docker`)
+- `references/compose-networking.md` — Docker Compose and Networking
+- `references/docker-advanced.md` — Docker Advanced Topics
+- `references/docker-fundamentals.md` — Docker Fundamentals
+- `references/docker-volume-storage.md` — Container Storage and Volumes
 
 ## Handoff
 After completing this skill:

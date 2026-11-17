@@ -1,16 +1,7 @@
 ---
 name: bare-metal
 description: >
-  Use this skill when the user says 'bare metal', 'physical server',
-  'provisioning', 'PXE boot', 'IPMI', 'BMC', 'iDRAC', 'iLO', 'RMM',
-  'server lifecycle', 'burn-in testing', 'firmware update', 'RAID',
-  'BIOS configuration', 'server automation', 'MAAS', 'Metal3',
-  'Rack deployment', 'data center hardware', 'server imaging'.
-  Covers: server provisioning (PXE, iPXE, MAAS), firmware lifecycle,
-  IPMI/BMC management, RAID configuration, burn-in testing,
-  server automation, hardware asset management, BIOS tuning.
-  Do NOT use for: cloud infrastructure (use cloud-specific skills),
-  Kubernetes on bare metal (use kubernetes-patterns).
+  Use when the user asks about bare metal servers, PXE or iPXE boot, IPMI, BMC, iDRAC, iLO, Redfish, MAAS, Metal3, RAID setup, burn-in testing, or firmware updates. Produces provisioning and server lifecycle automation. Not for rack power and cooling (use datacenter) or storage arrays (use storage-infrastructure).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

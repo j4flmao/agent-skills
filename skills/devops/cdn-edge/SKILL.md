@@ -1,14 +1,7 @@
 ---
 name: cdn-edge
 description: >
-  Use this skill when the user says 'CDN', 'edge', 'content delivery',
-  'CloudFront', 'Cloud CDN', 'Azure CDN', 'Akamai', 'Fastly', 'Cloudflare',
-  'edge computing', 'edge functions', 'WAF', 'DDoS protection',
-  'cache invalidation', 'signed URL', 'origin shield'.
-  Covers: CDN architecture, caching strategies, edge computing (CloudFront Functions,
-  Lambda@Edge, Cloudflare Workers, Fastly Compute@Edge), WAF rules, DDoS mitigation,
-  CDN provider comparison, origin configuration, SSL/TLS, signed URLs/cookies.
-  Do NOT use for: general DNS, Kubernetes ingress.
+  Use when the user asks about CDNs, CloudFront, Fastly, Akamai, Cloudflare caching, cache invalidation, Cache-Control headers, origin shield, signed URLs, CDN WAF rules or DDoS protection. Produces CDN cache, origin and security configuration. Not for writing Workers apps (use cloud-native-cloudflare-workers).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -47,7 +47,7 @@ const BASE_URL = __ENV.BASE_URL || "http://localhost:3000";
 export default function () {
   const payload = JSON.stringify({
     email: `user${__VU}@example.com`,
-    password: "test123",
+    password: __ENV.TEST_USER_PASSWORD,
   });
 
   const params = {
@@ -151,7 +151,7 @@ export default function () {
     // Login
     const loginRes = http.post(`${BASE_URL}/api/login`, {
       email: `user${__VU}@example.com`,
-      password: "test123",
+      password: __ENV.TEST_USER_PASSWORD,
     });
     check(loginRes, { "logged in": (r) => r.status === 200 });
 

@@ -1,7 +1,11 @@
 ---
 name: map-location
 description: >
-  Use this skill when the user says 'maps', 'map SDK', 'MapKit', 'Google Maps SDK', 'Mapbox', 'location tracking', 'GPS', 'geofencing', 'background location', 'geocoding', 'marker clustering'. Chooses a map SDK and implements location permissions, foreground/background tracking, geofencing, geocoding and map rendering performance on iOS, Android and cross-platform apps. Do NOT use for: backend geospatial queries (use data/relational-database with PostGIS), game world maps, indoor positioning hardware.
+  Use when the user asks about maps in a mobile app, MapKit, Google Maps SDK,
+  Mapbox, GPS location tracking, background location, geofencing, geocoding or
+  marker clustering. Produces map SDK choice, location permission flow and
+  battery-aware tracking. Not for backend geospatial queries (use
+  data-relational-database).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

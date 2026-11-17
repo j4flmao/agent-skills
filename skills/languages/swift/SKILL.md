@@ -1,7 +1,11 @@
 ---
 name: lang-swift
 description: >
-  Use this skill when the user says 'Swift', 'Swift 6', 'strict concurrency', 'actor', 'Sendable', 'async let', 'MainActor', 'data race error', 'protocol-oriented', 'value types', 'ARC', 'retain cycle', 'weak self', 'optionals', 'Swift Package Manager', 'Swift Testing', 'typed throws'. Writes and reviews modern Swift (Swift 6 language mode / Swift 6.2): optionals, value vs reference semantics, protocols and generics, ARC and retain cycles, structured concurrency with actors and Sendable, error handling, SwiftPM and testing. Do NOT use for: iOS app architecture and SwiftUI/UIKit specifics (use ios), macOS app frameworks (use desktop/swiftui or desktop/appkit), server-side Vapor architecture (use backend/swift/vapor).
+  Use when the user asks about Swift 6, strict concurrency, actors, Sendable,
+  MainActor, data race errors, async let, ARC and retain cycles, weak self,
+  typed throws, SwiftPM or Swift Testing. Produces idiomatic Swift 6 code and
+  tests. Not for iOS app architecture and SwiftUI screens (use ios) or Vapor
+  servers (use vapor-backend).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

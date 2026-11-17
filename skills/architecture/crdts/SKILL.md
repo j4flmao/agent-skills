@@ -1,7 +1,11 @@
 ---
 name: architecture-crdts
 description: >
-  Use this skill when the user says 'CRDT', 'real-time collaboration', 'collaborative editing', 'Yjs', 'Automerge', 'local-first', 'offline sync with merge', 'conflict-free merge', 'operational transformation vs CRDT'. Designs replicated data that merges without coordination: choosing CRDT types, library (Yjs, Automerge, Loro), sync and persistence architecture, and handling tombstones, schema evolution, and authorization. Do NOT use for: server-authoritative consistency/consensus (system-design distributed-consensus), mobile offline caching without concurrent edits (mobile/universal/offline-first), or event sourcing (backend/universal/event-sourcing).
+  Use when the user asks about CRDTs, real-time collaborative editing, Yjs,
+  Automerge, Loro, local-first apps, offline sync with automatic merge or OT vs
+  CRDT. Produces CRDT type and library choice, sync and persistence
+  architecture. Not for consensus-based consistency (use distributed-consensus)
+  or offline caching without concurrent edits (use mobile-offline-first).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

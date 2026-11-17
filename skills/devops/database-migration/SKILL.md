@@ -1,15 +1,7 @@
 ---
 name: database-migration
 description: >
-  Use this skill when the user says 'database migration', 'schema migration',
-  'DB migration', 'Flyway', 'Liquibase', 'Alembic', 'Prisma Migrate',
-  'DMS', 'AWS DMS', 'Azure DMS', 'Database Migration Service',
-  'zero-downtime migration', 'online migration', 'offline migration',
-  'homogeneous migration', 'heterogeneous migration', 'schema drift'.
-  Covers: schema migration tools, online/offline migration strategies,
-  homogeneous and heterogeneous migrations, zero-downtime deployments,
-  migration rollback, testing, and validation.
-  Do NOT use for: general cloud migration (use cloud-migration skill).
+  Use when the user asks about schema migrations, Flyway, Liquibase, Alembic, Prisma Migrate, zero-downtime expand/contract changes, AWS DMS, heterogeneous database moves, or schema drift. Produces safe migration scripts, rollout order and validation. Not for whole-workload cloud migration (use cloud-migration).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

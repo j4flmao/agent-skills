@@ -373,13 +373,13 @@ app.use('/graphql', (req, res, next) => {
 - Schema is the contract — version it, never break clients
 - Every query has complexity limit — set at gateway level
 - DataLoader per-request, never shared across requests
-- Mutations return `{ clientMutationId, error, ...payload }`
+- Mutations take one `input` argument and return a payload type with the changed object and typed user errors (`clientMutationId` is an optional legacy Relay field)
 - Pagination is cursor-based, never offset-based
 - Subscriptions use pub/sub, authenticate on connect
 - Persisted queries for production, full queries for development
-- Complexity budget: max 1000 points per query
-- Depth limit: max 7 levels of nesting
-- Rate limit: 1000 reads/min/user, 100 writes/min/user
+- Complexity budget: set a per-query cost limit (e.g. 1000 points) from measured costs
+- Depth limit: cap nesting (e.g. 7-10 levels) from the deepest legitimate client query
+- Rate limit by query cost per user/client, not by request count alone
 - Always use DataLoader for relation fields to prevent N+1
 - Never expose internal DB fields directly in the schema
 - All nullable fields should return null instead of throwing for missing data
@@ -504,3 +504,8 @@ What's the primary data access pattern?
 - [graphql security](references/graphql-security.md)
 - [graphql tooling](references/graphql-tooling.md)
 - [schema resolvers](references/schema-resolvers.md)
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-backend-graphql-optimization.md` — GraphQL Optimization (merged from `backend/graphql-optimization`)

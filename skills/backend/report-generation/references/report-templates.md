@@ -59,7 +59,7 @@ class SectionDef:
 
 ```python
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from datetime import datetime
+from datetime import datetime, timezone
 
 class JinjaTemplateEngine:
     def __init__(self, template_dir: str):
@@ -306,7 +306,7 @@ class TemplateVersionManager:
 
     def create_version(self, template: ReportTemplate) -> VersionRecord:
         self.version_dir.mkdir(exist_ok=True)
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         version_file = (
             self.version_dir /
             f"{template.id}_v{template.version}_{timestamp}.{template.format.value}"
@@ -317,7 +317,7 @@ class TemplateVersionManager:
             template_id=template.id,
             version=template.version,
             file_path=str(version_file),
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         self._save_record(record)
         return record

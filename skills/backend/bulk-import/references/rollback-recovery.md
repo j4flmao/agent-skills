@@ -396,7 +396,7 @@ class CleanupPolicy:
         self.snapshot_retention_days = snapshot_retention_days
 
     async def cleanup_old_jobs(self):
-        cutoff = datetime.utcnow() - timedelta(days=self.retention_days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=self.retention_days)
         await db.execute(
             "DELETE FROM import_jobs WHERE created_at < $1 "
             "AND status IN ('completed', 'rolled_back', 'cancelled')",
@@ -404,7 +404,7 @@ class CleanupPolicy:
         )
 
     async def cleanup_snapshots(self):
-        cutoff = datetime.utcnow() - timedelta(
+        cutoff = datetime.now(timezone.utc) - timedelta(
             days=self.snapshot_retention_days
         )
         await db.execute(
@@ -413,7 +413,7 @@ class CleanupPolicy:
         )
 
     async def archive_completed(self, days_old: int = 90):
-        cutoff = datetime.utcnow() - timedelta(days=days_old)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days_old)
         rows = await db.fetch("""
             INSERT INTO import_archive
             SELECT * FROM import_jobs

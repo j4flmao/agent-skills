@@ -1,7 +1,11 @@
 ---
 name: level-streaming
 description: >
-  Use this skill when the user says 'level streaming', 'open world streaming', 'world partition', 'streaming cells', 'async loading', 'hitch', 'pop-in'. Designs open-world streaming: cell layout and residency, async loading, dependency closure, hitch prevention and progressive transitions. Do NOT use for: asset cooking/packaging (use asset-pipeline), server-side zone sharding (use scaling-architecture).
+  Use when the user asks about level streaming, open world streaming, World
+  Partition, streaming cells, async loading, loading hitches or pop-in. Produces
+  cell layout, residency rules and hitch-free load scheduling. Not for asset
+  cooking and packaging (use asset-pipeline) or server zone sharding (use
+  scaling-architecture).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

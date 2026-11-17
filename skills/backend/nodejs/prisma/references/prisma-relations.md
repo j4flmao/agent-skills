@@ -6,7 +6,7 @@ Prisma schema supports one-to-one, one-to-many, and many-to-many relations.
 
 ```prisma
 model User {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid(7))
   email     String   @unique
   name      String
   profile   Profile?
@@ -15,7 +15,7 @@ model User {
 }
 
 model Profile {
-  id     String @id @default(uuid())
+  id     String @id @default(uuid(7))
   bio    String
   avatar String?
   userId String @unique
@@ -23,7 +23,7 @@ model Profile {
 }
 
 model Order {
-  id         String      @id @default(uuid())
+  id         String      @id @default(uuid(7))
   userId     String
   user       User        @relation(fields: [userId], references: [id])
   items      OrderItem[]
@@ -33,7 +33,7 @@ model Order {
 }
 
 model OrderItem {
-  id      String @id @default(uuid())
+  id      String @id @default(uuid(7))
   orderId String
   order   Order  @relation(fields: [orderId], references: [id])
   sku     String
@@ -172,13 +172,13 @@ const updatedOrder = await prisma.order.update({
 
 ```prisma
 model Product {
-  id          String           @id @default(uuid())
+  id          String           @id @default(uuid(7))
   name        String
   categories  ProductCategory[]
 }
 
 model Category {
-  id       String           @id @default(uuid())
+  id       String           @id @default(uuid(7))
   name     String
   products ProductCategory[]
 }

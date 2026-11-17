@@ -12,14 +12,13 @@ These skills make the agent apply this domain's security practices by default. T
 |-------|------|----------------|
 | [`security-api-security`](../../skills/security/api-security/SKILL.md) | `security/api-security` | Design comprehensive API security controls covering OWASP API Top 10 threat modeling, authentication (JWT, OAuth2, API keys), rate limiting (token… |
 
-## Level 1 — Essentials (3 skills)
+## Level 1 — Essentials (2 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
 | [`backend-graphql-patterns`](../../skills/backend/universal/graphql-patterns/SKILL.md) | `backend/universal/graphql-patterns` | Design production GraphQL schemas with resolvers, DataLoader batching, and auth. |
-| [`backend-graphql-optimization`](../../skills/backend/graphql-optimization/SKILL.md) | `backend/graphql-optimization` | GraphQL resolvers run per field, so a naive implementation issues one database query per parent object (N+1) and lets clients send arbitrarily… |
 | [`backend-api-design`](../../skills/backend/universal/api-design/SKILL.md) | `backend/universal/api-design` | Design consistent, production-grade REST or GraphQL APIs. |
 
 ## Level 2 — Professional (4 skills)
@@ -46,16 +45,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 + security baseline (4 skills):**
+**Level 1 + security baseline (3 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill backend-graphql-patterns --skill backend-graphql-optimization --skill backend-api-design --skill security-api-security
+npx skills add j4flmao/agent-skills --skill backend-graphql-patterns --skill backend-api-design --skill security-api-security
 ```
 
-**Level 1 + 2 + security baseline (8 skills):**
+**Level 1 + 2 + security baseline (7 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill backend-graphql-patterns --skill backend-graphql-optimization --skill backend-api-design --skill api-graphql-federation --skill frontend-data-fetching --skill backend-caching --skill backend-authorization --skill security-api-security
+npx skills add j4flmao/agent-skills --skill backend-graphql-patterns --skill backend-api-design --skill api-graphql-federation --skill frontend-data-fetching --skill backend-caching --skill backend-authorization --skill security-api-security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -66,7 +65,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`api-all`](../bundles.md#api-all) | 9 | API ecosystem: GraphQL Federation, API product management, API design, API gateway |
+| [`api-all`](../bundles.md#api-all) | 8 | API ecosystem: GraphQL Federation, API product management, API design, API gateway |
 | [`backend-patterns`](../bundles.md#backend-patterns) | 27 | Advanced backend patterns: CQRS, Event Sourcing, Saga, Transactional Outbox + related universal skills |
 
 ## Combine with

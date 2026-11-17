@@ -1,7 +1,7 @@
 ---
 name: sre-observability-scaling
 description: >
-  Use this skill when the user says 'prometheus tsdb internals', 'prometheus compaction', 'prometheus memory usage', 'high cardinality', 'scale prometheus', 'thanos vs mimir', 'remote write tuning', 'prometheus retention', 'too many series', 'otel collector scaling'. Explains Prometheus TSDB internals (head block, WAL, compaction, index) and uses them to size, tune and horizontally scale metrics (Thanos, Mimir, VictoriaMetrics) and telemetry pipelines. Do NOT use for: basic Prometheus/Grafana setup (prometheus-grafana), SLO alert design (sre-sli-slo-management), trace context propagation (cloud-native-distributed-tracing).
+  Use when the user asks about Prometheus TSDB internals, high cardinality or too many series, Prometheus memory usage, compaction and retention, scaling Prometheus, Thanos vs Mimir vs VictoriaMetrics, remote write tuning, or OTel Collector scaling. Produces sizing, tuning and horizontal scaling plans. Not for basic setup (use prometheus-grafana).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

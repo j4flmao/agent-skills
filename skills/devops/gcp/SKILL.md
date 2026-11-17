@@ -1,10 +1,7 @@
 ---
 name: devops-gcp
-description: |
-  Trigger: "GCP", "Google Cloud", "Google Kubernetes Engine", "GKE",
-  "Cloud Run", "Cloud Functions", "Cloud Storage", "Cloud SQL",
-  "Terraform GCP", "gcloud CLI", "Cloud Build"
-  Exclusion: Not for AWS or Azure -- use those specific skills.
+description: >
+  Use when the user asks about GCP, Google Cloud, GKE, Cloud Run, Cloud Run functions, Cloud Storage, Cloud SQL, IAM and Workload Identity Federation, the gcloud CLI, Cloud Build, or Terraform for GCP. Produces GCP architectures and IaC. Not for BigQuery tuning (use cloud-native-gcp-bigquery) or AWS (use aws).
 version: 1.0.0
 author: j4flmao
 license: MIT

@@ -1,7 +1,11 @@
 ---
 name: lang-c
 description: >
-  Use this skill when the user says 'C language', 'C11', 'C17', 'C23', 'pointers', 'undefined behavior', 'strict aliasing', 'restrict', 'volatile', 'malloc/free', 'buffer overflow', 'segfault', 'sanitizer', 'Makefile', 'CMake C project'. Writes and reviews portable C (C11/C17/C23): memory ownership, undefined behaviour and how optimisers exploit it, strings and buffers, error handling, build flags, sanitizers and static analysis. Do NOT use for: microcontroller firmware specifics (use c-cpp-patterns), kernel modules (use kernel-development), C++ (use lang-cpp).
+  Use when the user asks about C (C11, C17, C23), pointers, undefined behavior,
+  strict aliasing, restrict, malloc/free ownership, buffer overflows, segfaults,
+  sanitizers or C builds with CMake. Produces portable, warning-clean C with
+  sanitizer setup. Not for microcontroller firmware (use c-cpp-patterns) or C++
+  (use lang-cpp).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

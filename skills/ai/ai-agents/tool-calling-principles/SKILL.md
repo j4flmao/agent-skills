@@ -1,10 +1,14 @@
 ---
 name: tool-calling-principles
 description: >
-  Use this skill when the user says 'tool calling', 'function calling', 'tool schema', 'JSON schema for tools', 'agent picks wrong tool', 'tool error handling', 'structured outputs', 'tool_use / tool_result'. Designs tool interfaces for LLM agents: naming, descriptions, strict schemas, error contracts, idempotency, output shaping, and permission levels. Do NOT use for: building MCP servers specifically (ai/mcp-patterns and .claude/rules/mcp-server-design.md), the agent loop (ai/ai-agents/core-architectures), or general REST API design (backend/universal/api-design).
+  Use when the user asks about tool calling, function calling, tool schemas, tool_use / tool_result, strict
+  structured outputs, an agent picking the wrong tool or tool error handling. Produces JSON Schema tool
+  definitions, validated handlers with teaching errors, idempotency and a permission matrix. Not for the agent
+  loop (use ai-agent-core-loop) or REST API design (use backend-api-design).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, agents, tool-calling, function-calling, json-schema, structured-outputs]
 ---
 
@@ -166,3 +170,8 @@ Additional reference material for this skill, stored outside its own `references
 - `../../../harness-engineering/tool-orchestration/references/idempotency-patterns.md` — Idempotency Patterns
 - `../../../harness-engineering/tool-orchestration/references/tool-error-handling.md` — Tool Error Handling in Agent Harnesses
 - `../../../harness-engineering/tool-orchestration/references/tool-version-compatibility.md` — Tool Versioning and Compatibility in Agent Harnesses
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/model-context-protocol.md` — Model Context Protocol (MCP)

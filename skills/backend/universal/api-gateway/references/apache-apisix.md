@@ -215,7 +215,7 @@ deployment:
       "query": "jwt",
       "cookie": "jwt",
       "alg": "HS256",
-      "secret": "my-jwt-secret",
+      "secret": "$env://APISIX_JWT_SECRET",
       "base64_secret": false,
       "exp": 86400,
       "nbf": true,
@@ -244,7 +244,7 @@ deployment:
   "plugins": {
     "oidc": {
       "client_id": "my-client",
-      "client_secret": "my-secret",
+      "client_secret": "$env://OIDC_CLIENT_SECRET",
       "discovery": "https://auth.example.com/.well-known/openid-configuration",
       "scope": "openid profile email",
       "bearer_only": false,
@@ -350,7 +350,7 @@ deployment:
         "address": "otel-collector:4318",
         "request_timeout": 3,
         "request_headers": {
-          "X-Auth-Token": "my-token"
+          "X-Auth-Token": "<auth-token>"
         }
       },
       "sampler": {
@@ -427,7 +427,7 @@ curl http://127.0.0.1:9180/apisix/admin/consumers -X PUT -d '
   "plugins": {
     "jwt-auth": {
       "key": "user-key",
-      "secret": "my-secret"
+      "secret": "$env://APISIX_HMAC_SECRET"
     },
     "limit-count": {
       "count": 1000,

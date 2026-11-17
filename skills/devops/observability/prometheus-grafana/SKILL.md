@@ -1,7 +1,7 @@
 ---
 name: prometheus-grafana
 description: >
-  Use this skill when the user says 'prometheus grafana setup', 'kube-prometheus-stack', 'servicemonitor', 'expose /metrics', 'promql query', 'prometheus alert rule', 'alertmanager routing', 'grafana dashboard', 'red metrics', 'use method'. Sets up metrics monitoring with Prometheus, Alertmanager and Grafana: instrumentation, scrape discovery on Kubernetes, PromQL for RED/USE, alert rules with runbooks, and dashboards as code. Do NOT use for: TSDB internals, cardinality and horizontal scaling (sre-observability-scaling), SLO burn-rate design (sre-sli-slo-management), tracing (opentelemetry-tracing).
+  Use when the user asks about kube-prometheus-stack, ServiceMonitor, exposing /metrics, PromQL queries, Prometheus alert rules, Alertmanager routing, Grafana dashboards as code, or RED and USE metrics. Produces Prometheus, Alertmanager and Grafana configs. Not for TSDB internals and scaling (use sre-observability-scaling) or SLO burn-rate alerts (use sre-sli-slo-management).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -1,7 +1,11 @@
 ---
 name: interest-management
 description: >
-  Use this skill when the user says 'interest management', 'area of interest', 'relevancy', 'network culling', 'replication priority', 'observer set'. Designs interest management: spatial visibility, observer sets, priority/rate budgeting, network LOD and event vs state replication. Do NOT use for: rendering culling (use render-graph), matchmaking (use matchmaking-lobby).
+  Use when the user asks about interest management, area of interest, network
+  relevancy, network culling, replication priority or observer sets in
+  multiplayer games. Produces visibility, priority and bandwidth budgeting
+  design. Not for rendering culling (use render-graph) or matchmaking (use
+  matchmaking-lobby).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

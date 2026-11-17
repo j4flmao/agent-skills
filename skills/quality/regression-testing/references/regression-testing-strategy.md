@@ -244,7 +244,7 @@ regression:
         --output selected-tests.txt
 
     # Step 3: Run selected tests
-    - npx vitest --testPathPattern=$(cat selected-tests.txt | tr '\n' '|')
+    - npx vitest run $(cat selected-tests.txt | tr '\n' ' ')   # Vitest takes file filters as positional args
 
     # Step 4: Check for flaky tests
     - node scripts/check-flakiness.js --run-id=$CI_RUN_ID

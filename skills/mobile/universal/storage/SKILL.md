@@ -1,9 +1,11 @@
 ---
 name: mobile-storage
 description: >
-  Use this skill when the user asks about mobile local storage, SQLite, Room,
-  Core Data, Hive, Isar, SharedPreferences, UserDefaults, file storage, or
-  database migration.
+  Use when the user asks about local storage on mobile: SQLite, Room, Core Data,
+  SwiftData, DataStore, UserDefaults, Hive, Isar, Drift, file storage or
+  database migrations on device. Produces a storage choice, schema and migration
+  code. Not for sync with a server (use mobile-offline-first) or secrets storage
+  (use mobile-security).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

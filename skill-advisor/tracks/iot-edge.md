@@ -34,13 +34,12 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`cloud-native-cloudflare-workers`](../../skills/cloud-native/edge-computing/cloudflare-workers/SKILL.md) | `cloud-native/edge-computing/cloudflare-workers` | Run request-path logic close to users on Cloudflare's network. |
 | [`data-streaming`](../../skills/data/streaming/SKILL.md) | `data/streaming` | Design streaming data pipelines with Kafka topic architecture, Flink/Kafka Streams processing, schema evolution, and reliability guarantees. |
 
-## Level 3 — Specialist (2 skills)
+## Level 3 — Specialist (1 skill)
 
 Add one at a time, only for the problem in front of you. These are deep and narrow.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
-| [`rtos-fundamentals`](../../skills/embedded-systems/rtos-fundamentals/SKILL.md) | `embedded-systems/rtos-fundamentals` | Real-time means bounded and predictable response time, not fast. |
 | [`ml-inference-optimization`](../../skills/ml/inference-optimization/SKILL.md) | `ml/inference-optimization` | Serve LLMs at the required latency for the lowest cost. |
 
 ## Install
@@ -67,7 +66,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`embedded-iot`](../bundles.md#embedded-iot) | 9 | Embedded and IoT: RTOS, bare-metal Rust, C/C++ patterns, IoT protocols, edge AI |
+| [`embedded-iot`](../bundles.md#embedded-iot) | 8 | Embedded and IoT: RTOS, bare-metal Rust, C/C++ patterns, IoT protocols, edge AI |
 
 ## Combine with
 

@@ -1,7 +1,10 @@
 ---
 name: mobile-camera-media
 description: >
-  Use this skill when the user says 'camera', 'photo', 'video', 'image picker', 'gallery', 'photo library', 'camera capture', 'media picker', 'QR code scanner', 'barcode scanner', 'video recording', 'media upload'. Implement camera capture, media picking, image processing, and QR scanning on iOS and Android. Do NOT use for: audio recording or file storage patterns.
+  Use when the user asks about camera capture, CameraX, AVFoundation, photo or
+  image picker, PhotosPicker, video recording, QR or barcode scanning, or
+  compressing media before upload. Produces camera and media-picking code with
+  permissions handled. Not for local file persistence (use mobile-storage).
 compatibility:
   claude-code: true
   cursor: true

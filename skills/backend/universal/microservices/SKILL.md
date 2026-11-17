@@ -491,7 +491,7 @@ const client = new PaymentServiceClient('payment-service:443', channelCredential
 - Always define API contracts before implementation (contract-first).
 - Each service has at most one DB (shared-nothing).
 - Prefer eventual consistency unless strong consistency is legally required.
-- gRPC for high-throughput internal calls (< 2ms latency). HTTP for external or low-throughput internal.
+- gRPC for high-throughput or streaming internal calls with shared protobuf contracts; HTTP/JSON for external or low-throughput internal APIs.
 - Rate limit at the gateway AND per-service for defense in depth.
 - Use consumer-driven contracts to detect breaking API changes in CI.
 - Every service must have independent backup and restore tested quarterly.
@@ -516,6 +516,12 @@ Additional reference material for this skill, stored outside its own `references
 - `../saga-patterns/references/saga-state-management.md` — Saga State Management
 - `../saga-patterns/references/saga-testing.md` — Saga Testing
 - `../saga-patterns/references/saga-timeout-handling.md` — Saga Timeout Handling
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-architecture-microservices-patterns.md` — Microservices Architecture Patterns (merged from `architecture/system-design/microservices-patterns`)
+- `references/merged-microservice-design-patterns.md` — Microservice Data-Consistency Patterns (merged from `backend/universal/design-patterns/microservices`)
 
 ## Handoff
 Hand off to `devops/containerization/SKILL.md` for container orchestration setup. Hand off to `backend/universal/event-driven/SKILL.md` for detailed event-driven patterns. Hand off to `backend/universal/database-patterns/SKILL.md` for data consistency strategies.

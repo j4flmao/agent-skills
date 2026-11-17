@@ -29,7 +29,7 @@ Production data pipelines fail silently. Unlike application servers that return 
 
 ## Monitoring Stack
 
-`yaml
+```yaml
 # docker-compose monitoring stack
 version: '3.8'
 services:
@@ -53,12 +53,12 @@ services:
     image: airflow-metrics-exporter
     environment:
       - AIRFLOW_ENDPOINT=http://airflow:8080
-`
+```
 
 ## Setting Up Airflow Monitoring with Prometheus
 
 ### StatsD Configuration
-`python
+```python
 # airflow.cfg
 [metrics]
 statsd_on = True
@@ -66,10 +66,10 @@ statsd_host = localhost
 statsd_port = 8125
 statsd_prefix = airflow
 statsd_allow_list = task_*_duration, dag_*_duration, operator_*_failures
-`
+```
 
 ### Custom Metrics in Tasks
-`python
+```python
 from airflow.stats import Stats
 
 @task
@@ -84,12 +84,12 @@ def monitored_extract():
         Stats.incr("extract.failure")
         Stats.timing("extract.duration", (time.time() - start) * 1000)
         raise
-`
+```
 
 ## Alerting Configuration
 
 ### PagerDuty Integration
-`python
+```python
 def pagerduty_alert(context):
     import pdpyras
     events_client = pdpyras.EventsAPIClident("your_routing_key")
@@ -103,10 +103,10 @@ def pagerduty_alert(context):
         }
     }
     events_client.trigger(payload)
-`
+```
 
 ### Slack Notifications
-`python
+```python
 def slack_alert(context):
     from slack_sdk import WebhookClient
     webhook = WebhookClient("https://hooks.slack.com/services/xxx")
@@ -114,12 +114,12 @@ def slack_alert(context):
     task_id = context["task"].task_id
     message = f":red_circle: *DAG Failed*\nDAG: {dag_id}\nTask: {task_id}"
     webhook.send(text=message, username="Airflow Monitor")
-`
+```
 
 ## Data Freshness Monitoring
 
 ### dbt Source Freshness
-`yaml
+```yaml
 # sources.yml
 version: 2
 sources:
@@ -130,10 +130,10 @@ sources:
           warn_after: {count: 2, period: hour}
           error_after: {count: 6, period: hour}
         loaded_at_field: _etl_timestamp
-`
+```
 
 ### Custom Freshness Check
-`sql
+```sql
 -- freshness_check.sql
 SELECT
     source_name,
@@ -149,12 +149,12 @@ FROM (
     UNION ALL
     SELECT 'customers', MAX(created_at) FROM customers.customers
 ) AS sources;
-`
+```
 
 ## Anomaly Detection
 
 ### Statistical Methods
-`python
+```python
 import numpy as np
 from scipy import stats
 
@@ -170,11 +170,12 @@ def detect_anomaly(current_value, historical_values, method="zscore"):
         upper = q3 + 1.5 * iqr
         return current_value < lower or current_value > upper
     return False
-`
+```
 
 ## Log Aggregation Strategy
 - Centralize all worker logs via Filebeat -> Elasticsearch
-- Index DAG logs with dag_id and un_id fields
+- Index DAG logs with dag_id and 
+un_id fields
 - Set up log retention: 30 days for INFO, 90 days for ERROR
 - Create Kibana dashboards for task failure patterns
 

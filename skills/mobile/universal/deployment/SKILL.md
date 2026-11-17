@@ -1,9 +1,11 @@
 ---
 name: mobile-deployment
 description: >
-  Use this skill when the user asks about mobile app deployment, App Store,
-  Play Store, TestFlight, Fastlane, code signing, mobile CI/CD, app release,
-  or beta testing.
+  Use when the user asks about releasing a mobile app to TestFlight, App Store
+  Connect, Google Play tracks, Fastlane, code signing, release from CI, beta
+  testing or phased rollout. Produces signing, build and store-upload pipelines.
+  Not for OTA JS updates in React Native (use react-native-expertise) or general
+  CI design (use github-actions).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -9,7 +9,7 @@ WhatsApp Business API enables programmatic messaging on the WhatsApp platform. I
 
 ```python
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 class MessageType(Enum):
@@ -33,7 +33,7 @@ class WhatsAppMessage:
     template_params: dict = field(default_factory=dict)
     status: str = "pending"
     wa_message_id: str = ""
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 class WhatsAppCloudAPI:
     def __init__(self, phone_number_id: str, token: str,
@@ -358,8 +358,8 @@ class WhatsAppRateLimiter:
         self.daily_limit = messages_per_day
         self.tokens = messages_per_second
         self.daily_count = 0
-        self.last_refill = datetime.utcnow()
-        self.daily_reset = datetime.utcnow().replace(
+        self.last_refill = datetime.now(timezone.utc)
+        self.daily_reset = datetime.now(timezone.utc).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
 
@@ -376,7 +376,7 @@ class WhatsAppRateLimiter:
         self.daily_count += 1
 
     async def _refill(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         elapsed = (now - self.last_refill).total_seconds()
         refill = int(elapsed * self.rate_per_sec)
         if refill > 0:

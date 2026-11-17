@@ -1,14 +1,7 @@
 ---
 name: dependency-management
 description: >
-  Use this skill when the user says 'Dependabot', 'Renovate', 'dependencies',
-  'lock file', 'vulnerability scanning', 'update strategy', 'Renovate config',
-  'dependabot.yml', 'dependency bump', 'automated updates', 'version pinning',
-  'patch management', 'supply chain security', 'npm audit', 'SBOM'.
-  Covers: Dependabot configuration, Renovate configuration, lock file management,
-  vulnerability scanning, update strategy, dependency policy.
-  Do NOT use this for: monorepo workspace configuration, package.json structure,
-  or dependency graph visualization (use monorepo skill).
+  Use when the user asks about Dependabot, dependabot.yml, Renovate config, lock files, version pinning, dependency update strategy, automerging patch bumps, or npm audit vulnerability scanning. Produces update bot configs and a dependency policy. Not for SBOM generation (use security-sbom) or monorepo workspaces (use monorepo).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

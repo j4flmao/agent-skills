@@ -138,3 +138,8 @@ Real hardware needs decoders that keep up with the syndrome rate (around a micro
 - Dennis, Kitaev, Landahl & Preskill, "Topological quantum memory" (2002); Fowler et al., "Surface codes" (PRA 2012).
 - Gidney, "Stim: a fast stabilizer circuit simulator" (Quantum, 2021); Higgott & Gidney, "Sparse Blossom" (PyMatching v2, 2023).
 - Conceptual companion: `fundamental-truths/quantum-error-correction` skill.
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-fundamental-quantum-error-correction.md` — Quantum Error Correction: Foundations (merged from `fundamental-truths/quantum-error-correction`)

@@ -307,7 +307,7 @@ Add database indexes for slow queries:
 
 ```prisma
 model Order {
-  id         String   @id @default(uuid())
+  id         String   @id @default(uuid(7))
   customerId String
   createdAt  DateTime @default(now())
 

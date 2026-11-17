@@ -1,10 +1,13 @@
 ---
 name: distributed-training
 description: >
-  Use this skill when the user says 'distributed training', 'multi-gpu training', 'DDP', 'FSDP', 'ZeRO', 'DeepSpeed', 'all-reduce', 'tensor parallel', 'pipeline parallel', 'torchrun', 'NCCL'. Chooses and configures a parallelism strategy (data, sharded data, tensor, pipeline, context) for PyTorch training, sizes memory, and debugs collective-communication performance. Do NOT use for: inference serving (paged-attention, tensorrt-optimization), network fabric internals (rdma-roce), single-kernel optimization (cuda-programming), experiment tracking (ml-experiment-tracking).
+  Use when the user asks about multi-GPU training, DDP, FSDP, ZeRO, DeepSpeed, torchrun, tensor/pipeline
+  parallel, all-reduce or NCCL slowness. Produces a parallelism plan with per-GPU memory math, launch command
+  and config. Not for fabric tuning (use rdma-roce) or experiment logging (use ml-experiment-tracking).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [hardware-acceleration, distributed-training, pytorch, fsdp, deepspeed, nccl]
 ---
 

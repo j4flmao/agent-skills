@@ -1,7 +1,7 @@
 ---
 name: cloud-native-serverless-orchestration
 description: >
-  Use this skill when the user says 'step functions', 'state machine', 'amazon states language', 'asl', 'orchestrate lambdas', 'express workflow', 'distributed map', 'saga with step functions', 'workflow retries catch'. Designs AWS Step Functions state machines with correct ASL syntax, Retry/Catch error handling, Standard vs Express choice, and service integrations that avoid needless Lambdas. Do NOT use for: Azure Durable Functions (cloud-native-azure-functions), Lambda internals (cloud-native-aws-serverless), data-pipeline orchestrators like Airflow (data workflow-orchestration).
+  Use when the user asks about AWS Step Functions, Amazon States Language (ASL) state machines, orchestrating Lambdas, Standard vs Express workflows, Distributed Map, Retry/Catch, or a saga with Step Functions. Produces valid ASL with error handling and direct service integrations. Not for Azure Durable Functions (use cloud-native-azure-functions) or Airflow (use data-airflow-dbt-orchestration).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

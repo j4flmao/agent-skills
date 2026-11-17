@@ -1,7 +1,11 @@
 ---
 name: unreal
 description: >
-  Use this skill when the user says 'unreal', 'unreal engine 5', 'UE5', 'blueprint', 'UObject', 'gameplay ability system', 'nanite', 'lumen', 'unreal replication'. Guides Unreal Engine 5 projects: UObject/Actor framework, C++ vs Blueprint, rendering (Nanite/Lumen), Chaos physics, animation, AI, replication and profiling. Do NOT use for: Unity or Godot, custom engine rendering (use render-graph/vulkan).
+  Use when the user asks about Unreal Engine 5, UE5 C++, Blueprints, UObject and
+  Actor lifecycle, Gameplay Ability System, Nanite, Lumen, Chaos physics or
+  Unreal replication. Produces Unreal project architecture and C++/Blueprint
+  guidance. Not for Unity (use unity) or custom engine rendering (use
+  render-graph).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

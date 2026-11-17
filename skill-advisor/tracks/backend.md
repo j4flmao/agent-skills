@@ -91,7 +91,7 @@ Bundles are installed with the same command; each one's full command is on the [
 |--------|--------|-------------|
 | [`backend-patterns`](../bundles.md#backend-patterns) | 27 | Advanced backend patterns: CQRS, Event Sourcing, Saga, Transactional Outbox + related universal skills |
 | [`backend-capabilities`](../bundles.md#backend-capabilities) | 10 | Backend product capabilities: caching, event-driven, GraphQL, bulk import, email, SMS, reports, real-time |
-| [`backend-stacks`](../bundles.md#backend-stacks) | 83 | Backend frameworks and runtimes: Node (Express/Fastify/Hono/Nest), Bun, Deno, Go, Rust, Python, Java/Kotlin, .NET, PHP, Ruby, Elixir, Swift, Scala |
+| [`backend-stacks`](../bundles.md#backend-stacks) | 82 | Backend frameworks and runtimes: Node (Express/Fastify/Hono/Nest), Bun, Deno, Go, Rust, Python, Java/Kotlin, .NET, PHP, Ruby, Elixir, Swift, Scala |
 | [`access-control`](../bundles.md#access-control) | 7 | Authentication and authorization: auth patterns, RBAC, ABAC, fine-grained policies, identity providers, zero trust identity |
 | [`backend-only`](../bundles.md#backend-only) | 184 | Backend-only: OOP, design patterns, microservices, clean architecture, API, DB, auth, testing, all stacks |
 

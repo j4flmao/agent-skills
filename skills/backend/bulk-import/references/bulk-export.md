@@ -131,7 +131,7 @@ async def export_by_date_range(
 ### Export Job Model
 ```python
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 
 class ExportStatus(Enum):
@@ -152,7 +152,7 @@ class ExportJob:
     total_records: int = 0
     processed_records: int = 0
     error_message: str | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: datetime | None = None
 ```
 
@@ -185,7 +185,7 @@ class ExportJobManager:
             output_path = await self.export_runner.run(job, self._progress_callback)
             job.output_path = output_path
             job.status = ExportStatus.COMPLETED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(timezone.utc)
             await self.job_store.save(job)
             await self.notification_service.notify_complete(job)
         except Exception as e:

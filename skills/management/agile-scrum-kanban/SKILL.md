@@ -1,7 +1,7 @@
 ---
 name: agile-scrum-kanban
 description: >
-  Use this skill when the user says 'scrum or kanban', 'kanban board', 'WIP limits', 'cycle time', 'throughput', 'flow metrics', 'scrumban', 'cumulative flow diagram', 'monte carlo forecast', 'backlog management', 'scaling agile', 'SAFe', 'LeSS'. It selects and tunes an agile delivery approach (Scrum, Kanban, Scrumban), designs boards and WIP policies, measures flow and forecasts delivery with data, and advises on scaling frameworks. Do NOT use for: Scrum event mechanics and Definition of Done setup (use agile-scrum), retrospective facilitation (use sprint-retro), team boundaries (use team-topology), OKRs (use okr-kpi).
+  Use this skill when the user says 'scrum or kanban', 'kanban board', 'WIP limits', 'cycle time', 'throughput', 'flow metrics', 'scrumban', 'cumulative flow diagram', 'monte carlo forecast', 'backlog management', 'scaling agile', 'SAFe', 'LeSS'. It selects and tunes an agile delivery approach (Scrum, Kanban, Scrumban), designs boards and WIP policies, measures flow and forecasts delivery with data, and advises on scaling frameworks. Do NOT use for: Scrum event mechanics and Definition of Done setup (use agile-scrum-kanban), retrospective facilitation (use sprint-retro), team boundaries (use team-topology), OKRs (use okr-kpi).
 version: "3.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -49,6 +49,12 @@ Next experiment: {one policy change + expected effect}
 | Roles | PO, SM, Developers | None prescribed | Usually keeps PO |
 | Commitment | Sprint Goal | Service level expectation (e.g., 85% in ≤8 days) | Both |
 | Good fit | Product teams discovering + building | Ops, support, platform, maintenance | Teams outgrowing rigid sprints |
+
+## Scrum Essentials (Scrum Guide 2020)
+- Required: 3 accountabilities (Product Owner, Scrum Master, Developers; typically 10 or fewer people), 5 events (Sprint of one month or less, Sprint Planning ≤8 h, Daily Scrum 15 min, Sprint Review ≤4 h, Retrospective ≤3 h for a one-month Sprint), 3 artifacts with commitments (Product Backlog → Product Goal, Sprint Backlog → Sprint Goal, Increment → Definition of Done).
+- Optional complementary practices, not Scrum itself: story points, velocity, user stories, burndown charts, the three-question stand-up. Refinement is ongoing, not an event.
+- Keep sprint length constant (2 weeks is the common default); work that misses the DoD goes back to the Product Backlog.
+- Setup details, DoD starter and planning recipe: `references/merged-agile-scrum.md`.
 
 ## Kanban Essentials
 1. **Visualize** the actual workflow (not an idealized one), including queues ("Ready for review").
@@ -145,3 +151,8 @@ Before scaling a framework, reduce dependencies (team topology, architecture) �
 - `references/agile-scaling-frameworks.md` — SAFe/LeSS/Nexus comparison
 - `references/agile-scrum-kanban-fundamentals.md`
 - `references/agile-scrum-kanban-advanced.md`
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-agile-scrum.md` — Agile Scrum (merged from `management/agile-scrum`)

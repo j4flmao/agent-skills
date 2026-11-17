@@ -1,7 +1,11 @@
 ---
 name: job-system
 description: >
-  Use this skill when the user says 'job system', 'work stealing', 'task scheduler', 'fibers', 'parallel for', 'job graph', 'engine threading'. Designs engine job systems: work-stealing schedulers, job graphs and dependencies, parallel-for, fibers, determinism and profiling within the frame budget. Do NOT use for: general backend concurrency (use language skills), GPU async compute (use render-graph).
+  Use when the user asks about a game engine job system, work stealing, task
+  scheduler, fibers, parallel for, job graph dependencies or engine threading.
+  Produces job system design that fits the frame budget. Not for backend service
+  concurrency (use backend-concurrency-mechanics) or GPU async compute (use
+  render-graph).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

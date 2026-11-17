@@ -1,10 +1,14 @@
 ---
 name: ai-agent-architectures
 description: >
-  Use this skill when the user says 'build an AI agent', 'agent architecture', 'design an autonomous agent', 'agent system prompt', 'agent with tools and memory', 'which agent framework'. Entry point for single-agent design: decomposes the request into loop, tools, memory, planning, and evaluation, then routes depth to the child skills. Do NOT use for: workflow pattern selection (ai/agentic-workflows), multi-agent orchestration (ai/multi-agent-systems), or harness concerns like sandboxing and tracing (harness-engineering/*).
+  Use when the user asks to build an AI agent, design an agent that calls tools and keeps memory, write an agent
+  system prompt or pick an agent framework (Claude Agent SDK, OpenAI Agents SDK, LangGraph). Produces an
+  architecture brief covering loop, tools, memory, guardrails and evals, routing depth to child skills. Not for
+  workflow patterns (use ai-agentic-workflows).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, agents, architecture, tool-use, memory, planning]
 ---
 

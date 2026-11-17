@@ -70,7 +70,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`game-development`](../bundles.md#game-development) | 32 | Game development: engines, ECS, rendering, physics, animation, audio, input, streaming, netcode, game servers |
+| [`game-development`](../bundles.md#game-development) | 30 | Game development: engines, ECS, rendering, physics, animation, audio, input, streaming, netcode, game servers |
 | [`systems-programming`](../bundles.md#systems-programming) | 17 | Systems programming: C/C++/Rust/assembly, compilers, kernels, eBPF, networking, lock-free and kernel-bypass |
 
 ## Combine with

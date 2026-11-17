@@ -1,10 +1,15 @@
 ---
 name: unity-csharp
 description: >
-  Use this skill when the user says 'unity dots', 'unity ecs', 'unity entities', 'ISystem', 'IJobEntity', 'burst compiler', 'unity job system', 'unity c# performance'. Covers Unity Entities (ECS), the C# Job System and Burst plus GC-free C# patterns for Unity gameplay code. Do NOT use for: general Unity project architecture (use unity), non-Unity ECS (use ecs-pattern).
+  Use when the user asks about Unity DOTS, Unity ECS with Entities, ISystem,
+  IJobEntity, Burst jobs, the C# Job System, NativeArray or GC-free Unity C#.
+  Produces Entities, Jobs and Burst code with correct safety rules. Not for
+  general Unity project architecture (use unity) or engine-agnostic ECS design
+  (use ecs-pattern).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [game, unity, dots, ecs, burst, csharp]
 ---
 
@@ -46,7 +51,7 @@ DOTS replaces this with contiguous data and systems-in-a-loop.
 
 ## 2. ECS Model in Unity
 
-Packages: Entities 1.x on Unity 6.0-6.3 (`com.unity.entities` from the Package Manager); from Unity 6.4 Entities, Collections and Mathematics ship as core packages whose version matches the Editor. Code below uses the current `ISystem` + `SystemAPI` style (not the removed `SystemBase.Entities.ForEach` lambdas in new code).
+Packages: Entities 1.x on Unity 6.0-6.3 (`com.unity.entities` from the Package Manager); from Unity 6.4 Entities, Collections and Mathematics ship as core packages whose version matches the Editor. Code below uses the current `ISystem` + `SystemAPI` style (`SystemBase` `Entities.ForEach` lambdas are obsolete since Entities 1.4).
 
 ### 2.1 Entities, Components, Systems
 
@@ -184,7 +189,10 @@ async Awaitable<string> FetchAsync(string url, CancellationToken ct) {
 ```csharp
 public sealed class GameManager : MonoBehaviour {
     public static GameManager I { get; private set; }
-    void Awake() { I = this; }          // Set only if null at scene start
+    void Awake() {
+        if (I != null && I != this) { Destroy(gameObject); return; }   // keep the first instance
+        I = this;
+    }
     void OnDestroy() { if (I == this) I = null; }
 }
 ```
@@ -217,7 +225,7 @@ public sealed class GameManager : MonoBehaviour {
 | Cache component references in `Awake` | repeated `GetComponent` calls are lookups every time |
 | Begin/End sample with profiler markers | measure before optimizing |
 | Pre-allocate everything once | cache and pool |
-| Avoid `FindObjectOfType` | scans scene; expensive |
+| Avoid `FindObjectOfType` (obsolete since 2023.1; use `FindAnyObjectByType` only outside hot paths) | scans the scene; expensive |
 | Prefer fixed-point for sync systems | determinism across devices |
 
 ## 10. Decision: DOTS vs MonoBehaviour

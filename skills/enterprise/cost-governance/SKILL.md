@@ -582,4 +582,4 @@ A mid-market company moved from FinOps maturity Level 1 (Crawl) to Level 3 (Run)
   - references/cost-governance-practices.md -- Cloud Cost Governance Practices
   - references/ri-savings-plan-strategy.md -- Reserved Instance and Savings Plan Strategy
 ## Handoff
-For multi-tenant cost tracking, hand off to `enterprise-multi-tenant`. For compliance cost reporting, hand off to `enterprise-compliance-audit`.
+For multi-tenant cost tracking, hand off to `backend-multi-tenancy`. For compliance cost reporting, hand off to `enterprise-compliance-audit`.

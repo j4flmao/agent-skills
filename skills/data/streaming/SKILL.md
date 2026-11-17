@@ -580,6 +580,20 @@ Additional reference material for this skill, stored outside its own `references
 - `../data-streaming/references/security_best_practices.md` — Streaming Platform Security
 - `../data-streaming/references/troubleshooting_guide.md` — Streaming Pipeline Troubleshooting Guide
 
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-backend-data-streaming.md` — Data Streaming Architecture (merged from `backend/universal/data-streaming`)
+- `references/merged-data-kafka-event-streaming.md` — Apache Kafka Event Streaming (merged from `data/data-engineering/kafka-event-streaming`)
+- `references/exactly-once.md` — Exactly-Once Semantics
+- `references/streaming-architecture-2.md` — Streaming Architecture
+- `references/streaming-fundamentals.md` — Data Streaming Fundamentals
+- `references/streaming-operations.md` — Streaming Operations
+- `references/streaming-patterns.md` — Streaming Patterns
+- `references/streaming-security.md` — Streaming Security
+- `references/streaming-testing.md` — Streaming Testing
+- `references/stream-processing.md` — Stream Processing (Apache Flink)
+
 ## Handoff
 `data-data-warehouse` for streaming data landing in the warehouse
 `data-etl-pipeline` for batch processing of streamed data

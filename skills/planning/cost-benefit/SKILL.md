@@ -302,10 +302,12 @@ Inflating ROI by using unrealistic discount rates or excluding certain costs. Mi
 
 ## Success Metrics
 
+Example targets; replace with your finance team's hurdle rates.
+
 | Metric | Target |
 |--------|--------|
 | NPV | > $0 (positive) |
-| ROI | > 100% (double the investment) |
+| ROI | Above the organization's hurdle (e.g., > 100% over the horizon) |
 | Payback period | < 3 years |
 | Sensitivity range | NPV positive across ±20% of key variables |
 | Build vs buy delta | Clear cost or benefit advantage >20% |
@@ -474,17 +476,17 @@ Investment: -$500,000
 Cash flows: $200K (Y1), $350K (Y2), $500K (Y3)
 IRR: Find r where NPV = 0
   0 = -500K + 200K/(1+r) + 350K/(1+r)^2 + 500K/(1+r)^3
-  IRR ≈ 38%
+  IRR ≈ 40%
 
-Decision rule: IRR > WACC → Proceed (38% > 10% → Proceed)
+Decision rule: IRR > WACC → Proceed (40% > 10% → Proceed)
 ```
 
 ### Profitability Index (PI)
-PI = NPV / Initial Investment. Measures value created per dollar invested. Useful for comparing projects of different sizes.
+PI = PV of future cash flows / Initial Investment (= 1 + NPV / Initial Investment). PI > 1 creates value. Useful for comparing projects of different sizes.
 
 ```
-Project A: NPV = $346K, Investment = $500K, PI = 0.69
-Project B: NPV = $200K, Investment = $200K, PI = 1.00
+Project A: NPV = $346K, Investment = $500K, PI = 1.69
+Project B: NPV = $200K, Investment = $200K, PI = 2.00
 Project B creates more value per dollar invested despite lower absolute NPV.
 Capital-constrained: rank by PI, select highest first.
 ```
@@ -497,7 +499,7 @@ Variable            -20%    Base    +20%    Range
 Adoption rate       $180K   $346K   $514K   $334K ← Most sensitive
 Labor cost          $420K   $346K   $272K   $148K
 Timeline            $310K   $346K   $382K   $72K
-Discount rate       $389K   $346K   $305K   $84K
+Discount rate       $382K   $346K   $313K   $69K
 
 Priority: Adoption rate needs the most accurate estimate.
 ```
@@ -517,7 +519,7 @@ Selecting assumptions that support the desired outcome. "We assume 50% market ad
 The CBA evaluates Option A (Minimal Viable) but the team builds Option B (Full Feature). Costs overrun and benefits don't match the analysis. Mitigation: clearly define scope boundaries in the CBA. If scope changes, re-run the analysis. Every scope assumption is a sensitivity variable.
 
 ### 12. Ignoring Implementation Risk
-Assuming the project will be delivered on time and on budget. No contingency. No risk adjustment. Most large IT projects overrun by 20-50%. Mitigation: apply a contingency factor based on project complexity and team track record. Use three-point estimates (optimistic/most likely/pessimistic).
+Assuming the project will be delivered on time and on budget. No contingency. No risk adjustment. Large IT projects frequently overrun budget and schedule; use your own portfolio history as the reference class. Mitigation: apply a contingency factor based on project complexity and team track record. Use three-point estimates (optimistic/most likely/pessimistic).
 
 ### 13. False Precision in Long-Term Projections
 Showing 5-year projections with dollar precision when year 5 estimates are essentially guesses. Presents a false sense of accuracy. Mitigation: use ranges instead of single numbers. Show declining confidence bands over time. Year 1 should be precise, year 5 should show ±50% range.
@@ -569,6 +571,21 @@ Threshold: > 4.0 — Proceed. 3.0-4.0 — Revise. < 3.0 — Reject.
   - references/project-valuation.md — Project Valuation
   - references/cost-benefit-advanced.md — Cost Benefit Advanced Topics
   - references/cost-benefit-fundamentals.md — Cost Benefit Fundamentals
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-cost-benefit.md` — Cost-Benefit Analysis (merged from `management/cost-benefit`)
+- `references/cba-methodology.md` — CBA Methodology
+- `references/cost-benefit-advanced-2.md` — Cost Benefit Advanced Topics
+- `references/cost-benefit-analysis-methods.md` — Cost-Benefit Analysis Methods
+- `references/cost-benefit-fundamentals-2.md` — Cost Benefit Fundamentals
+- `references/cost-benefit-presentation-stakeholder.md` — Stakeholder Presentation for Cost-Benefit Analysis
+- `references/roi-framework.md` — ROI Framework
+- `references/roi-frameworks.md` — ROI Frameworks
+- `references/tco-calculation.md` — TCO Calculation
+- `references/tco-modeling.md` — TCO Modeling Across Scenarios
+
 ## Handoff
 `planning/create-pitch-deck` for business case presentation with ROI and NPV highlights
-`planning/create-adr` for recording the investment decision with rationale
+`planning/create-tech-spec` for recording the investment decision as an ADR with rationale

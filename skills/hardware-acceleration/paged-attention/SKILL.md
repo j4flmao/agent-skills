@@ -1,10 +1,14 @@
 ---
 name: paged-attention
 description: >
-  Use this skill when the user says 'pagedattention', 'paged attention', 'kv cache', 'kv cache memory', 'vllm memory', 'block table', 'prefix caching', 'continuous batching', 'gpu-memory-utilization', 'preemption'. Explains PagedAttention KV-cache management (fixed-size blocks, block tables, copy-on-write sharing, prefix caching) and tunes LLM serving engines (vLLM, SGLang, TensorRT-LLM) for KV capacity and throughput. Do NOT use for: the attention kernel math itself (flash-attention), weight quantization (extreme-quantization-mastery), TensorRT engine building (tensorrt-optimization), general model serving infra (ml-model-serving).
+  Use when the user asks about PagedAttention, KV cache size, vLLM OOM, gpu-memory-utilization, max-num-seqs,
+  prefix caching, continuous batching or preemption. Produces a KV-cache capacity estimate and serving-engine
+  flags for vLLM, SGLang or TensorRT-LLM. Not for the attention kernel itself (use flash-attention) or general
+  model serving (use ml-model-serving).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [hardware-acceleration, paged-attention, kv-cache, vllm, llm-serving, throughput]
 ---
 

@@ -1,7 +1,11 @@
 ---
 name: c-cpp-patterns
 description: >
-  Use this skill when the user says 'embedded C', 'embedded C++', 'firmware', 'register access', 'volatile', 'memory-mapped IO', 'ISR', 'ring buffer', 'struct packing', 'alignment', 'MISRA', 'RAII on microcontroller', 'linker script'. Writes and reviews C/C++ firmware for microcontrollers: safe register access, ISR/main data sharing, static memory, fixed-width types and packing, RAII and zero-cost C++ subsets, and the build/linker setup. Do NOT use for: RTOS task design (use rtos), Rust firmware (use bare-metal-rust), desktop/server C++ (use lang-cpp).
+  Use when the user asks about embedded C or C++ firmware, register access,
+  volatile, memory-mapped IO, ISR data sharing, ring buffers, struct packing,
+  MISRA or linker scripts. Produces microcontroller C/C++ with static memory and
+  safe register access. Not for RTOS task design (use rtos) or desktop C++ (use
+  lang-cpp).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

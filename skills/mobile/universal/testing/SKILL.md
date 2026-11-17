@@ -1,9 +1,10 @@
 ---
 name: mobile-testing
 description: >
-  Use this skill when the user asks about mobile testing strategies, unit tests,
-  widget tests, component tests, integration tests, E2E, golden/snapshot tests,
-  mocking, or CI test integration.
+  Use when the user asks about mobile testing: unit tests, widget or component
+  tests, Espresso, XCUITest, Maestro, Detox, snapshot/golden tests, mocking or
+  running device tests in CI. Produces a test pyramid and runnable test
+  examples. Not for web end-to-end tests (use quality-e2e-testing).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

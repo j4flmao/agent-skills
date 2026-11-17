@@ -38,7 +38,7 @@ Add when the project grows: production concerns, scaling and team workflows.
 |-------|------|----------------|
 | [`github-actions`](../../skills/devops/github-actions/SKILL.md) | `devops/github-actions` | Define CI/CD pipelines using GitHub Actions workflows, reusable workflows, and composite actions. |
 | [`cicd-pipeline`](../../skills/devops/cicd-pipeline/SKILL.md) | `devops/cicd-pipeline` | Design and implement CI/CD pipelines with proper stages, dependency caching, parallel execution, security scanning, deployment strategies, and… |
-| [`e2e-testing`](../../skills/quality/e2e-testing/SKILL.md) | `quality/e2e-testing` | Configure and write reliable end-to-end browser tests with framework selection, page objects, parallel execution, and CI integration. |
+| [`quality-e2e-testing`](../../skills/quality/quality-e2e-testing/SKILL.md) | `quality/quality-e2e-testing` | Use end-to-end tests where only they can give confidence — critical user journeys across the real stack — and keep them deterministic, fast enough… |
 | [`quality-integration-testing`](../../skills/quality/integration-testing/SKILL.md) | `quality/integration-testing` | Design and implement integration tests that verify components work together: API integration, database integration, external service mocking, and… |
 | [`frontend-design-system`](../../skills/frontend/universal/design-system/SKILL.md) | `frontend/universal/design-system` | Build a three-tier design token system with CVA-based component variants and theme-aware architecture. |
 | [`backend-caching`](../../skills/backend/universal/caching/SKILL.md) | `backend/universal/caching` | Design consistent, production-grade caching layers. |
@@ -71,7 +71,7 @@ npx skills add j4flmao/agent-skills --skill master-orchestrator --skill project-
 **Level 1 + 2 + security baseline (21 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill master-orchestrator --skill project-init --skill create-tech-spec --skill backend-api-design --skill backend-database-patterns --skill backend-auth-patterns --skill frontend-state-management --skill frontend-data-fetching --skill docker-patterns --skill github-actions --skill cicd-pipeline --skill e2e-testing --skill quality-integration-testing --skill frontend-design-system --skill backend-caching --skill backend-background-jobs --skill code-review --skill dev-loop-pr-writer --skill security-api-security --skill frontend-security --skill security-secrets-management
+npx skills add j4flmao/agent-skills --skill master-orchestrator --skill project-init --skill create-tech-spec --skill backend-api-design --skill backend-database-patterns --skill backend-auth-patterns --skill frontend-state-management --skill frontend-data-fetching --skill docker-patterns --skill github-actions --skill cicd-pipeline --skill quality-e2e-testing --skill quality-integration-testing --skill frontend-design-system --skill backend-caching --skill backend-background-jobs --skill code-review --skill dev-loop-pr-writer --skill security-api-security --skill frontend-security --skill security-secrets-management
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -82,13 +82,13 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`fullstack-nestjs-react`](../bundles.md#fullstack-nestjs-react) | 225 | Full stack: NestJS backend + React frontend |
-| [`fullstack-golang-vue`](../bundles.md#fullstack-golang-vue) | 218 | Full stack: Go backend + Vue frontend |
-| [`fullstack-rust-angular`](../bundles.md#fullstack-rust-angular) | 217 | Full stack: Rust backend + Angular frontend |
-| [`fullstack-dotnet-react`](../bundles.md#fullstack-dotnet-react) | 218 | Full stack: C# .NET backend + React frontend |
-| [`fullstack-nodejs-react`](../bundles.md#fullstack-nodejs-react) | 223 | Full stack: Node.js backend + React frontend |
-| [`fullstack-elysia-react`](../bundles.md#fullstack-elysia-react) | 218 | Full stack: ElysiaJS (Bun) backend + React frontend |
-| [`fullstack-rails-svelte`](../bundles.md#fullstack-rails-svelte) | 216 | Full stack: Ruby on Rails backend + SvelteKit frontend |
+| [`fullstack-nestjs-react`](../bundles.md#fullstack-nestjs-react) | 223 | Full stack: NestJS backend + React frontend |
+| [`fullstack-golang-vue`](../bundles.md#fullstack-golang-vue) | 216 | Full stack: Go backend + Vue frontend |
+| [`fullstack-rust-angular`](../bundles.md#fullstack-rust-angular) | 215 | Full stack: Rust backend + Angular frontend |
+| [`fullstack-dotnet-react`](../bundles.md#fullstack-dotnet-react) | 216 | Full stack: C# .NET backend + React frontend |
+| [`fullstack-nodejs-react`](../bundles.md#fullstack-nodejs-react) | 221 | Full stack: Node.js backend + React frontend |
+| [`fullstack-elysia-react`](../bundles.md#fullstack-elysia-react) | 216 | Full stack: ElysiaJS (Bun) backend + React frontend |
+| [`fullstack-rails-svelte`](../bundles.md#fullstack-rails-svelte) | 214 | Full stack: Ruby on Rails backend + SvelteKit frontend |
 
 ## Combine with
 

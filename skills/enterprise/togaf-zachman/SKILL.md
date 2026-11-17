@@ -106,7 +106,7 @@ Capture, track, and prioritize requirements throughout ADM. Assess requirements 
    - 5-20 architects, medium maturity: TOGAF ADM with Zachman overlay. Use ADM for method, Zachman for classification framework.
    - 20+ architects, high maturity: Full TOGAF + Zachman hybrid. ADM phases driven by EA program, Zachman for taxonomy.
 
-5. Hybrid approach: Use TOGAF ADM as the method and Zachman as the ontology. Map ADM deliverables to Zachman cells. Use Zachman rows (Executive, Business, Architect, Engineer, Technician) as viewpoint templates during ADM phases. This provides both process and structure.
+5. Hybrid approach: Use TOGAF ADM as the method and Zachman as the ontology. Map ADM deliverables to Zachman cells. Use Zachman rows (Executive, Business Management, Architect, Engineer, Technician, Enterprise) as viewpoint templates during ADM phases. This provides both process and structure.
 
 ### ADM Phase Entry Decision Tree
 

@@ -1,189 +1,196 @@
-# Prisma Middleware Reference
+# Prisma Query Extensions (replacement for `$use` middleware)
 
-## Middleware Lifecycle
+`prisma.$use()` middleware was deprecated in Prisma 4.16 and removed in Prisma ORM 6.14.0. Use Client Extensions (`$extends`) with a `query` component instead. Differences that matter:
 
-Prisma middleware executes on client operations with a request/response lifecycle.
+- An extension returns a **new** client; code must use the extended instance (`xprisma`), not the original.
+- Extensions are isolated: each `$extends` call wraps the previous client, so order is explicit.
+- `$allModels` / `$allOperations` replace `params.model` / `params.action` checks.
+
+## Timing / Logging
 
 ```typescript
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-prisma.$use(async (params, next) => {
-  // Pre-operation
-  const start = Date.now();
-
-  const result = await next(params);
-
-  // Post-operation
-  const duration = Date.now() - start;
-  console.log(`Query ${params.model}.${params.action} took ${duration}ms`);
-
-  return result;
-});
-```
-
-## Soft Delete Middleware
-
-```typescript
-prisma.$use(async (params, next) => {
-  // Intercept find queries to filter out soft-deleted records
-  if (params.model === 'User' || params.model === 'Order') {
-    if (params.action === 'findMany' || params.action === 'findFirst') {
-      if (!params.args) params.args = {};
-      if (!params.args.where) params.args.where = {};
-      params.args.where.deletedAt = null;
-    }
-
-    // Intercept delete actions as soft delete
-    if (params.action === 'delete') {
-      params.action = 'update';
-      params.args.data = { deletedAt: new Date() };
-    }
-
-    if (params.action === 'deleteMany') {
-      params.action = 'updateMany';
-      if (!params.args.data) params.args.data = {};
-      params.args.data.deletedAt = new Date();
-    }
-  }
-
-  return next(params);
-});
-```
-
-## Audit Log Middleware
-
-```typescript
-prisma.$use(async (params, next) => {
-  const result = await next(params);
-
-  if (['create', 'update', 'delete'].includes(params.action)) {
-    await prisma.auditLog.create({
-      data: {
-        model: params.model!,
-        action: params.action,
-        recordId: result?.id?.toString(),
-        timestamp: new Date(),
-        changes: params.args?.data || null,
+export const xprisma = prisma.$extends({
+  query: {
+    $allModels: {
+      async $allOperations({ model, operation, args, query }) {
+        const start = performance.now();
+        const result = await query(args);
+        const ms = Math.round(performance.now() - start);
+        logger.debug({ model, operation, ms }, 'prisma query');
+        return result;
       },
-    });
-  }
-
-  return result;
+    },
+  },
 });
 ```
 
-## Field Masking Middleware
+## Soft Delete
+
+Filtering reads is easy in an extension; turning `delete` into `update` is not (the operation cannot be swapped), so expose an explicit model method instead.
 
 ```typescript
-prisma.$use(async (params, next) => {
-  const result = await next(params);
+const SOFT_DELETE_MODELS = new Set(['User', 'Order']);
 
-  // Mask sensitive fields in responses
-  if (params.model === 'User' && result) {
-    if (result.email) {
-      const [name, domain] = result.email.split('@');
-      result.email = `${name[0]}***@${domain}`;
-    }
-  }
-
-  return result;
+export const softDeleteClient = prisma.$extends({
+  query: {
+    $allModels: {
+      async findMany({ model, args, query }) {
+        if (SOFT_DELETE_MODELS.has(model)) args.where = { ...args.where, deletedAt: null };
+        return query(args);
+      },
+      async findFirst({ model, args, query }) {
+        if (SOFT_DELETE_MODELS.has(model)) args.where = { ...args.where, deletedAt: null };
+        return query(args);
+      },
+    },
+  },
+  model: {
+    user: {
+      async softDelete(id: string) {
+        return prisma.user.update({ where: { id }, data: { deletedAt: new Date() } });
+      },
+    },
+  },
 });
 ```
 
-## Cache Middleware
+Use a partial unique index (`WHERE "deletedAt" IS NULL`) in a SQL migration so uniqueness ignores deleted rows.
+
+## Audit Log
+
+Write the audit row in the same transaction as the change when it must not be lost; an extension hook that writes afterwards can miss entries on crash.
+
+```typescript
+export const auditedClient = prisma.$extends({
+  query: {
+    $allModels: {
+      async $allOperations({ model, operation, args, query }) {
+        const result = await query(args);
+        if (['create', 'update', 'delete'].includes(operation) && model !== 'AuditLog') {
+          await prisma.auditLog.create({
+            data: {
+              model,
+              action: operation,
+              recordId: (result as { id?: unknown })?.id?.toString() ?? null,
+              changes: 'data' in args ? (args.data as object) : undefined,
+            },
+          });
+        }
+        return result;
+      },
+    },
+  },
+});
+```
+
+## Field Masking (result extension)
+
+```typescript
+export const maskedClient = prisma.$extends({
+  result: {
+    user: {
+      maskedEmail: {
+        needs: { email: true },
+        compute(user) {
+          const [name, domain] = user.email.split('@');
+          return `${name[0]}***@${domain}`;
+        },
+      },
+    },
+  },
+});
+```
+
+Prefer `omit` (GA since Prisma 6.2) to keep secrets such as `passwordHash` out of results entirely.
+
+## Read Cache
 
 ```typescript
 import { createClient } from 'redis';
 
 const redis = createClient({ url: process.env.REDIS_URL! });
+await redis.connect();
 
-prisma.$use(async (params, next) => {
-  // Only cache read operations
-  if (params.action === 'findUnique' || params.action === 'findFirst') {
-    const cacheKey = `${params.model}:${JSON.stringify(params.args)}`;
-    const cached = await redis.get(cacheKey);
-
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    const result = await next(params);
-
-    if (result) {
-      await redis.setEx(cacheKey, 300, JSON.stringify(result));
-    }
-
-    return result;
-  }
-
-  // Invalidate cache on writes
-  if (params.action === 'create' || params.action === 'update' || params.action === 'delete') {
-    const keys = await redis.keys(`${params.model}:*`);
-    if (keys.length > 0) {
-      await redis.del(keys);
-    }
-  }
-
-  return next(params);
+export const cachedClient = prisma.$extends({
+  query: {
+    product: {
+      async findUnique({ args, query }) {
+        const key = `product:v1:${JSON.stringify(args.where)}`;
+        const hit = await redis.get(key);
+        if (hit) return JSON.parse(hit);
+        const result = await query(args);
+        if (result) await redis.set(key, JSON.stringify(result), { EX: 300 });
+        return result;
+      },
+      async update({ args, query }) {
+        const result = await query(args);
+        await redis.del(`product:v1:${JSON.stringify(args.where)}`); // delete after the write
+        return result;
+      },
+    },
+  },
 });
 ```
 
-## Validation Middleware
+Cache keys built from `args.where` must match exactly; for anything beyond single-row lookups use explicit cache-aside in the service layer (see `skills/backend/universal/caching/SKILL.md`).
+
+## Validation
+
+Validate at the API boundary (Zod in the route handler) first. A query extension is a second line of defence:
 
 ```typescript
 import { z } from 'zod';
 
-const userCreateSchema = z.object({
+const userCreate = z.object({
   email: z.string().email(),
   name: z.string().min(2).max(100),
-  age: z.number().int().min(18).optional(),
 });
 
-prisma.$use(async (params, next) => {
-  if (params.model === 'User' && params.action === 'create') {
-    const validation = userCreateSchema.safeParse(params.args.data);
-    if (!validation.success) {
-      throw new Error(`Validation failed: ${validation.error.message}`);
-    }
-    params.args.data = validation.data;
-  }
-
-  return next(params);
+export const validatedClient = prisma.$extends({
+  query: {
+    user: {
+      async create({ args, query }) {
+        args.data = { ...args.data, ...userCreate.parse(args.data) };
+        return query(args);
+      },
+    },
+  },
 });
 ```
 
-## Tenant Isolation Middleware
+## Tenant Isolation
+
+Build one extended client per request with the tenant bound; never rely on a global mutable "current tenant".
 
 ```typescript
-prisma.$use(async (params, next) => {
-  const tenantId = getCurrentTenantId();
-
-  if (tenantId && hasTenantField(params.model!)) {
-    if (!params.args) params.args = {};
-    if (!params.args.where) params.args.where = {};
-
-    if (params.action === 'create') {
-      params.args.data.tenantId = tenantId;
-    } else {
-      params.args.where.tenantId = tenantId;
-    }
-  }
-
-  return next(params);
-});
+export function forTenant(tenantId: string) {
+  return prisma.$extends({
+    query: {
+      $allModels: {
+        async $allOperations({ model, operation, args, query }) {
+          if (!TENANT_MODELS.has(model)) return query(args);
+          const a = args as { where?: object; data?: object };
+          if (operation === 'create') a.data = { ...a.data, tenantId };
+          else if ('where' in a || operation.startsWith('find') || operation.endsWith('Many')) {
+            a.where = { ...a.where, tenantId };
+          }
+          return query(a as typeof args);
+        },
+      },
+    },
+  });
+}
 ```
+
+For hard isolation, pair this with PostgreSQL Row-Level Security (`SET app.tenant_id` inside a transaction) so a forgotten filter cannot leak rows.
 
 ## Key Points
 
-- Middleware runs in registration order as a chain
-- Soft delete intercepts delete actions and sets deletedAt
-- Audit logs capture all data mutations automatically
-- Field masking hides sensitive fields in responses
-- Cache middleware reduces database load for reads
-- Schema validation prevents invalid data at Prisma level
-- Tenant isolation filters queries to current tenant
-- Each middleware receives params and next function
-- Pre-hooks modify params before query execution
-- Post-hooks transform results after query execution
+- `$use` no longer exists in current Prisma; migrate every middleware to `$extends`.
+- Query extensions modify `args` or the result; result extensions add computed fields.
+- Extensions wrap a client and return a new one; export and use the extended client.
+- Keep authorization and tenant scoping enforced in the database too (RLS), not only in an extension.

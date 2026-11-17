@@ -468,6 +468,18 @@ feature_3          | 15.0%    | NA          | -0.1 | 0.8 | -3  | 4   | YES - KS=
   - references/feature-serving.md — Feature Serving
   - references/feature-store-advanced.md — Feature Store Advanced Topics
   - references/feature-store-fundamentals.md — Feature Store Fundamentals
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-data-feature-store.md` — Feature Store (merged from `data/feature-store`)
+- `references/feast-setup-guide.md` — Feast Setup Guide
+- `references/feature-engineering-pipeline.md` — Feature Engineering Pipeline Reference
+- `references/feature-registry.md` — Feature Registry & Governance
+- `references/feature-validation-monitoring.md` — Feature Validation and Monitoring
+- `references/offline-feature-computation.md` — Offline Feature Computation
+- `references/online-serving.md` — Online Feature Serving Reference
+
 ## Handoff
 For model training with feature store integration, hand off to `ml-ml-pipeline`. For serving infrastructure, hand off to `ml-model-serving`.
 

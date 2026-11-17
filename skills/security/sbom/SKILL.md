@@ -474,6 +474,13 @@ Build-time SBOM includes dev dependencies not present in production. Generate se
   - references/sbom-generation-tools.md — SBOM Generation Tools Comparison
   - references/sbom-policy-enforcement.md — SBOM Policy Enforcement Guide
   - references/supply-chain-attacks.md — Supply Chain Attack Patterns
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/sbom-formats-2.md` — SBOM Formats
+- `references/vulnerability-correlation.md` — Vulnerability Correlation
+
 ## Handoff
 `security-container-security` for image scanning integration
 `devops-ci-cd` for pipeline configuration and artifact storage

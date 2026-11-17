@@ -1,10 +1,15 @@
 ---
 name: rtos
 description: >
-  Use this skill when the user says 'FreeRTOS', 'RTOS task', 'xTaskCreate', 'task priority', 'mutex vs semaphore', 'priority inversion', 'task notification', 'stack overflow in task', 'Zephyr thread', 'RTOS queue', 'ISR to task'. Designs and reviews code on a real-time kernel (FreeRTOS primary, Zephyr notes): task partitioning, priorities, inter-task communication, ISR deferral, memory and stack sizing, timing analysis and debugging. Do NOT use for: scheduling theory and RTOS selection (use rtos-fundamentals), bare-metal superloops without a kernel (use c-cpp-patterns or bare-metal-rust), Linux userspace threads.
+  Use when the user asks about FreeRTOS, task priorities, xTaskCreate, ISR-safe
+  queues, mutex vs semaphore, priority inversion, task notifications, task stack
+  overflow or Zephyr threads. Produces RTOS task design, ISR deferral and timing
+  analysis. Not for bare-metal superloops (use c-cpp-patterns or
+  bare-metal-rust).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [embedded, rtos, freertos, zephyr, real-time, concurrency]
 ---
 
@@ -16,7 +21,7 @@ Turn a firmware feature into a set of tasks, priorities and communication primit
 ## Agent Protocol
 
 ### Trigger
-"FreeRTOS", "RTOS task", "xTaskCreate", "task priority", "mutex vs semaphore", "priority inversion", "task notification", "stack overflow", "Zephyr thread", "RTOS queue", "ISR to task".
+"FreeRTOS", "RTOS task", "xTaskCreate", "task priority", "mutex vs semaphore", "priority inversion", "task notification", "stack overflow", "Zephyr thread", "RTOS queue", "ISR to task", "hard real-time", "rate monotonic", "EDF", "WCET", "RTOS vs Linux", "PREEMPT_RT".
 
 ### Input Context
 - MCU/core (Cortex-M0/M3/M4F/M7/M33, RISC-V, ESP32), clock, RAM/flash budget
@@ -36,6 +41,12 @@ Config: {key FreeRTOSConfig.h settings}
 Code: {snippet}
 Verification: {WCET/response-time check, stack high-water marks, trace}
 ```
+
+## 0. Is It Real-Time, and Which Platform?
+- Real-time means bounded worst-case response, not fast. Classify each activity: hard (miss = failure, needs a worst-case proof), firm (late result useless), soft (statistics such as p99 are enough).
+- Fixed-priority kernels (FreeRTOS, Zephyr, VxWorks, QNX) → Rate/Deadline Monotonic priorities + response-time analysis (section 7). The Liu & Layland bound U <= n(2^(1/n) - 1) (~0.69 for large n) is sufficient, not necessary; EDF is schedulable up to U <= 1 on one core but degrades badly under overload.
+- Platform: superloop for one or two timing domains; FreeRTOS for small MCUs; Zephyr when you need its drivers/networking/devicetree; certified RTOS (SafeRTOS, VxWorks, QNX, INTEGRITY) for DO-178C/ISO 26262; Linux PREEMPT_RT (mainline since 6.12) when tens-of-microseconds latency is acceptable and no proof is required.
+- Theory, worked RTA example and WCET sources: `references/merged-rtos-fundamentals.md`.
 
 ## 1. How the FreeRTOS Scheduler Works
 - Fixed-priority preemptive scheduling (`configUSE_PREEMPTION 1`). The highest-priority Ready task always runs; equal priorities round-robin on each tick when `configUSE_TIME_SLICING 1` (default).
@@ -93,7 +104,7 @@ Note: the stack depth argument is in words (`StackType_t`), not bytes.
 Mutex vs binary semaphore: a mutex has an owner and priority inheritance and must be released by the task that took it; a binary semaphore is for signalling and has neither.
 
 ## 4. Priority Inversion and Inheritance
-Classic failure (Mars Pathfinder, 1997): low task holds a lock, high task blocks on it, medium task preempts low — high waits on medium. FreeRTOS mutexes apply priority inheritance: the holder is raised to the highest waiter's priority and lowered again when it gives the mutex back (since V10 the original priority is restored once it holds no more mutexes, and a waiter timing out can lower the inherited priority). Inheritance is not transitive-safe against long critical sections: keep mutex-held code short, never block on another primitive while holding a mutex, and take multiple mutexes in a fixed global order to avoid deadlock.
+Classic failure (Mars Pathfinder, 1997): low task holds a lock, high task blocks on it, medium task preempts low — high waits on medium. FreeRTOS mutexes apply priority inheritance: the holder is raised to the highest waiter's priority and lowered again when it gives the mutex back (the original priority is restored once it holds no more mutexes, and in current versions a waiter that times out can lower the inherited priority again). Inheritance is not transitive-safe against long critical sections: keep mutex-held code short, never block on another primitive while holding a mutex, and take multiple mutexes in a fixed global order to avoid deadlock.
 
 ## 5. ISRs and Deferral
 ```c
@@ -149,3 +160,10 @@ void ADC_IRQHandler(void)
 - [ ] `configASSERT` enabled in debug builds
 - [ ] Response-time analysis or trace evidence that deadlines hold at worst-case load
 - [ ] Watchdog fed from a supervisor that checks every task's liveness, not from the idle hook alone
+
+## References
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-rtos-fundamentals.md` — Real-Time Systems Fundamentals (merged from `embedded-systems/rtos-fundamentals`)

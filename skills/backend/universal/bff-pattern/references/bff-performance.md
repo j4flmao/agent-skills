@@ -82,7 +82,9 @@ class BffCache {
 
   async invalidate(patterns: string[]): Promise<void> {
     for (const pattern of patterns) {
-      const keys = await this.redis.keys(this.key(pattern));
+      const keys: string[] = [];
+      // SCAN in batches (ioredis scanStream); KEYS blocks Redis on large keyspaces
+      for await (const batch of this.redis.scanStream({ match: this.key(pattern), count: 500 })) keys.push(...batch);
       if (keys.length > 0) {
         await this.redis.del(...keys);
       }

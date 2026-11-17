@@ -54,7 +54,7 @@ gcloud container clusters create-auto autopilot-cluster \
 ```bash
 # Deploy container
 gcloud run deploy my-service \
-  --image=gcr.io/my-project/my-image:v1 \
+  --image=us-docker.pkg.dev/my-project/my-repo/my-image:v1 \
   --region=us-central1 \
   --platform=managed \
   --allow-unauthenticated \
@@ -66,7 +66,7 @@ gcloud run deploy my-service \
 
 # Schedule Cloud Run job
 gcloud run jobs create daily-batch \
-  --image=gcr.io/my-project/batch:v1 \
+  --image=us-docker.pkg.dev/my-project/my-repo/batch:v1 \
   --tasks=10 \
   --parallelism=3 \
   --task-timeout=30m

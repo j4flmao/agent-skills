@@ -1,10 +1,10 @@
 ---
 name: mobile-widgets
 description: >
-  Enforce mobile widget development patterns for iOS WidgetKit (widgets, Live Activities)
-  and Android App Widgets (widgets, complications). Covers timeline management, widget
-  families, configuration, deep linking, refresh strategies, and testing. NOT for in-app
-  UI components or full-screen experiences.
+  Use when the user asks about home screen widgets, WidgetKit, timelines, Live
+  Activities, Dynamic Island, App Intents widgets, Android App Widgets or
+  Jetpack Glance. Produces widget extensions, refresh strategy and deep links
+  into the app. Not for in-app UI components (use ios or android).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

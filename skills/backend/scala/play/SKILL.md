@@ -48,17 +48,19 @@ Produce artifact directly. No preamble, no postamble, no explanations.
 
 ## Architecture Decision Trees
 
-### Play vs Akka HTTP vs http4s vs ZIO HTTP
+### Play vs Pekko HTTP vs http4s vs ZIO HTTP
 
-| Criterion | Play | Akka HTTP | http4s | ZIO HTTP |
+Play 3.x is built on Apache Pekko (`org.apache.pekko.*`); Play 2.9 is the last Akka-based line. Import Pekko packages in Play 3 code.
+
+| Criterion | Play | Pekko / Akka HTTP | http4s | ZIO HTTP |
 |-----------|------|-----------|--------|----------|
-| Ecosystem | Full (MVC, Slick, JSON) | HTTP + Akka ecosystem | Functional + Cats | ZIO ecosystem |
-| Async | Future-based | Akka Streams | IO/Cats Effect | ZIO |
+| Ecosystem | Full (MVC, Slick, JSON) | HTTP + Pekko/Akka ecosystem | Functional + Cats | ZIO ecosystem |
+| Async | Future-based | Pekko/Akka Streams | IO/Cats Effect | ZIO |
 | Type level | Moderate | Moderate | High (functional) | High |
 | Learning curve | Low-Moderate | Moderate | High (FP concepts) | High (ZIO) |
 | Community | Large (Scala standard) | Medium | Medium | Growing |
 
-Decision: Full framework (MVC, DB, JSON) → Play. Lightweight HTTP → http4s. Streaming/Akka → Akka HTTP. ZIO stack → ZIO HTTP.
+Decision: Full framework (MVC, DB, JSON) → Play. Lightweight HTTP → http4s. Streaming-first HTTP → Pekko HTTP. ZIO stack → ZIO HTTP.
 
 ### Slick vs Doobie vs Quill
 

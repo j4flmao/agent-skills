@@ -34,7 +34,7 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`management-team-topology`](../../skills/management/team-topology/SKILL.md) | `management/team-topology` | Designs team structures aligned with stream-aligned, enabling, complicated-subsystem, and platform topologies using Conway's Law, cognitive load… |
 | [`management-change-management`](../../skills/management/change-management/SKILL.md) | `management/change-management` | Drives organizational change using ADKAR, Kotter 8-Step, and stakeholder impact analysis frameworks with measurable adoption outcomes. |
 | [`management-okr-kpi`](../../skills/management/okr-kpi/SKILL.md) | `management/okr-kpi` | Define, cascade, and track Objectives and Key Results (OKRs) alongside KPIs for teams and individuals. |
-| [`cost-benefit`](../../skills/management/cost-benefit/SKILL.md) | `management/cost-benefit` | Evaluate technology investments through ROI, TCO, break-even, and NPV analysis to support data-driven decision-making. |
+| [`planning-cost-benefit`](../../skills/planning/cost-benefit/SKILL.md) | `planning/cost-benefit` | Produce a defensible cost-benefit analysis quantifying investment costs, expected benefits, ROI, NPV, payback period, and sensitivity ranges to… |
 | [`dev-loop-tech-debt-tracker`](../../skills/dev-loop/tech-debt-tracker/SKILL.md) | `dev-loop/tech-debt-tracker` | Systematically identify, track, prioritize, and reduce technical debt — establishing a quantifiable, transparent process that balances feature… |
 
 ## Level 3 — Specialist (5 skills)
@@ -62,7 +62,7 @@ npx skills add j4flmao/agent-skills --skill agile-scrum-kanban --skill sprint-re
 **Level 1 + 2 + security baseline (12 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill agile-scrum-kanban --skill sprint-retro --skill management-stakeholder --skill management-risk-management --skill team-rules --skill management-hiring --skill management-team-topology --skill management-change-management --skill management-okr-kpi --skill cost-benefit --skill dev-loop-tech-debt-tracker --skill security
+npx skills add j4flmao/agent-skills --skill agile-scrum-kanban --skill sprint-retro --skill management-stakeholder --skill management-risk-management --skill team-rules --skill management-hiring --skill management-team-topology --skill management-change-management --skill management-okr-kpi --skill planning-cost-benefit --skill dev-loop-tech-debt-tracker --skill security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -73,7 +73,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`management-only`](../bundles.md#management-only) | 66 | Management: PM, BA, QA, QC, security, pentesting, alerting, team-rules |
+| [`management-only`](../bundles.md#management-only) | 65 | Management: PM, BA, QA, QC, security, pentesting, alerting, team-rules |
 | [`enterprise`](../bundles.md#enterprise) | 18 | Enterprise: governance, compliance, identity, multi-tenancy, legacy migration, ITIL, vendors, FinOps, release engineering |
 
 ## Combine with
@@ -83,4 +83,4 @@ Bundles are installed with the same command; each one's full command is on the [
 
 ## Watch out
 
-`management/agile-scrum` and `management/agile-scrum-kanban` overlap; keep `agile-scrum-kanban`.
+`management/agile-scrum-kanban` and `management/agile-scrum-kanban` overlap; keep `agile-scrum-kanban`.

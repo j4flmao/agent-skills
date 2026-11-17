@@ -445,6 +445,12 @@ Primary workload characteristics?
   - references/warehouse-observability.md — Warehouse Observability
   - references/warehouse-platforms.md — Warehouse Platforms
   - references/warehouse-security.md — Warehouse Security
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/duckdb.md` — DuckDB (In-Process OLAP)
+
 ## Architecture Decision Trees
 
 ```

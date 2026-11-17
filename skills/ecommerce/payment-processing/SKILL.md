@@ -442,9 +442,11 @@ Practice 8: Implement gateway failover for critical payments. If primary gateway
 | Level | Transaction Volume | Requirements |
 |-------|-------------------|--------------|
 | 1 | > 6M/year | Full QSA audit, ASV scan quarterly, ROC report |
-| 2 | 1-6M/year | SAQ D + ASV scan quarterly, quarterly self-assessment |
-| 3 | 20k-1M/year | SAQ + ASV scan quarterly, annual self-assessment |
-| 4 | < 20k/year | SAQ (self-assessment), ASV scan quarterly |
+| 2 | 1-6M/year | Annual SAQ (type depends on integration: A, A-EP or D) or ROC if the acquirer requires; quarterly ASV scans when applicable |
+| 3 | 20k-1M e-commerce/year | Annual SAQ + quarterly ASV scans when applicable |
+| 4 | < 20k e-commerce/year (or up to 1M other) | Annual SAQ; validation rules set by the acquirer |
+
+Levels follow Visa/Mastercard merchant thresholds; your acquirer decides the validation you owe. The SAQ type comes from the integration (hosted iframe/redirect = SAQ A, your page loads the script = SAQ A-EP, card data touches your servers = SAQ D), not from the level.
 
 ## Implementation Patterns
 
@@ -496,16 +498,22 @@ class StripeAdapter implements PaymentGateway {
 ### Pattern: Webhook Idempotent Handler
 
 ```typescript
+// Route must use express.raw({ type: 'application/json' }) so req.body is the raw Buffer.
 async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
   const sig = req.headers['stripe-signature'];
-  const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-
-  // Idempotency check
-  const processed = await ProcessedEvent.findOne({ eventId: event.id });
-  if (processed) { res.json({ received: true }); return; }
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig as string, process.env.STRIPE_WEBHOOK_SECRET!);
+  } catch (err) {
+    console.error(`Stripe webhook signature verification failed: ${(err as Error).message}`);
+    res.status(400).send('invalid signature');
+    return;
+  }
 
   await db.transaction(async (trx) => {
-    await ProcessedEvent.create({ eventId: event.id, handledAt: new Date() });
+    // Unique constraint on event_id makes the insert the dedupe (no check-then-insert race).
+    const inserted = await ProcessedEvent.insertIgnoreDuplicate(trx, { eventId: event.id, handledAt: new Date() });
+    if (!inserted) return; // already handled
 
     switch (event.type) {
       case 'payment_intent.succeeded':
@@ -515,7 +523,8 @@ async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
         await OrderService.markFailed(event.data.object.metadata.orderId, event.data.object.last_payment_error?.message);
         break;
       case 'charge.refunded':
-        await OrderService.markRefunded(event.data.object.metadata.orderId);
+        // Look up by PaymentIntent ID; do not assume PaymentIntent metadata is present on the Charge.
+        await OrderService.markRefundedByPaymentIntent(event.data.object.payment_intent as string);
         break;
     }
   });
@@ -527,8 +536,8 @@ async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
 ## Production Considerations
 
 ### Payment Operations
-- Idempotency keys stored for 48 hours. TTL matches gateway idempotency window.
-- Webhook retry: gateway retries webhook delivery up to 3 times over 24 hours. Log every attempt.
+- Idempotency keys: Stripe may prune keys after 24 hours, so back them with your own unique constraint (order ID, customer ID) for longer windows.
+- Webhook retry: Stripe retries failed live-mode deliveries with exponential backoff for up to 3 days and may disable an endpoint that keeps failing; other PSPs differ, check their docs. Log every attempt.
 - Payment reconciliation runs at midnight UTC. Matches gateway settlement report against internal records.
 - Gateway failover: if primary gateway 5xx > 2% in 5 minutes, route to secondary. Health check every 30 seconds.
 
@@ -567,6 +576,17 @@ async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
 - Requirement 10: track and monitor all access to cardholder data. Log: user, timestamp, action, resource.
 - Requirement 11: regularly test security systems. ASV scan quarterly. Penetration test annually.
 - Tokenization flow: card data → gateway token → your server (never card data). Token is useless if breached.
-- 3D Secure (SCA): required for EU transactions. Exemption for low-risk, low-value, or recurring.
+- 3D Secure (SCA): required under PSD2 for most customer-initiated card payments in the EEA/UK. Exemptions exist for low-value, low-risk (TRA) and merchant-initiated recurring payments; the issuer has the final say.
 - Fraud monitoring: velocity check (X attempts/hour), AVS mismatch, IP geo mismatch, card BIN country mismatch.
 - Chargeback prevention: clear descriptor, delivery confirmation for physical goods, customer support contact visible.
+
+## References
+- `references/stripe-integration.md`, `references/subscription-billing.md` — Stripe API and billing lifecycle
+- `references/pci-dss-guide.md`, `references/payment-security.md` — PCI DSS v4.0.1 scope and controls
+- `references/gateway-patterns.md`, `references/checkout-optimization.md` — multi-PSP routing and checkout conversion
+- Subscription rule: Stripe Checkout (`mode: 'subscription'`) for the fastest correct signup, Payment Element + Subscriptions API for custom UI; grant access from subscription `status` synced by verified webhooks, never from the success redirect.
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-stripe-payments.md` — Stripe Payments & Subscriptions (merged from `ecommerce/payments`)

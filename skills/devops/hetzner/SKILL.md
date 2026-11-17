@@ -1,19 +1,7 @@
 ---
 name: hetzner-cloud
 description: >
-  Use this skill when the user says 'hetzner', 'hetzner cloud',
-  'hcloud', 'hetzner dedicated', 'hetzner robot', 'hetzner
-  auction', 'hetzner server', 'hetzner kubernetes', 'hcloud
-  terraform', 'hcloud packer', 'hcloud cli', 'CX', 'CCX',
-  'CAX', 'Hetzner Storage Box', 'Hetzner vSwitch', 'Hetzner
-  Firewall', 'Hetzner Load Balancer', 'Hetzner Floating IP',
-  'Hetzner Placement Group', 'Hetzner ISO'.
-  Covers: Hetzner Cloud resources (servers, networks, firewalls,
-  load balancers, volumes), Hetzner Dedicated (Robot servers),
-  Hetzner Storage Boxes, Kubernetes on Hetzner, cost
-  optimization.
-  Do NOT use for: other cloud providers (AWS, Azure, GCP,
-  Oracle, IBM).
+  Use when the user asks about Hetzner Cloud, the hcloud CLI, Hetzner dedicated servers or Robot, the server auction, CX/CPX/CAX/CCX types, Storage Box, vSwitch, Hetzner firewalls or load balancers, or Kubernetes on Hetzner. Produces Hetzner infrastructure with Terraform or Packer. Not for DigitalOcean (use digitalocean) or PXE provisioning (use bare-metal).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

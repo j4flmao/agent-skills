@@ -186,7 +186,7 @@ This separation unlocks several enterprise capabilities:
 
 ## 6. Managing Dynamic Few-Shot Pools
 
-If your architecture uses dynamic example selection (as detailed in `example-selection-architectures.md`), the `examples_path` in the YAML file shouldn't point to a static JSON file. Instead, it should point to a configuration block defining the database connection and the selection parameters (e.g., `k=5`, `algorithm=hybrid`).
+If your architecture uses dynamic example selection (see the dynamic few-shot section of the parent SKILL.md), the `examples_path` in the YAML file shouldn't point to a static JSON file. Instead, it should point to a configuration block defining the database connection and the selection parameters (e.g., `k=5`, `algorithm=hybrid`).
 
 ## 7. Conclusion
 

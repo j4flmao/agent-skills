@@ -1,10 +1,14 @@
 ---
 name: genai-vision
 description: >
-  Use this skill when the user says 'generate images', 'Stable Diffusion', 'SDXL', 'FLUX', 'diffusers pipeline', 'image-to-image', 'inpainting', 'Whisper transcription', 'speech to image pipeline'. Implements local or self-hosted image generation with Hugging Face diffusers and speech transcription with Whisper, including memory optimization, reproducibility, licensing, and safety checks. Do NOT use for: vision-language understanding / VLM pipelines (rnd/ai-agents/multimodal-pipelines), training diffusion models from scratch (fundamental-truths/statistical-mechanics for theory), or classic CV tasks like detection (ml computer-vision skill).
+  Use when the user asks to generate images with Stable Diffusion, SDXL, FLUX or a diffusers pipeline, img2img,
+  inpainting, ControlNet, LoRA styles, or transcribe audio with Whisper. Produces model choice with license
+  note, pipeline code, memory settings and serving outline. Not for VLM image understanding (use
+  multimodal-pipelines) or detection models (use ml-computer-vision).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, generative, diffusers, stable-diffusion, flux, whisper, image-generation]
 ---
 

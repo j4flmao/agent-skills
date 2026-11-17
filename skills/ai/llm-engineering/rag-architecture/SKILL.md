@@ -1,10 +1,14 @@
 ---
 name: llm-rag-retrieval-internals
 description: >
-  Use this skill when the user says 'HNSW parameters', 'IVF-PQ', 'ANN index tuning', 'efSearch', 'nprobe', 'recall vs latency', 'Self-RAG', 'DSPy', 'optimize RAG pipeline', 'hybrid search fusion'. Covers retrieval engine internals (HNSW, IVF, PQ), index tuning for recall/latency/memory, hybrid dense+sparse fusion, reranking, and adaptive/optimized RAG pipelines (Self-RAG, DSPy). Do NOT use for: query rewriting and prompt-side RAG design (prompt-engineering/rag-design), agent memory (ai/ai-agents/memory-systems), or choosing a vector database product (ai vector-databases / data skills).
+  Use when the user asks to build a RAG pipeline over documentation, tune HNSW (M, efSearch) or IVF-PQ (nprobe),
+  hybrid dense + BM25 search, reciprocal rank fusion, cross-encoder reranking, Self-RAG or DSPy. Produces index
+  choice and parameters, a hybrid+rerank pipeline and recall evals. Not for query rewriting and RAG prompts (use
+  prompt-rag-query-design).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, rag, retrieval, hnsw, ivf-pq, faiss, hybrid-search, reranking, dspy]
 ---
 

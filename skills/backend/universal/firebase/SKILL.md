@@ -363,11 +363,11 @@ Use built-in extensions to reduce custom code:
 | Over-indexing | Each index adds write cost | Only create indexes for actual queries |
 
 ## Rules
-- Firestore: max 1 write per second on a document — use aggregations for counters.
+- Firestore: sustain at most ~1 write per second per document; use distributed counters or `count()`/`sum()` aggregation queries instead of a hot counter document.
 - Use subcollections instead of nested objects when data grows unbounded.
 - Security rules evaluate on every read/write — limit get() calls within rules.
 - Cloud Functions: set memory/timeout based on workload — 256MB for light triggers, 1GB+ for heavy processing.
-- Firebase Pricing: Firestore charges per read/write/delete — index writes count as 1 write + 1 per index.
+- Firebase Pricing: Firestore bills document reads, writes and deletes plus storage (index entries add storage, not extra write operations); a query costs at least one read even when empty.
 - Use Firebase App Check to block unauthorized client requests.
 - Enable Firestore PITR (point-in-time recovery) for production.
 - Functions: use `minInstances` for latency-sensitive endpoints (cost trade-off).

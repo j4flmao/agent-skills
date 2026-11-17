@@ -1,7 +1,7 @@
 ---
 name: sprint-retro
 description: >
-  Use this skill when the user says 'retrospective', 'sprint retro', 'retro format', 'start stop continue', 'sailboat retro', 'facilitate a retro', 'retro action items', 'our retros are boring', 'same issues every retro'. It plans and facilitates sprint retrospectives: format selection, the five-phase agenda, safety, turning discussion into owned experiments, and tracking action-item follow-through. Do NOT use for: incident postmortems (use devops/incident-response), running other Scrum events (use agile-scrum), team structure problems (use team-topology).
+  Use this skill when the user says 'retrospective', 'sprint retro', 'retro format', 'start stop continue', 'sailboat retro', 'facilitate a retro', 'retro action items', 'our retros are boring', 'same issues every retro'. It plans and facilitates sprint retrospectives: format selection, the five-phase agenda, safety, turning discussion into owned experiments, and tracking action-item follow-through. Do NOT use for: incident postmortems (use devops/incident-response), running other Scrum events (use agile-scrum-kanban), team structure problems (use team-topology).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

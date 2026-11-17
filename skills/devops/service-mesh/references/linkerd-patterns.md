@@ -2,7 +2,10 @@
 
 ## Installation
 ```bash
-curl --proto '=https' --tlsv1.2 -sSfL https://run.linkerd.io/install | sh
+# Open-source Linkerd ships as edge releases; Buoyant publishes the stable channel (Buoyant Enterprise for Linkerd).
+# Download and review the installer instead of piping it to sh:
+curl --proto '=https' --tlsv1.2 -sSfLo linkerd-install.sh https://run.linkerd.io/install-edge
+less linkerd-install.sh && sh linkerd-install.sh
 export PATH=$HOME/.linkerd2/bin:$PATH
 
 linkerd check --pre

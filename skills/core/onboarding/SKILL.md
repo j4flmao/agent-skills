@@ -447,16 +447,17 @@ asdf global python latest
 sudo apt update && sudo apt install -y \
   git curl wget build-essential docker.io docker-compose-v2
 
-# Node.js via NodeSource
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
+# Node.js: install the version in .nvmrc via a version manager (nvm/fnm/asdf/mise);
+# Node 24 is the Active LTS line in late 2026 (Node 20 reached end of life in April 2026)
+nvm install && nvm use
 
-# pnpm
-curl -fsSL https://get.pnpm.io/install.sh | sh -
+# pnpm (via npm, pinned by the repo's packageManager field)
+npm install -g pnpm
 
-# VS Code
-wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | sudo tee /etc/apt/keyrings/packages.microsoft.gpg
-sudo apt install -y code
+# VS Code (Microsoft apt repository)
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | sudo tee /etc/apt/keyrings/packages.microsoft.gpg > /dev/null
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | sudo tee /etc/apt/sources.list.d/vscode.list
+sudo apt update && sudo apt install -y code
 ```
 
 ## Code Review Mentorship Program

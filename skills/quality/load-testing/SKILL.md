@@ -136,8 +136,8 @@ const BASE_URL = __ENV.BASE_URL || "http://localhost:3000";
 export default function () {
   group("user_login", function () {
     const payload = JSON.stringify({
-      email: `user_${__VU}@example.com`,
-      password: "test123",
+      email: `user_${__VU}@example.com`,   // seeded synthetic accounts
+      password: __ENV.TEST_USER_PASSWORD,  // from CI secrets, never in the script
     });
     const res = http.post(`${BASE_URL}/api/login`, payload, {
       headers: { "Content-Type": "application/json" },
@@ -161,8 +161,9 @@ export default function () {
 
 ### Locust — Python Load Test
 ```python
-from locust import HttpUser, task, between, events
-import json
+import os
+
+from locust import HttpUser, between, task
 
 class WebsiteUser(HttpUser):
     wait_time = between(1, 3)
@@ -170,7 +171,7 @@ class WebsiteUser(HttpUser):
     def on_start(self):
         response = self.client.post("/api/login", json={
             "email": "loadtest@example.com",
-            "password": "test123"
+            "password": os.environ["LOAD_TEST_PASSWORD"],
         })
         self.token = response.json().get("token")
         self.client.headers.update({"Authorization": f"Bearer {self.token}"})
@@ -419,6 +420,19 @@ custom_metrics:
   - references/load-testing-fundamentals.md — Load Testing Fundamentals
   - references/locust-guide.md — Locust Guide
   - references/test-design.md — Test Design
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-backend-load-testing.md` — Backend Load Testing (merged from `backend/universal/load-testing`)
+- `references/ci-integration.md` — CI Integration
+- `references/k6-guide.md` — k6 Guide
+- `references/k6-scripting.md` — k6 Scripting Guide
+- `references/load-testing-infrastructure.md` — Load Test Infrastructure
+- `references/load-testing-scenarios.md` — Load Test Scenarios
+- `references/results-analysis.md` — Load Test Results Analysis
+- `references/test-types.md` — Load Test Types
+
 ## Handoff
 `devops-observability` for monitoring setup based on load test findings.
 `quality-e2e-testing` for functional validation of performance-critical flows.

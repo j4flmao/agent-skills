@@ -44,7 +44,7 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`data-testing`](../../skills/data/data-testing/SKILL.md) | `data/data-testing` | Implement automated data testing across the data platform: unit tests for dbt models, regression detection between environments, data quality… |
 | [`data-pipeline-cicd`](../../skills/data/data-pipeline-cicd/SKILL.md) | `data/data-pipeline-cicd` | Establish continuous integration and delivery for data pipelines covering SQL code quality, dbt model testing, schema change management, and… |
 
-## Level 3 — Specialist (12 skills)
+## Level 3 — Specialist (10 skills)
 
 Add one at a time, only for the problem in front of you. These are deep and narrow.
 
@@ -58,8 +58,6 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 | [`data-reverse-etl`](../../skills/data/reverse-etl/SKILL.md) | `data/reverse-etl` | Sync aggregated, transformed data from a data warehouse to operational SaaS tools (CRM, marketing, support) to power customer-facing and internal… |
 | [`data-clean-room`](../../skills/data/data-clean-room/SKILL.md) | `data/data-clean-room` | Enable privacy-preserving data collaboration between multiple parties using clean room architectures, private set intersection, differential… |
 | [`data-cost-optimization`](../../skills/data/data-cost-optimization/SKILL.md) | `data/data-cost-optimization` | Analyze, optimize, and manage cloud data platform costs across Snowflake, BigQuery, and S3, implementing FinOps practices for cost allocation,… |
-| [`data-lake-architecture`](../../skills/data/data-engineering/data-lake-architecture/SKILL.md) | `data/data-engineering/data-lake-architecture` | Decide where analytical data lives and how it is laid out so that it stays cheap, queryable by several engines, governed, and does not turn into a… |
-| [`data-kafka-event-streaming`](../../skills/data/data-engineering/kafka-event-streaming/SKILL.md) | `data/data-engineering/kafka-event-streaming` | Kafka is a distributed, partitioned, replicated append-only log. |
 | [`architecture-postgresql-internals`](../../skills/architecture/databases/postgresql-internals/SKILL.md) | `architecture/databases/postgresql-internals` | Most PostgreSQL production issues (bloat, sudden slowdowns, replication lag, wraparound emergencies, bad plans) are direct consequences of how… |
 | [`architecture-database-scaling`](../../skills/architecture/databases/scaling-and-sharding/SKILL.md) | `architecture/databases/scaling-and-sharding` | Sharding is the most expensive scaling step: it complicates queries, transactions, schema changes, and operations forever. |
 
@@ -87,7 +85,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`data-engineering`](../bundles.md#data-engineering) | 45 | Data engineering: pipelines, orchestration, streaming/CDC, lakes and lakehouses, warehousing, modeling, quality, governance |
+| [`data-engineering`](../bundles.md#data-engineering) | 43 | Data engineering: pipelines, orchestration, streaming/CDC, lakes and lakehouses, warehousing, modeling, quality, governance |
 | [`data-platform`](../bundles.md#data-platform) | 39 | Data platform: ETL, warehouse, streaming, BI, quality, storage, compute, lake, lakehouse, batch, orchestration, CDC, replication, catalog, observability, contracts, mesh, versioning, API, virtualization, schema registry, relational, NoSQL, graph, search, clean-room, cost-optimization, formats, lineage, pipeline-CI/CD, testing, reverse-ETL |
 
 ## Combine with

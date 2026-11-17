@@ -1,7 +1,11 @@
 ---
 name: vulkan
 description: >
-  Use this skill when the user says 'vulkan', 'vkQueueSubmit', 'swapchain', 'render pass', 'dynamic rendering', 'pipeline barrier', 'synchronization2', 'descriptor sets', 'VMA', 'vulkan validation'. Guides explicit Vulkan rendering: instance/device setup, swapchain, dynamic rendering and render passes, pipelines, command buffers, synchronization, memory and compute/ray tracing. Do NOT use for: engine-agnostic frame-graph design (use render-graph), DirectX 12 or Metal specifics, shader art.
+  Use when the user asks about Vulkan, swapchain recreation on window resize,
+  vkQueueSubmit, dynamic rendering, pipeline barriers, synchronization2,
+  descriptor sets, VMA or validation layer errors. Produces explicit Vulkan
+  setup, sync and memory code. Not for engine-agnostic frame graph design (use
+  render-graph).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -670,3 +674,10 @@ flowchart TD
 - `references/synchronization-deep-dive.md` - barriers, fences, semaphores, timeline semaphores
 - `references/memory-and-upload.md` - allocators, staging, image/buffer resources
 - `references/compute-and-ray-tracing.md` - compute dispatch, RT pipelines, TLAS/BLAS
+
+## References
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/vulkan-rendering.md` — Vulkan Rendering API

@@ -1,22 +1,7 @@
 ---
 name: jenkins
 description: >
-  Use this skill when the user says 'jenkins', 'jenkins pipeline',
-  'jenkinsfile', 'declarative pipeline', 'scripted pipeline',
-  'jenkins shared library', 'jenkins agent', 'jenkins node',
-  'jenkins plugin', 'jenkins blue ocean', 'jenkins credentials',
-  'jenkins multibranch', 'jenkins folder', 'jenkins job',
-  'jenkins groovy', 'pipeline as code', 'agent any', 'post
-  block', 'when block', 'parallel pipeline', 'stage',
-  'declarative pipeline', 'scripted pipeline', 'pipeline
-  syntax', 'jenkinsfile best practices', 'jenkins security',
-  'jenkins high availability', 'jenkins backup', 'jenkins
-  casC', 'configuration as code', 'jenkins operator',
-  'jcasc', 'shared library', 'pipeline utility steps',
-  'jenkinsfile generator'.
-  Covers: Jenkins pipeline development, shared libraries,
-  multibranch pipelines, security hardening, high availability,
-  configuration as code, plugin management, and operations.
+  Use when the user asks about Jenkins, Jenkinsfile, declarative or scripted pipelines, shared libraries, multibranch pipelines, Jenkins agents on Kubernetes, credentials, JCasC (Configuration as Code), or Jenkins security and backup. Produces Jenkinsfiles and controller config. Not for GitHub Actions (use github-actions) or GitLab CI (use devops-gitlab-ci).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -93,7 +78,7 @@ kind: Pod
 spec:
   containers:
   - name: ci
-    image: jenkins/inbound-agent:latest
+    image: jenkins/inbound-agent:<pinned-tag>
     command:
     - cat
     tty: true
@@ -106,7 +91,7 @@ spec:
     - name: docker-socket
       mountPath: /var/run/docker.sock
   - name: sonar
-    image: sonarsource/sonar-scanner-cli:latest
+    image: sonarsource/sonar-scanner-cli:<pinned-tag>
     command:
     - cat
     tty: true

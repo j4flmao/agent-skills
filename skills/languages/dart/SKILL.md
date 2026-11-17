@@ -1,7 +1,10 @@
 ---
 name: lang-dart
 description: >
-  Use this skill when the user says 'Dart', 'Dart 3', 'null safety', 'records', 'patterns', 'sealed class', 'Future', 'Stream', 'async*', 'isolate', 'Isolate.run', 'dart:ffi', 'pub', 'build_runner', 'freezed', 'dart test'. Writes and reviews idiomatic Dart 3: sound null safety, records/patterns/sealed classes, async with Futures and Streams, isolates for CPU work, FFI, code generation and testing. Do NOT use for: Flutter widget and state-management architecture (use flutter-expertise / flutter-internals), backend frameworks in other languages.
+  Use when the user asks about Dart 3, sound null safety, records, patterns,
+  sealed classes, Futures and Streams, isolates and Isolate.run, dart:ffi,
+  build_runner or dart test. Produces idiomatic Dart code and tests. Not for
+  Flutter widgets or state management (use flutter-expertise).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

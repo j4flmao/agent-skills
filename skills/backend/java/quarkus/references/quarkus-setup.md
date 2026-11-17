@@ -7,7 +7,7 @@ sdk install quarkus 3.6.0
 
 # Create project
 quarkus create app com.example:order-service \
-  --extension='resteasy-reactive,reactive-pg-client,hibernate-validator,smallrye-openapi'
+  --extension='rest,reactive-pg-client,hibernate-validator,smallrye-openapi'
 
 # Dev mode (live reload)
 quarkus dev
@@ -87,7 +87,7 @@ quarkus.hibernate-orm.database.generation=drop-and-create
 
 | Extension | Usage |
 |---|---|
-| `resteasy-reactive` | Reactive REST endpoints |
+| `rest` | Reactive REST endpoints |
 | `hibernate-orm-panache` | Active record ORM |
 | `reactive-pg-client` | Reactive PostgreSQL |
 | `smallrye-reactive-messaging` | Event streaming (Kafka, AMQP) |

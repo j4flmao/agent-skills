@@ -10,7 +10,7 @@ SMS-based two-factor authentication (2FA) sends one-time passcodes (OTP) via SMS
 ```python
 import secrets
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 class OTPGenerator:
     def __init__(self, length: int = 6,
@@ -38,15 +38,15 @@ class OTPRecord:
         self.code = code
         self.attempts = 0
         self.max_attempts = 3
-        self.created_at = datetime.utcnow()
-        self.expires_at = datetime.utcnow() + timedelta(
+        self.created_at = datetime.now(timezone.utc)
+        self.expires_at = datetime.now(timezone.utc) + timedelta(
             seconds=validity_seconds
         )
         self.verified = False
 
     @property
     def is_expired(self) -> bool:
-        return datetime.utcnow() >= self.expires_at
+        return datetime.now(timezone.utc) >= self.expires_at
 
     @property
     def is_blocked(self) -> bool:
@@ -291,7 +291,7 @@ class SMSSecurityValidator:
             return True
         recent_changes = [
             h for h in phone_history
-            if h.changed_at > datetime.utcnow() - timedelta(days=30)
+            if h.changed_at > datetime.now(timezone.utc) - timedelta(days=30)
         ]
         return len(recent_changes) > 1
 

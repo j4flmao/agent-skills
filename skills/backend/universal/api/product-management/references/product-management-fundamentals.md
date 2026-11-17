@@ -300,7 +300,7 @@ jobs:
 class ApiTelemetryPipeline:
     def process(self, raw: dict):
         event = {
-            "timestamp": raw.get("timestamp", datetime.utcnow()),
+            "timestamp": raw.get("timestamp", datetime.now(timezone.utc)),
             "api_key_hash": hashlib.sha256(raw["api_key"].encode()).hexdigest(),
             "endpoint": raw["endpoint"],
             "method": raw["method"],

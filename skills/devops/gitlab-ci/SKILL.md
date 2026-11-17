@@ -1,12 +1,7 @@
 ---
 name: devops-gitlab-ci
 description: >
-  GitLab CI/CD pipeline configuration and management.
-  Covers: .gitlab-ci.yml structure, stages, jobs, parallel, needs, artifacts, cache,
-  child/parent pipelines, multi-project pipelines, rules, YAML anchors, templates,
-  includes, Container Registry, Kaniko, security scanning (SAST, DAST, dependency),
-  runner management, autoscaling.
-  Do NOT use for: GitHub Actions, CircleCI, Jenkins, or other CI/CD platforms.
+  Use when the user asks about GitLab CI, .gitlab-ci.yml, stages and needs, rules, parent-child or multi-project pipelines, include templates, CI/CD components, GitLab runners, container builds, or GitLab SAST/DAST scanning. Produces GitLab pipeline configs. Not for GitHub Actions (use github-actions) or Jenkins (use jenkins).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -70,8 +65,8 @@ No preamble. No postamble. No explanations.
 
 ### Build Method Decision Tree
 - Docker-in-Docker (DIND): Most common, full Docker access, requires privileged mode.
-- Kaniko: Rootless, no privileged mode, K8s-native, recommended for K8s executors.
-- Buildah: Daemonless builds, rootless option, good for security.
+- Buildah (or rootless BuildKit): daemonless, no privileged mode, recommended for K8s executors.
+- Kaniko: daemonless, but the upstream project was archived in June 2025; only use a maintained fork.
 - Shell executor: Direct host builds, no container isolation, not recommended.
 
 ### Security Scanning Integration
@@ -170,22 +165,20 @@ dependency_scanning:
 ```yaml
 container-build:
   stage: package
-  image:
-    name: gcr.io/kaniko-project/executor:v1.23.2-debug
-    entrypoint: [""]
+  image: quay.io/buildah/stable:<pinned-version>   # pin a tested tag or digest
+  variables:
+    STORAGE_DRIVER: vfs
+    BUILDAH_ISOLATION: chroot
   script:
-    - /kaniko/executor
-      --context $CI_PROJECT_DIR
-      --dockerfile $CI_PROJECT_DIR/Dockerfile
-      --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
-      --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_BRANCH
-      --cache=true
-      --cache-ttl=168h
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - buildah build --layers --cache-to "$CI_REGISTRY_IMAGE/cache" --cache-from "$CI_REGISTRY_IMAGE/cache"
+        -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" .
+    - buildah push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
 
 container-scan:
   stage: security
   image:
-    name: aquasec/trivy:latest
+    name: aquasec/trivy:<pinned-version>
     entrypoint: [""]
   script:
     - trivy image --severity CRITICAL,HIGH --format sarif --output trivy.sarif $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
@@ -343,7 +336,7 @@ Artifacts without expire_in accumulate indefinitely, filling storage quotas. Set
 Automatically deploying to production without manual approval risks deploying broken code. Always use when: manual for production deployments.
 
 ### Anti-Pattern 6: Overusing DIND
-Docker-in-Docker requires privileged mode, which bypasses security controls. Use Kaniko for container builds on K8s runners. Reserve DIND for when Docker socket is required.
+Docker-in-Docker requires privileged mode, which bypasses security controls. Use a daemonless builder (Buildah, rootless BuildKit) on K8s runners. Reserve DIND for when Docker socket is required.
 
 ### Anti-Pattern 7: Too Many Stages
 Having too many stages slows pipeline execution (each stage completes before next starts). Combine independent jobs into the same stage using needs for DAG execution.
@@ -353,7 +346,7 @@ Having too many stages slows pipeline execution (each stage completes before nex
 ### Pipeline Performance
 - Use needs for DAG execution to parallelize independent jobs.
 - Cache aggressively: node_modules, .m2, pip cache, go module cache.
-- Use Kaniko instead of DIND for faster, more secure builds.
+- Use a daemonless builder (Buildah, rootless BuildKit) instead of DIND for safer builds.
 - Set CI_TIMEOUT to prevent runaway jobs (default 60 min).
 - Use parallel for multi-configuration testing.
 
@@ -362,7 +355,7 @@ Having too many stages slows pipeline execution (each stage completes before nex
 - Enable pipeline security scanning (SAST, Secret Detection, Dependency).
 - Use protected branches for main/master.
 - Restrict runner access to specific projects.
-- Use Kaniko over DIND for container builds.
+- Use daemonless builders over DIND for container builds.
 - Disable debug logging in production pipelines.
 
 ### Monitoring
@@ -380,7 +373,7 @@ Having too many stages slows pipeline execution (each stage completes before nex
 - Use rules over only/except (deprecated).
 - Set artifact expire_in to prevent storage bloat.
 - Never run production deployments automatically.
-- Use Kaniko over DIND for container builds on K8s.
+- Use daemonless builders over DIND for container builds on K8s.
 - Enable security scanning for all production pipelines.
 - Use child/parent pipelines for monorepo components.
 - Use YAML anchors and extends to reduce duplication.
@@ -396,8 +389,8 @@ GitLab CI: single app for code + CI, auto DevOps, built-in registry, self-manage
 ### GitLab CI vs Jenkins
 GitLab CI: cloud-native, simpler configuration, integrated with GitLab. Jenkins: extensive plugin ecosystem, any VCS, mature. GitLab CI is better for GitLab-centric teams; Jenkins for complex multi-VCS organizations.
 
-### DIND vs Kaniko
-DIND: requires privileged mode, full Docker daemon, faster for multi-stage builds. Kaniko: rootless, no privileged mode, K8s-native, safer. Use Kaniko on K8s runners, DIND on Docker executors.
+### DIND vs daemonless builders
+DIND: requires privileged mode and a full Docker daemon. Buildah / rootless BuildKit: no privileged mode, safer on shared K8s runners. Kaniko (GoogleContainerTools) was archived in June 2025 and gets no upstream fixes; if you keep it, use a maintained fork (e.g. Chainguard's) or move to Buildah/BuildKit rootless.
 
 ## Operations & Maintenance
 
@@ -572,7 +565,7 @@ wait_for_pipeline() {
 - Enable **`GIT_STRATEGY: fetch`** instead of clone — saves time for large repositories
 - Use **`GIT_DEPTH: 50`** to shallow-clone only the needed commit history
 - Set up **pre-clone scripts** on self-hosted runners to pre-warm large repositories
-- Use **Kaniko** instead of Docker-in-Docker for building images without privileged mode
+- Use a **daemonless builder** (Buildah, rootless BuildKit) instead of Docker-in-Docker for building images without privileged mode
 
 ## Security Considerations
 

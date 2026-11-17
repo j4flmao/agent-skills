@@ -1,7 +1,10 @@
 ---
 name: asset-pipeline
 description: >
-  Use this skill when the user says 'asset pipeline', 'asset cooking', 'import pipeline', 'pak file', 'hot reload', 'shader compilation pipeline', 'asset registry'. Designs the asset pipeline: import/cook, content-addressed caching, asset registry and references, packaging, streaming throttles, hot reload and shader pipelines. Do NOT use for: runtime open-world streaming policies (use level-streaming), CI system setup (use devops skills).
+  Use when the user asks about a game asset pipeline, asset cooking, import
+  pipeline, pak files, an asset registry, hot reload or shader compilation
+  pipeline. Produces import/cook stages, content-addressed caching and
+  packaging. Not for runtime open-world streaming (use level-streaming).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

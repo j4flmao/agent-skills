@@ -1,15 +1,7 @@
 ---
 name: circleci
 description: >
-  Use this skill when the user says 'CircleCI', 'circleci config',
-  'orb', 'workflows', 'jobs', 'steps', 'executors', 'Docker executor',
-  'machine executor', 'CircleCI runner', 'pipeline', 'context',
-  'store_artifacts', 'save_cache', 'restore_cache', 'parallelism',
-  'circleci local', 'SSH debug'.
-  Covers: CircleCI configuration (config.yml), executors, jobs, workflows,
-  caching, orbs, matrix builds, contexts, parallel execution, self-hosted runners,
-  pipeline parameters, triggers, artifacts, test splitting, SSH debug.
-  Do NOT use for: GitHub Actions, GitLab CI, Jenkins, or other CI systems.
+  Use when the user asks about CircleCI, .circleci/config.yml, orbs, executors, workflows, contexts, save_cache/restore_cache, test splitting, parallelism, self-hosted runners, or SSH debug. Produces CircleCI configs. Not for GitHub Actions (use github-actions) or GitLab CI (use devops-gitlab-ci).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -211,7 +203,7 @@ jobs:
       - run:
           name: Snyk security scan
           command: |
-            curl -sL https://snyk.io/cli/install | bash
+            npm install -g snyk@1   # pinned via a package manager (or use the snyk orb), not curl | bash
             snyk test --severity-threshold=high
 
   nightly-e2e:

@@ -214,7 +214,7 @@ docs/
 Before creating any files, verify:
 - [ ] Project name is kebab-case and URL-friendly
 - [ ] Target directory doesn't exist or user confirmed overwrite
-- [ ] Required tools are installed (Node 20+, Python 3.12+, etc.)
+- [ ] Required tools are installed (Node 22+, Python 3.12+, etc.)
 - [ ] Package manager chosen (npm/pnpm/yarn/bun) and available
 - [ ] Git is initialized (or will be by init command)
 - [ ] License file will be generated (MIT/Apache/GPL — ask user)
@@ -362,7 +362,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with: { node-version: 24 }
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm test -- --coverage
@@ -425,7 +425,7 @@ check_cmd() {
   echo "✓ $1 found: $(command -v "$1") ($("$1" --version 2>&1 | head -1))"
 }
 
-check_cmd node "https://nodejs.org/ (v20+)"
+check_cmd node "https://nodejs.org/ (v22+)"
 check_cmd pnpm "npm install -g pnpm"
 check_cmd git "https://git-scm.com/"
 check_cmd docker "https://docker.com/products/docker-desktop"

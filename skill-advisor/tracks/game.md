@@ -20,7 +20,7 @@ Install these first. They cover the everyday work of this role and rarely confli
 | Skill | Path | What it covers |
 |-------|------|----------------|
 | [`game-engine-patterns`](../../skills/game/game-engine/patterns/SKILL.md) | `game/game-engine/patterns` | Game engines are the most demanding real-time software systems in common use. |
-| [`ecs-architecture`](../../skills/game/ecs-architecture/SKILL.md) | `game/ecs-architecture` | ECS is a data-driven design pattern for game engines that separates entities (IDs), components (pure data), and systems (logic operating on… |
+| [`ecs-pattern`](../../skills/game/game-engine/ecs-pattern/SKILL.md) | `game/game-engine/ecs-pattern` | ECS is the dominant data-oriented architecture for modern game engines (Unity Entities/DOTS, Bevy, Unreal Mass, Overwatch's engine, flecs, EnTT —… |
 | [`physics-engine`](../../skills/game/game-development/physics-engine/SKILL.md) | `game/game-development/physics-engine` | A physics engine simulates rigid bodies through three pipelines every tick: collision detection (find contacts), collision resolution (apply… |
 | [`input-systems`](../../skills/game/client-engine/input-systems/SKILL.md) | `game/client-engine/input-systems` | Input is the player's handshake: it must be lag-free, remappable, device-agnostic and deterministic. |
 
@@ -63,13 +63,13 @@ Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a 
 **Level 1 + security baseline (6 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill game-engine-patterns --skill ecs-architecture --skill physics-engine --skill input-systems --skill anti-cheat-server --skill security-api-security
+npx skills add j4flmao/agent-skills --skill game-engine-patterns --skill ecs-pattern --skill physics-engine --skill input-systems --skill anti-cheat-server --skill security-api-security
 ```
 
 **Level 1 + 2 + security baseline (15 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill game-engine-patterns --skill ecs-architecture --skill physics-engine --skill input-systems --skill memory-management --skill job-system --skill render-graph --skill asset-pipeline --skill math-foundation --skill animation-systems --skill audio-engine --skill level-streaming --skill multiplayer-netcode --skill anti-cheat-server --skill security-api-security
+npx skills add j4flmao/agent-skills --skill game-engine-patterns --skill ecs-pattern --skill physics-engine --skill input-systems --skill memory-management --skill job-system --skill render-graph --skill asset-pipeline --skill math-foundation --skill animation-systems --skill audio-engine --skill level-streaming --skill multiplayer-netcode --skill anti-cheat-server --skill security-api-security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -80,8 +80,8 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`game-development`](../bundles.md#game-development) | 32 | Game development: engines, ECS, rendering, physics, animation, audio, input, streaming, netcode, game servers |
-| [`game-server`](../bundles.md#game-server) | 9 | Online game backends: authoritative servers, netcode, interest management, matchmaking, anti-cheat, scaling |
+| [`game-development`](../bundles.md#game-development) | 30 | Game development: engines, ECS, rendering, physics, animation, audio, input, streaming, netcode, game servers |
+| [`game-server`](../bundles.md#game-server) | 8 | Online game backends: authoritative servers, netcode, interest management, matchmaking, anti-cheat, scaling |
 
 ## Combine with
 

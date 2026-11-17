@@ -1,7 +1,7 @@
 ---
 name: agent-task-checklist
 description: >
-  Use this skill when the user says 'track progress', 'task.md', 'keep a checklist', 'break this into steps', 'show me what is done', or when an agent executes a long multi-step task that should remain transparent and resumable. It maintains a granular, frequently updated checklist with explicit states ([ ], [/], [x]) so progress survives interruptions and the user can see status at a glance. Do NOT use for: the up-front design of changes (use write-implementation-plan), sprint/backlog management for human teams (use agile-scrum), final reporting (use agent-walkthrough-report).
+  Use this skill when the user says 'track progress', 'task.md', 'keep a checklist', 'break this into steps', 'show me what is done', or when an agent executes a long multi-step task that should remain transparent and resumable. It maintains a granular, frequently updated checklist with explicit states ([ ], [/], [x]) so progress survives interruptions and the user can see status at a glance. Do NOT use for: the up-front design of changes (use write-implementation-plan), sprint/backlog management for human teams (use agile-scrum-kanban), final reporting (use agent-walkthrough-report).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

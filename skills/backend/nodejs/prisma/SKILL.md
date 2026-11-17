@@ -16,7 +16,7 @@ tags: [backend, nodejs, prisma, phase-10]
 # Prisma ORM
 
 ## Purpose
-Design database schemas, write performant queries, manage migrations, implement middleware, and optimize Prisma Client for production.
+Design database schemas, write performant queries, manage migrations, implement client extensions, and optimize Prisma Client for production.
 
 ## Agent Protocol
 
@@ -25,12 +25,13 @@ User request includes: `prisma`, `prisma schema`, `prisma migrate`, `prisma clie
 
 ### Input Context
 - Database (PostgreSQL, MySQL, SQLite, SQL Server, MongoDB)
-- Prisma version (5.x, 6.x)
+- Prisma version (6.x or 7.x). Prisma 7 (late 2025) moves to the Rust-free `prisma-client` generator, `prisma.config.ts` for connection config and driver adapters; check the upgrade guide before mixing examples
+- Primary keys: prefer `@default(uuid(7))` (time-ordered, Prisma 5.18+) or `autoincrement()` over random UUIDv4 on write-heavy tables
 - Schema complexity (relations, enums, composite keys)
 - Deployment (Node.js, serverless, edge)
 
 ### Output Artifact
-Schema definition, query examples, migration setup, middleware patterns, performance optimizations.
+Schema definition, query examples, migration setup, extension patterns, performance optimizations.
 
 ### Response Format
 Produce artifact directly. No preamble, no postamble, no explanations.
@@ -80,8 +81,7 @@ Decision: Prisma-first project → use schema.prisma as source of truth. Existin
 ```prisma
 // prisma/schema.prisma
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["extendedWhereUnique"]
+  provider = "prisma-client-js" // Prisma 7: provider = "prisma-client" with an explicit output path
 }
 
 datasource db {
@@ -96,7 +96,7 @@ enum UserRole {
 }
 
 model User {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid(7))
   email     String   @unique
   name      String
   role      UserRole @default(USER)
@@ -111,7 +111,7 @@ model User {
 }
 
 model Profile {
-  id      String @id @default(uuid())
+  id      String @id @default(uuid(7))
   bio     String?
   avatar  String?
   userId  String @unique
@@ -121,7 +121,7 @@ model Profile {
 }
 
 model Post {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid(7))
   title     String
   content   String?
   published Boolean  @default(false)
@@ -136,7 +136,7 @@ model Post {
 }
 
 model Tag {
-  id    String @id @default(uuid())
+  id    String @id @default(uuid(7))
   name  String @unique
   posts Post[]
 
@@ -266,7 +266,7 @@ npx prisma generate
 npx prisma migrate status
 ```
 
-### Step 5: Middleware / Extensions (Prisma 5+)
+### Step 5: Client Extensions (`$use` middleware was removed in Prisma 6.14)
 
 ```typescript
 // src/lib/prisma-extension.ts
@@ -422,7 +422,7 @@ try {
 - Raw queries (`$queryRawUnsafe`) risk SQL injection — use `$queryRaw` with parameterized templates
 - Prisma validates input types, but always validate business rules in application layer
 - Connection string in `.env` — never committed to repo
-- Audit logging via Prisma middleware for sensitive models
+- Audit logging via a Prisma query extension (or DB trigger) for sensitive models
 - Field-level `@map` for column obfuscation not needed — use DB-level encryption
 - Use `select` to avoid exposing sensitive fields (password hash, etc.)
 
@@ -457,7 +457,7 @@ Use separate test database with test user. Use `prisma migrate deploy` in CI. Us
 - Schema is the source of truth — `prisma migrate dev` after every schema change.
 - `prisma generate` after every pull/sync — always regenerate client.
 - `select` over `include` for production queries — minimize data transfer.
-- Soft deletes via `deletedAt` + middleware filter — never hard delete user data.
+- Soft deletes via `deletedAt` + query-extension filter — never hard delete user data.
 - `$transaction` for atomic multi-table operations.
 - `$extends` for cross-cutting concerns (soft delete, audit, computed fields).
 - No `prisma.$disconnect()` in serverless handlers — let adapter handle pooling.

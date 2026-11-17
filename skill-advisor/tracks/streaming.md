@@ -12,15 +12,13 @@ These skills make the agent apply this domain's security practices by default. T
 |-------|------|----------------|
 | [`security-data-security`](../../skills/security/data-security/SKILL.md) | `security/data-security` | Implements data security controls: encryption, key management, masking, column-level security, and data anonymization for regulatory compliance. |
 
-## Level 1 — Essentials (3 skills)
+## Level 1 — Essentials (1 skill)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
 | [`data-streaming`](../../skills/data/streaming/SKILL.md) | `data/streaming` | Design streaming data pipelines with Kafka topic architecture, Flink/Kafka Streams processing, schema evolution, and reliability guarantees. |
-| [`data-kafka-event-streaming`](../../skills/data/data-engineering/kafka-event-streaming/SKILL.md) | `data/data-engineering/kafka-event-streaming` | Kafka is a distributed, partitioned, replicated append-only log. |
-| [`backend-data-streaming`](../../skills/backend/universal/data-streaming/SKILL.md) | `backend/universal/data-streaming` | Build pipelines that process continuous event streams with predictable latency and correct results under failures, late data and redelivery. |
 
 ## Level 2 — Professional (5 skills)
 
@@ -42,22 +40,22 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 |-------|------|----------------|
 | [`data-data-lakehouse`](../../skills/data/data-lakehouse/SKILL.md) | `data/data-lakehouse` | Design lakehouse architectures that merge data lake flexibility with warehouse reliability. |
 | [`data-data-observability`](../../skills/data/data-observability/SKILL.md) | `data/data-observability` | Design comprehensive data observability across pipelines: freshness, volume, schema, quality, lineage, and incident management. |
-| [`architecture-event-driven`](../../skills/architecture/event-driven/SKILL.md) | `architecture/event-driven` | In EDA, services publish facts ("OrderPlaced") and other services react, so producers do not depend on consumers being available or even known. |
+| [`backend-event-driven`](../../skills/backend/universal/event-driven/SKILL.md) | `backend/universal/event-driven` | Design event-driven systems with clear event boundaries, reliable delivery, observable flows, and error recovery. |
 
 ## Install
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 + security baseline (4 skills):**
+**Level 1 + security baseline (2 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill data-streaming --skill data-kafka-event-streaming --skill backend-data-streaming --skill security-data-security
+npx skills add j4flmao/agent-skills --skill data-streaming --skill security-data-security
 ```
 
-**Level 1 + 2 + security baseline (9 skills):**
+**Level 1 + 2 + security baseline (7 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill data-streaming --skill data-kafka-event-streaming --skill backend-data-streaming --skill data-schema-registry --skill backend-event-sourcing --skill backend-transactional-outbox --skill cloud-native-event-driven-scaling --skill backend-idempotency --skill security-data-security
+npx skills add j4flmao/agent-skills --skill data-streaming --skill data-schema-registry --skill backend-event-sourcing --skill backend-transactional-outbox --skill cloud-native-event-driven-scaling --skill backend-idempotency --skill security-data-security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -68,7 +66,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`data-engineering`](../bundles.md#data-engineering) | 45 | Data engineering: pipelines, orchestration, streaming/CDC, lakes and lakehouses, warehousing, modeling, quality, governance |
+| [`data-engineering`](../bundles.md#data-engineering) | 43 | Data engineering: pipelines, orchestration, streaming/CDC, lakes and lakehouses, warehousing, modeling, quality, governance |
 
 ## Combine with
 

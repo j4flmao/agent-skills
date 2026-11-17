@@ -60,3 +60,15 @@ flowchart TD
     J --> K[Deploy & Monitor Tokens/Evals]
     I --> K
 ```
+
+## References
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/anti-sycophancy.md` — Anti-Sycophancy & Intellectual Honesty
+- `references/epistemic-confidence.md` — Epistemic Confidence Calibration
+- `references/proactive-assistance.md` — Proactive Assistance
+- `references/tone-adaptation.md` — Affective Computing & Tone Adaptation
+- `references/knowledge-gap-detection.md` — Knowledge Gap Detection
+- `references/theory-of-mind.md` — Theory of Mind (ToM) in Personas

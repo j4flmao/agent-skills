@@ -499,7 +499,7 @@ Use `testcontainers` for DB integration. Mock HTTP with `nock`. Use `jest` with 
 
 ## Rules
 - Middleware order: security -> parsing -> logging -> rate-limit -> routes -> 404 -> error. Never deviate.
-- All async handlers wrapped with asyncHandler. No try/catch in controllers.
+- Express 5 (npm default since 2025) passes rejected promises to the error handler; wrap async handlers with asyncHandler only on Express 4. No try/catch in controllers.
 - Input validation via Zod schema in middleware. Never trust raw req.body.
 - App factory pattern (createApp function) for testability. No top-level app.listen.
 - Environment config validated at startup with Zod. Fail fast on missing vars.

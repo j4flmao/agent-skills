@@ -70,7 +70,7 @@ Bundles are installed with the same command; each one's full command is on the [
 | Bundle | Skills | Description |
 |--------|--------|-------------|
 | [`languages`](../bundles.md#languages) | 14 | Programming language deep dives: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, C#, C, C++, Scala, Elixir, Dart, Assembly |
-| [`dev-workflow`](../bundles.md#dev-workflow) | 23 | Developer workflow: code review, debugging, refactoring, git, PRs, changelogs, dev containers, CI, monorepos, dependencies |
+| [`dev-workflow`](../bundles.md#dev-workflow) | 22 | Developer workflow: code review, debugging, refactoring, git, PRs, changelogs, dev containers, CI, monorepos, dependencies |
 
 ## Combine with
 

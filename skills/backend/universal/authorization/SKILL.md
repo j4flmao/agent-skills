@@ -680,9 +680,9 @@ func Authorize(engine *casbin.Enforcer) func(http.Handler) http.Handler {
 - Temporary elevation must expire automatically. Never leave JIT roles permanent.
 - Break-glass access must notify security immediately and expire within 30 minutes.
 - Delegated permissions must not exceed the delegator's own permissions.
-- Every user has exactly one role. Use attributes for exceptions, not custom roles.
+- Keep role assignments few and coarse; use attributes or relationships for exceptions instead of minting one-off custom roles.
 - Permission changes propagate immediately (no cache) or with documented delay.
-- Policy evaluation is a synchronous hot-path operation. Keep it fast (<5ms p99).
+- Policy evaluation is a synchronous hot-path operation. Set a latency budget, measure it, and cache decision inputs where needed.
 - Default allow lists for known-safe operations (public endpoints, health checks). All else default deny.
 
 ## References

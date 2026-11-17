@@ -1,10 +1,14 @@
 ---
 name: ai-defense-mechanisms
 description: >
-  Use this skill when the user says 'LLM guardrails', 'prompt injection defense', 'Llama Guard', 'NeMo Guardrails', 'input/output filtering', 'secure my agent', 'dual LLM pattern', 'spotlighting', 'semantic router for blocking'. Designs layered defenses for LLM apps and agents: capability restriction and approvals, isolation of untrusted content, input/output classifiers, output handling (no data exfiltration via rendering), monitoring, and evaluation of the defenses. Do NOT use for: attacking/red-teaming systems (rnd/security/adversarial-prompting), sandboxing code execution (harness-engineering/sandbox-execution), or content policy for training.
+  Use when the user asks to defend a chatbot or agent against prompt injection, add LLM guardrails, Llama Guard,
+  NeMo Guardrails, spotlighting, the dual LLM pattern, CaMeL or output filtering. Produces a layered defense
+  plan with code and attack-success / false-positive evals. Not for red-teaming (use adversarial-prompting) or
+  sandboxing code execution (use sandbox-execution).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [rnd, security, ai-defense-mechanisms, guardrails, prompt-injection, llama-guard]
 ---
 

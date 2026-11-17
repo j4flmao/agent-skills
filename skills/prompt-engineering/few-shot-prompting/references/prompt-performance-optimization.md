@@ -56,7 +56,7 @@ When you send a large prompt (like a complex system instruction + 20 few-shot ex
 ### 3.2 Implementation Rules for Caching
 1.  **Static Prefixing**: Structure your prompt so the static parts (System Instruction + Few-Shot Examples) are at the absolute beginning of the prompt.
 2.  **Dynamic Suffixing**: Place dynamic parts (User Query, current context) at the very end.
-3.  **Order Matters**: If you dynamically select few-shot examples (as per `example-selection-architectures.md`), caching is defeated because the prefix changes every time. You must balance dynamic selection against caching benefits.
+3.  **Order Matters**: If you dynamically select few-shot examples (see the dynamic few-shot section of the parent SKILL.md), caching is defeated because the prefix changes every time. You must balance dynamic selection against caching benefits.
 
 ```text
 [---- CACHEABLE PREFIX ----] [---- DYNAMIC SUFFIX ----]
@@ -108,16 +108,19 @@ export interface PerformanceMetrics {
 }
 
 export class LLMClientWithMetrics {
-  constructor(private readonly baseClient: any) {}
+  // Prices change often: load them from config (cents per 1M tokens per model id),
+  // never hardcode them. Unknown models fail loudly instead of reporting zero cost.
+  constructor(
+    private readonly baseClient: any,
+    private readonly pricing: Record<string, { input: number; output: number }>
+  ) {}
 
   private calculateCost(model: string, input: number, output: number): number {
-    // Pricing as of early 2024 (Example)
-    const pricing = {
-      'gpt-4-turbo': { input: 1.0, output: 3.0 }, // Cents per 1k
-      'gpt-3.5-turbo': { input: 0.05, output: 0.15 }
-    };
-    const rate = pricing[model as keyof typeof pricing] || { input: 0, output: 0 };
-    return (input / 1000) * rate.input + (output / 1000) * rate.output;
+    const rate = this.pricing[model];
+    if (!rate) {
+      throw new Error(`No pricing configured for model ${model}`);
+    }
+    return (input / 1_000_000) * rate.input + (output / 1_000_000) * rate.output;
   }
 
   public async execute(request: LLMRequest): Promise<{response: LLMResponse, metrics: PerformanceMetrics}> {

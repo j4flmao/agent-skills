@@ -1,9 +1,7 @@
 ---
 name: devops-mlops
 description: >
-  Use this skill when implementing MLOps: ML CI/CD pipelines, model deployment pipelines, model registry CI/CD, canary deploy ML, A/B testing ML, model monitoring, model drift, model rollback, feature store CI/CD.
-  This skill enforces: CI/CD for model pipeline, registry promotion, canary/blue-green deployment, drift monitoring, rollback strategy.
-  Do NOT use for: model training (use ml-training), feature engineering (use feature-engineering), data pipeline CI/CD (use devops-dataops).
+  Use when the user asks about MLOps, ML CI/CD pipelines, model registry promotion, canary or shadow model deployment, model drift monitoring, model rollback, or feature store CI/CD. Produces model delivery pipelines and monitoring. Not for model serving runtimes (use ml-model-serving) or experiment tracking (use ml-experiment-tracking).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -210,7 +208,7 @@ spec:
   transformer:
     containers:
     - name: transformer
-      image: registry/feature-transformer:latest
+      image: registry/feature-transformer:<pinned-tag>
       env:
       - name: FEATURE_STORE_URL
         value: http://feast:6565

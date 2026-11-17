@@ -22,11 +22,20 @@ cursor.execute("SELECT * FROM users WHERE username = %s", (user_input,))
 Argon2 is the current OWASP recommendation, surpassing bcrypt and PBKDF2 due to memory-hard properties against GPU cracking.
 
 ```python
-from passlib.hash import argon2
+# argon2-cffi (passlib is unmaintained and breaks on recent Python/bcrypt releases)
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 
-password = "supersecretpassword"
-hashed = argon2.hash(password)
-is_valid = argon2.verify(password, hashed)
+ph = PasswordHasher()  # Argon2id with library defaults (above OWASP minimum)
+
+def hash_password(password: str) -> str:
+    return ph.hash(password)
+
+def verify_password(stored_hash: str, password: str) -> bool:
+    try:
+        return ph.verify(stored_hash, password)
+    except VerifyMismatchError:
+        return False
 ```
 
 ## 3. JWT Security

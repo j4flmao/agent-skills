@@ -22,6 +22,13 @@ const DEPRECATED_PATTERNS = [
   [/@tauri-apps\/api\/tauri\b/, "Tauri v1 import (use @tauri-apps/api/core)"],
   [/fcm\.googleapis\.com\/fcm\/send\b/, "legacy FCM HTTP API (use HTTP v1)"],
   [/\btillerNamespace\b|\bhelm init\b/, "Helm 2 / Tiller"],
+  [/\bReactDOM\.render\(/, "ReactDOM.render (removed in React 19; use createRoot)"],
+  [/\bcomponentWill(Mount|ReceiveProps)\b/, "legacy React lifecycle (use effects or getDerivedStateFromProps)"], // not Update: Stencil uses componentWillUpdate
+  [/\bopenai\.(ChatCompletion|Completion)\.create\b/, "pre-1.0 OpenAI Python SDK (use client.chat.completions.create)"],
+  [/\btext-davinci-00\d\b/, "retired OpenAI completion model"],
+  [/\bnew Buffer\(/, "new Buffer() (use Buffer.from / Buffer.alloc)"],
+  [/\bioutil\.(ReadFile|WriteFile|ReadAll|TempDir|TempFile)\b/, "Go io/ioutil (use os / io)"],
+  [/\btf\.Session\(/, "TensorFlow 1.x tf.Session"],
 ];
 // A line that names the old API to explain a migration is documentation, not a defect.
 const MIGRATION_NOTE = /deprecat|removed|legacy|replaced|instead|migrat|\bv\d+ used\b|\bin v\d+\b|→|->/i;
@@ -41,6 +48,8 @@ const SECRET_PATTERNS = [
 
 const errors = [];
 const warnings = [];
+const STALE_AFTER_DAYS = 180;
+const freshness = { fresh: 0, stale: 0, missing: 0 };
 const linkedReferences = new Set();
 const referenceFiles = [];
 const toPosix = (p) => path.relative(root, p).split(path.sep).join("/");
@@ -88,6 +97,16 @@ function checkSkill(file) {
   const text = fs.readFileSync(file, "utf8");
   const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
   if (!fm) { errors.push(rel + ": missing YAML frontmatter"); return; }
+  // last_verified: "YYYY-MM-DD" records when the skill's facts were last checked against current docs.
+  const verified = /^last_verified:\s*"?(\d{4}-\d{2}-\d{2})"?\s*$/m.exec(fm[1]);
+  if (/^last_verified:/m.test(fm[1]) && !verified) errors.push(rel + ": last_verified must be YYYY-MM-DD");
+  if (!verified) freshness.missing += 1;
+  else {
+    const ageDays = (Date.now() - Date.parse(verified[1])) / 86400000;
+    if (ageDays < -1) errors.push(rel + ": last_verified is in the future");
+    else if (ageDays > STALE_AFTER_DAYS) { freshness.stale += 1; warnings.push(rel + ": last verified " + verified[1] + " (over " + STALE_AFTER_DAYS + " days ago); re-check versions and APIs"); }
+    else freshness.fresh += 1;
+  }
   const description = parseDescription(fm[1]);
   if (!description) errors.push(rel + ": missing description");
   else if (description.length > MAX_DESCRIPTION_CHARS) errors.push(rel + ": description is " + description.length + " chars (max " + MAX_DESCRIPTION_CHARS + ")");
@@ -218,3 +237,4 @@ if (errors.length) {
   process.exit(1);
 }
 console.log("Skill validation passed (" + skillCount + " skills, " + referenceCount + " references, " + routeCount + " route targets, " + warnings.length + " warnings).");
+console.log("Freshness: " + freshness.fresh + " verified within " + STALE_AFTER_DAYS + " days, " + freshness.stale + " stale, " + freshness.missing + " never verified (add last_verified to frontmatter after a fact-check).");

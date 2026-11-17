@@ -1,7 +1,10 @@
 ---
 name: memory-management
 description: >
-  Use this skill when the user says 'game memory', 'arena allocator', 'pool allocator', 'frame allocator', 'memory fragmentation', 'memory tracking', 'cache layout', 'GC spikes'. Designs engine memory: allocator hierarchy (frame/arena/pool/free-list), cache-aware layout, tracking and budgets, virtual memory, GPU memory and GC-spike avoidance. Do NOT use for: general application memory leaks in web/backend code, embedded static-only allocation (use embedded skills).
+  Use when the user asks about game engine memory, arena allocators, pool
+  allocators, frame allocators, fragmentation, memory tracking and budgets,
+  cache-friendly layout or GC spikes. Produces an allocator hierarchy and budget
+  tracking. Not for embedded static-only allocation (use c-cpp-patterns).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

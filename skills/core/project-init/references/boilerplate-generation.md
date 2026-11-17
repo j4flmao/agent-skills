@@ -64,14 +64,14 @@ export default tseslint.config(
 
 ```dockerfile
 # Dockerfile — Multi-stage build for Node.js
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM node:24-alpine AS runner
 WORKDIR /app
 RUN addgroup --system app && adduser --system app
 COPY --from=builder --chown=app:app /app/dist ./dist

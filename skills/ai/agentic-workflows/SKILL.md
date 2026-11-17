@@ -1,10 +1,14 @@
 ---
 name: ai-agentic-workflows
 description: >
-  Use this skill when the user says 'agentic workflow', 'agent loop', 'ReAct', 'plan and execute', 'planner executor', 'reflection loop', 'evaluator-optimizer', 'prompt chaining', 'LangGraph workflow'. Designs the control flow around an LLM: which workflow pattern to pick (chain, router, parallel, orchestrator-workers, evaluator-optimizer, autonomous agent), how to bound loops, and where to put human checkpoints. Do NOT use for: multi-agent topology choices (ai/multi-agent-systems), the internals of a single agent loop (ai/ai-agents/core-architectures), or tool schema design (ai/ai-agents/tool-calling-principles).
+  Use when the user asks about an agentic workflow, prompt chaining, router, orchestrator-workers,
+  evaluator-optimizer, ReAct, plan-and-execute or a LangGraph workflow with human checkpoints. Produces the
+  simplest workflow pattern with typed state, loop bounds and approval points. Not for multi-agent runtimes (use
+  ai-multi-agent-systems) or single-loop mechanics (use ai-agent-core-loop).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, agents, agentic-workflows, react, planning, langgraph, orchestration]
 ---
 
@@ -187,3 +191,10 @@ Additional reference material for this skill, stored outside its own `references
 - `../../harness-engineering/feedback-loops/references/quality-gate-frameworks.md` — Quality Gate Frameworks for Agent Work
 - `../../harness-engineering/feedback-loops/references/reflection-patterns.md` — Reflection Patterns
 - `../../harness-engineering/feedforward-controls/references/anticipatory-error-prevention.md` — Anticipatory Error Prevention (Feedforward Controls)
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/generative-ui.md` — Generative UI (Vercel AI SDK)
+- `references/meta-prompting.md` — Meta-Prompting (AI Generating AI)
+- `references/prompt-optimization.md` — Self-Evolving Prompts (APE)

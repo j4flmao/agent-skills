@@ -165,7 +165,7 @@ ssh -L 9229:localhost:9229 -L 5005:localhost:5005 user@remote-server
 kubectl debug my-pod -it --image=nicolaka/netshoot --target=my-container
 
 # Node.js debug
-kubectl debug my-pod --image=node:20 --target=my-app -- node --inspect=0.0.0.0:9229
+kubectl debug my-pod --image=node:24 --target=my-app -- node --inspect=0.0.0.0:9229
 
 # With port forwarding
 kubectl port-forward pod/my-pod 9229:9229

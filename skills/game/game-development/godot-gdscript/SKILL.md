@@ -1,7 +1,10 @@
 ---
 name: godot-gdscript
 description: >
-  Use this skill when the user says 'gdscript', 'godot servers', 'RenderingServer', 'PhysicsServer', 'godot signals', 'godot threading', 'godot performance'. Covers Godot 4 internals and advanced GDScript: servers vs SceneTree, signals, threading, resources and performance techniques. Do NOT use for: general Godot project setup (use godot), Unity or Unreal.
+  Use when the user asks about advanced GDScript, typed GDScript performance,
+  Godot servers (RenderingServer, PhysicsServer), signals, threading in Godot 4
+  or bypassing the SceneTree for speed. Produces low-level Godot 4 techniques
+  and profiled optimisations. Not for general Godot project setup (use godot).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

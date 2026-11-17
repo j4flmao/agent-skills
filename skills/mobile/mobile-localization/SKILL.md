@@ -1,10 +1,11 @@
 ---
 name: mobile-localization
 description: >
-  Enforce mobile localization patterns for iOS (.strings, .xcstrings) and Android
-  (strings.xml), including plural rules (CLDR), RTL layout support, OTA updates,
-  translation management, locale detection, date/number formatting, and CI
-  integration. NOT for web localization or server-side i18n.
+  Use when the user asks about localizing a mobile app: String Catalogs
+  (.xcstrings), strings.xml, plurals, RTL layout, per-app language, locale-aware
+  dates and numbers, or translation workflow in CI. Produces iOS/Android/Flutter
+  localization setup and checks. Not for web or server i18n (use
+  frontend-internationalization or backend-internationalization).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

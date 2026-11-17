@@ -1,10 +1,14 @@
 ---
 name: swarm-architectures
 description: >
-  Use this skill when the user says 'agent swarm', 'multi-agent debate', 'actor model agents', 'context routing to specialist agents', 'judge agent', 'mixture of agents', 'decentralized agents prototype'. Prototypes R&D swarm designs: actor-style isolated agents exchanging messages, a cheap router that dispatches to specialists, debate rounds with a judge, and the measurement needed to prove the swarm beats a single model. Do NOT use for: production multi-agent runtimes (ai/multi-agent-systems), choosing a topology for a product (ai/ai-agents/multi-agent-topology), or ToT search (prompt-engineering/tree-of-thoughts).
+  Use when the user asks about an agent swarm, multi-agent debate, judge agent, mixture of agents, actor-model
+  agents or router-to-specialist prototypes. Produces an R&D swarm design with bounded rounds and equal-budget
+  baselines to prove it beats one model. Not for production multi-agent runtimes (use ai-multi-agent-systems) or
+  picking a product topology (use multi-agent-topology).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [rnd, ai-agents, swarm-architectures, actor-model, debate, routing]
 ---
 

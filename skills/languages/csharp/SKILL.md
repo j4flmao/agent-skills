@@ -1,7 +1,11 @@
 ---
 name: lang-csharp
 description: >
-  Use this skill when the user says 'C#', 'csharp', '.NET', 'dotnet', 'async await C#', 'LINQ', 'nullable reference types', 'Span<T>', 'records', 'pattern matching', 'IDisposable', 'xUnit', 'NuGet', 'dotnet CLI'. Writes and reviews modern C# on current .NET (LTS .NET 10): language features, async/await correctness, nullable reference types, LINQ and allocation-aware code, resource disposal, project/build setup and testing. Do NOT use for: ASP.NET Core service architecture (use backend/dotnet/*), Unity scripting (use unity / unity-csharp), .NET MAUI apps (use mobile-dotnet-maui), desktop UI frameworks (use desktop skills).
+  Use when the user asks about C# on .NET 10, async/await, LINQ, nullable
+  reference types, Span<T>, records, pattern matching, IDisposable, xUnit or the
+  dotnet CLI. Produces idiomatic, allocation-aware C# and project setup. Not for
+  ASP.NET Core architecture (use dotnet-architecture), Unity scripting (use
+  unity) or MAUI apps (use mobile-dotnet-maui).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

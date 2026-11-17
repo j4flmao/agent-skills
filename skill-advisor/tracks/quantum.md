@@ -25,13 +25,12 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`quantum-entanglement`](../../skills/quantum-computing/quantum-entanglement/SKILL.md) | `quantum-computing/quantum-entanglement` | A multi-qubit state is entangled when it cannot be written as a product of individual qubit states. |
 | [`quantum-error-correction`](../../skills/quantum-computing/quantum-error-correction/SKILL.md) | `quantum-computing/quantum-error-correction` | Build and evaluate error-correcting codes the way QEC researchers do: describe the code by its stabilizers, generate a noisy syndrome-extraction… |
 
-## Level 3 — Specialist (3 skills)
+## Level 3 — Specialist (2 skills)
 
 Add one at a time, only for the problem in front of you. These are deep and narrow.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
-| [`fundamental-quantum-error-correction`](../../skills/fundamental-truths/quantum-error-correction/SKILL.md) | `fundamental-truths/quantum-error-correction` | Physical qubits fail far too often for long algorithms: today's best two-qubit gate error rates are around 10⁻³, while algorithms such as Shor's… |
 | [`post-quantum-crypto`](../../skills/quantum-computing/post-quantum-crypto/SKILL.md) | `quantum-computing/post-quantum-crypto` | A cryptographically relevant quantum computer (CRQC) running Shor's algorithm would break RSA, finite-field Diffie-Hellman, and elliptic-curve… |
 | [`quantum-scientist`](../../skills/personas/quantum-scientist/SKILL.md) | `personas/quantum-scientist` | Adopt the mindset of a Principal Quantum Physicist: reason in superposition, entanglement, and probabilistic (unitary then measured) outcomes… |
 
@@ -59,7 +58,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`quantum-computing`](../bundles.md#quantum-computing) | 12 | Quantum computing: qubits and gates, algorithms (Grover, Shor), Qiskit, error correction, post-quantum cryptography |
+| [`quantum-computing`](../bundles.md#quantum-computing) | 11 | Quantum computing: qubits and gates, algorithms (Grover, Shor), Qiskit, error correction, post-quantum cryptography |
 
 ## Combine with
 
@@ -68,4 +67,4 @@ Bundles are installed with the same command; each one's full command is on the [
 
 ## Watch out
 
-`quantum-computing/quantum-error-correction` and `fundamental-truths/quantum-error-correction` overlap; the first is practical, the second theoretical.
+`quantum-computing/quantum-error-correction` and `quantum-computing/quantum-error-correction` overlap; the first is practical, the second theoretical.

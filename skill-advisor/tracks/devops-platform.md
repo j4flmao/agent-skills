@@ -85,11 +85,11 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`kubernetes-platform`](../bundles.md#kubernetes-platform) | 36 | Kubernetes and platform engineering: clusters, operators, Helm, GitOps, service mesh, autoscaling, policy, IDPs |
-| [`infra-foundations`](../bundles.md#infra-foundations) | 15 | Infrastructure foundations: Docker, Terraform, Ansible, Consul, networking, storage, bare metal, datacenters, hybrid cloud |
-| [`serverless-edge`](../bundles.md#serverless-edge) | 9 | Serverless and edge: Lambda/Functions, cold starts, Cloudflare Workers, orchestration, event-driven scaling, CDN |
-| [`devops-only`](../bundles.md#devops-only) | 68 | DevOps-only: Docker, CI/CD, K8s, monitoring, IaC, automation |
-| [`infra-cloud`](../bundles.md#infra-cloud) | 36 | Infrastructure & Cloud: IaC, CI/CD, K8s, cloud providers, observability, networking |
+| [`kubernetes-platform`](../bundles.md#kubernetes-platform) | 31 | Kubernetes and platform engineering: clusters, operators, Helm, GitOps, service mesh, autoscaling, policy, IDPs |
+| [`infra-foundations`](../bundles.md#infra-foundations) | 12 | Infrastructure foundations: Docker, Terraform, Ansible, Consul, networking, storage, bare metal, datacenters, hybrid cloud |
+| [`serverless-edge`](../bundles.md#serverless-edge) | 8 | Serverless and edge: Lambda/Functions, cold starts, Cloudflare Workers, orchestration, event-driven scaling, CDN |
+| [`devops-only`](../bundles.md#devops-only) | 66 | DevOps-only: Docker, CI/CD, K8s, monitoring, IaC, automation |
+| [`infra-cloud`](../bundles.md#infra-cloud) | 35 | Infrastructure & Cloud: IaC, CI/CD, K8s, cloud providers, observability, networking |
 | [`cloud-architecture`](../bundles.md#cloud-architecture) | 15 | Cloud architecture: landing zone, well-architected framework, governance, multi-cloud |
 
 ## Combine with
@@ -100,4 +100,4 @@ Bundles are installed with the same command; each one's full command is on the [
 
 ## Watch out
 
-Add only the cloud you run on (`devops/aws`, `devops/azure`, `devops/gcp`, `devops/hetzner`, …). `devops/chaos-engineering` and `site-reliability-engineering/chaos-engineering` overlap: keep one.
+Add only the cloud you run on (`devops/aws`, `devops/azure`, `devops/gcp`, `devops/hetzner`, …). `devops/chaos-engineering` and `devops/chaos-engineering` overlap: keep one.

@@ -394,7 +394,7 @@ maxmemory: 512mb                # Cap idempotency storage
 | State Machine | Guard transitions | Stateful operations | Workflow engines |
 
 ## Rules
-- Idempotency keys are required on all mutating endpoints — no exceptions.
+- Idempotency keys are required on every non-idempotent mutating endpoint a client may retry (POST, and PATCH when not idempotent); PUT and DELETE must be idempotent by design.
 - Keys expire after a fixed window (minimum 24 hours, maximum 7 days).
 - Return the same response for the same key within the TTL window — including error responses.
 - Use database-level uniqueness for the idempotency key column, not application-level locking.

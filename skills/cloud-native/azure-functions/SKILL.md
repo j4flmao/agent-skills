@@ -1,7 +1,7 @@
 ---
 name: cloud-native-azure-functions
 description: >
-  Use this skill when the user says 'azure functions', 'durable functions', 'orchestrator function', 'activity function', 'durable entities', 'event grid trigger', 'flex consumption', 'azure functions hosting plan', 'fan-out fan-in azure'. Designs Azure Functions apps and Durable Functions workflows with correct replay-safe orchestrator code, hosting-plan choice, and Event Grid delivery semantics. Do NOT use for: AWS Lambda (cloud-native-aws-serverless), AWS Step Functions (cloud-native-serverless-orchestration), generic multi-cloud serverless strategy (devops-serverless).
+  Use when the user asks about Azure Functions, Durable Functions orchestrator or activity functions, durable entities, fan-out/fan-in, Event Grid triggers, Flex Consumption or other hosting plans. Produces replay-safe Durable Functions code and a hosting-plan choice. Not for AWS Lambda (use cloud-native-aws-serverless) or Step Functions (use cloud-native-serverless-orchestration).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

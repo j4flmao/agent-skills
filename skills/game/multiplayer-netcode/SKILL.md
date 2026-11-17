@@ -1,10 +1,15 @@
 ---
 name: multiplayer-netcode
 description: >
-  Use this skill when the user says 'multiplayer', 'netcode', 'client prediction', 'server reconciliation', 'entity interpolation', 'rollback netcode', 'lag compensation', 'GGPO'. Gameplay-level netcode: transports, client prediction and reconciliation, interpolation, lag compensation, rollback, lobbies and replication choices. Do NOT use for: engine-internal replication architecture (use game-engine-multiplayer-netcode), server fleet scaling (use scaling-architecture).
+  Use when the user asks about multiplayer netcode, client-side prediction and
+  server reconciliation, entity interpolation, rollback netcode, GGPO, lag
+  compensation for a shooter or choosing a transport. Produces gameplay netcode
+  design and code. Not for server tick and fleet design (use
+  authoritative-server or scaling-architecture).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [game, netcode, multiplayer, prediction, rollback]
 ---
 
@@ -216,9 +221,10 @@ Opposite of prediction-with-snapshots: keep a rolling buffer of the last N ticks
 1. Rewind world to that tick.
 2. Apply the new input.
 3. Re-simulate forward to the current tick.
-4. Show the corrected result (gameplay rewinds visibly).
+4. Present the corrected state; small corrections are usually invisible, large ones appear as a short visual snap.
 
-Deterministic sim highly recommended for exact rollback.
+The simulation must be deterministic (same inputs, same results on every peer), and saving/loading state must be cheap enough to re-simulate several ticks in one frame. Use input delay of a few frames to reduce how far you roll back (GGPO-style).
+
 
 ## 9. Replication & Ownership
 
@@ -249,17 +255,26 @@ Deterministic sim highly recommended for exact rollback.
 6. Delta compression + interest management for scaling.
 7. Lobby/matching, NAT traversal (STUN/TURN), spectator mode.
 
-## 13. Named Damage / Quality Checklist
+## 13. Quality Checklist
 
 - Predictability: interpolation delay ≤ 100ms; no visible jitter.
 - Fairness: lag-compensated shots; ping displayed.
 - Robustness: server owns state; clients reconnect + resync quickly.
-- Bandwidth: ≤ 100-200 kB/s per player at 30Hz typical.
+- Bandwidth: an explicit per-client budget (up and down), measured under load; delta compression and interest management keep it flat as player count grows.
 - Determinism: lockstep replays reproducible.
 
-## 14. References
+## 14. Engine Mapping and Web Transports
+- Unity Netcode for GameObjects has no built-in client prediction; Netcode for Entities does (ghost prediction and lag compensation). Unreal's `CharacterMovementComponent` predicts and reconciles character movement out of the box. Godot 4's `MultiplayerSynchronizer` neither predicts nor interpolates.
+- Browsers have no raw UDP: use WebRTC data channels (unordered, no retransmits) or WebTransport datagrams; WebSocket is reliable-ordered only.
+- The snapshot must carry the last input sequence the server processed so the client knows which pending inputs to replay.
+- Engine API table, input validation and quality gates: `references/merged-game-engine-multiplayer-netcode.md`.
 
-- `skills/game/game-engine/multiplayer-netcode/SKILL.md` — engine-level netcode architecture
+## References
 - `skills/game/game-engine/ecs-pattern/references/ecs-netcode.md` — deterministic simulation patterns
 - `skills/game/game-development/physics-engine/SKILL.md` — authoritative physics step
-- `skills/game/unity/SKILL.md` (§9), `skills/game/unreal/SKILL.md` (§7), `skills/game/godot/SKILL.md` (§8) — engine netcode APIs
+- `skills/game/game-server/authoritative-server/SKILL.md` — server tick loop and snapshots
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-game-engine-multiplayer-netcode.md` — engine mapping (Unity/Unreal/Godot), web transports, input validation and quality gates (merged from `game/game-engine/multiplayer-netcode`)

@@ -58,3 +58,10 @@ The agent acts as a Senior Reverse Engineer.
 - Provide side-by-side Assembly to C pseudo-code translations.
 - Explain the register states and stack layout before and after function calls (Prologue/Epilogue).
 - Provide conceptual Frida hook scripts (e.g., `Interceptor.attach`).
+
+## References
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-reverse-engineering.md` — Reverse Engineering & Low-Level Binary Analysis (merged from `cybersecurity/reverse-engineering`)

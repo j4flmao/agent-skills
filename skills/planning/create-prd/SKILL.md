@@ -81,7 +81,7 @@ PRD saved to docs/prd-{YYYY-MM-DD}.md
 Epics: {n}
 Stories: {n}
 Non-functional requirements: {n}
-Next skill: create-adr
+Next skill: create-tech-spec
 ```
 
 No preamble. No postamble. No explanations. No filler/hedging/transitions.
@@ -448,5 +448,5 @@ Stories without connection to the brief or business goals. Every story should an
 
 ## Handoff
 Output: `docs/prd-{YYYY-MM-DD}.md`
-Next skill: create-adr
+Next skill: create-tech-spec
 Carry forward: brief content, epics list, priority order, non-functional requirements.

@@ -11,7 +11,7 @@ Every transaction produces at least two entries: a debit on one account and a cr
 ```python
 from dataclasses import dataclass, field
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 @dataclass
@@ -25,7 +25,7 @@ class LedgerEntry:
     balance_before: Decimal | None = None
     balance_after: Decimal | None = None
     description: str = ""
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: dict = field(default_factory=dict)
 
 @dataclass
@@ -35,7 +35,7 @@ class Transaction:
     transaction_type: str = ""
     entries: list[LedgerEntry] = field(default_factory=list)
     status: str = "pending"
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: datetime | None = None
 ```
 
@@ -65,7 +65,7 @@ class LedgerEngine:
                 await self.accounts.update_balance(account)
                 await self._save_entry(entry)
             tx.status = "completed"
-            tx.completed_at = datetime.utcnow()
+            tx.completed_at = datetime.now(timezone.utc)
             await self._save_transaction(tx)
         return tx
 

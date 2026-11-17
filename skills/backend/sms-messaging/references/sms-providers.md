@@ -10,7 +10,7 @@ SMS messaging requires integration with third-party providers that handle the ac
 ```python
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from decimal import Decimal
 
@@ -35,7 +35,7 @@ class SMSMessage:
     cost: Decimal = Decimal("0")
     error_code: str | None = None
     error_message: str | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     delivered_at: datetime | None = None
 
 class SMSProvider(ABC):
@@ -238,7 +238,7 @@ class RoutingRule:
         if self.max_segments and message.segments > self.max_segments:
             return False
         if self.time_window:
-            current_hour = datetime.utcnow().hour
+            current_hour = datetime.now(timezone.utc).hour
             start, end = self.time_window
             if not (start <= current_hour < end):
                 return False
@@ -293,7 +293,7 @@ class SMSCostTracker:
         await self.db.execute(query,
             message.id, message.provider, message.segments,
             message.cost / message.segments if message.segments else 0,
-            message.cost, "USD", country, datetime.utcnow()
+            message.cost, "USD", country, datetime.now(timezone.utc)
         )
 
     async def monthly_spend(self, year: int, month: int) -> dict:

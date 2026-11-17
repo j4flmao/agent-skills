@@ -167,7 +167,6 @@
           "frontend/universal/tailwind-css",
           "frontend/universal/authentication",
           "frontend/universal/error-handling",
-          "frontend/universal/security",
           "frontend/universal/responsive-design",
           "frontend/universal/internationalization",
           "frontend/universal/image-optimization",
@@ -282,7 +281,7 @@
         "2": [
           "devops/github-actions",
           "devops/cicd-pipeline",
-          "quality/e2e-testing",
+          "quality/quality-e2e-testing",
           "quality/integration-testing",
           "frontend/universal/design-system",
           "backend/universal/caching",
@@ -295,7 +294,6 @@
           "devops/progressive-delivery",
           "backend/universal/feature-flags",
           "frontend/universal/performance",
-          "security/api-security",
           "devops/database-migration"
         ]
       },
@@ -330,7 +328,6 @@
           "mobile/universal/networking",
           "mobile/universal/storage",
           "mobile/universal/testing",
-          "mobile/universal/security",
           "mobile/universal/performance"
         ],
         "2": [
@@ -391,7 +388,6 @@
           "desktop/gnome"
         ],
         "3": [
-          "frontend/universal/security",
           "dev-loop/performance-profiler",
           "devops/github-actions"
         ]
@@ -460,7 +456,7 @@
         "security",
         "backend"
       ],
-      "watchOut": "Add only the cloud you run on (`devops/aws`, `devops/azure`, `devops/gcp`, `devops/hetzner`, …). `devops/chaos-engineering` and `site-reliability-engineering/chaos-engineering` overlap: keep one.",
+      "watchOut": "Add only the cloud you run on (`devops/aws`, `devops/azure`, `devops/gcp`, `devops/hetzner`, …). `devops/chaos-engineering` and `devops/chaos-engineering` overlap: keep one.",
       "security": [
         "security/devsecops",
         "security/secrets-management",
@@ -490,7 +486,7 @@
           "enterprise/sla-management"
         ],
         "3": [
-          "site-reliability-engineering/chaos-engineering",
+          "devops/chaos-engineering",
           "enterprise/business-continuity",
           "devops/kubernetes-internals",
           "personas/devops-sre-engineer"
@@ -504,7 +500,7 @@
         "devops-platform",
         "security"
       ],
-      "watchOut": "`devops/incident-response` and `site-reliability-engineering/incident-response` overlap: keep the SRE one if you run formal postmortems, otherwise the DevOps one.",
+      "watchOut": "`devops/incident-response` and `devops/incident-response` overlap: keep the SRE one if you run formal postmortems, otherwise the DevOps one.",
       "security": [
         "security/secrets-management",
         "security/container-security"
@@ -545,7 +541,6 @@
           "data/reverse-etl",
           "data/data-clean-room",
           "data/data-cost-optimization",
-          "data/data-engineering/*",
           "architecture/databases/*"
         ]
       },
@@ -635,7 +630,6 @@
         "3": [
           "rnd/ai-agents/*",
           "rnd/security/adversarial-prompting",
-          "rnd/security/ai-defense-mechanisms",
           "prompt-engineering/tree-of-thoughts",
           "planning/agent-*",
           "personas/ai-architect"
@@ -713,8 +707,7 @@
           "blockchain/blockchain-core",
           "blockchain/blockchain-application",
           "blockchain/blockchain-testing",
-          "blockchain/blockchain-security",
-          "blockchain/smart-contract-security"
+          "blockchain/blockchain-security"
         ],
         "2": [
           "blockchain/blockchain-ethereum",
@@ -726,7 +719,6 @@
         ],
         "3": [
           "blockchain/blockchain-zk",
-          "blockchain/zero-knowledge-proofs",
           "blockchain/blockchain-cross-chain",
           "blockchain/blockchain-solana",
           "blockchain/blockchain-bitcoin",
@@ -742,7 +734,7 @@
         "security",
         "frontend"
       ],
-      "watchOut": "`blockchain/blockchain-defi` and `blockchain/defi-protocols` overlap, as do `blockchain-zk` and `zero-knowledge-proofs`; keep the `blockchain-*` versions unless you need the shorter ones.",
+      "watchOut": "`blockchain/blockchain-defi` and `blockchain/blockchain-defi` overlap, as do `blockchain-zk` and `zero-knowledge-proofs`; keep the `blockchain-*` versions unless you need the shorter ones.",
       "security": [
         "security/secrets-management"
       ]
@@ -754,7 +746,7 @@
       "levels": {
         "1": [
           "game/game-engine/patterns",
-          "game/ecs-architecture",
+          "game/game-engine/ecs-pattern",
           "game/game-development/physics-engine",
           "game/client-engine/input-systems"
         ],
@@ -845,15 +837,13 @@
       "levels": {
         "1": [
           "planning/create-tech-spec",
-          "system-design/database-sharding",
+          "architecture/databases/scaling-and-sharding",
           "system-design/distributed-consensus",
           "backend/universal/microservices",
           "backend/universal/event-driven",
           "architecture/system-design/domain-driven-design"
         ],
         "2": [
-          "architecture/system-design/microservices-patterns",
-          "architecture/event-driven",
           "architecture/crdts",
           "architecture/databases/*",
           "backend/universal/cqrs-patterns",
@@ -866,8 +856,8 @@
           "enterprise/architecture-governance",
           "enterprise/togaf-zachman",
           "enterprise/legacy-migration",
-          "enterprise/multi-tenant",
-          "architecture/micro-frontends",
+          "backend/universal/multi-tenancy",
+          "frontend/universal/microfrontend",
           "personas/system-architect"
         ]
       },
@@ -951,7 +941,7 @@
           "management/team-topology",
           "management/change-management",
           "management/okr-kpi",
-          "management/cost-benefit",
+          "planning/cost-benefit",
           "dev-loop/tech-debt-tracker"
         ],
         "3": [
@@ -970,7 +960,7 @@
         "product",
         "quality"
       ],
-      "watchOut": "`management/agile-scrum` and `management/agile-scrum-kanban` overlap; keep `agile-scrum-kanban`.",
+      "watchOut": "`management/agile-scrum-kanban` and `management/agile-scrum-kanban` overlap; keep `agile-scrum-kanban`.",
       "security": [
         "management/security"
       ]
@@ -997,7 +987,6 @@
           "mobile/universal/testing"
         ],
         "3": [
-          "quality-assurance/testing-strategies/*",
           "planning/bdd-atdd",
           "management/qa",
           "management/qc",
@@ -1012,7 +1001,7 @@
         "backend",
         "mobile"
       ],
-      "watchOut": "`quality/e2e-testing` and `quality/quality-e2e-testing` overlap; keep `quality-e2e-testing`.",
+      "watchOut": "`quality/quality-e2e-testing` and `quality/quality-e2e-testing` overlap; keep `quality-e2e-testing`.",
       "security": [
         "security/sast-dast"
       ]
@@ -1081,7 +1070,6 @@
         "3": [
           "frontend/react/react-fiber",
           "frontend/nextjs/internals",
-          "web/nextjs-server-components",
           "frontend/universal/storybook",
           "quality/visual-testing"
         ]
@@ -1099,7 +1087,7 @@
         "node-backend",
         "design-ux"
       ],
-      "watchOut": "`frontend/react/nextjs`, `frontend/nextjs/internals` and `web/nextjs-server-components` overlap; start with the first and add the others only for App Router internals."
+      "watchOut": "`frontend/react/nextjs`, `frontend/nextjs/internals` and `frontend/react/nextjs` overlap; start with the first and add the others only for App Router internals."
     },
     {
       "id": "vue",
@@ -1517,8 +1505,6 @@
         "3": [
           "devops/pulumi",
           "devops/hybrid-cloud",
-          "enterprise/finops-cloud-cost",
-          "devops/cloud-cost-optimization",
           "devops/oracle-cloud",
           "devops/digitalocean",
           "devops/hetzner",
@@ -1555,7 +1541,6 @@
         ],
         "2": [
           "devops/observability/prometheus-grafana",
-          "devops/observability/opentelemetry-tracing",
           "devops/apm-observability",
           "cloud-native/distributed-tracing",
           "site-reliability-engineering/sli-slo-management"
@@ -1592,8 +1577,7 @@
           "data/nosql-database",
           "data/database-internals",
           "architecture/databases/postgresql-internals",
-          "architecture/databases/scaling-and-sharding",
-          "system-design/database-sharding"
+          "architecture/databases/scaling-and-sharding"
         ],
         "3": [
           "data/graph-database",
@@ -1848,7 +1832,6 @@
           "ecommerce/payment-processing"
         ],
         "2": [
-          "enterprise/multi-tenant",
           "backend/universal/feature-flags",
           "product/pricing-strategy",
           "product/onboarding-flow",
@@ -1889,7 +1872,6 @@
           "backend/universal/idempotency"
         ],
         "2": [
-          "ecommerce/checkout-optimization",
           "ecommerce/headless",
           "backend/universal/search-patterns",
           "backend/universal/caching",
@@ -1897,7 +1879,6 @@
         ],
         "3": [
           "playbooks/high-scale-ecommerce",
-          "ecommerce/payments",
           "frontend/universal/performance",
           "web/performance"
         ]
@@ -1914,7 +1895,7 @@
         "saas",
         "performance"
       ],
-      "watchOut": "`ecommerce/payment-processing` and `ecommerce/payments` overlap; start with `payment-processing`."
+      "watchOut": "`ecommerce/payment-processing` and `ecommerce/payment-processing` overlap; start with `payment-processing`."
     },
     {
       "id": "realtime",
@@ -1927,14 +1908,12 @@
           "backend/universal/message-queue"
         ],
         "2": [
-          "backend/universal/data-streaming",
           "data/streaming",
           "architecture/crdts",
           "mobile/universal/push-notifications",
           "backend/sms-messaging"
         ],
         "3": [
-          "data/data-engineering/kafka-event-streaming",
           "backend/universal/distributed-locking",
           "game/multiplayer-netcode"
         ]
@@ -2074,8 +2053,7 @@
       "levels": {
         "1": [
           "dev-loop/readme-writer",
-          "backend/universal/openapi-documentation",
-          "devops/api-documentation"
+          "backend/universal/openapi-documentation"
         ],
         "2": [
           "planning/create-tech-spec",
@@ -2097,7 +2075,7 @@
         "product",
         "oss-maintainer"
       ],
-      "watchOut": "`backend/universal/openapi-documentation` and `devops/api-documentation` overlap; keep the backend one for spec-first work."
+      "watchOut": "`backend/universal/openapi-documentation` and `backend/universal/openapi-documentation` overlap; keep the backend one for spec-first work."
     },
     {
       "id": "beginner",
@@ -2151,11 +2129,10 @@
           "web/performance",
           "frontend/universal/image-optimization",
           "frontend/universal/rendering-strategies",
-          "mobile/universal/performance",
-          "backend/universal/load-testing"
+          "mobile/universal/performance"
         ],
         "3": [
-          "system-design/rate-limiting",
+          "backend/universal/rate-limiting",
           "low-level/cpu-architecture",
           "ml/inference-optimization"
         ]
@@ -2168,7 +2145,7 @@
         "sre",
         "frontend"
       ],
-      "watchOut": "`quality/load-testing` and `backend/universal/load-testing` overlap; keep `quality/load-testing`."
+      "watchOut": "`quality/load-testing` and `quality/load-testing` overlap; keep `quality/load-testing`."
     },
     {
       "id": "accessibility",
@@ -2403,7 +2380,6 @@
           "game/game-engine/patterns"
         ],
         "2": [
-          "game/ecs-architecture",
           "game/game-engine/ecs-pattern",
           "game/game-development/physics-engine",
           "game/client-engine/input-systems",
@@ -2546,7 +2522,6 @@
         "2": [
           "game/game-server/interest-management",
           "game/game-server/scaling-architecture",
-          "game/game-engine/multiplayer-netcode",
           "backend/universal/websocket-patterns",
           "devops/kubernetes-autoscaling"
         ],
@@ -2569,7 +2544,7 @@
         "sre",
         "realtime"
       ],
-      "watchOut": "`game/multiplayer-netcode` and `game/game-engine/multiplayer-netcode` overlap; start with the first."
+      "watchOut": "`game/multiplayer-netcode` and `game/multiplayer-netcode` overlap; start with the first."
     },
     {
       "id": "platform-engineering",
@@ -2584,7 +2559,6 @@
         ],
         "2": [
           "devops/kubernetes-operators",
-          "cloud-native/k8s-operators",
           "devops/gitops-advanced",
           "devops/policy-as-code",
           "devops/progressive-delivery",
@@ -2609,7 +2583,7 @@
         "devops-platform",
         "sre"
       ],
-      "watchOut": "`devops/kubernetes-operators` and `cloud-native/k8s-operators` overlap; keep one unless you write operators daily."
+      "watchOut": "`devops/kubernetes-operators` and `devops/kubernetes-operators` overlap; keep one unless you write operators daily."
     },
     {
       "id": "finops",
@@ -2617,9 +2591,7 @@
       "who": "You make cloud spend visible, accountable and lower.",
       "levels": {
         "1": [
-          "devops/finops",
-          "devops/cloud-cost-optimization",
-          "enterprise/finops-cloud-cost"
+          "devops/finops"
         ],
         "2": [
           "enterprise/cost-governance",
@@ -2642,7 +2614,7 @@
         "cloud",
         "management"
       ],
-      "watchOut": "`devops/finops` and `enterprise/finops-cloud-cost` overlap; engineers keep the DevOps one, finance-facing roles the enterprise one."
+      "watchOut": "`devops/finops` and `devops/finops` overlap; engineers keep the DevOps one, finance-facing roles the enterprise one."
     },
     {
       "id": "analytics-engineer",
@@ -2687,9 +2659,7 @@
       "who": "You build Kafka, Flink and CDC pipelines.",
       "levels": {
         "1": [
-          "data/streaming",
-          "data/data-engineering/kafka-event-streaming",
-          "backend/universal/data-streaming"
+          "data/streaming"
         ],
         "2": [
           "data/schema-registry",
@@ -2701,7 +2671,7 @@
         "3": [
           "data/data-lakehouse",
           "data/data-observability",
-          "architecture/event-driven"
+          "backend/universal/event-driven"
         ]
       },
       "security": [
@@ -2899,7 +2869,6 @@
           "data/streaming"
         ],
         "3": [
-          "embedded-systems/rtos-fundamentals",
           "ml/inference-optimization"
         ]
       },
@@ -2923,13 +2892,10 @@
       "levels": {
         "1": [
           "blockchain/blockchain-defi",
-          "blockchain/smart-contract-security",
           "blockchain/blockchain-application",
           "blockchain/blockchain-testing"
         ],
         "2": [
-          "blockchain/defi-protocols",
-          "niche/fintech-web3/defi-smart-contracts",
           "blockchain/blockchain-patterns",
           "blockchain/blockchain-cross-chain",
           "blockchain/blockchain-data-indexing"
@@ -2959,7 +2925,6 @@
       "levels": {
         "1": [
           "blockchain/blockchain-zk",
-          "blockchain/zero-knowledge-proofs",
           "blockchain/blockchain-cryptography"
         ],
         "2": [
@@ -3000,7 +2965,6 @@
           "quantum-computing/quantum-error-correction"
         ],
         "3": [
-          "fundamental-truths/quantum-error-correction",
           "quantum-computing/post-quantum-crypto",
           "personas/quantum-scientist"
         ]
@@ -3013,7 +2977,7 @@
         "zk",
         "ml-ai"
       ],
-      "watchOut": "`quantum-computing/quantum-error-correction` and `fundamental-truths/quantum-error-correction` overlap; the first is practical, the second theoretical."
+      "watchOut": "`quantum-computing/quantum-error-correction` and `quantum-computing/quantum-error-correction` overlap; the first is practical, the second theoretical."
     },
     {
       "id": "qa-automation",
@@ -3022,7 +2986,6 @@
       "levels": {
         "1": [
           "quality/quality-e2e-testing",
-          "quality-assurance/testing-strategies/e2e-playwright",
           "quality/regression-testing",
           "quality/smoke-testing"
         ],
@@ -3030,7 +2993,6 @@
           "quality/visual-testing",
           "quality/contract-testing",
           "quality/load-testing",
-          "frontend/e2e-testing",
           "devops/github-actions"
         ],
         "3": [
@@ -3049,7 +3011,7 @@
         "quality",
         "frontend"
       ],
-      "watchOut": "Three Playwright-flavoured skills overlap (`quality-e2e-testing`, `e2e-playwright`, `frontend/e2e-testing`); keep the first two."
+      "watchOut": "Three Playwright-flavoured skills overlap (`quality-e2e-testing`, `e2e-playwright`, `quality/quality-e2e-testing`); keep the first two."
     },
     {
       "id": "web-growth",
@@ -3134,7 +3096,6 @@
       "levels": {
         "1": [
           "backend/universal/microservices",
-          "backend/universal/design-patterns/microservices",
           "backend/universal/event-driven",
           "backend/universal/resilience-patterns"
         ],
@@ -3150,7 +3111,7 @@
           "backend/universal/cqrs-patterns",
           "backend/universal/event-sourcing",
           "backend/universal/distributed-locking",
-          "backend/universal/contract-testing"
+          "quality/contract-testing"
         ]
       },
       "security": [
@@ -3174,7 +3135,6 @@
       "levels": {
         "1": [
           "backend/universal/graphql-patterns",
-          "backend/graphql-optimization",
           "backend/universal/api-design"
         ],
         "2": [
@@ -3230,7 +3190,7 @@
         "management",
         "product"
       ],
-      "watchOut": "`management/agile-scrum` duplicates `agile-scrum-kanban`; keep the Kanban one."
+      "watchOut": "`management/agile-scrum-kanban` duplicates `agile-scrum-kanban`; keep the Kanban one."
     }
   ],
   "profiles": [

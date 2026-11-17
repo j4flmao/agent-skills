@@ -1,7 +1,7 @@
 ---
 name: kubernetes-architecture
 description: >
-  Use this skill when the user says 'kubernetes architecture', 'control plane components', 'what does the kubelet do', 'kube-proxy modes', 'etcd role', 'how a pod gets scheduled', 'deployment strategies kubernetes', 'rolling update vs blue green vs canary', 'kubernetes overview for my team'. Explains Kubernetes components and the request path from `kubectl apply` to running containers, and chooses a deployment strategy (rolling, recreate, blue/green, canary). Do NOT use for: deep etcd/apiserver/informer internals (kubernetes-internals), workload manifests and pod patterns (cloud-native-kubernetes-patterns), progressive delivery tooling (devops-progressive-delivery).
+  Use when the user asks for a Kubernetes architecture overview, control plane components, what the kubelet does, kube-proxy modes, how a pod gets scheduled, or rolling update vs blue/green vs canary. Traces kubectl apply to running containers and picks a rollout strategy. Not for etcd/apiserver internals (use kubernetes-internals) or rollout tooling (use devops-progressive-delivery).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

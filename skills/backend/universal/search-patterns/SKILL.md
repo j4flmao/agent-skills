@@ -446,7 +446,7 @@ const suggestQuery = {
 - Index aliases for all production reads, write to specific alias, swap on reindex
 - Set resource limits: max shards per node, field count limit
 - Monitor search latency p95/p99
-- Tune refresh interval for write-heavy workloads (30s default, increase to 60-120s for bulk)
+- Tune refresh interval for write-heavy workloads (Elasticsearch default is 1s; raise to 30s or more, or `-1` during a bulk reindex, then restore)
 - Use `dynamic: strict` for production mappings
 - Synonyms should be content-managed, not hardcoded
 - Always use field-level doc_values for aggregation/sorting fields

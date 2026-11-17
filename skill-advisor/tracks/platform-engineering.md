@@ -25,14 +25,13 @@ Install these first. They cover the everyday work of this role and rarely confli
 | [`kubernetes`](../../skills/devops/kubernetes/SKILL.md) | `devops/kubernetes` | Design, deploy, secure, and operate production-grade Kubernetes clusters covering architecture decisions, networking, storage, security,… |
 | [`gitops`](../../skills/devops/gitops/SKILL.md) | `devops/gitops` | Manage Kubernetes deployments using Git as the single source of truth with ArgoCD or Flux. |
 
-## Level 2 — Professional (6 skills)
+## Level 2 — Professional (5 skills)
 
 Add when the project grows: production concerns, scaling and team workflows.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
 | [`devops-kubernetes-operators`](../../skills/devops/kubernetes-operators/SKILL.md) | `devops/kubernetes-operators` | Build Kubernetes operators and custom controllers using Kubebuilder, Operator SDK, or raw controller-runtime to automate application management on… |
-| [`cloud-native-k8s-operators`](../../skills/cloud-native/k8s-operators/SKILL.md) | `cloud-native/k8s-operators` | An operator is a custom controller plus a CRD that encodes operational knowledge (provisioning, upgrades, failover, backup) as code. |
 | [`devops-gitops-advanced`](../../skills/devops/gitops-advanced/SKILL.md) | `devops/gitops-advanced` | Implement advanced GitOps patterns: multi-cluster management, ApplicationSets, sync strategies, progressive delivery, cluster bootstrapping, and… |
 | [`devops-policy-as-code`](../../skills/devops/policy-as-code/SKILL.md) | `devops/policy-as-code` | Implement policy as code using OPA/Rego and Kyverno: write admission policies, enforce guardrails, validate configurations, and automate… |
 | [`devops-progressive-delivery`](../../skills/devops/progressive-delivery/SKILL.md) | `devops/progressive-delivery` | Implement progressive delivery strategies: canary releases, blue-green deployments, feature flags in production, traffic mirroring, and automated… |
@@ -59,10 +58,10 @@ Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a 
 npx skills add j4flmao/agent-skills --skill devops-platform-engineering --skill devops-internal-developer-platform --skill kubernetes --skill gitops --skill devsecops --skill security-container-security --skill security-secrets-management
 ```
 
-**Level 1 + 2 + security baseline (13 skills):**
+**Level 1 + 2 + security baseline (12 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill devops-platform-engineering --skill devops-internal-developer-platform --skill kubernetes --skill gitops --skill devops-kubernetes-operators --skill cloud-native-k8s-operators --skill devops-gitops-advanced --skill devops-policy-as-code --skill devops-progressive-delivery --skill helm-patterns --skill devsecops --skill security-container-security --skill security-secrets-management
+npx skills add j4flmao/agent-skills --skill devops-platform-engineering --skill devops-internal-developer-platform --skill kubernetes --skill gitops --skill devops-kubernetes-operators --skill devops-gitops-advanced --skill devops-policy-as-code --skill devops-progressive-delivery --skill helm-patterns --skill devsecops --skill security-container-security --skill security-secrets-management
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -73,7 +72,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`kubernetes-platform`](../bundles.md#kubernetes-platform) | 36 | Kubernetes and platform engineering: clusters, operators, Helm, GitOps, service mesh, autoscaling, policy, IDPs |
+| [`kubernetes-platform`](../bundles.md#kubernetes-platform) | 31 | Kubernetes and platform engineering: clusters, operators, Helm, GitOps, service mesh, autoscaling, policy, IDPs |
 
 ## Combine with
 
@@ -82,4 +81,4 @@ Bundles are installed with the same command; each one's full command is on the [
 
 ## Watch out
 
-`devops/kubernetes-operators` and `cloud-native/k8s-operators` overlap; keep one unless you write operators daily.
+`devops/kubernetes-operators` and `devops/kubernetes-operators` overlap; keep one unless you write operators daily.

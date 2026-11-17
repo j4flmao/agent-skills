@@ -1,7 +1,7 @@
 ---
 name: cloud-native-security-offensive
 description: >
-  Use this skill when the user says 'aws privilege escalation paths', 'cloud attack path', 'imds ssrf', 'iam passrole abuse', 'azure managed identity abuse', 'cloud threat model', 'cloud red team review', 'how could an attacker escalate in our aws'. Explains cloud attack paths mechanically for authorized assessment and threat modeling, and always pairs each path with detection and remediation. Do NOT use for: implementing guardrails and detections in depth (cloud-native-security-defensive), general penetration-testing methodology (security/penetration-testing).
+  Use when the user asks about AWS privilege escalation paths, cloud attack paths, IMDS SSRF, iam:PassRole abuse, Azure managed identity abuse, or a cloud threat model for an authorized review. Explains each path with its detection and remediation. Not for building guardrails (use cloud-native-security-defensive) or general pentest method (use red-team-pentest-methodology).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

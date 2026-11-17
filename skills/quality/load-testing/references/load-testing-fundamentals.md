@@ -188,13 +188,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: grafana/setup-k6-action@v1   # grafana/k6-action is archived
       - name: Run k6 load test
-        uses: grafana/k6-action@v0.3.0
+        uses: grafana/run-k6-action@v1
         with:
-          filename: k6-scripts/checkout-load-test.js
-          flags: |
-            --out json=results.json
-            --env BASE_URL=${{ github.event.inputs.target_url }}
+          path: k6-scripts/checkout-load-test.js
+          flags: --out json=results.json --env BASE_URL=${{ github.event.inputs.target_url }}
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:

@@ -80,9 +80,9 @@ Bundles are installed with the same command; each one's full command is on the [
 | Bundle | Skills | Description |
 |--------|--------|-------------|
 | [`systems-programming`](../bundles.md#systems-programming) | 17 | Systems programming: C/C++/Rust/assembly, compilers, kernels, eBPF, networking, lock-free and kernel-bypass |
-| [`embedded-iot`](../bundles.md#embedded-iot) | 9 | Embedded and IoT: RTOS, bare-metal Rust, C/C++ patterns, IoT protocols, edge AI |
+| [`embedded-iot`](../bundles.md#embedded-iot) | 8 | Embedded and IoT: RTOS, bare-metal Rust, C/C++ patterns, IoT protocols, edge AI |
 | [`languages`](../bundles.md#languages) | 14 | Programming language deep dives: TypeScript, Python, Go, Rust, Java, Kotlin, Swift, C#, C, C++, Scala, Elixir, Dart, Assembly |
-| [`quantum-computing`](../bundles.md#quantum-computing) | 12 | Quantum computing: qubits and gates, algorithms (Grover, Shor), Qiskit, error correction, post-quantum cryptography |
+| [`quantum-computing`](../bundles.md#quantum-computing) | 11 | Quantum computing: qubits and gates, algorithms (Grover, Shor), Qiskit, error correction, post-quantum cryptography |
 
 ## Combine with
 

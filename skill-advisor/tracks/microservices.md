@@ -13,14 +13,13 @@ These skills make the agent apply this domain's security practices by default. T
 | [`security-api-security`](../../skills/security/api-security/SKILL.md) | `security/api-security` | Design comprehensive API security controls covering OWASP API Top 10 threat modeling, authentication (JWT, OAuth2, API keys), rate limiting (token… |
 | [`zero-trust-identity`](../../skills/cybersecurity/zero-trust-identity/SKILL.md) | `cybersecurity/zero-trust-identity` | Explain Zero Trust identity mechanics — OIDC/OAuth2 flows (Authorization Code + PKCE), JWT signature validation (RS256 vs HS256 and… |
 
-## Level 1 — Essentials (4 skills)
+## Level 1 — Essentials (3 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
 | [`microservices`](../../skills/backend/universal/microservices/SKILL.md) | `backend/universal/microservices` | Guide microservices decomposition, communication patterns, data ownership, and migration strategies. |
-| [`microservice-design-patterns`](../../skills/backend/universal/design-patterns/microservices/SKILL.md) | `backend/universal/design-patterns/microservices` | With a database per service, one business operation spans several local transactions. |
 | [`backend-event-driven`](../../skills/backend/universal/event-driven/SKILL.md) | `backend/universal/event-driven` | Design event-driven systems with clear event boundaries, reliable delivery, observable flows, and error recovery. |
 | [`backend-resilience-patterns`](../../skills/backend/universal/resilience-patterns/SKILL.md) | `backend/universal/resilience-patterns` | Protect backend services from cascading failures by applying circuit breakers, retries with backoff, bulkheads, timeouts, and fallbacks. |
 
@@ -46,22 +45,22 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 | [`backend-cqrs-patterns`](../../skills/backend/universal/cqrs-patterns/SKILL.md) | `backend/universal/cqrs-patterns` | Separate read and write models so each can be optimized independently — write side for consistency and validation, read side for query performance… |
 | [`backend-event-sourcing`](../../skills/backend/universal/event-sourcing/SKILL.md) | `backend/universal/event-sourcing` | Store state changes as an append-only sequence of events. |
 | [`backend-distributed-locking`](../../skills/backend/universal/distributed-locking/SKILL.md) | `backend/universal/distributed-locking` | Coordinate access to shared resources across multiple service instances using distributed locks with guaranteed safety properties. |
-| [`backend-contract-testing`](../../skills/backend/universal/contract-testing/SKILL.md) | `backend/universal/contract-testing` | Use consumer-driven contract (CDC) testing with Pact to verify that provider services satisfy consumer expectations, replacing brittle end-to-end… |
+| [`quality-contract-testing`](../../skills/quality/contract-testing/SKILL.md) | `quality/contract-testing` | Implement consumer-driven contract testing with Pact to verify API compatibility between services without brittle integration tests. |
 
 ## Install
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 + security baseline (6 skills):**
+**Level 1 + security baseline (5 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill microservices --skill microservice-design-patterns --skill backend-event-driven --skill backend-resilience-patterns --skill security-api-security --skill zero-trust-identity
+npx skills add j4flmao/agent-skills --skill microservices --skill backend-event-driven --skill backend-resilience-patterns --skill security-api-security --skill zero-trust-identity
 ```
 
-**Level 1 + 2 + security baseline (12 skills):**
+**Level 1 + 2 + security baseline (11 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill microservices --skill microservice-design-patterns --skill backend-event-driven --skill backend-resilience-patterns --skill backend-transactional-outbox --skill backend-idempotency --skill backend-message-queue --skill devops-service-mesh --skill cloud-native-distributed-tracing --skill backend-api-versioning --skill security-api-security --skill zero-trust-identity
+npx skills add j4flmao/agent-skills --skill microservices --skill backend-event-driven --skill backend-resilience-patterns --skill backend-transactional-outbox --skill backend-idempotency --skill backend-message-queue --skill devops-service-mesh --skill cloud-native-distributed-tracing --skill backend-api-versioning --skill security-api-security --skill zero-trust-identity
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -73,7 +72,7 @@ Bundles are installed with the same command; each one's full command is on the [
 | Bundle | Skills | Description |
 |--------|--------|-------------|
 | [`backend-patterns`](../bundles.md#backend-patterns) | 27 | Advanced backend patterns: CQRS, Event Sourcing, Saga, Transactional Outbox + related universal skills |
-| [`architecture-system-design`](../bundles.md#architecture-system-design) | 23 | Software and solution architecture: system design, DDD, microservices, event-driven, CQRS/ES, sagas, CRDTs, sharding, consensus, ADRs |
+| [`architecture-system-design`](../bundles.md#architecture-system-design) | 20 | Software and solution architecture: system design, DDD, microservices, event-driven, CQRS/ES, sagas, CRDTs, sharding, consensus, ADRs |
 
 ## Combine with
 

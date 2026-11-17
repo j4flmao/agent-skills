@@ -1,18 +1,14 @@
 ---
 name: agent-observability
 description: >
-  Use this skill when the user says 'agent observability', 'trace agent reasoning',
-  'debug agent loop', 'LLM cost tracking', 'agent audit log', 'OpenTelemetry for agents'.
-  Covers
-  reasoning trace visualization, OpenTelemetry integration for agent systems,
-  distributed tracing across multi-agent chains, decision audit logging,
-  performance profiling, anomaly detection, cost tracking and optimization,
-  and latency analysis for AI agent deployments. Do NOT use for: generic service
-  observability without LLM/agent components (devops/opentelemetry), or offline
-  model evaluation (ai evals skills).
+  Use when the user asks about agent observability, tracing agent reasoning, debugging an agent loop,
+  OpenTelemetry GenAI spans for LLM calls, LLM cost tracking per agent, agent audit logs or hallucination/eval
+  monitoring in production. Produces instrumentation config, trace schema, dashboards, alerts and cost
+  attribution. Not for generic service tracing without LLMs (use devops-opentelemetry).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 type: skill
 compatibility:
   claude-code: true
@@ -354,20 +350,22 @@ User Request: "Summarize the Q3 financial report and compare to Q2"
 ## Rules and Guidelines
 
 1. **Never log raw prompts or completions in metrics**: Prompts and completions contain
-   sensitive data and have unbounded cardinality. Store them in traces with appropriate
-   access controls, never as metric labels.
+   sensitive data and have unbounded cardinality. Store them in traces only after
+   redacting secrets and PII, behind access controls and a retention limit, never as
+   metric labels.
 
 2. **Propagate trace context through every boundary**: Every HTTP call, gRPC call, queue
    message, and sandbox invocation must carry W3C TraceContext headers. Broken trace
    context creates observability blind spots.
 
-3. **Cost attribution must be real-time**: Cost data older than 5 minutes is too stale for
-   anomaly detection. Compute cost at span-completion time using pre-configured pricing
-   tables.
+3. **Cost attribution must be near real-time**: Runaway loops burn budget in minutes, so
+   compute cost at span-completion time from versioned pricing config and alert on
+   per-run budgets rather than waiting for the provider invoice.
 
 4. **Audit logs are append-only and immutable**: Once written, audit entries must never be
-   modified or deleted within the retention period. Use cryptographic hash chains to detect
-   tampering.
+   modified or deleted within the retention period. Use hash chains plus signed or
+   externally anchored checkpoints (or WORM storage) to detect tampering; an unkeyed hash
+   chain alone can be recomputed by whoever can rewrite the log.
 
 5. **Alert on absence, not just presence**: Missing traces, gaps in metric streams, and
    silent agents are often more dangerous than explicit errors. Monitor heartbeats and
@@ -387,8 +385,8 @@ User Request: "Summarize the Q3 financial report and compare to Q2"
 ## Handoff
 
 - **sandbox-execution**: Sandbox telemetry is a key input to the observability pipeline
-- **prompt-engineering**: Reasoning traces inform prompt optimization and debugging
-- **safety-guardrails**: Anomaly detection feeds into safety monitoring systems
+- **prompt-chain-of-thought**: Reasoning traces inform prompt optimization and debugging
+- **ai-defense-mechanisms**: Anomaly detection feeds into guardrail monitoring
 
 <!-- COMPRESSION: agent-observability | reasoning-traces + otel + distributed-tracing + audit-logs + anomaly-detection + cost-tracking | v2.0.0 -->
 

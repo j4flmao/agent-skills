@@ -438,7 +438,7 @@ public async Task ValidationBehavior_ShouldThrowWhenInvalid()
 Use `WebApplicationFactory<T>` with in-memory or TestContainers SQL Server. Seed data in test setup. Verify with `Shouldly` or `FluentAssertions`. Use `Verify` for snapshot testing of complex responses.
 
 ## Rules
-- MediatR pipeline order: Logging → Validation → Performance → Exception → Transaction.
+- MediatR pipeline order: Logging → Validation → Performance → Exception → Transaction. MediatR v13+ is commercially licensed (2025); the same pipeline works with plain decorators or another mediator.
 - Result pattern at Application boundary — never throw for expected failure paths.
 - Domain events dispatched via MediatR `INotification`, never directly.
 - Outbox pattern for reliable messaging — write outbox rows in the same transaction as the state change; publish to the broker only after commit (background dispatcher).

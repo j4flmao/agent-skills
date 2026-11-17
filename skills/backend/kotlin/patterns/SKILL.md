@@ -585,7 +585,7 @@ Need Kotlin multiplatform support?
 - DTOs annotated with @Serializable, mapped via extension functions.
 - DI modules separated by layer (infrastructure, service, controller).
 - MockK preferred for unit tests — inline mocking discouraged.
-- runTest for coroutine tests, TestCoroutineDispatcher for time control.
+- runTest for coroutine tests; `StandardTestDispatcher` and `advanceTimeBy` for time control (`TestCoroutineDispatcher` is deprecated).
 - Domain entities are data classes — value equality.
 - Validator classes contain all business rule checks.
 - Controllers never access repositories directly.

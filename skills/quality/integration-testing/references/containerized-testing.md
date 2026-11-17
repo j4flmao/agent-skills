@@ -433,7 +433,6 @@ const container = await new GenericContainer('redis:7')
 
 `yaml
 # docker-compose.test.yml
-version: '3.8'
 services:
   app:
     build: .

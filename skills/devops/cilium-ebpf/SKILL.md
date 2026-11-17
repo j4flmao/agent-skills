@@ -1,15 +1,7 @@
 ---
 name: cilium-ebpf
 description: >
-  Use this skill when the user says 'Cilium', 'eBPF', 'BPF', 'Hubble',
-  'service mesh', 'network policy', 'cluster mesh', 'eBPF observability',
-  'kube-proxy replacement', 'CiliumNetworkPolicy', 'CiliumClusterWideNetworkPolicy',
-  'CiliumEndpoint', 'Hubble UI', 'Tetragon', 'Cilium CNI'.
-  Covers: Cilium CNI installation, eBPF-based networking, network policies,
-  Hubble observability, cluster mesh (multi-cluster), service mesh (L7 policies),
-  kube-proxy replacement, bandwidth management, encryption (Wireguard/IPsec).
-  Do NOT use for: generic Kubernetes networking (use kubernetes-patterns),
-  traditional CNI plugins (Calico, Flannel).
+  Use when the user asks about installing Cilium CNI, Hubble, CiliumNetworkPolicy, Cluster Mesh, Cilium kube-proxy replacement, WireGuard or IPsec encryption, Cilium Gateway API, or Tetragon. Produces Cilium Helm values, policies and operational checks. Not for eBPF datapath internals (use cloud-native-ebpf-networking) or Istio/Linkerd (use devops-service-mesh).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

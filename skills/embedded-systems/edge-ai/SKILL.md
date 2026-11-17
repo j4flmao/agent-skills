@@ -1,7 +1,11 @@
 ---
 name: edge-ai
 description: >
-  Use this skill when the user says 'edge AI', 'on-device inference', 'TensorRT', 'ONNX Runtime', 'TFLite', 'LiteRT', 'TinyML', 'quantization int8', 'Jetson', 'Coral', 'NPU', 'ExecuTorch', 'model on microcontroller'. Deploys trained models to edge hardware: export path (PyTorch/TF → ONNX/LiteRT/ExecuTorch), runtime and accelerator choice, post-training quantization and calibration, benchmarking latency/power, and on-device validation. Do NOT use for: model training or architecture design (use ml/deep-learning), cloud LLM serving (use ml/inference-optimization), MCU driver code (use c-cpp-patterns).
+  Use when the user asks about edge AI, on-device inference, TensorRT on Jetson,
+  ONNX Runtime, LiteRT (TFLite), TinyML, int8 quantization, Coral, NPUs or
+  ExecuTorch. Produces export, quantization and on-device benchmarking plans.
+  Not for model training (use ml-deep-learning) or cloud LLM serving (use
+  ml-inference-optimization).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

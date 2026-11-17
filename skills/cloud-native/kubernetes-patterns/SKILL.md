@@ -1,7 +1,7 @@
 ---
 name: cloud-native-kubernetes-patterns
 description: >
-  Use this skill when the user says 'k8s patterns', 'sidecar container', 'native sidecar', 'ambassador pattern', 'pod disruption budget', 'topology spread', 'pod anti-affinity', 'taints and tolerations', 'graceful shutdown kubernetes', 'admission webhook', 'validatingadmissionpolicy'. Applies structural (sidecar, ambassador, adapter, init), scheduling/resilience (PDB, topology spread, affinity, taints), lifecycle (probes, graceful shutdown) and admission patterns with correct current-API YAML. Do NOT use for: writing operators (cloud-native-k8s-operators), control-plane internals (kubernetes-internals), autoscaling (devops-kubernetes-autoscaling).
+  Use when the user asks about sidecar or native sidecar containers, ambassador/adapter/init patterns, PodDisruptionBudget, topology spread, pod anti-affinity, taints and tolerations, graceful shutdown, or ValidatingAdmissionPolicy. Produces current-API workload YAML. Not for control-plane internals (use kubernetes-internals) or autoscaling (use devops-kubernetes-autoscaling).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

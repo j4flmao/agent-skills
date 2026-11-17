@@ -1,7 +1,11 @@
 ---
 name: input-systems
 description: >
-  Use this skill when the user says 'input system', 'action mapping', 'key rebinding', 'gamepad input', 'touch gestures', 'IME text input', 'haptics', 'input latency'. Designs device-agnostic input: device abstraction, action mapping and rebinding, sampling vs events, text/IME, touch gestures, haptics and input-to-simulation timing. Do NOT use for: UI widget design (use frontend or design skills), accessibility audits of menus (use design/accessibility).
+  Use when the user asks about a game input system, action mapping, key
+  rebinding, gamepad input, touch gestures, IME text input, haptics or input
+  latency. Produces device-agnostic input architecture tied to the simulation
+  tick. Not for menu accessibility audits (use design-accessibility) or
+  Unity-specific setup (use unity).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

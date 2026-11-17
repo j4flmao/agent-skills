@@ -337,7 +337,7 @@ import play.api.mvc._
 
 val timingEssentialAction = EssentialAction { request =>
   val start = System.currentTimeMillis()
-  AkkaStreams.ignoreAfterCancellation(
+  PekkoStreams.ignoreAfterCancellation(
     Accumulator[ByteString, Result]().map { result =>
       val elapsed = System.currentTimeMillis() - start
       Logger.info(s"${request.method} ${request.uri} took ${elapsed}ms")
@@ -1699,8 +1699,8 @@ play.ws {
 
 ```scala
 import play.api.libs.ws.WSClient
-import akka.util.ByteString
-import akka.stream.scaladsl.{Source, Sink}
+import org.apache.pekko.util.ByteString
+import org.apache.pekko.stream.scaladsl.{Source, Sink}
 
 class StreamingWSClient @Inject()(
   ws: WSClient
@@ -1731,8 +1731,8 @@ class StreamingWSClient @Inject()(
 ### Response Streaming
 
 ```scala
-import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
-import akka.util.ByteString
+import org.apache.pekko.stream.scaladsl.{FileIO, Source, StreamConverters}
+import org.apache.pekko.util.ByteString
 import play.api.mvc._
 import java.nio.file.Paths
 
@@ -1769,8 +1769,8 @@ class StreamingController @Inject()(
 ### Chunked Responses
 
 ```scala
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.ByteString
 import play.api.mvc._
 import scala.concurrent.duration._
 
@@ -1799,7 +1799,7 @@ class ChunkedController @Inject()(
 ### Server-Sent Events
 
 ```scala
-import akka.stream.scaladsl.Source
+import org.apache.pekko.stream.scaladsl.Source
 import play.api.libs.EventSource
 import play.api.libs.json.Json
 import scala.concurrent.duration._
@@ -1840,7 +1840,7 @@ class SSEController @Inject()(
 ### WebSockets
 
 ```scala
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source}
 import play.api.mvc._
 import play.api.libs.json._
 
@@ -1911,11 +1911,10 @@ class AsyncOrderService @Inject()(
 
 ```scala
 import play.api.inject.{SimpleModule, Bind}
-import play.api.libs.concurrent.Akka
 
 // Dedicated dispatcher for blocking DB operations
 // application.conf
-akka {
+pekko {  # Play 3.x runs on Apache Pekko (Akka fork)
   actor {
     default-dispatcher {
       fork-join-executor {
@@ -2148,13 +2147,14 @@ play {
 slick.dbs.default {
   profile = "slick.jdbc.PostgresProfile$"
   db {
-    url = ${?JDBC_DATABASE_URL}
+    # HOCON: later keys win, so the local default comes first and the
+    # optional env override (${?VAR}) after it
     url = "jdbc:postgresql://localhost:5432/orders_dev"
+    url = ${?JDBC_DATABASE_URL}
     driver = org.postgresql.Driver
-    user = ${?DB_USER}
     user = "dev_user"
-    password = ${?DB_PASSWORD}
-    password = "dev_password"
+    user = ${?DB_USER}
+    password = ${?DB_PASSWORD}  # no committed default; set DB_PASSWORD locally
     numThreads = 10
     maxConnections = 10
     minConnections = 2
@@ -2219,10 +2219,8 @@ slick.dbs.default.db {
 play.http.secret.key = ${?APPLICATION_SECRET}
 slick.dbs.default.db.password = ${?DB_PASSWORD}
 payment.apiKey = ${?PAYMENT_API_KEY}
+// No committed fallback: the app must fail at startup if JWT_SECRET is unset
 jwt.secret = ${?JWT_SECRET}
-
-// Fallback for local dev only (never commit real secrets)
-jwt.secret = "dev-jwt-secret-change-in-prod"
 
 // For HashiCorp Vault integration
 class VaultSecretProvider @Inject()(
@@ -2365,13 +2363,13 @@ components:
 // Thread pool tuning — application.conf
 play {
   server {
-    akka {
+    pekko {  # Play 3.x runs on Apache Pekko (Akka fork)
       requestTimeout = infinite
       http2.enabled = true
     }
   }
 
-  akka {
+  pekko {  # Play 3.x runs on Apache Pekko (Akka fork)
     actor {
       default-dispatcher {
         fork-join-executor {
@@ -2395,8 +2393,8 @@ slick.dbs.default.db {
   connectionPool = "HikariCP"
 }
 
-// akka-http tuning
-akka.http {
+// pekko-http tuning (Play 3.x server backend option)
+pekko.http {
   server {
     pipelining-limit = 16
     max-connections = 1024
@@ -2600,7 +2598,7 @@ class PaginatedOrderController @Inject()(
 
 ```scala
 import play.api.mvc._
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import scala.concurrent.ExecutionContext
 
 class RequestLoggingFilter @Inject()(
@@ -2665,7 +2663,7 @@ class OrderedFilters @Inject()(
 import play.api.mvc._
 
 class ResponseTransformFilter @Inject()(
-  implicit val mat: akka.stream.Materializer,
+  implicit val mat: org.apache.pekko.stream.Materializer,
   ec: ExecutionContext
 ) extends EssentialFilter {
 
@@ -2680,7 +2678,7 @@ class ResponseTransformFilter @Inject()(
 }
 
 class RequestIdFilter @Inject()(
-  implicit val mat: akka.stream.Materializer,
+  implicit val mat: org.apache.pekko.stream.Materializer,
   ec: ExecutionContext
 ) extends EssentialFilter {
 

@@ -1,10 +1,14 @@
 ---
 name: prompt-chain-of-thought
 description: >
-  Use this skill when the user says 'chain of thought', 'CoT', 'think step by step', 'reasoning prompt', 'self-consistency', 'make the model reason', 'extended thinking', 'reasoning model prompting'. Decides when explicit step-by-step reasoning helps, how to elicit it (zero-shot, few-shot, structured scratchpads, self-consistency), how to work with native reasoning models, and how to keep reasoning out of user-facing or parsed output. Do NOT use for: search over multiple reasoning branches (prompt-engineering/tree-of-thoughts), choosing demonstrations (prompt-engineering/few-shot-prompting), or agent planning loops (ai/ai-agents/core-architectures).
+  Use when the user asks about chain of thought (CoT), think step by step, self-consistency, reasoning prompts,
+  extended thinking or reasoning-effort settings. Produces a reasoning template with a parseable answer, a
+  sampling choice and a with/without-CoT eval. Not for branching search over thoughts (use
+  prompt-tree-of-thoughts) or choosing demonstrations (use prompt-few-shot).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [prompt-engineering, chain-of-thought, reasoning, self-consistency, llm]
 ---
 

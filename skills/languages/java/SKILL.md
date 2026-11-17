@@ -1,7 +1,11 @@
 ---
 name: java
 description: >
-  Use this skill when the user says 'java', 'maven', 'gradle', 'records', 'sealed classes', 'virtual threads', 'streams', 'Optional', 'JUnit', 'JVM tuning'. Covers modern Java (17/21/25 LTS) language features, build tooling, concurrency, testing and JVM production settings. Do NOT use for: Spring Boot application architecture (use backend/spring-boot), Kotlin (use lang-kotlin), Android (use android).
+  Use when the user asks about modern Java (21 and 25 LTS), records, sealed
+  classes, pattern matching, virtual threads, streams, Optional, Maven, Gradle,
+  JUnit 5 or JVM tuning. Produces idiomatic Java, builds and JVM settings. Not
+  for Spring Boot architecture (use spring-boot-architecture) or Kotlin (use
+  lang-kotlin).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

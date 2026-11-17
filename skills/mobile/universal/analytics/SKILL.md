@@ -1,7 +1,11 @@
 ---
 name: mobile-analytics
 description: >
-  Use this skill when the user says 'analytics', 'event tracking', 'Firebase Analytics', 'Mixpanel', 'Amplitude', 'app analytics', 'event logging', 'user properties', 'screen tracking', 'funnel analytics', 'user behavior', 'telemetry'. Track events, screen views, and user properties in mobile apps with privacy compliance. Do NOT use for: server-side analytics or web analytics.
+  Use when the user asks about mobile app analytics, event tracking, Firebase
+  Analytics, Mixpanel, Amplitude, screen tracking, user properties or
+  ATT/consent for tracking. Produces an event taxonomy, SDK wrapper and
+  privacy-compliant setup. Not for product funnel strategy (use
+  product-analytics) or crash tracking (use mobile-crash-reporting).
 compatibility:
   claude-code: true
   cursor: true

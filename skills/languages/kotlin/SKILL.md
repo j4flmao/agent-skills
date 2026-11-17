@@ -1,7 +1,11 @@
 ---
 name: lang-kotlin
 description: >
-  Use this skill when the user says 'Kotlin', 'coroutines', 'Flow', 'StateFlow', 'suspend function', 'structured concurrency', 'null safety Kotlin', 'data class', 'sealed interface', 'extension function', 'K2 compiler', 'KSP', 'Gradle Kotlin DSL', 'MockK', 'kotlinx.serialization'. Writes and reviews idiomatic Kotlin 2.x on the JVM: null safety, data/sealed/value classes, coroutines and Flow with structured concurrency, collections and sequences, Java interop, build setup and testing. Do NOT use for: Android UI/Jetpack Compose architecture (use android), Kotlin Multiplatform project structure (use mobile-kotlin-multiplatform), Ktor/Spring service architecture (use backend/kotlin/*).
+  Use when the user asks about Kotlin 2.x, coroutines, Flow and StateFlow,
+  structured concurrency, null safety, data/sealed/value classes, the K2
+  compiler, KSP, Gradle Kotlin DSL, MockK or kotlinx.serialization. Produces
+  idiomatic JVM Kotlin and tests. Not for Android UI (use android) or KMP
+  project structure (use mobile-kotlin-multiplatform).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

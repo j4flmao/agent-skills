@@ -1,13 +1,7 @@
 ---
 name: cicd-pipeline
 description: >
-  Use this skill when the user says 'CI/CD', 'GitHub Actions', 'GitLab CI',
-  'pipeline', 'deployment pipeline', 'automated testing pipeline', 'workflow yaml',
-  'build pipeline', 'deploy workflow', 'continuous integration', 'continuous delivery'.
-  Covers: pipeline stages (lint → test → build → security scan → deploy), caching,
-  parallel execution, deployment strategies (blue/green, canary, rolling),
-  security scanning, secret management, rollback.
-  Do NOT use for: Dockerfile optimization, Kubernetes, local dev setup.
+  Use when the user asks to design a CI/CD pipeline, a deployment pipeline, build-test-deploy stages, a workflow to test and deploy on push, pipeline caching, security scanning gates, or rollback in CD, independent of the CI vendor. Produces a staged pipeline design with gates. Not for GitHub Actions syntax (use github-actions) or GitLab CI (use devops-gitlab-ci).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -248,13 +242,13 @@ test:
 
 security:
   stage: security
-  image: aquasec/trivy:latest
+  image: aquasec/trivy:<pinned-tag>
   script:
     - trivy fs --severity CRITICAL,HIGH --exit-code 1 .
 
 build:
   stage: build
-  image: docker:latest
+  image: docker:<pinned-tag>
   services:
     - docker:dind
   script:

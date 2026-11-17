@@ -37,11 +37,10 @@ supabase functions delete hello-world
 
 ```typescript
 // supabase/functions/hello-world/index.ts
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
 console.log('Hello from Edge Function!');  // Runs once at cold start
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const { name } = await req.json().catch(() => ({ name: 'World' }));
 
   return new Response(
@@ -54,9 +53,8 @@ serve(async (req) => {
 ## Request & Response
 
 ```typescript
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Read method and headers
   const method = req.method;
   const authHeader = req.headers.get('Authorization');
@@ -91,10 +89,9 @@ serve(async (req) => {
 ## Supabase Client in Edge Functions
 
 ```typescript
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_ANON_KEY')!,
@@ -131,9 +128,8 @@ serve(async (req) => {
 
 // Example: send notification on new comment
 // supabase/functions/on-comment/index.ts
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const { type, table, record, old_record } = await req.json();
 
   if (type === 'INSERT' && table === 'comments') {
@@ -179,10 +175,9 @@ const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 ```typescript
 // supabase/functions/stripe-webhook/index.ts
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const signature = req.headers.get('stripe-signature');
   const body = await req.text();
 
@@ -231,14 +226,13 @@ function getSupabaseClient(req: Request) {
 }
 
 // Global initialization (runs once at cold start, not per request)
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 // Heavy imports at top level
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Function body — fast path
 });
 
@@ -272,9 +266,8 @@ max_instances = 10
 ```typescript
 // Long-running tasks (up to 15 min timeout)
 // supabase/functions/process-video/index.ts
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const { videoId } = await req.json();
 
   // Acknowledge receipt immediately
@@ -315,7 +308,7 @@ console.error('Failed to process', error);
 ```
 
 ## Key Points
-- Edge Functions run on Deno — use `https://esm.sh/` or `https://deno.land/x/` for imports.
+- Edge Functions run on Deno 2 — use `npm:` and `jsr:` specifiers (e.g. `npm:@supabase/supabase-js@2`) and the built-in `Deno.serve`.
 - `--no-verify-jwt` flag disables auto JWT verification — for webhooks and public endpoints.
 - Default timeout: 300 seconds (5 min), max: 900 seconds (15 min).
 - Memory: default 256MB, configurable up to 1GB in config.toml.

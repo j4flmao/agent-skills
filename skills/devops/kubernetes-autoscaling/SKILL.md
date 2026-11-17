@@ -1,12 +1,7 @@
 ---
 name: devops-kubernetes-autoscaling
 description: >
-  Kubernetes autoscaling strategies and configurations.
-  Covers: Horizontal Pod Autoscaler (HPA) with CPU/memory, custom, and external metrics,
-  Vertical Pod Autoscaler (VPA) update modes and recommender, Keda with 50+ scalers,
-  Cluster Autoscaler node group optimization, combined HPA+VPA+CA strategies,
-  predictive scaling, and cost optimization.
-  Do NOT use for: Non-Kubernetes autoscaling (AWS ASG, Azure VMSS, etc.).
+  Use when the user asks about HPA, VPA, Cluster Autoscaler, Karpenter, KEDA to scale pods on queue length, custom or external metrics autoscaling, scaling behavior and flapping, or autoscaling cost. Produces combined HPA/VPA/node autoscaling configs. Not for KEDA scaler details (use cloud-native-event-driven-scaling) or data workloads (use devops-kubernetes-for-data).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -272,7 +267,7 @@ spec:
       spec:
         containers:
         - name: worker
-          image: my-worker:latest
+          image: my-worker:<pinned-tag>
         restartPolicy: Never
   pollingInterval: 30
   maxReplicaCount: 20

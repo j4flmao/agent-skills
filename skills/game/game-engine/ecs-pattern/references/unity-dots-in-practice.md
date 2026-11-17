@@ -49,6 +49,8 @@ public partial struct MovementSystem : ISystem {
 
 ### SystemBase (Managed, easier for beginners)
 
+`Entities.ForEach` (shown here because legacy code uses it) is marked obsolete since Entities 1.4. For new code use `foreach (var (t, v) in SystemAPI.Query<RefRW<LocalTransform>, RefRO<Velocity>>())` or an `IJobEntity`.
+
 ```csharp
 public partial class MovementSystem : SystemBase {
     protected override void OnUpdate() {

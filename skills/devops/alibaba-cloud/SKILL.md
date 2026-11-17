@@ -1,15 +1,7 @@
 ---
 name: alibaba-cloud
 description: >
-  Use this skill when the user says 'Alibaba Cloud', 'Aliyun', 'ECS', 'ACK',
-  'OSS', 'SLB', 'RDS', 'ApsaraDB', 'Alibaba Cloud Kubernetes', 'Container Service',
-  'VPC', 'Security Group', 'Resource Access Management', 'RAM',
-  'Terraform Alibaba Cloud', 'terraform alicloud'.
-  Covers: compute (ECS, ECI), container orchestration (ACK, ASK),
-  networking (VPC, SLB, PrivateLink), storage (OSS, NAS, block storage),
-  database (RDS, PolarDB, Redis), security (RAM, KMS, WAF),
-  serverless (FC, SAE), and cost optimization.
-  Do NOT use for: AWS, GCP, Azure, or other cloud providers.
+  Use when the user asks about Alibaba Cloud (Aliyun), ECS, ACK, OSS, SLB/ALB, ApsaraDB RDS, PolarDB, RAM policies, Function Compute, or the Terraform alicloud provider. Produces Alibaba Cloud architectures, RAM and network configs and IaC. Not for AWS (use aws), Azure (use devops-azure) or GCP (use devops-gcp).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

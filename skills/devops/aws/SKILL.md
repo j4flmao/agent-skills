@@ -1,15 +1,7 @@
 ---
 name: aws
 description: >
-  Use this skill when the user says 'AWS', 'EC2', 'S3', 'RDS', 'Lambda', 'VPC',
-  'IAM', 'Well-Architected', 'cost optimization', 'CloudFormation',
-  'Terraform AWS', 'EKS', 'ECS', 'ELB', 'Route53', 'CloudFront', 'WAF',
-  'Auto Scaling', 'Security Group', 'NACL', 'AWS CLI', 'AWS SDK',
-  'boto3', 'aws-vault', 'SSM', 'Secrets Manager', 'KMS', 'CloudWatch'.
-  Covers: compute selection (EC2 vs Lambda vs ECS vs EKS), IAM policies,
-  networking patterns, Well-Architected Framework, cost optimization,
-  security best practices, multi-account strategy.
-  Do NOT use for: GCP, Azure, Alibaba Cloud.
+  Use when the user asks about AWS, EC2, S3, RDS, VPC, IAM policies, EKS or ECS, Route 53, CloudFront, multi-account setup, or the Well-Architected Framework. Produces AWS service choices, IAM and network designs, and Terraform/CDK snippets. Not for Lambda internals (use cloud-native-aws-serverless) or cloud cost work (use devops-finops).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

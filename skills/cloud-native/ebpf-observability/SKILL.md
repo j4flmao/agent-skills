@@ -1,7 +1,7 @@
 ---
 name: cloud-native-ebpf-observability
 description: >
-  Use this skill when the user says 'ebpf tracing', 'ebpf observability', 'bpftrace', 'trace syscalls', 'kprobe', 'tracepoint', 'uprobe', 'off-cpu profiling', 'continuous profiling ebpf', 'libbpf ringbuf', 'measure latency in kernel'. Builds kernel- and user-level observability with eBPF: bpftrace one-liners for investigation, libbpf CO-RE programs with ring buffers for production agents, and guidance on Kubernetes-ready tools (Pixie, Parca, Tetragon, Beyla/OBI). Do NOT use for: packet processing and Cilium datapath (cloud-native-ebpf-networking), OpenTelemetry SDK tracing (opentelemetry-tracing), runtime threat detection rules (ebpf-threat-detection).
+  Use when the user asks about bpftrace, tracing syscalls, kprobes, tracepoints, uprobes, off-CPU or continuous profiling with eBPF, libbpf ring buffers, or measuring kernel latency. Produces bpftrace one-liners and libbpf CO-RE agents, and picks tools like Parca, Pixie, Tetragon or Beyla. Not for packet processing (use cloud-native-ebpf-networking) or threat detection (use ebpf-threat-detection).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

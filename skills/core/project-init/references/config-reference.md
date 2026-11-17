@@ -184,7 +184,7 @@ updates:
 ## Dockerfile (Node.js)
 
 ```dockerfile
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 WORKDIR /app
 
 FROM base AS deps

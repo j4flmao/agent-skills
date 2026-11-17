@@ -27,13 +27,13 @@ User request includes: `quarkus`, `quarkus backend`, `supersonic java`, `quarkus
 - JDK version (17+)
 - Build tool (Gradle, Maven)
 - Runtime (JIT, GraalVM native)
-- Extensions (RESTEasy Reactive, Hibernate, Kafka, MongoDB)
+- Extensions (Quarkus REST, Hibernate, Kafka, MongoDB)
 - Deployment (JAR, native binary, container)
 
 ### Output Artifact
 A markdown document containing:
 - Project structure
-- RESTEasy Reactive endpoint conventions
+- Quarkus REST endpoint conventions
 - Panache ORM setup
 - Reactive messaging configuration
 - Dev Services and Dev UI usage
@@ -46,7 +46,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 
 ### Completion Criteria
 - Application starts in dev mode with live reload
-- REST endpoints use RESTEasy Reactive annotations
+- REST endpoints use Quarkus REST annotations
 - Panache repository or active record configured
 - Native build succeeds with application.properties tuning
 - Tests pass with @QuarkusTest and Dev Services
@@ -62,15 +62,15 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 mvn io.quarkus.platform:quarkus-maven-plugin:3.6.0:create \
   -DprojectGroupId=com.example \
   -DprojectArtifactId=order-service \
-  -Dextensions='resteasy-reactive,hibernate-validator,reactive-pg-client,panache'
+  -Dextensions='rest,hibernate-validator,reactive-pg-client,panache'
 
 # Using Gradle
 quarkus create app com.example:order-service \
-  --extension=resteasy-reactive,reactive-pg-client,panache,kafka
+  --extension=rest,reactive-pg-client,panache,kafka
 
 # Using Quarkus CLI
 quarkus create app order-service \
-  -x resteasy-reactive,reactive-pg-client,panache,kafka
+  -x rest,reactive-pg-client,panache,kafka
 ```
 
 ### Step 2: Project Structure
@@ -105,7 +105,7 @@ src/
 +-- docker-compose.yml
 ```
 
-### Step 3: RESTEasy Reactive Resource
+### Step 3: Quarkus REST Resource
 ```java
 @Path("/api/orders")
 @Produces(MediaType.APPLICATION_JSON)
@@ -452,7 +452,7 @@ Need fine-grained JPA control (custom queries, entity graphs)?
 ```
 Already using blocking JDBC driver?
   +-- Yes -> Use standard Hibernate ORM + RESTEasy (non-reactive). Same code, JIT runtime.
-  +-- No  -> Use Hibernate Reactive + RESTEasy Reactive + R2DBC/Reactive PG Client.
+  +-- No  -> Use Hibernate Reactive + Quarkus REST + Vert.x Reactive PG Client (Quarkus does not use R2DBC).
 ```
 
 ### Native Compilation
@@ -514,7 +514,7 @@ Container deployment with cold-start requirements?
 
 - Quarkus JIT startup: ~0.3 seconds. Native: ~0.02 seconds.
 - Memory: JIT ~50MB base heap. Native ~15MB RSS.
-- RESTEasy Reactive handles ~100k req/s on modern hardware (same as raw Netty).
+- Quarkus REST runs on Vert.x event loops; benchmark your own endpoints before quoting throughput.
 - Hibernate Reactive with connection pooling of 5-10 connections per core.
 - Kafka messaging throughput: ~50k msg/s per consumer group.
 - Build time: Maven/Gradle ~10s incremental, GraalVM native ~120-300s.
@@ -528,7 +528,7 @@ Container deployment with cold-start requirements?
 | **Dev UI** | Web-based development dashboard |
 | **SmallRye OpenAPI** | OpenAPI spec generation |
 | **Panache** | Simplified Hibernate ORM |
-| **RESTEasy Reactive** | Reactive REST endpoints |
+| **Quarkus REST** | Reactive REST endpoints |
 | **SmallRye Reactive Messaging** | Event-driven messaging |
 | **Hibernate Reactive** | Reactive database access |
 | **Testcontainers** | Integration test containers |
@@ -537,7 +537,7 @@ Container deployment with cold-start requirements?
 
 ## Rules
 
-- RESTEasy Reactive for all HTTP endpoints — never Jakarta REST.
+- Quarkus REST (`quarkus-rest`) for all HTTP endpoints; it implements Jakarta REST annotations. Avoid legacy RESTEasy Classic.
 - Panache for data access — active record or repository per preference.
 - application.properties for all configuration — env vars via ${} syntax.
 - Dev Services in dev/test — never in production.

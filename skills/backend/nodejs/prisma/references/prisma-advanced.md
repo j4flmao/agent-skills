@@ -3,7 +3,7 @@
 ## Middleware (Deprecated) vs Extensions
 
 ```typescript
-// Old: Middleware (deprecated in Prisma 5+)
+// Old: Middleware (deprecated in 4.16, removed in Prisma 6.14 — do not use)
 prisma.$use(async (params, next) => {
   if (params.model === 'User' && params.action === 'findUnique') {
     params.action = 'findFirst';
@@ -12,7 +12,7 @@ prisma.$use(async (params, next) => {
   return next(params);
 });
 
-// New: Client Extensions (Prisma 5+)
+// New: Client Extensions (Prisma 4.16+)
 const xprisma = prisma.$extends({
   query: {
     user: {
@@ -165,7 +165,7 @@ const orders = await prisma.$queryRaw<
 
 ```typescript
 model Product {
-  id      String @id @default(uuid())
+  id      String @id @default(uuid(7))
   name    String
   metadata Json   // Flexible key-value data
 }
@@ -195,11 +195,11 @@ const products = await prisma.product.findMany({
 ```prisma
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch"]
+  previewFeatures = ["fullTextSearchPostgres"] // renamed in Prisma 6 (PostgreSQL); MySQL full-text search is GA
 }
 
 model Post {
-  id    String @id @default(uuid())
+  id    String @id @default(uuid(7))
   title String
   body  String
 

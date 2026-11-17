@@ -397,6 +397,29 @@ const summary = ["# Skills Master Summary", "",
   "`npm run validate` checks names, bundles, routing targets, links and code fences against the same data.", ""];
 outputs.set("docs/skills-master-summary.md", summary.join("\n"));
 
+// ---------------------------------------------------------------- .claude/rules/routing.md (Quick Map + trigger table)
+const routingSrc = read(".claude/rules/routing.md");
+const quickMap = ["| Category | Skills (paths under `skills/<category>/`) |", "|----------|--------|",
+  ...[...catCount.keys()].sort(byKey).map((c) => `| ${c} (${catCount.get(c)}) | ` +
+    sortedPaths.filter((p) => category(p) === c).map((p) => p.slice(c.length + 1) || "(root)").join(", ") + " |")].join("\n");
+const routing = routingSrc
+  .replace(/^# Routing — \d+ skills/m, `# Routing — ${skills.size} skills`)
+  .replace(/(## Quick Map\n)[\s\S]*?(\n## Trigger Keywords)/, (_, a, b) => a + quickMap + "\n" + b)
+  .replace(/(## Trigger Keywords\n)[\s\S]*?(\n## Stack Detection)/, (_, a, b) => a + [
+    "1. Match the request against skill names and descriptions (the Quick Map above lists every path).",
+    "2. When unsure, rank candidates with the retriever and read the top results:",
+    "",
+    "```bash",
+    "node scripts/route.js \"<the user's request>\"   # top 5 skills by name + description",
+    "```",
+    "",
+    "3. Prefer the most specific skill; load at most the top 1–2. If nothing fits, use `core/master-orchestrator`.",
+    "",
+    "Hand-written keyword tables were removed: on the routing eval (`evals/routing/report.md`) they picked the right skill for under half of the test prompts, while description matching puts it in the top 5 for almost all of them.",
+    "",
+  ].join("\n") + b);
+outputs.set(".claude/rules/routing.md", routing);
+
 // ---------------------------------------------------------------- write or check
 const generatedTracks = new Set([...outputs.keys()].filter((f) => f.startsWith("skill-advisor/tracks/")));
 const extraTracks = fs.readdirSync(path.join(root, "skill-advisor", "tracks"))

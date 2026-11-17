@@ -81,7 +81,7 @@ GET /api/orders/delete/1  # Bad
 # app/blueprints/orders/schemas.py
 from pydantic import BaseModel, Field, UUID4
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class OrderItemResponse(BaseModel):
@@ -364,7 +364,7 @@ def delete_order(order_id):
 ```python
 # app/__init__.py
 from flask import Flask
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timezone
 from decimal import Decimal
 import uuid
 
@@ -890,15 +890,15 @@ user_limiter.limit("100 per minute")(orders_bp)
 from functools import wraps
 from flask import request, jsonify, g
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 def generate_token(user_id: str, secret: str, expiry_minutes: int = 15) -> str:
     """Generate JWT access token."""
     payload = {
         "sub": user_id,
-        "iat": datetime.utcnow(),
-        "exp": datetime.utcnow() + timedelta(minutes=expiry_minutes),
+        "iat": datetime.now(timezone.utc),
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=expiry_minutes),
     }
     return jwt.encode(payload, secret, algorithm="HS256")
 

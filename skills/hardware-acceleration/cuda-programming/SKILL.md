@@ -1,10 +1,14 @@
 ---
 name: cuda-programming
 description: >
-  Use this skill when the user says 'cuda', 'cuda kernel', 'nvcc', 'gpu programming', 'thread block', 'shared memory', 'warp divergence', 'coalesced access', 'occupancy', 'cuda streams'. Writes and reviews CUDA C++ kernels: launch configuration, memory hierarchy, coalescing, shared-memory tiling, synchronization, error checking and profiling with Nsight. Do NOT use for: Triton kernels (triton-kernels), PTX/SASS inspection (ptx-assembly, sass-machine-code), TensorRT engines (tensorrt-optimization), multi-GPU training (distributed-training).
+  Use when the user asks about a CUDA kernel, nvcc, shared memory tiling, coalesced access, warp divergence,
+  occupancy, CUDA streams or __syncthreads. Produces CUDA C++ kernels with launch config, error checking and an
+  Nsight Compute profiling plan. Not for Triton kernels (use triton-kernels) or PTX/SASS reading (use
+  ptx-assembly).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [hardware-acceleration, cuda, gpu, nvcc, kernels, performance]
 ---
 

@@ -1,16 +1,7 @@
 ---
 name: apm-observability
 description: >
-  Use this skill when the user says 'APM', 'observability', 'monitoring',
-  'Datadog', 'New Relic', 'Grafana', 'Prometheus', 'OpenTelemetry',
-  'distributed tracing', 'metrics', 'logging', 'SLI', 'SLO', 'error budget',
-  'application performance monitoring', 'trace', 'span', 'telemetry',
-  'instrumentation', 'RUM', 'synthetics', 'alerting'.
-  Covers: metrics collection, distributed tracing, log aggregation,
-  alerting and on-call, dashboards, SLI/SLO/error budget, RUM, synthetics,
-  OpenTelemetry instrumentation, cost optimization for observability tools.
-  Do NOT use for: infrastructure monitoring only (use monitoring skill),
-  SIEM/security monitoring (use security skill).
+  Use when the user asks about APM tools such as Datadog, New Relic, Dynatrace or Elastic APM, RUM, synthetic monitoring, APM tracing, or choosing and costing an observability vendor. Produces vendor APM setup, dashboards and cost controls. Not for vendor-neutral OpenTelemetry pipelines (use devops-opentelemetry) or Prometheus stacks (use prometheus-grafana).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

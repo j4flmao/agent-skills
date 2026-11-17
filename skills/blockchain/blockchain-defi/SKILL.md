@@ -431,6 +431,12 @@ interface CowOrder {
   - references/lsd-lrt-restaking.md — Liquid Staking & Restaking
   - references/yield-strategies.md — Yield Strategies
 
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-defi-smart-contracts.md` — DeFi: Automated Market Makers (AMM) (merged from `niche/fintech-web3/defi-smart-contracts`)
+- `references/merged-defi-protocols.md` — DeFi Protocols (merged from `blockchain/defi-protocols`)
+
 ## Architecture Decision Trees
 
 ```

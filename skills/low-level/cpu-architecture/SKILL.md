@@ -1,7 +1,11 @@
 ---
 name: cpu-architecture
 description: >
-  Use this skill when the user says 'CPU pipeline', 'branch prediction', 'branch misprediction', 'out-of-order execution', 'superscalar', 'cache miss', 'false sharing', 'memory ordering', 'SIMD', 'TLB', 'hardware performance counters', 'perf stat', 'microarchitecture', 'why is this loop slow'. Explains how modern x86-64 and ARM64 cores execute code and turns that into concrete optimisation steps: pipelines and OoO, branch prediction, cache hierarchy and coherence, memory ordering, SIMD, TLBs, and measurement with hardware counters. Do NOT use for: compiler internals (use compiler-design), OS kernel design (use kernel-development), GPU programming.
+  Use when the user asks why a loop is slow, branch misprediction, cache misses,
+  false sharing, out-of-order execution, memory ordering, SIMD, TLB misses or
+  perf stat hardware counters. Produces measured, microarchitecture-aware
+  optimisations for x86-64 and ARM64. Not for compiler internals (use
+  compiler-design) or kernel design (use kernel-development).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -116,3 +120,8 @@ Speculative execution leaks (Spectre variants, Meltdown) led to mitigations (ret
 ## References
 - `references/cache-hierarchy.md` — L1/L2/L3, inclusion policies, MESI coherence
 - `references/tlb-and-paging.md` — virtual memory, page walks, TLB reach, huge pages
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/cpu-cache-optimization.md` — CPU Cache Optimization & False Sharing

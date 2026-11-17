@@ -215,8 +215,9 @@ ufw allow 80/tcp
 ufw allow 443/tcp
 ufw --force enable
 
-# Install Docker
-curl -fsSL https://get.docker.com | sh
+# Install Docker from Docker's signed apt repository (see docs.docker.com/engine/install/);
+# the get.docker.com convenience script is meant for test machines, not production.
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 systemctl enable docker
 
 # Set hostname
@@ -229,8 +230,9 @@ sysctl -p
 # Set timezone
 timedatectl set-timezone UTC
 
-# Install monitoring agent
-curl -O https://install.example.com/agent.sh | bash
+# Install monitoring agent: download, verify the published checksum, then run
+curl -fsSLo agent.sh https://install.example.com/agent.sh
+sha256sum -c agent.sh.sha256 && bash agent.sh
 ```
 
 ## Performance Tuning

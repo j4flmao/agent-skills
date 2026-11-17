@@ -1,7 +1,10 @@
 ---
 name: math-foundation
 description: >
-  Use this skill when the user says 'game math', 'quaternion', 'SIMD math', 'transform hierarchy', 'frustum culling', 'collision primitives', 'interpolation', 'floating point precision'. Builds the engine math layer: SIMD vectors/matrices, quaternions, transforms, interpolation and curves, collision primitives and numerical stability. Do NOT use for: physics solver design (use physics-engine), shader math tutorials.
+  Use when the user asks about game math, quaternions, SIMD vector math,
+  transform hierarchies, frustum culling, collision primitives, interpolation or
+  floating point precision in large worlds. Produces the engine math layer with
+  numerically stable code. Not for physics solver design (use physics-engine).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

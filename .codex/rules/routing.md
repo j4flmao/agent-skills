@@ -1,4 +1,4 @@
-# Routing -- 641 skills
+# Routing -- 587 skills
 
 ## Entry
 
@@ -200,7 +200,7 @@ unity/dots/burst/jobs                                   -> game/unity
 unreal/c++/blueprint/editor                             -> game/unreal
 godot/gdscript/scene                                    -> game/godot
 cocos2d/scene-graph/director                            -> game/cocos2d
-ecs/entity-component/archetype                          -> game/ecs-architecture
+ecs/entity-component/archetype                          -> game/game-engine/ecs-pattern
 netcode/prediction/reconciliation                       -> game/multiplayer-netcode
 vulkan/swapchain/render-pass/shader                     -> game/game-development/vulkan
 physics/collision/ragdoll/rigid-body                    -> game/game-development/physics-engine

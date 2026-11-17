@@ -1,10 +1,7 @@
 ---
 name: devops-service-mesh
-description: |
-  Trigger: "service mesh", "Istio", "Linkerd", "Envoy", "sidecar", "mTLS",
-  "service-to-service", "mesh traffic", "virtual service", "destination rule",
-  "service mesh observability", "mesh security"
-  Exclusion: Not for standard K8s networking — use kubernetes-patterns.
+description: >
+  Use when the user asks about service mesh, Istio, Istio ambient mode, Linkerd, Envoy sidecars, mTLS between services, VirtualService and DestinationRule, mesh retries and timeouts, or mesh observability. Produces mesh install, traffic and security policies. Not for Cilium networking (use cilium-ebpf) or Consul (use consul).
 version: 1.0.0
 author: j4flmao
 license: MIT
@@ -509,5 +506,13 @@ istioctl dashboard grafana
   - references/service-mesh-architecture.md — Service Mesh Architecture
   - references/service-mesh-fundamentals.md — Service Mesh Fundamentals
   - references/service-mesh-security.md — Service Mesh Security
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-istio-envoy-service-mesh-mechanics.md` — Istio and Envoy: Data-Plane Mechanics (merged from `cloud-native/service-mesh`)
+- `references/envoy-xds.md` — Service Mesh: Envoy and the xDS Protocol
+- `references/service-mesh-envoy.md` — Service Mesh & Envoy Proxy
+
 ## Handoff
 Hand off to monitoring for Prometheus/Grafana dashboards. Hand off to security for PKI and certificate management. Hand off to argo-cd for progressive delivery patterns with Istio integration. Hand off to chaos-engineering for mesh resilience testing.

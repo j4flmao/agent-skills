@@ -1,12 +1,7 @@
 ---
 name: github-actions
 description: >
-  Use this skill when the user says 'GitHub Actions', 'CI/CD', 'workflow',
-  'reusable workflow', 'composite action', 'matrix build', 'actions/checkout',
-  'GITHUB_TOKEN', 'self-hosted runner', or when setting up CI/CD pipelines on
-  GitHub. Covers: workflow files, reusable workflows, composite actions, matrix
-  strategies, expressions, environments, artifacts, caching, OIDC. Do NOT use
-  this for: Jenkins pipelines, GitLab CI, CircleCI, or non-GitHub CI systems.
+  Use when the user asks for a GitHub Actions workflow to test and deploy on push, reusable workflows, composite actions, matrix builds, GITHUB_TOKEN permissions, OIDC to a cloud, self-hosted runners, or caching. Produces secure workflow YAML with pinned actions. Not for vendor-neutral pipeline design (use cicd-pipeline) or GitLab CI (use devops-gitlab-ci).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -474,6 +469,11 @@ Reusable workflows: call another workflow file, support secrets and matrix, good
 - references/reusable-workflows.md -- Reusable Workflows
 - references/workflow-basics.md -- Workflow Basics
 - references/workflow-optimization.md -- GitHub Actions Workflow Optimization
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-github-actions-pipelines.md` — GitHub Actions CI/CD Pipeline Architecture (merged from `devops/ci-cd/github-actions-pipelines`)
 
 ## Handoff
 After completing this skill:

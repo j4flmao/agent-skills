@@ -1,7 +1,7 @@
 ---
 name: sre-sli-slo-management
 description: >
-  Use this skill when the user says 'define slo', 'sli', 'error budget', 'burn rate alert', 'multiwindow multi-burn-rate', 'slo math', 'availability target', 'latency slo', 'error budget policy', 'sloth', 'pyrra', 'openslo'. Defines SLIs as good/valid event ratios, sets SLO targets and windows, computes error budgets, and writes multiwindow multi-burn-rate Prometheus alerts plus an error budget policy. Do NOT use for: broad SRE program design (devops-sre-practices), contractual SLAs and penalties (sla-management), incident handling (sre-incident-response).
+  Use when the user asks to define SLOs and an error budget policy, SLIs, burn rate alerts, multiwindow multi-burn-rate alerting, SLO math, availability or latency targets, Sloth, Pyrra or OpenSLO. Produces SLI definitions, targets, budgets and Prometheus alerts. Not for SRE program design (use devops-sre-practices) or contractual SLAs (use enterprise-sla-management).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -1,9 +1,11 @@
 ---
 name: mobile-performance
 description: >
-  Use this skill when the user asks about mobile performance optimization, app
-  slow, jank, frame drops, memory leaks, startup time, battery drain, bundle size,
-  or profiling tools.
+  Use when the user asks about a slow mobile app, jank, frame drops, startup
+  time, memory leaks, battery drain, app size, Baseline Profiles or profiling
+  with Instruments, Android Studio Profiler, Perfetto or Flutter DevTools.
+  Produces measured diagnoses and fixes. Not for crash monitoring (use
+  mobile-crash-reporting).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -27,7 +29,7 @@ User request includes: `mobile performance`, `app slow`, `jank`, `frame drop`, `
 
 ### Input Context
 - Platform (iOS, Android, Flutter, React Native)
-- Performance tool (Xcode Instruments, Android Profiler, Flutter DevTools, Flipper)
+- Performance tool (Xcode Instruments, Android Profiler, Flutter DevTools, React Native DevTools)
 - Current issue (jank, memory, startup, battery, size)
 
 ### Output Artifact
@@ -154,7 +156,7 @@ performance_budgets:
 profiling_workflow:
   step_1_establish_baseline:
     activity: "Run performance tests on reference device (mid-range, not flagship)"
-    tools: ["Xcode Instruments", "Android Profiler", "Flutter DevTools", "Flipper"]
+    tools: ["Xcode Instruments", "Android Profiler", "Flutter DevTools", "React Native DevTools"]
     metrics: ["Startup time", "Frame rate", "Peak memory", "Bundle size"]
     
   step_2_identify_bottlenecks:
@@ -471,7 +473,7 @@ InteractionManager.runAfterInteractions(() => {
 - Leak common causes: retain cycles (iOS), static references (Android), timer not cancelled
 - Use weak references for delegates/callbacks
 - Cancel network requests on screen dispose
-- Profile with: Instruments (iOS), Memory Profiler (Android), DevTools (Flutter), Flipper (RN)
+- Profile with: Instruments (iOS), Memory Profiler (Android), DevTools (Flutter), React Native DevTools (RN)
 - Image caching: use disk-backed cache (NSCache/Glide/COIL), limit in-memory cache to 50-100MB
 - Bitmap pooling on Android: reuse bitmap objects instead of allocating new ones per image decode
 - Weak reference patterns: delegate pattern in Swift, WeakReference in Java/Kotlin, WeakRef in Dart
@@ -725,7 +727,7 @@ Push notification: 0 background network, push wakes app only when needed
 | Xcode Instruments | iOS | Frame timing, allocations, energy, network |
 | Android Studio Profiler | Android | CPU, memory, network, energy |
 | Flutter DevTools | Flutter | Widget rebuild, frame analysis, memory |
-| React DevTools + Flipper | React Native | Component tree, network, layout |
+| React Native DevTools (0.76+) | React Native | Component tree, network, layout |
 | Systrace (Android) | Android | System-level trace, thread scheduling |
 | MetricKit (iOS) | iOS | Production performance data aggregation |
 | Firebase Performance | Cross-platform | Production monitoring with traces |

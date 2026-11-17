@@ -273,7 +273,7 @@ class UsageTracker:
             "method": method,
             "status": status,
             "latency_ms": latency_ms,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "tier": self.get_tier(api_key),
         }
         self.buffer.append(event)

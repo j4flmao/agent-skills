@@ -1,7 +1,11 @@
 ---
 name: advanced-workflows
 description: >
-  Use this skill when the user says 'branching strategy', 'trunk-based development', 'GitFlow', 'GitHub Flow', 'release branches', 'feature flags vs branches', 'squash vs rebase vs merge', 'conventional commits', 'semantic versioning', 'git worktree', 'monorepo git', 'stacked PRs', 'force-with-lease', 'signed commits', 'protected branches'. Defines team Git workflows: branching models, merge strategies, commit conventions and automated versioning, release/hotfix flow, branch protection, signing, and power-user commands (worktrees, rebase --update-refs, sparse checkout). Do NOT use for: resolving a specific conflict or recovering lost work (use conflict-resolution), hook tooling setup (use husky-and-hooks), CI pipeline authoring (use devops/github-actions or devops/gitlab-ci).
+  Use when the user asks about a branching strategy, trunk-based development,
+  GitFlow, GitHub Flow, squash vs rebase vs merge, conventional commits,
+  semantic versioning, stacked PRs, git worktree, force-with-lease, signed
+  commits or protected branches. Produces a team Git workflow. Not for resolving
+  a conflict or lost work (use conflict-resolution).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

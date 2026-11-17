@@ -1,12 +1,11 @@
 ---
 name: mobile-push-notifications
 description: >
-  Use this skill when the user says 'push notification', 'APNs', 'FCM',
-  'remote notification', 'push token', 'notification payload', 'notification
-  channel'. This skill enforces platform-specific push notification patterns:
-  permission flow, token management, payload structure, foreground/background
-  handling, and notification channels. Applies to iOS, Android, Flutter, and
-  React Native.
+  Use when the user asks about push notifications, APNs, FCM HTTP v1, device
+  push tokens, notification payloads, notification channels, silent pushes or
+  Android 13 notification permission. Produces permission flow, token handling
+  and server send code. Not for in-app deep link routing (use
+  mobile-deep-linking).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"

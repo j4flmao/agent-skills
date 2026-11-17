@@ -1,7 +1,11 @@
 ---
 name: flutter-expertise
 description: >
-  Use this skill when the user says 'Flutter', 'Flutter app', 'widget rebuild', 'Riverpod', 'BLoC', 'Provider', 'go_router', 'Flutter performance', 'jank', 'const widget', 'platform channel', 'Flutter testing', 'golden test', 'Flutter release build', 'flavors'. Builds and reviews Flutter apps: project structure, state management choice (Riverpod 3, BLoC, Provider), navigation, rebuild/paint optimisation, platform channels and FFI, testing (unit/widget/golden/integration) and release builds. Do NOT use for: engine/rendering internals (use flutter-internals), Dart language features (use lang-dart), cross-platform framework comparison (use mobile-patterns).
+  Use when the user asks about a Flutter app, Riverpod, BLoC, Provider,
+  go_router, widget rebuilds, jank, platform channels, golden tests, flavors or
+  Flutter release builds. Produces Flutter project structure, state management
+  choices, performance fixes and tests. Not for engine and rendering internals
+  (use flutter-internals) or Dart language features (use lang-dart).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

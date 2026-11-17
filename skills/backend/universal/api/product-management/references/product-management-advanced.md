@@ -385,7 +385,7 @@ class DeprecationAutomation:
             )
 
         # 2. Block traffic at sunset date
-        if datetime.utcnow() >= datetime.fromisoformat(sunset_date):
+        if datetime.now(timezone.utc) >= datetime.fromisoformat(sunset_date):
             self.db.execute("""
                 INSERT INTO sunset_actions (version, action, executed_at)
                 VALUES (?, 'gateway_block', NOW())

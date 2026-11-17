@@ -20,7 +20,7 @@ You can adopt pieces independently: many teams use `bun install` and `bun test` 
 ## Installing and Starting a Project
 
 ```bash
-curl -fsSL https://bun.sh/install | bash      # macOS/Linux; Windows: powershell -c "irm bun.sh/install.ps1 | iex"
+curl -fsSL https://bun.sh/install -o bun-install.sh && less bun-install.sh && bash bun-install.sh   # review first; or `brew install oven-sh/bun/bun` / `npm i -g bun`; Windows: powershell -c "irm bun.sh/install.ps1 | iex"
 bun --version
 bun upgrade                                    # update the runtime
 

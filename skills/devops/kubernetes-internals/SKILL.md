@@ -1,7 +1,7 @@
 ---
 name: kubernetes-internals
 description: >
-  Use this skill when the user says 'kubernetes internals', 'etcd raft', 'resourceVersion', 'watch cache', 'informers and list-watch', 'admission chain', 'kubelet pod lifecycle', 'cri cni csi', 'apiserver request flow', 'optimistic concurrency kubernetes', 'etcd compaction defrag'. Explains the Kubernetes control plane under the hood — etcd/Raft and MVCC, apiserver request pipeline and watch cache, controller reconciliation, kubelet with CRI/CNI/CSI — to debug and tune clusters. Do NOT use for: component overview and deployment strategies (kubernetes-architecture), writing controllers (cloud-native-k8s-operators), workload YAML patterns (cloud-native-kubernetes-patterns).
+  Use when the user asks about Kubernetes internals, etcd Raft and compaction, resourceVersion, the watch cache, informers and list-watch, the admission chain, kubelet pod lifecycle, CRI/CNI/CSI, or why a pod is OOMKilled at the cgroup level. Explains the control plane for debugging. Not for an overview (use kubernetes-architecture) or writing operators (use devops-kubernetes-operators).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -133,4 +133,4 @@ crictl pods; crictl ps -a; crictl logs <id>
 - [ ] Node: kubelet eviction thresholds and reserved resources (`kubeReserved`/`systemReserved`) set.
 
 ## References
-- Related skills: `skills/devops/orchestration/kubernetes-architecture/SKILL.md`, `skills/cloud-native/k8s-operators/SKILL.md`, `skills/devops/kubernetes/SKILL.md`.
+- Related skills: `skills/devops/orchestration/kubernetes-architecture/SKILL.md`, `skills/devops/kubernetes-operators/references/merged-cloud-native-k8s-operators.md`, `skills/devops/kubernetes/SKILL.md`.

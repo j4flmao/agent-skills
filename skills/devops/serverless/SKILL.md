@@ -1,19 +1,7 @@
 ---
 name: devops-serverless
 description: >
-  Use this skill when the user says 'serverless', 'lambda', 'aws
-  lambda', 'functions', 'function as a service', 'faas', 'azure
-  functions', 'google cloud functions', 'knative', 'openfaas',
-  'serverless framework', 'chalice', 'zappa', 'apigw', 'api
-  gateway', 'event-driven', 'cold start', 'provisioned
-  concurrency', 'reserved concurrency', 'lambda layers',
-  'step functions', 'durable functions', 'serverless
-  observability', 'serverless monitoring', 'serverless
-  security', 'serverless cost', 'serverless best practices',
-  'serverless framework deployment'.
-  Covers: AWS Lambda, Azure Functions, Google Cloud Functions,
-  serverless framework, event-driven patterns, cold start
-  optimization, monitoring, security, and cost management.
+  Use when the user asks about choosing a serverless platform, AWS Lambda vs Azure Functions vs Cloud Run functions, Serverless Framework, AWS SAM, Knative, OpenFaaS, API Gateway backends, or serverless cost. Produces serverless architectures and deployment configs. Not for cold start latency (use cloud-native-serverless-cold-starts) or Lambda internals (use cloud-native-aws-serverless).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -438,6 +426,12 @@ Lambda response streaming:
   - references/serverless-advanced.md — Serverless Advanced Topics
   - references/serverless-fundamentals.md — Serverless Fundamentals
   - references/serverless-framework.md — Serverless Framework Deployment
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-backend-serverless.md` — Serverless Backend Development (merged from `backend/universal/serverless`)
+
 ## Handoff
 - `devops-aws` for API Gateway, DynamoDB, SQS, EventBridge integration.
 - `devops-observability` for AWS X-Ray and CloudWatch configuration.
@@ -463,10 +457,10 @@ Lambda response streaming:
 
 | Aspect | REST API | HTTP API | WebSocket API |
 |---|---|---|---|
-| Latency | ~50ms | ~10ms | ~50ms |
+| Overhead | Higher (more features per request) | Lower | Per connection |
 | Features | WAF, usage plans, API keys | JWT, CORS, cheaper | Real-time, bidirectional |
-| Cost | Most expensive | Cheapest (~70% less) | Connection + message |
-| Integration | Lambda, HTTP, Step Functions | Lambda, HTTP, Service Discovery | Lambda, DynamoDB |
+| Cost | Highest per request | Lower (AWS cites up to ~70% cheaper than REST) | Connection minutes + messages |
+| Integration | Lambda, HTTP, AWS services (e.g. Step Functions) | Lambda, HTTP, private integrations (ALB/NLB, Cloud Map), some AWS services | Lambda, HTTP, AWS services |
 | Use case | Public APIs with throttling | Microservices APIs | Chat, real-time updates |
 
 ## Implementation Patterns

@@ -1,13 +1,7 @@
 ---
 name: devops-network-infrastructure
 description: >
-  Use this skill when designing or operating production network infrastructure: BGP, anycast, ECMP,
-  leaf-spine fabric, EVPN/VXLAN, MPLS, SD-WAN, VRRP/HSRP/CARP, jumbo frames, QoS, multi-WAN, NAT,
-  IPv6 dual-stack, transit-vs-peering, internet exchanges (IX). Applies to colo, on-prem DC, hybrid
-  cloud, and edge POPs. This skill enforces: redundant uplinks, BGP best-practice (origin AS, prefix
-  filtering, MED/LOCAL_PREF policy), leaf-spine non-blocking, MTU consistency, and verifiable failover.
-  Do NOT use for: cloud-native VPC/Transit Gateway (see devops-aws / devops-gcp / devops-azure),
-  service mesh (see devops-service-mesh), or app-level load balancing (see enterprise-high-availability).
+  Use when the user asks about BGP, anycast, ECMP, leaf-spine fabrics, EVPN/VXLAN, MPLS, SD-WAN, VRRP, MTU and jumbo frames, QoS, IPv6 dual-stack, or transit vs peering at an IX. Produces data center and WAN network designs with verified failover. Not for cloud VPC design (use aws or devops-gcp) or service mesh (use devops-service-mesh).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

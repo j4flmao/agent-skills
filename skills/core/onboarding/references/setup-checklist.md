@@ -38,22 +38,25 @@ Install exactly one version manager. The project's repository should indicate wh
 
 **asdf** (recommended for polyglot repositories)
 ```bash
-git clone https://github.com/asdf-vm/asdf.git ~/.asdf
-echo '. "$HOME/.asdf/asdf.sh"' >> ~/.bashrc
+# asdf 0.16+ is a single Go binary (the old git clone + asdf.sh setup no longer applies)
+brew install asdf            # or download the release binary from github.com/asdf-vm/asdf/releases
+echo 'export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"' >> ~/.bashrc
 asdf plugin add nodejs && asdf plugin add python && asdf plugin add java
 asdf install
 ```
 
 **nvm** (Node.js only)
 ```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-nvm install
+# Pin a released tag (check github.com/nvm-sh/nvm/releases), download, review, then run
+curl -fsSLo nvm-install.sh https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh
+less nvm-install.sh && bash nvm-install.sh
+nvm install   # reads .nvmrc
 ```
 
 **pyenv** (Python only)
 ```bash
-curl https://pyenv.run | bash
-pyenv install
+brew install pyenv   # Linux: see github.com/pyenv/pyenv#installation (download and review the installer before running it)
+pyenv install        # reads .python-version
 ```
 
 ### Runtime Installation
@@ -133,7 +136,7 @@ unzip awscliv2.zip && sudo ./aws/install
 # macOS:
 brew install --cask google-cloud-sdk
 # Linux:
-curl https://sdk.cloud.google.com | bash
+# use Google's apt/yum repository (cloud.google.com/sdk/docs/install) rather than piping an installer to bash
 
 # Azure CLI
 # macOS:

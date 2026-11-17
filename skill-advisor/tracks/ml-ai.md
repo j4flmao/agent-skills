@@ -80,7 +80,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`ml-engineering`](../bundles.md#ml-engineering) | 24 | Machine learning and data science: classical/deep learning, features, evaluation, serving, MLOps, experimentation |
+| [`ml-engineering`](../bundles.md#ml-engineering) | 23 | Machine learning and data science: classical/deep learning, features, evaluation, serving, MLOps, experimentation |
 | [`ai-engineering`](../bundles.md#ai-engineering) | 26 | AI engineering: LLM apps, RAG, prompting, fine-tuning, inference, vector search, agent harnesses |
 | [`gpu-hpc`](../bundles.md#gpu-hpc) | 14 | GPU and high-performance computing: CUDA, Triton, PTX/SASS, attention kernels, quantization, distributed training, RDMA |
 

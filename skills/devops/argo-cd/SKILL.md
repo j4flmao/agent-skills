@@ -1,15 +1,7 @@
 ---
 name: argo-cd
 description: >
-  Use this skill when the user says 'ArgoCD', 'Argo CD', 'GitOps',
-  'ApplicationSet', 'Sync Policy', 'Sync Wave', 'Application Controller',
-  'argocd CLI', 'Declarative GitOps', 'Progressive Delivery', 'Rollback',
-  'Multi-cluster ArgoCD', 'ArgoCD RBAC', 'ArgoCD SSO', 'ArgoCD Project'.
-  Covers: application deployment, sync strategies, application sets,
-  multi-cluster management, RBAC, SSO integration, monitoring, rollback,
-  disaster recovery, CLI usage, declarative setup.
-  Do NOT use for: Flux (use gitops skill), generic GitOps concepts,
-  Kubernetes cluster setup, CI/CD pipeline design.
+  Use when the user asks about Argo CD, syncing cluster state from git with Argo CD, Application or AppProject CRDs, sync policy, sync waves, the argocd CLI, Argo CD RBAC and SSO, or multi-cluster Argo CD. Produces Argo CD manifests, sync settings and access controls. Not for Flux or GitOps repo strategy (use gitops) or ApplicationSets at scale (use devops-gitops-advanced).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -349,7 +341,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migration
-          image: myapp/migration:latest
+          image: myapp/migration:<pinned-tag>
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -397,7 +389,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: myapp/payment-service:latest
+          image: myapp/payment-service:<pinned-tag>
           ports:
             - containerPort: 8080
   strategy:
@@ -623,6 +615,11 @@ Argo CD Application/ApplicationSet YAML, Project YAML, RBAC config, notification
   - references/argocd-operations.md
   - references/argocd-patterns.md
   - references/argocd-setup.md
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-gitops-argocd.md` — GitOps with Argo CD (merged from `devops/ci-cd/gitops-argocd`)
 
 ## Handoff
 After completing this skill:

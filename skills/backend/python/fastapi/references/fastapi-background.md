@@ -206,22 +206,20 @@ async def process_webhook(ctx, payload: dict, webhook_id: str):
 
 ### FastAPI with ARQ
 ```python
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+
 from arq import create_pool
+from arq.connections import RedisSettings
+from fastapi import FastAPI
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # lifespan replaces the deprecated @app.on_event("startup"/"shutdown")
+    app.state.arq_pool = await create_pool(RedisSettings(host="redis", port=6379))
+    yield
+    await app.state.arq_pool.aclose()
 
-@app.on_event("startup")
-async def startup():
-    app.state.redis = await aioredis.from_url("redis://redis:6379/0")
-    app.state.arq_pool = await create_pool(
-        RedisSettings(host="redis", port=6379)
-    )
-
-@app.on_event("shutdown")
-async def shutdown():
-    await app.state.arq_pool.close()
-    await app.state.redis.close()
+app = FastAPI(lifespan=lifespan)
 
 @app.post("/send-email")
 async def send_email_endpoint(to: str, subject: str, body: str):

@@ -1,10 +1,14 @@
 ---
 name: prompt-rag-query-design
 description: >
-  Use this skill when the user says 'query rewriting', 'HyDE', 'multi-query retrieval', 'query decomposition', 'multi-hop RAG', 'step-back prompting', 'RAG prompt template', 'cite sources', 'GraphRAG', 'answer only from context'. Designs the LLM-side of RAG: transforming queries before retrieval, routing to indexes, iterative multi-hop retrieval, and grounded answer prompts with citations and abstention. Do NOT use for: ANN index tuning, hybrid fusion and reranking internals (ai/llm-engineering/rag-architecture), agent memory (ai/ai-agents/memory-systems), or vector database operations (data/vector-databases).
+  Use when the user asks about query rewriting, HyDE, multi-query retrieval, query decomposition, multi-hop RAG,
+  step-back prompting, GraphRAG or a grounded RAG prompt that cites sources and abstains. Produces the LLM-side
+  RAG pipeline: query transforms, routing and the answer prompt. Not for ANN indexes, hybrid fusion and
+  reranking (use llm-rag-retrieval-internals).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [prompt-engineering, rag, query-rewriting, hyde, multi-hop, citations, grounding]
 ---
 

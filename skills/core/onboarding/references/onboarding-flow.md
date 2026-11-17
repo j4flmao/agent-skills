@@ -95,7 +95,7 @@ The setup script is the single entry point for new developers. It must be idempo
 ```
 $ bin/setup
 ==> Checking prerequisites...                          PASS
-==> Installing runtime (Node.js 20.x)...                PASS
+==> Installing runtime (Node.js 24.x)...                PASS
 ==> Installing dependencies (npm ci)...                 PASS
 ==> Creating .env from .env.example...                  PASS
 ==> Creating database...                                PASS

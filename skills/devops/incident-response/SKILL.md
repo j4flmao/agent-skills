@@ -1,7 +1,7 @@
 ---
 name: devops-incident-response
 description: >
-  Use this skill when the user says 'incident response', 'on-call', 'PagerDuty', 'OpsGenie', 'incident management', 'postmortem', 'runbook', 'severity', 'escalation', 'SEV', 'incident command', 'SEV1', 'SEV2', 'incident timeline'. This skill enforces: severity classification with clear definitions (SEV1-4), structured incident lifecycle from detection to resolution, runbook creation with step-by-step procedures, on-call scheduling with escalation policies, blameless postmortem culture, and incident command system roles (IC, Scribe, SME, Comms). Do NOT use for: routine bug tracking, feature development, or performance monitoring (those have dedicated skills).
+  Use when the user had an outage and needs a postmortem, an on-call process, incident severity levels (SEV1-SEV4), incident commander roles, escalation policies, runbooks, PagerDuty or Opsgenie setup, or an incident timeline. Produces incident process docs, runbooks and blameless postmortems. Not for SLO and error budget design (use sre-sli-slo-management).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -318,6 +318,8 @@ The issue has been resolved. [Service] is operating normally. A postmortem will 
 
 ## Tool Comparison: Incident Management Platforms
 
+> Opsgenie reached end of sale on 2025-06-04 and Atlassian shuts it down on 2027-04-05 (migration path: Jira Service Management or Compass). Do not pick it for new setups; plan migration for existing ones.
+
 | Feature | PagerDuty | OpsGenie | incident.io | Grafana OnCall |
 |---|---|---|---|---|
 | Alert routing | Yes (intelligent) | Yes (team-based) | Yes | Yes |
@@ -505,6 +507,12 @@ def track_weekly_metrics(incidents):
   - references/postmortem.md — Postmortem Process
   - references/severity-classification.md — Severity Classification
   - references/war-room-protocol.md — War Room Protocol
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-sre-incident-response.md` — Incident Response: Triage Automation and Blameless Postmortems (merged from `site-reliability-engineering/incident-response`)
+
 ## Handoff
 `dev-loop/tech-debt-tracker` for action items from postmortem
 `planning/create-roadmap` for incident-driven roadmap changes

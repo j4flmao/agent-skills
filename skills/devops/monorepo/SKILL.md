@@ -1,15 +1,7 @@
 ---
 name: monorepo
 description: >
-  Use this skill when the user says 'monorepo', 'Nx', 'Turborepo', 'NX', 'nx
-  build', 'nx affected', 'workspace', 'dependency graph', 'build
-  orchestration', 'remote caching', 'task orchestration', 'shared
-  configuration', 'lerna', 'pnpm workspace', 'yarn workspace', 'npm workspace',
-  'project graph', 'module boundary', 'computation caching'.
-  Covers: Nx workspaces, Turborepo pipelines, dependency graph management, build
-  orchestration, caching, task distribution, module boundary enforcement.
-  Do NOT use this for: single-package projects, non-JS/TS monorepos without
-  build tooling, or Git submodule strategies.
+  Use when the user asks about monorepos, Nx, Turborepo, nx affected, pnpm/yarn/npm workspaces, remote caching, task pipelines, project graphs, or module boundary rules. Produces workspace layout and build orchestration configs. Not for dependency update bots (use dependency-management) or Git submodules (use advanced-workflows).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -355,7 +347,7 @@ npx nx g @nx/js:lib shared --directory=packages/shared
 # docker-compose for self-hosted Nx Cloud
 services:
   nx-cloud:
-    image: nrwl/nx-cloud:latest
+    image: nrwl/nx-cloud:<pinned-tag>
     ports:
       - "8080:8080"
     environment:

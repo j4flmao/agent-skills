@@ -1,10 +1,14 @@
 ---
 name: llm-finetuning
 description: >
-  Use this skill when the user says 'fine-tune an LLM', 'LoRA', 'QLoRA', 'PEFT', 'SFT', 'instruction tuning', 'TRL SFTTrainer', 'DPO', 'train on my data', 'merge adapter'. Decides whether fine-tuning is the right tool, prepares chat-format datasets, configures LoRA/QLoRA with PEFT and TRL, evaluates against the base model, and exports or serves adapters. Do NOT use for: pre-training or full-parameter distributed training (ai model-training skills), post-training quantization for serving (ai/llm-engineering/model-quantization), or prompt-only improvements (prompt-engineering/*).
+  Use when the user asks to fine-tune an open model with LoRA or QLoRA, PEFT, SFT, instruction tuning, TRL
+  SFTTrainer, DPO, train on my data or merge an adapter. Produces a go/no-go decision, chat-format dataset spec,
+  training config, eval plan and serving steps. Not for multi-node training (use distributed-training) or
+  post-training quantization (use llm-model-quantization).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, llm, fine-tuning, lora, qlora, peft, trl, sft, dpo]
 ---
 

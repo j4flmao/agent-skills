@@ -1,7 +1,11 @@
 ---
 name: conflict-resolution
 description: >
-  Use this skill when the user says 'merge conflict', 'rebase conflict', 'resolve conflicts', 'conflict markers', 'ours vs theirs', 'git rerere', 'abort rebase', 'lost commits', 'git reflog', 'undo a merge', 'revert a merge', 'detached HEAD', 'recover deleted branch', 'git bisect', 'cherry-pick conflict'. Resolves Git conflicts and recovers from mistakes: how three-way merges produce conflicts, reading diff3/zdiff3 markers, ours/theirs semantics during merge vs rebase, tools (mergetool, rerere), lock files and generated files, undoing merges/rebases with reflog, and finding regressions with bisect. Do NOT use for: choosing a team branching model (use advanced-workflows), hook automation (use husky-and-hooks).
+  Use when the user asks to resolve a merge or rebase conflict, read conflict
+  markers, ours vs theirs, git rerere, abort a rebase, recover lost commits with
+  reflog, undo or revert a merge, detached HEAD or git bisect. Produces
+  step-by-step conflict resolution and recovery commands. Not for choosing a
+  branching model (use advanced-workflows).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -1,18 +1,7 @@
 ---
 name: helm-patterns
 description: >
-  Use this skill when the user says 'helm', 'helm chart', 'helm
-  template', 'helm install', 'helm upgrade', 'helm rollback',
-  'helmfile', 'helm secrets', 'helm values', 'helm dependency',
-  'helm repository', 'helm plugin', 'helm unittest', 'helm
-  lint', 'helm package', 'helm registry', 'oci helm', 'helm
-  hooks', 'helm tests', 'helm subchart', 'helm global values',
-  'helm library chart', 'helm umbrella chart', 'helm postrender',
-  'helm diff', 'helmfile', 'helm values schema', 'helm crd',
-  'chart museum', 'chart repo', 'helmfile environment'.
-  Covers: Helm chart development, templating, dependency
-  management, testing, CI/CD integration, security, advanced
-  patterns, and operational best practices.
+  Use when the user asks to package an app as a Helm chart, Helm values per environment, helm upgrade or rollback, helmfile, chart dependencies and subcharts, library charts, helm unittest, OCI chart registries, or helm diff. Produces charts and release workflows. Not for a chart plus operator scaffold (use cloud-native-kubernetes-mastery) or GitOps sync (use argo-cd).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -393,7 +382,7 @@ metadata:
 spec:
   containers:
   - name: curl
-    image: curlimages/curl:latest
+    image: curlimages/curl:<pinned-tag>
     command: ['sh', '-c', 'curl -sf http://{{ include "my-app.fullname" . }}:{{ .Values.service.port }}/healthz']
   restartPolicy: Never
 ```
@@ -596,6 +585,7 @@ jobs:
 - For large clusters, increase Helm driver performance with `--driver=secret` (ConfigMap-based is slow).
 
 ## Anti-Patterns
+- Depending on Bitnami charts or images without checking their status: since August-September 2025 versioned `docker.io/bitnami` images moved to the unmaintained `bitnamilegacy` repository and only a small set of `latest`-tagged images stays free. Pin and mirror what you use, or switch to upstream/vendor charts and images. Examples in the references that use Bitnami charts illustrate syntax only.
 - Using `--recreate-pods` — forces pod restart; use rolling update instead.
 - Hardcoding values in templates — use values.yaml for all configurable parameters.
 - Single values.yaml for all environments — use helmfile or per-environment files.

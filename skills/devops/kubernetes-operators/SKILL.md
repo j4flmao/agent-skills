@@ -1,15 +1,7 @@
 ---
 name: devops-kubernetes-operators
 description: >
-  Use when the user asks about Kubernetes operators, custom controllers,
-  operator pattern, Kubebuilder, Operator SDK, custom resource definitions
-  (CRD), reconciliation loops, or extending Kubernetes with custom resources.
-  Covers: Kubebuilder project structure, controller-runtime patterns,
-  finalizers, status subresource, webhooks, multi-version CRDs, operator
-  testing with envtest, operator deployment with OLM, and operator design
-  patterns.
-  Do NOT use for: basic Kubernetes usage (kubernetes-patterns), Helm charts
-  (helm-patterns), or general Kubernetes management.
+  Use when the user asks about Kubernetes operators, custom controllers, CRDs, Kubebuilder, Operator SDK, controller-runtime reconcile loops, finalizers, conversion webhooks, envtest, OLM, or Crossplane compositions. Produces operator code and CRD designs. Not for a chart plus operator scaffold (use cloud-native-kubernetes-mastery).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -873,6 +865,12 @@ Additional reference material for this skill, stored outside its own `references
 - `../crossplane/references/enterprise-patterns.md` — Crossplane Enterprise Patterns
 - `../crossplane/references/package-management.md` — Crossplane Package Management
 - `../crossplane/references/provider-architecture.md` — Crossplane Provider Architecture
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-cloud-native-k8s-operators.md` — Kubernetes Operators and the Controller Pattern (merged from `cloud-native/k8s-operators`)
+- `references/kubernetes-operators.md` — Kubernetes Custom Operators
 
 ## Handoff
 Related skills: kubernetes-patterns (K8s resource patterns), helm-patterns (Helm chart design), gitops-advanced (GitOps with custom operators), policy-as-code (admission webhooks integration), monitoring (operator metrics and dashboards).

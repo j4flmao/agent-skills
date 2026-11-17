@@ -69,7 +69,7 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`fullstack-rust-angular`](../bundles.md#fullstack-rust-angular) | 217 | Full stack: Rust backend + Angular frontend |
+| [`fullstack-rust-angular`](../bundles.md#fullstack-rust-angular) | 215 | Full stack: Rust backend + Angular frontend |
 | [`systems-programming`](../bundles.md#systems-programming) | 17 | Systems programming: C/C++/Rust/assembly, compilers, kernels, eBPF, networking, lock-free and kernel-bypass |
 
 ## Combine with

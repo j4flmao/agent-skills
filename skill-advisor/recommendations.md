@@ -7,21 +7,21 @@ Ready-made combinations of tracks for common situations. Each one merges the cho
 | Situation | Tracks | Skills |
 |-----------|--------|--------|
 | [Solo founder: web MVP in weeks](#solo-mvp) | [Startup CTO & Solo Founder](tracks/startup-cto.md) L1 + [React & Next.js Developer](tracks/react.md) L1 + [Node.js & TypeScript Backend](tracks/node-backend.md) L1 | 20 |
-| [Seed-stage SaaS team (3–8 engineers)](#seed-saas) | [SaaS Product Builder](tracks/saas.md) L1–2 + [Full-Stack Product Team](tracks/fullstack.md) L1 + [DevOps & Platform Engineer](tracks/devops-platform.md) L1 + [QA & Test Engineer](tracks/quality.md) L1 | 36 |
-| [Scale-up platform team](#scale-up-platform) | [Platform Engineer (IDP)](tracks/platform-engineering.md) L1–2 + [Site Reliability Engineer](tracks/sre.md) L1 + [Observability Engineer](tracks/observability.md) L1 + [Cloud Architect & Engineer](tracks/cloud.md) L1 | 27 |
+| [Seed-stage SaaS team (3–8 engineers)](#seed-saas) | [SaaS Product Builder](tracks/saas.md) L1–2 + [Full-Stack Product Team](tracks/fullstack.md) L1 + [DevOps & Platform Engineer](tracks/devops-platform.md) L1 + [QA & Test Engineer](tracks/quality.md) L1 | 35 |
+| [Scale-up platform team](#scale-up-platform) | [Platform Engineer (IDP)](tracks/platform-engineering.md) L1–2 + [Site Reliability Engineer](tracks/sre.md) L1 + [Observability Engineer](tracks/observability.md) L1 + [Cloud Architect & Engineer](tracks/cloud.md) L1 | 26 |
 | [Enterprise modernization program](#enterprise-modernization) | [Legacy Modernization Lead](tracks/legacy-modernization.md) L1–2 + [Software & Solution Architect](tracks/architecture.md) L1 + [Compliance & Privacy Engineer](tracks/compliance.md) L1 + [Java & Kotlin Backend Developer](tracks/java-kotlin-backend.md) L1 | 24 |
 | [AI product startup](#ai-startup) | [LLM Application Developer](tracks/llm-app.md) L1–2 + [AI Agent Builder](tracks/ai-agents.md) L1 + [Python Backend Developer](tracks/python-backend.md) L1 + [SaaS Product Builder](tracks/saas.md) L1 | 24 |
 | [Internal AI agents and tools](#internal-ai-tools) | [AI Agent Builder](tracks/ai-agents.md) L1–2 + [AI Safety & LLM Red Team](tracks/ai-safety.md) L1 + [Compliance & Privacy Engineer](tracks/compliance.md) L1 | 17 |
-| [Data platform team](#data-platform-team) | [Data Engineer](tracks/data-engineering.md) L1–2 + [Analytics Engineer](tracks/analytics-engineer.md) L1 + [Streaming & Event Data Engineer](tracks/streaming.md) L1 | 22 |
+| [Data platform team](#data-platform-team) | [Data Engineer](tracks/data-engineering.md) L1–2 + [Analytics Engineer](tracks/analytics-engineer.md) L1 + [Streaming & Event Data Engineer](tracks/streaming.md) L1 | 20 |
 | [ML product team](#ml-product-team) | [Data Scientist & Analyst](tracks/data-scientist.md) L1 + [ML & AI Engineer](tracks/ml-ai.md) L1 + [MLOps Engineer](tracks/mlops.md) L1–2 | 18 |
 | [Mobile-first consumer app](#mobile-first-consumer) | [React Native Developer](tracks/react-native.md) L1–2 + [Backend Engineer](tracks/backend.md) L1 + [Product Manager & Planner](tracks/product.md) L1 | 30 |
-| [Native mobile studio](#native-mobile-studio) | [iOS Developer](tracks/ios.md) L1 + [Android Developer](tracks/android.md) L1 + [Mobile Engineer](tracks/mobile.md) L1 + [QA Automation Engineer](tracks/qa-automation.md) L1 | 16 |
-| [Indie game (Unity)](#indie-game) | [Unity Developer](tracks/unity.md) L1–2 + [Game Developer](tracks/game.md) L1 | 12 |
-| [Online multiplayer game](#online-multiplayer) | [Online Game Backend Engineer](tracks/game-backend.md) L1–2 + [Real-Time Apps Developer](tracks/realtime.md) L1 + [Site Reliability Engineer](tracks/sre.md) L1 | 20 |
+| [Native mobile studio](#native-mobile-studio) | [iOS Developer](tracks/ios.md) L1 + [Android Developer](tracks/android.md) L1 + [Mobile Engineer](tracks/mobile.md) L1 + [QA Automation Engineer](tracks/qa-automation.md) L1 | 15 |
+| [Indie game (Unity)](#indie-game) | [Unity Developer](tracks/unity.md) L1–2 + [Game Developer](tracks/game.md) L1 | 11 |
+| [Online multiplayer game](#online-multiplayer) | [Online Game Backend Engineer](tracks/game-backend.md) L1–2 + [Real-Time Apps Developer](tracks/realtime.md) L1 + [Site Reliability Engineer](tracks/sre.md) L1 | 19 |
 | [Fintech or payments product](#fintech-payments) | [E-commerce Engineer](tracks/ecommerce.md) L1 + [Compliance & Privacy Engineer](tracks/compliance.md) L1–2 + [Application Security & DevSecOps](tracks/appsec.md) L1 + [Backend Engineer](tracks/backend.md) L1 | 24 |
-| [Web3 protocol team](#web3-protocol) | [DeFi Protocol Engineer](tracks/defi.md) L1–2 + [Zero-Knowledge & Cryptography Engineer](tracks/zk.md) L1 + [Application Security & DevSecOps](tracks/appsec.md) L1 | 17 |
+| [Web3 protocol team](#web3-protocol) | [DeFi Protocol Engineer](tracks/defi.md) L1–2 + [Zero-Knowledge & Cryptography Engineer](tracks/zk.md) L1 + [Application Security & DevSecOps](tracks/appsec.md) L1 | 13 |
 | [Security team](#security-team) | [Application Security & DevSecOps](tracks/appsec.md) L1–2 + [SOC Analyst & Detection Engineer](tracks/soc.md) L1 + [Compliance & Privacy Engineer](tracks/compliance.md) L1 | 15 |
-| [Open-source library](#open-source-library) | [Open-Source Maintainer](tracks/oss-maintainer.md) L1–2 + [QA & Test Engineer](tracks/quality.md) L1 + [Technical Writer & Docs Engineer](tracks/technical-writer.md) L1 | 19 |
+| [Open-source library](#open-source-library) | [Open-Source Maintainer](tracks/oss-maintainer.md) L1–2 + [QA & Test Engineer](tracks/quality.md) L1 + [Technical Writer & Docs Engineer](tracks/technical-writer.md) L1 | 18 |
 | [Agency or freelancer building client websites](#agency-websites) | [Svelte, Solid, Astro & Qwik Developer](tracks/modern-frontend.md) L1 + [SEO & Web Growth Engineer](tracks/web-growth.md) L1–2 + [Accessibility Specialist](tracks/accessibility.md) L1 + [Designer & Design Engineer](tracks/design-ux.md) L1 | 19 |
 | [New tech lead on an existing codebase](#tech-lead-onboarding) | [Tech Lead & Staff Engineer](tracks/tech-lead.md) L1–2 + [Software & Solution Architect](tracks/architecture.md) L1 | 15 |
 | [Learning to code](#learning-path) | [Beginner Learning Path](tracks/beginner.md) L1–2 | 10 |
@@ -45,10 +45,10 @@ npx skills add j4flmao/agent-skills --skill master-orchestrator --skill project-
 
 **Situation:** A small team with paying customers and a growing codebase.
 
-**Combines:** [SaaS Product Builder](tracks/saas.md) L1–2 + [Full-Stack Product Team](tracks/fullstack.md) L1 + [DevOps & Platform Engineer](tracks/devops-platform.md) L1 + [QA & Test Engineer](tracks/quality.md) L1 — **36 skills**
+**Combines:** [SaaS Product Builder](tracks/saas.md) L1–2 + [Full-Stack Product Team](tracks/fullstack.md) L1 + [DevOps & Platform Engineer](tracks/devops-platform.md) L1 + [QA & Test Engineer](tracks/quality.md) L1 — **35 skills**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill backend-multi-tenancy --skill backend-authorization --skill backend-api-design --skill ecommerce-payment-processing --skill enterprise-multi-tenant --skill backend-feature-flags --skill product-pricing-strategy --skill product-onboarding-flow --skill rate-limiting --skill backend-webhooks --skill security-api-security --skill security-data-security --skill security-secrets-management --skill master-orchestrator --skill project-init --skill create-tech-spec --skill backend-database-patterns --skill backend-auth-patterns --skill frontend-state-management --skill frontend-data-fetching --skill docker-patterns --skill frontend-security --skill cicd-pipeline --skill github-actions --skill terraform --skill kubernetes --skill helm-patterns --skill observability --skill devsecops --skill security-container-security --skill quality-unit-testing --skill quality-integration-testing --skill quality-e2e-testing --skill quality-regression-testing --skill quality-smoke-testing --skill security-sast-dast
+npx skills add j4flmao/agent-skills --skill backend-multi-tenancy --skill backend-authorization --skill backend-api-design --skill ecommerce-payment-processing --skill backend-feature-flags --skill product-pricing-strategy --skill product-onboarding-flow --skill rate-limiting --skill backend-webhooks --skill security-api-security --skill security-data-security --skill security-secrets-management --skill master-orchestrator --skill project-init --skill create-tech-spec --skill backend-database-patterns --skill backend-auth-patterns --skill frontend-state-management --skill frontend-data-fetching --skill docker-patterns --skill frontend-security --skill cicd-pipeline --skill github-actions --skill terraform --skill kubernetes --skill helm-patterns --skill observability --skill devsecops --skill security-container-security --skill quality-unit-testing --skill quality-integration-testing --skill quality-e2e-testing --skill quality-regression-testing --skill quality-smoke-testing --skill security-sast-dast
 ```
 
 **Next:** Swap `fullstack` for your stack tracks (for example `react` + `python-backend`) once the stack is settled.
@@ -58,10 +58,10 @@ npx skills add j4flmao/agent-skills --skill backend-multi-tenancy --skill backen
 
 **Situation:** Several product teams need a reliable, observable platform.
 
-**Combines:** [Platform Engineer (IDP)](tracks/platform-engineering.md) L1–2 + [Site Reliability Engineer](tracks/sre.md) L1 + [Observability Engineer](tracks/observability.md) L1 + [Cloud Architect & Engineer](tracks/cloud.md) L1 — **27 skills**
+**Combines:** [Platform Engineer (IDP)](tracks/platform-engineering.md) L1–2 + [Site Reliability Engineer](tracks/sre.md) L1 + [Observability Engineer](tracks/observability.md) L1 + [Cloud Architect & Engineer](tracks/cloud.md) L1 — **26 skills**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill devops-platform-engineering --skill devops-internal-developer-platform --skill kubernetes --skill gitops --skill devops-kubernetes-operators --skill cloud-native-k8s-operators --skill devops-gitops-advanced --skill devops-policy-as-code --skill devops-progressive-delivery --skill helm-patterns --skill devsecops --skill security-container-security --skill security-secrets-management --skill devops-sre-practices --skill sre-sli-slo-management --skill devops-incident-response --skill observability --skill monitoring --skill alerting --skill devops-opentelemetry --skill backend-structured-logging --skill backend-data-masking --skill cloud-architecture --skill terraform --skill devops-finops --skill cloud-native-security-defensive --skill zero-trust-identity
+npx skills add j4flmao/agent-skills --skill devops-platform-engineering --skill devops-internal-developer-platform --skill kubernetes --skill gitops --skill devops-kubernetes-operators --skill devops-gitops-advanced --skill devops-policy-as-code --skill devops-progressive-delivery --skill helm-patterns --skill devsecops --skill security-container-security --skill security-secrets-management --skill devops-sre-practices --skill sre-sli-slo-management --skill devops-incident-response --skill observability --skill monitoring --skill alerting --skill devops-opentelemetry --skill backend-structured-logging --skill backend-data-masking --skill cloud-architecture --skill terraform --skill devops-finops --skill cloud-native-security-defensive --skill zero-trust-identity
 ```
 
 **Next:** Add `finops` Level 1 when the cloud bill becomes a board topic.
@@ -74,7 +74,7 @@ npx skills add j4flmao/agent-skills --skill devops-platform-engineering --skill 
 **Combines:** [Legacy Modernization Lead](tracks/legacy-modernization.md) L1–2 + [Software & Solution Architect](tracks/architecture.md) L1 + [Compliance & Privacy Engineer](tracks/compliance.md) L1 + [Java & Kotlin Backend Developer](tracks/java-kotlin-backend.md) L1 — **24 skills**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill enterprise-legacy-migration --skill dev-loop-refactor-guide --skill enterprise-integration-patterns --skill cloud-migration --skill microservices --skill architecture-domain-driven-design --skill backend-transactional-outbox --skill database-migration --skill quality-regression-testing --skill threat-modeling --skill security-secrets-management --skill create-tech-spec --skill system-design-database-sharding --skill distributed-consensus --skill backend-event-driven --skill zero-trust-identity --skill enterprise-compliance-audit --skill enterprise-data-governance --skill security-data-security --skill java --skill spring-boot-architecture --skill spring-boot-patterns --skill backend-api-design --skill security-api-security
+npx skills add j4flmao/agent-skills --skill enterprise-legacy-migration --skill dev-loop-refactor-guide --skill enterprise-integration-patterns --skill cloud-migration --skill microservices --skill architecture-domain-driven-design --skill backend-transactional-outbox --skill database-migration --skill quality-regression-testing --skill threat-modeling --skill security-secrets-management --skill create-tech-spec --skill architecture-database-scaling --skill distributed-consensus --skill backend-event-driven --skill zero-trust-identity --skill enterprise-compliance-audit --skill enterprise-data-governance --skill security-data-security --skill java --skill spring-boot-architecture --skill spring-boot-patterns --skill backend-api-design --skill security-api-security
 ```
 
 **Next:** Replace `java-kotlin-backend` with `dotnet` for Microsoft shops.
@@ -110,10 +110,10 @@ npx skills add j4flmao/agent-skills --skill ai-agent-architectures --skill ai-ag
 
 **Situation:** A central team running pipelines, warehouse and streaming.
 
-**Combines:** [Data Engineer](tracks/data-engineering.md) L1–2 + [Analytics Engineer](tracks/analytics-engineer.md) L1 + [Streaming & Event Data Engineer](tracks/streaming.md) L1 — **22 skills**
+**Combines:** [Data Engineer](tracks/data-engineering.md) L1–2 + [Analytics Engineer](tracks/analytics-engineer.md) L1 + [Streaming & Event Data Engineer](tracks/streaming.md) L1 — **20 skills**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill data-etl-pipeline --skill data-data-warehouse --skill data-dimensional-modeling --skill data-data-quality --skill data-relational-database --skill data-streaming --skill data-data-lakehouse --skill data-data-lake --skill data-batch-processing --skill data-distributed-compute --skill data-formats --skill data-schema-registry --skill data-data-contracts --skill data-data-observability --skill data-lineage --skill data-testing --skill data-pipeline-cicd --skill security-data-security --skill security-secrets-management --skill data-science-analytics-engineering --skill data-kafka-event-streaming --skill backend-data-streaming
+npx skills add j4flmao/agent-skills --skill data-etl-pipeline --skill data-data-warehouse --skill data-dimensional-modeling --skill data-data-quality --skill data-relational-database --skill data-streaming --skill data-data-lakehouse --skill data-data-lake --skill data-batch-processing --skill data-distributed-compute --skill data-formats --skill data-schema-registry --skill data-data-contracts --skill data-data-observability --skill data-lineage --skill data-testing --skill data-pipeline-cicd --skill security-data-security --skill security-secrets-management --skill data-science-analytics-engineering
 ```
 
 **Next:** Add `mlops` Level 1 when models start consuming the platform's data.
@@ -149,10 +149,10 @@ npx skills add j4flmao/agent-skills --skill react-native-expertise --skill types
 
 **Situation:** Separate native iOS and Android apps.
 
-**Combines:** [iOS Developer](tracks/ios.md) L1 + [Android Developer](tracks/android.md) L1 + [Mobile Engineer](tracks/mobile.md) L1 + [QA Automation Engineer](tracks/qa-automation.md) L1 — **16 skills**
+**Combines:** [iOS Developer](tracks/ios.md) L1 + [Android Developer](tracks/android.md) L1 + [Mobile Engineer](tracks/mobile.md) L1 + [QA Automation Engineer](tracks/qa-automation.md) L1 — **15 skills**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill ios --skill lang-swift --skill mobile-patterns --skill mobile-networking --skill mobile-storage --skill mobile-security --skill android --skill lang-kotlin --skill mobile-testing --skill mobile-performance --skill security-secrets-management --skill quality-e2e-testing --skill qa-e2e-playwright --skill quality-regression-testing --skill quality-smoke-testing --skill security-sast-dast
+npx skills add j4flmao/agent-skills --skill ios --skill lang-swift --skill mobile-patterns --skill mobile-networking --skill mobile-storage --skill mobile-security --skill android --skill lang-kotlin --skill mobile-testing --skill mobile-performance --skill security-secrets-management --skill quality-e2e-testing --skill quality-regression-testing --skill quality-smoke-testing --skill security-sast-dast
 ```
 
 **Next:** Add `design-ux` Level 1 if designers work in the same repository.
@@ -162,10 +162,10 @@ npx skills add j4flmao/agent-skills --skill ios --skill lang-swift --skill mobil
 
 **Situation:** A small team shipping a single-player or light multiplayer game.
 
-**Combines:** [Unity Developer](tracks/unity.md) L1–2 + [Game Developer](tracks/game.md) L1 — **12 skills**
+**Combines:** [Unity Developer](tracks/unity.md) L1–2 + [Game Developer](tracks/game.md) L1 — **11 skills**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill unity --skill unity-csharp --skill lang-csharp --skill game-engine-patterns --skill ecs-architecture --skill ecs-pattern --skill physics-engine --skill input-systems --skill animation-systems --skill audio-engine --skill anti-cheat-server --skill security-api-security
+npx skills add j4flmao/agent-skills --skill unity --skill unity-csharp --skill lang-csharp --skill game-engine-patterns --skill ecs-pattern --skill physics-engine --skill input-systems --skill animation-systems --skill audio-engine --skill anti-cheat-server --skill security-api-security
 ```
 
 **Next:** Swap `unity` for `godot` or `unreal` to match your engine.
@@ -175,10 +175,10 @@ npx skills add j4flmao/agent-skills --skill unity --skill unity-csharp --skill l
 
 **Situation:** Authoritative servers, matchmaking and live operations.
 
-**Combines:** [Online Game Backend Engineer](tracks/game-backend.md) L1–2 + [Real-Time Apps Developer](tracks/realtime.md) L1 + [Site Reliability Engineer](tracks/sre.md) L1 — **20 skills**
+**Combines:** [Online Game Backend Engineer](tracks/game-backend.md) L1–2 + [Real-Time Apps Developer](tracks/realtime.md) L1 + [Site Reliability Engineer](tracks/sre.md) L1 — **19 skills**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill authoritative-server --skill multiplayer-netcode --skill matchmaking-lobby --skill interest-management --skill scaling-architecture --skill game-engine-multiplayer-netcode --skill backend-websocket-patterns --skill devops-kubernetes-autoscaling --skill anti-cheat-server --skill security-api-security --skill backend-web-real-time --skill backend-message-queue --skill devops-sre-practices --skill sre-sli-slo-management --skill devops-incident-response --skill observability --skill monitoring --skill alerting --skill security-secrets-management --skill security-container-security
+npx skills add j4flmao/agent-skills --skill authoritative-server --skill multiplayer-netcode --skill matchmaking-lobby --skill interest-management --skill scaling-architecture --skill backend-websocket-patterns --skill devops-kubernetes-autoscaling --skill anti-cheat-server --skill security-api-security --skill backend-web-real-time --skill backend-message-queue --skill devops-sre-practices --skill sre-sli-slo-management --skill devops-incident-response --skill observability --skill monitoring --skill alerting --skill security-secrets-management --skill security-container-security
 ```
 
 **Next:** Add your engine track (`unity`, `unreal` or `godot`) at Level 1 for the client side.
@@ -201,10 +201,10 @@ npx skills add j4flmao/agent-skills --skill ecommerce-checkout-cart --skill ecom
 
 **Situation:** Smart contracts holding real value.
 
-**Combines:** [DeFi Protocol Engineer](tracks/defi.md) L1–2 + [Zero-Knowledge & Cryptography Engineer](tracks/zk.md) L1 + [Application Security & DevSecOps](tracks/appsec.md) L1 — **17 skills**
+**Combines:** [DeFi Protocol Engineer](tracks/defi.md) L1–2 + [Zero-Knowledge & Cryptography Engineer](tracks/zk.md) L1 + [Application Security & DevSecOps](tracks/appsec.md) L1 — **13 skills**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill blockchain-defi --skill smart-contract-security --skill blockchain-application --skill blockchain-testing --skill defi-protocols --skill defi-smart-contracts --skill blockchain-patterns --skill blockchain-cross-chain --skill blockchain-data-indexing --skill blockchain-security --skill blockchain-zk --skill zero-knowledge-proofs --skill blockchain-cryptography --skill threat-modeling --skill security-sast-dast --skill security-secrets-management --skill devsecops
+npx skills add j4flmao/agent-skills --skill blockchain-defi --skill blockchain-application --skill blockchain-testing --skill blockchain-patterns --skill blockchain-cross-chain --skill blockchain-data-indexing --skill blockchain-security --skill blockchain-zk --skill blockchain-cryptography --skill threat-modeling --skill security-sast-dast --skill security-secrets-management --skill devsecops
 ```
 
 **Next:** Plan an external audit before mainnet; the skills do not replace one.
@@ -227,10 +227,10 @@ npx skills add j4flmao/agent-skills --skill threat-modeling --skill security-sas
 
 **Situation:** A public package with contributors and releases.
 
-**Combines:** [Open-Source Maintainer](tracks/oss-maintainer.md) L1–2 + [QA & Test Engineer](tracks/quality.md) L1 + [Technical Writer & Docs Engineer](tracks/technical-writer.md) L1 — **19 skills**
+**Combines:** [Open-Source Maintainer](tracks/oss-maintainer.md) L1–2 + [QA & Test Engineer](tracks/quality.md) L1 + [Technical Writer & Docs Engineer](tracks/technical-writer.md) L1 — **18 skills**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill dev-loop-readme-writer --skill dev-loop-changelog-generator --skill dev-loop-pr-writer --skill dev-loop-git-workflow --skill github-actions --skill dependency-management --skill conflict-resolution --skill husky-and-hooks --skill code-review --skill security-sbom --skill security-secrets-management --skill quality-unit-testing --skill quality-integration-testing --skill quality-e2e-testing --skill quality-regression-testing --skill quality-smoke-testing --skill security-sast-dast --skill backend-openapi-documentation --skill api-documentation
+npx skills add j4flmao/agent-skills --skill dev-loop-readme-writer --skill dev-loop-changelog-generator --skill dev-loop-pr-writer --skill dev-loop-git-workflow --skill github-actions --skill dependency-management --skill conflict-resolution --skill husky-and-hooks --skill code-review --skill security-sbom --skill security-secrets-management --skill quality-unit-testing --skill quality-integration-testing --skill quality-e2e-testing --skill quality-regression-testing --skill quality-smoke-testing --skill security-sast-dast --skill backend-openapi-documentation
 ```
 
 **Next:** Add your language track (for example `rust` or `python-backend`) at Level 1.
@@ -256,7 +256,7 @@ npx skills add j4flmao/agent-skills --skill frontend-svelte-architecture --skill
 **Combines:** [Tech Lead & Staff Engineer](tracks/tech-lead.md) L1–2 + [Software & Solution Architect](tracks/architecture.md) L1 — **15 skills**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill code-review --skill dev-loop-refactor-guide --skill create-tech-spec --skill dev-loop-tech-debt-tracker --skill architecture-domain-driven-design --skill backend-clean-architecture --skill team-rules --skill dev-loop-performance-profiler --skill dev-loop-security-auditor --skill threat-modeling --skill system-design-database-sharding --skill distributed-consensus --skill microservices --skill backend-event-driven --skill zero-trust-identity
+npx skills add j4flmao/agent-skills --skill code-review --skill dev-loop-refactor-guide --skill create-tech-spec --skill dev-loop-tech-debt-tracker --skill architecture-domain-driven-design --skill backend-clean-architecture --skill team-rules --skill dev-loop-performance-profiler --skill dev-loop-security-auditor --skill threat-modeling --skill architecture-database-scaling --skill distributed-consensus --skill microservices --skill backend-event-driven --skill zero-trust-identity
 ```
 
 **Next:** Add the stack track of the codebase at Level 1.

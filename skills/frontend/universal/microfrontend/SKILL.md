@@ -552,6 +552,15 @@ jest.mock('orders/OrderList', () => ({
   - references/microfrontend-integration.md — Microfrontend Integration
   - references/microfrontend-testing.md — Microfrontend Testing Reference
   - references/module-federation.md — Module Federation Reference
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-web-micro-frontends-import-maps.md` — Micro-frontends with Import Maps & ES Modules (merged from `web/micro-frontends`)
+- `references/merged-architecture-micro-frontends.md` — Micro-Frontends (merged from `architecture/micro-frontends`)
+- `references/merged-module-federation-runtime-sharing.md` — Module Federation: Runtime Dependency Sharing (merged from `frontend/architecture/micro-frontends`)
+- `references/merged-micro-frontends-adoption.md` — Micro-frontends Adoption & Composition (merged from `frontend/advanced-architecture/micro-frontends`)
+
 ## Handoff
 
 Hand off to `frontend/universal/patterns/SKILL.md` for component patterns used within each microfrontend. Hand off to `frontend/universal/design-system/SKILL.md` for shared design system.

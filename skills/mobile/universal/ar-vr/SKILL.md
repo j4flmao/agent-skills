@@ -1,7 +1,11 @@
 ---
 name: mobile-ar-vr
 description: >
-  Use this skill when the user says 'AR', 'VR', 'augmented reality', 'virtual reality', 'ARKit', 'ARCore', 'Unity AR', '3D rendering', 'SceneView', 'AR scene', 'AR interaction', 'AR performance'. This skill enforces: platform-specific AR configuration (ARKit vs ARCore), scene setup with anchor management, optimal 3D model handling with LODs and compression, interaction patterns for gesture and placement, performance budgets (<60fps, <200MB), and VR integration considerations. Do NOT use for: general mobile UI/UX design, game engine tutorials unrelated to AR/VR, or 3D modeling software usage instructions.
+  Use when the user asks about AR in a mobile app, ARKit, ARCore, RealityKit,
+  SceneView, plane detection, anchors, object placement or visionOS and XR
+  performance budgets. Produces AR session setup, anchor and 3D asset handling
+  and interaction code. Not for game engine projects in general (use unity) or
+  3D on the web (use web3d-webgl).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

@@ -1,7 +1,11 @@
 ---
 name: react-native-expertise
 description: >
-  Use this skill when the user says 'React Native', 'Expo', 'RN app', 'FlatList performance', 'FlashList', 'Reanimated', 'React Navigation', 'Expo Router', 'EAS Build', 'EAS Update', 'OTA update', 'CodePush', 'Hermes', 'native module', 'Turbo Module', 'RN upgrade'. Builds and reviews React Native apps on the New Architecture: Expo vs bare workflow, navigation, list and animation performance, native modules, OTA updates with EAS Update, testing and release. Do NOT use for: New Architecture internals (JSI/Fabric/TurboModule mechanics — use react-native-architecture), React web patterns (use frontend/react/*), native iOS/Android code in depth (use ios / android).
+  Use when the user asks about React Native, an Expo app, Expo Router, React
+  Navigation, FlashList or FlatList performance, Reanimated, EAS Build, EAS
+  Update/OTA updates or RN upgrades. Produces React Native app code, navigation,
+  performance fixes and release setup. Not for JSI/Fabric/TurboModule internals
+  (use react-native-architecture).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

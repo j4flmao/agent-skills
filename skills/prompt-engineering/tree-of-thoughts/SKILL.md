@@ -1,10 +1,14 @@
 ---
 name: prompt-tree-of-thoughts
 description: >
-  Use this skill when the user says 'tree of thoughts', 'ToT', 'search over reasoning paths', 'beam search with LLM', 'backtracking reasoning', 'LLM as evaluator of partial solutions', 'BFS/DFS over thoughts'. Implements deliberate search over partial solutions: thought decomposition, candidate generation, state evaluation (value or vote), BFS/beam and DFS with pruning and backtracking, with cost controls. Do NOT use for: single-path reasoning prompts (prompt-engineering/chain-of-thought), agent tool loops (ai/ai-agents/core-architectures), or multi-agent debate (ai/ai-agents/multi-agent-topology).
+  Use when the user asks about Tree of Thoughts (ToT), BFS/DFS or beam search over reasoning paths,
+  backtracking, or using an LLM to score partial solutions. Produces a ToT config and implementation with call
+  budget and a comparison against CoT and self-consistency. Not for single-path reasoning (use
+  prompt-chain-of-thought) or agent debate (use swarm-architectures).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [prompt-engineering, tree-of-thoughts, search, bfs, dfs, beam-search, reasoning]
 ---
 

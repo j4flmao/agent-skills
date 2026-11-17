@@ -1,15 +1,7 @@
 ---
 name: devops-progressive-delivery
 description: >
-  Use when the user asks about progressive delivery, canary deployments,
-  blue-green deployments, feature flags in production, traffic shifting, A/B
-  testing in production, Flagger, Argo Rollouts, deployment strategies, or
-  gradual rollouts. Covers: canary analysis (Prometheus metrics, Datadog, manual
-  judgement), traffic management (Istio, Linkerd, NGINX, SMI), feature flag
-  systems (LaunchDarkly, Flagsmith, ConfigCat), deployment automation, and
-  automated rollback based on metrics.
-  Do NOT use for: basic CI/CD (cicd-pipeline), general Kubernetes
-  (kubernetes-patterns), or feature flag development (backend-feature-flags).
+  Use when the user asks to roll out a canary release with automatic rollback, blue-green deployments, Argo Rollouts, Flagger, analysis on Prometheus metrics, traffic shifting with Istio, Gateway API or NGINX, or feature flags in rollouts. Produces rollout manifests and metric gates. Not for in-app feature flag code (use backend-feature-flags) or a strategy overview (use kubernetes-architecture).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -232,7 +224,7 @@ spec:
               spec:
                 containers:
                   - name: sleep
-                    image: alpine:latest
+                    image: alpine:<pinned-tag>
                     command: ["sleep", "1800"]  # Wait for manual approval
                 restartPolicy: Never
             backoffLimit: 0

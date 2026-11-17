@@ -473,7 +473,7 @@ Use `#[tokio::test]` for async tests. Use `mockall` or manual mock traits for re
 - Cargo workspace for multi-crate projects — one binary crate + library crates.
 - Domain crate has zero dependencies on infrastructure (database, HTTP).
 - `thiserror` for error types — `#[derive(Error)]` with `#[error("...")]` format strings.
-- Traits are `#[async_trait]` for async and `Send + Sync` bound for thread safety.
+- Use native `async fn` in traits (Rust 1.75+) for static dispatch; use `#[async_trait]` only when you need `dyn Trait`. Add `Send + Sync` bounds for shared services.
 - `sqlx::query!` macro for compile-time SQL verification — never raw string queries.
 - Feature flags for conditional compilation — `cfg(feature = "postgres")`.
 - `tokio::main` for async entry point with multi-threaded runtime.

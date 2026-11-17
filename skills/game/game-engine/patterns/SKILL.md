@@ -1,7 +1,11 @@
 ---
 name: game-engine-patterns
 description: >
-  Use this skill when the user says 'game loop', 'fixed timestep', 'game programming patterns', 'object pooling', 'spatial partitioning', 'command pattern game', 'state machine game'. Canonical engine patterns: game loop and fixed timestep, component architecture, spatial partitioning, pooling, command/state patterns and render-pipeline organisation. Do NOT use for: ECS storage internals (use ecs-pattern), engine-specific APIs (use unity/unreal/godot).
+  Use when the user asks about the game loop, fixed timestep, game programming
+  patterns, object pooling, spatial partitioning, command pattern or state
+  machines in games. Produces canonical engine and gameplay pattern
+  implementations. Not for ECS storage internals (use ecs-pattern) or
+  engine-specific APIs (use unity, unreal or godot).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

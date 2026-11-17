@@ -653,7 +653,7 @@ Single service deployment?
 - TypeScript strict mode for all new projects.
 - No business logic in route handlers or controllers.
 - Repository interfaces in domain, implementations in infrastructure.
-- Async handlers must be wrapped for Express (use express-async-errors).
+- Express 5 forwards rejected promises from async handlers to the error handler; on Express 4 wrap handlers (or use express-async-errors).
 - Error classes carry HTTP status code, error code, and optional details.
 - Environment variables validated at startup with Zod schema.
 - Database migrations for all schema changes — never raw DDL in production.

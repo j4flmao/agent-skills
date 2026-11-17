@@ -4,14 +4,13 @@
 
 [← Advisor home](../README.md) · [Build a custom bundle](../custom-bundles.md) · [Recipes](../recipes.md)
 
-## Level 1 — Essentials (3 skills)
+## Level 1 — Essentials (2 skills)
 
 Install these first. They cover the everyday work of this role and rarely conflict.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
 | [`blockchain-zk`](../../skills/blockchain/blockchain-zk/SKILL.md) | `blockchain/blockchain-zk` | Guide zero-knowledge proof integration in blockchain systems covering proof system selection, circuit programming, prover/verifier infrastructure,… |
-| [`zero-knowledge-proofs`](../../skills/blockchain/zero-knowledge-proofs/SKILL.md) | `blockchain/zero-knowledge-proofs` | Explain how to build and prove zero-knowledge statements: authoring constrained arithmetic circuits in Circom, selecting a proving system (Groth16… |
 | [`blockchain-cryptography`](../../skills/blockchain/blockchain-cryptography/SKILL.md) | `blockchain/blockchain-cryptography` | Guide the selection, implementation, and optimization of cryptographic primitives specific to blockchain systems. |
 
 ## Level 2 — Professional (3 skills)
@@ -37,16 +36,16 @@ Add one at a time, only for the problem in front of you. These are deep and narr
 
 Add `-a <agent>` (for example `-a claude-code`) to target one agent, `-g` for a global install, `-y` to skip prompts.
 
-**Level 1 only (3 skills):**
+**Level 1 only (2 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill blockchain-zk --skill zero-knowledge-proofs --skill blockchain-cryptography
+npx skills add j4flmao/agent-skills --skill blockchain-zk --skill blockchain-cryptography
 ```
 
-**Level 1 + 2 (6 skills):**
+**Level 1 + 2 (5 skills):**
 
 ```bash
-npx skills add j4flmao/agent-skills --skill blockchain-zk --skill zero-knowledge-proofs --skill blockchain-cryptography --skill modern-cryptography --skill post-quantum-crypto --skill blockchain-security
+npx skills add j4flmao/agent-skills --skill blockchain-zk --skill blockchain-cryptography --skill modern-cryptography --skill post-quantum-crypto --skill blockchain-security
 ```
 
 Level 3: add single skills with `--skill <name>` when you need them.
@@ -57,8 +56,8 @@ Bundles are installed with the same command; each one's full command is on the [
 
 | Bundle | Skills | Description |
 |--------|--------|-------------|
-| [`blockchain-all`](../bundles.md#blockchain-all) | 20 | All blockchain skills: core, cryptography, Ethereum, Bitcoin, patterns, application, web3, testing, infrastructure, security, management, Solana, DeFi, cross-chain, ZK, data indexing |
-| [`quantum-computing`](../bundles.md#quantum-computing) | 12 | Quantum computing: qubits and gates, algorithms (Grover, Shor), Qiskit, error correction, post-quantum cryptography |
+| [`blockchain-all`](../bundles.md#blockchain-all) | 16 | All blockchain skills: core, cryptography, Ethereum, Bitcoin, patterns, application, web3, testing, infrastructure, security, management, Solana, DeFi, cross-chain, ZK, data indexing |
+| [`quantum-computing`](../bundles.md#quantum-computing) | 11 | Quantum computing: qubits and gates, algorithms (Grover, Shor), Qiskit, error correction, post-quantum cryptography |
 
 ## Combine with
 

@@ -356,8 +356,9 @@ recovery_flow:
   optimization:
     timing: "Send first email within 1 hour for best conversion"
     personalization: "Include images of abandoned items, similar products"
-    incentives: "Free shipping or 10% discount on abandoned cart items"
-    exit_intent: "Capture email before abandonment (exit-intent popup)"
+    incentives: "Free shipping or a discount only if margin allows; avoid training users to abandon"
+    consent: "Send recovery email/SMS only to users who opted in (GDPR/ePrivacy, TCPA for SMS)"
+    exit_intent: "A/B test exit-intent modals before keeping them; they often hurt mobile UX"
 ```
 
 ### Checkout Optimization Checklist
@@ -377,7 +378,8 @@ optimization_checklist:
   conversion:
     - "Abandoned cart email within 1 hour"
     - "Cart persistence across sessions (logged-in users)"
-    - "Multiple payment methods displayed upfront"
+    - "Express wallets (Apple Pay, Google Pay, PayPal, Link) above the form on mobile"
+    - "Correct autocomplete tokens on every address/contact input"
     - "Estimated total shown before checkout entry"
     
   trust:
@@ -565,3 +567,13 @@ class DiscountEngine {
 - Inventory race conditions: atomic `DECR` on Redis for flash sales. Row-level lock for normal flow.
 - Data validation: validate all item IDs, quantities, prices against catalog at checkout.
 - Abandoned cart PII: encrypt personally identifiable information in cart records. Anonymize after 30 days.
+
+## References
+- `references/cart-architecture.md`, `references/discount-engine.md`, `references/order-fulfillment-strategy.md` — cart, promotion and order internals
+- `references/checkout-optimization.md`, `references/checkout-ux.md`, `references/payment-flow-integration.md` — conversion and PSP handoff
+- Conversion rule: find the biggest funnel drop-off (cart → checkout start → shipping → payment → order) from your own data before changing anything; measure each change as step conversion with order completion as the primary A/B metric.
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-checkout-optimization.md` — Checkout Optimization (merged from `ecommerce/checkout-optimization`)

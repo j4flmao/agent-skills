@@ -1,7 +1,7 @@
 ---
 name: quality-e2e-testing
 description: >
-  Use this skill when the user says 'e2e strategy', 'which flows should be e2e', 'flaky e2e tests', 'e2e quarantine', 'mock or real backend in e2e', 'e2e test data', 'e2e in CI gating', 'network conditions in e2e', 'accessibility checks in e2e'. It defines how an organization uses end-to-end tests: journey selection, environment and data strategy, network control, flakiness policy, CI gating and reporting. Do NOT use for: writing the suite scaffolding and page objects (use e2e-testing), Playwright API specifics (use qa-e2e-playwright), visual regression baselines (use quality/visual-testing), fault-injection experiments (use qa-chaos-engineering).
+  Use this skill when the user says 'e2e strategy', 'which flows should be e2e', 'flaky e2e tests', 'e2e quarantine', 'mock or real backend in e2e', 'e2e test data', 'e2e in CI gating', 'network conditions in e2e', 'accessibility checks in e2e'. It defines how an organization uses end-to-end tests: journey selection, environment and data strategy, network control, flakiness policy, CI gating and reporting. Do NOT use for: writing the suite scaffolding and page objects (use quality-e2e-testing), Playwright API specifics (use quality-e2e-testing), visual regression baselines (use quality/visual-testing), fault-injection experiments (use devops-chaos-engineering).
 version: "3.0.0"
 author: "j4flmao"
 license: "MIT"
@@ -137,3 +137,19 @@ Post-deploy:       production smoke (read-only / test tenant), triggers rollback
 - `references/visual-regression.md` — screenshot assertions in E2E
 - `references/ci-cd-integration.md` — pipelines, sharding, artifacts
 - `references/anti-patterns.md` — E2E anti-patterns
+
+Implementation lives in the merged references: Playwright config, setup-project auth and locators in `references/merged-frontend-playwright-testing.md`; page objects, sharded CI and API seeding in `references/merged-e2e-testing.md`; core concepts and sharding matrix in `references/merged-qa-e2e-playwright.md`. Default tool for new suites: Playwright (Chromium, Firefox, WebKit); Cypress when the team already runs it.
+
+### Merged Material
+Content folded in from overlapping skills and notes.
+
+- `references/merged-frontend-playwright-testing.md` — E2E & Component Testing with Playwright (merged from `frontend/e2e-testing`)
+- `references/merged-qa-e2e-playwright.md` — E2E Testing with Playwright (merged from `quality-assurance/testing-strategies/e2e-playwright`)
+- `references/merged-e2e-testing.md` — Quality E2E Testing (merged from `quality/e2e-testing`)
+- `references/cypress-guide.md` — Cypress Guide
+- `references/e2e-testing-advanced.md` — E2E Testing Advanced Topics
+- `references/e2e-testing-fundamentals.md` — E2E Testing Fundamentals
+- `references/flakiness-management.md` — E2E Test Flakiness Management
+- `references/framework-selection.md` — Framework Selection
+- `references/playwright-guide.md` — Playwright Guide
+- `references/test-patterns.md` — Test Patterns

@@ -1,7 +1,11 @@
 ---
 name: flutter-internals
 description: >
-  Use this skill when the user says 'Flutter internals', 'widget element render object', 'three trees', 'BuildContext', 'RenderObject', 'layout constraints', 'constraints go down sizes go up', 'Impeller', 'Skia', 'raster thread', 'layer tree', 'Flutter engine', 'embedder', 'platform views', 'custom RenderBox'. Explains how Flutter works under the hood — widget/element/render-object trees, the build-layout-paint-composite pipeline, the constraint model, engine threads, Impeller vs Skia, platform channels and platform views — and uses that to diagnose layout errors and performance problems. Do NOT use for: app architecture and state management (use flutter-expertise), Dart language features (use lang-dart), React Native (use react-native-architecture).
+  Use when the user asks about Flutter internals: widget/element/render object
+  trees, BuildContext, constraints go down sizes go up, RenderBox, Impeller vs
+  Skia, raster thread, platform views or the embedder. Explains the
+  build-layout-paint pipeline to diagnose layout errors and jank. Not for app
+  architecture or state management (use flutter-expertise).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"

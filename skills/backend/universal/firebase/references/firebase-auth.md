@@ -93,7 +93,7 @@ const adminAuth = getAuth(adminApp);
 const userRecord = await adminAuth.createUser({
   email: 'user@example.com',
   emailVerified: false,
-  password: 'secretPassword',
+  password: generatedTempPassword, // never hardcode; or omit and send a password-reset link
   displayName: 'John Doe',
   disabled: false,
 });

@@ -10,7 +10,7 @@ Check project state ────────────────────
     │                                                             │
     ├── No docs exist, no README → create-brief                   │
     ├── Brief exists, no PRD → create-prd                         │
-    ├── PRD exists, no ADRs/specs → create-adr + create-tech-spec │
+    ├── PRD exists, no ADRs/specs → create-tech-spec (ADRs+spec)  │
     ├── Architecture exists → detect stack                        │
     └── Already has code → route by intent                        │
                                                                   │
@@ -56,7 +56,7 @@ Detect intent from user request ────────────────
     │   → ba                                                      │
     │                                                             │
     ├── Architecture discussion, tech decision                    │
-    │   → create-adr + detect stack for implementation            │
+    │   → create-tech-spec + detect stack for implementation      │
     │                                                             │
     └── Unknown → ask user: "What would you like to do?"          │
                                                                   │
@@ -191,7 +191,7 @@ Analyze Domain Keywords
 ```
 Phase 0: Scaffolding, config → project-init, create-brief
 Phase 1: Planning → create-prd, create-story
-Phase 2: Architecture → create-adr, create-tech-spec
+Phase 2: Architecture → create-tech-spec (ADRs + spec)
 Phase 3: Implementation → stack-architecture, specific patterns
 Phase 4: Testing → quality-*, backend-testing, frontend-testing
 Phase 5: Deployment → cicd-pipeline, docker-patterns

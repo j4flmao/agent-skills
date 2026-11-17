@@ -1,10 +1,14 @@
 ---
 name: llm-kv-cache-paged-attention
 description: >
-  Use this skill when the user says 'KV cache', 'PagedAttention', 'vLLM memory', 'gpu_memory_utilization', 'prefix caching', 'max concurrent sequences', 'KV cache size', 'context length OOM'. Explains KV cache memory math and how paged allocation, prefix caching, KV quantization, and attention variants (MQA/GQA/MLA) change serving capacity, with vLLM configuration. Do NOT use for: weight quantization (ai/llm-engineering/model-quantization), local llama.cpp/Ollama setups (rnd/ai-agents/local-slm-inference), or general LLMOps (ai/llm-ops).
+  Use when the user asks about KV cache size, PagedAttention, vLLM OOM, gpu_memory_utilization, max_num_seqs,
+  prefix caching, GQA/MLA memory or long-context OOM. Produces KV-per-token math, max concurrency and vLLM
+  flags. Not for weight quantization (use llm-model-quantization) or local llama.cpp setups (use
+  local-slm-inference).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-11"
 tags: [ai, llm, inference, kv-cache, paged-attention, vllm, serving]
 ---
 
