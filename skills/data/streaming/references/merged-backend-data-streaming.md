@@ -1,30 +1,9 @@
 # Data Streaming Architecture
 
+> Merged reference for the data-streaming skill (folded in from `backend/universal/data-streaming`). The entry point is the parent [SKILL.md](../SKILL.md); this file keeps only the material that the parent does not cover.
+
 ## Purpose
 Build pipelines that process continuous event streams with predictable latency and correct results under failures, late data and redelivery. Covers Kafka topic design, consumer scaling, processing semantics, and stateful stream processing with Flink or Kafka Streams.
-
-## Agent Protocol
-
-### Trigger
-Exact user phrases: "data streaming", "kafka architecture", "stream processing", "flink job", "kafka streams", "exactly once", "watermarks", "windowed aggregation", "consumer lag", "log compaction".
-
-### Input Context
-- Event sources, volume (events/s, bytes/s), and latency target.
-- Ordering and correctness needs (approximate OK vs exact counts, money).
-- Processing engine in use or allowed (Flink, Kafka Streams, Spark Structured Streaming, plain consumers).
-- Sinks (DB, search index, another topic, warehouse).
-
-### Output Artifact
-Pipeline diagram, topic/partition plan, producer/consumer/processor config, and processing code. No files unless requested.
-
-### Response Format
-```
-Pipeline: {source} -> {topic(partitions, RF)} -> {processor} -> {sink}
-Key: {partition key}   Ordering: per key
-Semantics: {at-least-once + idempotent sink | exactly-once (transactions)}
-Time: {event time, watermark = max_ts - {lateness}} Window: {tumbling/sliding/session, size}
-State: {store/backend, TTL}   Checkpoint: {interval}
-```
 
 ## Kafka Fundamentals That Drive Design
 

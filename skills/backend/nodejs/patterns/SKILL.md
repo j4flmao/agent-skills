@@ -1,10 +1,11 @@
 ---
 name: nodejs-patterns
 description: >
-  Use this skill when implementing Node.js-specific patterns — streams, event emitters, worker threads, DI containers, error handling, and async patterns. This skill enforces: backpressure handling in streams, typed event emitters, structured concurrency with worker threads, DI with awilix or inversify, and centralized error classification. Requires Node.js 18+. Do NOT use for: framework-specific (Express/Fastify) patterns, database patterns, or non-Node.js runtimes.
+  Use when the user asks about Node.js streams and backpressure, stream.pipeline, worker threads, typed EventEmitter, AbortController, bounded Promise concurrency or DI with awilix. Produces Node runtime pattern code. Not for project structure (use nodejs-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

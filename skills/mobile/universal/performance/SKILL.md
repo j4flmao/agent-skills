@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -42,8 +43,6 @@ A markdown document containing:
 ### Response Format
 No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
 
----
-
 ### Max Response Length
 4096 tokens
 
@@ -70,7 +69,7 @@ What is the user complaint?
 │   └── Location tracking always on → Use significant-change or region monitoring
 └── "App download is too large" → Bundle Size
     ├── IPA >80MB / APK >30MB → Code splitting, remove unused resources, asset optimization
-    └── Download >100MB cellular warning → On-demand resources, app thinning, deferred downloads
+    └── Large store download (iOS asks before cellular downloads above 200 MB by default; users can change it) → On-demand resources / Background Assets, app thinning, deferred downloads
 ```
 
 ### Performance Layer Model
@@ -89,9 +88,9 @@ What is the user complaint?
 │  Storage: indexed queries, lazy load     │
 ├──────────────────────────────────────────┤
 │            Platform Bridge                │
-│  Flutter: 4-8ms Dart-to-native overhead  │
-│  RN: 10-50ms JS-to-native bridge latency │
-│  Native: 0ms (direct API calls)          │
+│  Flutter: platform channel messages      │
+│  RN: JSI calls (New Architecture)        │
+│  Native: direct API calls                │
 └──────────────────────────────────────────┘
 ```
 
@@ -148,7 +147,7 @@ performance_budgets:
       target: "<80MB IPA"
       reduction: "Asset catalog optimization, remove unused architectures, Bitcode"
     download:
-      target: "<100MB initial download from store (to avoid cellular warning)"
+      target: "<200MB initial download from store (iOS default cellular prompt threshold)"
 ```
 
 ### Profiling Workflow
@@ -654,7 +653,7 @@ Push notification: 0 background network, push wakes app only when needed
 ```
 
 ### Network Batching for Radio Efficiency
-- Radio energy profile: ramp-up (~2s high power) → transfer → tail (~10s high power)
+- Radio energy profile: ramp-up → transfer → tail period at high power for several seconds after the last byte, so many small requests cost far more than one batched request
 - Batch requests into 1-2 minute windows to avoid multiple radio ramp-ups
 - Use `JobScheduler` (Android) / `BGTaskScheduler` (iOS) for opportunistic batching
 - Prefetch data for likely user actions when on WiFi
@@ -703,7 +702,7 @@ Push notification: 0 background network, push wakes app only when needed
 - **Shipping multiple architectures unnecessarily**: `x86_64` emulator libs in release. Filter with `abiFilters`
 
 ### Battery Anti-Patterns
-- **Polling instead of push notifications**: Each poll wakes cellular radio for ~20s. Replace with push + silent notification
+- **Polling instead of push notifications**: Each poll wakes the cellular radio and keeps it in a high-power tail state. Replace with push + silent notification
 - **Continuous location in background**: Kills battery. Use significant-change or region monitoring
 - **No background work constraints**: WorkManager without network/battery constraints runs at inappropriate times
 - **Wake locks held too long**: Prevent device sleep. Use `acquire(timeout)` with timeout, always release in finally
@@ -714,10 +713,10 @@ Push notification: 0 background network, push wakes app only when needed
 
 | Platform | Rendering | Memory Model | Startup | Bundle Size |
 |----------|-----------|-------------|---------|-------------|
-| Native (Swift/Kotlin) | Direct GPU access, 60fps guaranteed | ARC/GC, fine-grained control | Fastest (native code) | Smallest |
-| Flutter | Skia/Impeller engine, 60-120fps | Dart GC, widget tree overhead | Moderate (engine init ~200ms) | Moderate (engine ~5MB) |
-| React Native | JS-to-native bridge, 60fps typical | JS GC, bridge serialization overhead | Slowest (JS engine init + bundle parse) | Large (JS bundle + RN lib) |
-| Ionic/Capacitor | WebView rendering, 60fps achievable | WebView heap, limited control | Slow (WebView init ~200-600ms) | Large (WebView + Ionic libs) |
+| Native (Swift/Kotlin) | Platform UI toolkit, 60-120fps achievable | ARC/GC, fine-grained control | Fastest (native code) | Smallest |
+| Flutter | Impeller (default on iOS and modern Android), 60-120fps | Dart GC, widget tree overhead | Moderate (engine init) | Moderate (engine adds a few MB) |
+| React Native | Native views via Fabric/JSI, 60fps typical | Hermes GC | Slower (JS engine init; Hermes bytecode helps) | Large (JS bundle + RN lib) |
+| Ionic/Capacitor | WebView rendering, 60fps achievable | WebView heap, limited control | Slow (WebView init before JS runs) | Large (WebView + Ionic libs) |
 | Kotlin Multiplatform | Native performance per platform | Platform-native memory model | Native fast startup | Platform-native size |
 
 ## Tooling

@@ -1,10 +1,14 @@
 ---
 name: data-schema-registry
 description: >
-  Use this skill when asked about Schema Registry, Avro, Protobuf, schema evolution, compatibility, Confluent Schema Registry, Apicurio, serialization, deserialization, or schema validation. This skill enforces: Schema Registry architecture and deployment, Avro/Protobuf/JSON Schema definition, compatibility modes (BACKWARD, FORWARD, FULL, NONE), schema evolution best practices, SerDe (serialization/deserialization) patterns, and CI/CD integration for schema governance. Do NOT use for: data contract enforcement, data catalog management, or database schema design.
+  Use when the user asks about Confluent Schema Registry, Apicurio, Avro or Protobuf schemas for Kafka,
+  compatibility modes (BACKWARD, FORWARD, FULL), schema evolution or SerDe config. Produces schema definitions,
+  compatibility settings and client SerDe setup. Not for cross-team data contracts (use data-data-contracts) or
+  Kafka topic design (use data-streaming).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

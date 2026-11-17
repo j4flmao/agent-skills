@@ -1,10 +1,11 @@
 ---
 name: backend-bff-pattern
 description: >
-  Use this skill when the user says 'BFF', 'Backend for Frontend', 'API gateway', 'gateway specialization', 'frontend API', 'mobile API', 'web API', 'API composition', 'aggregation service', 'frontend gateway'. This skill designs Backend for Frontend patterns with specialized API gateways for each client type. Applies to any backend stack. Do NOT use for: general-purpose API gateways (Kong, NGINX), service mesh, or GraphQL federation.
+  Use when the user asks about Backend for Frontend (BFF), a mobile vs web API layer, API aggregation or composition for one client, or a frontend-specific gateway. Produces a BFF design with aggregation, partial failure and caching. Not for federated GraphQL (use api-graphql-federation) or general API design (use backend-api-design).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

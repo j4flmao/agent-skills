@@ -116,55 +116,8 @@ Every request must carry tenant context through all layers:
    - YES -> Provision target environment first, then run async data migration pipeline. Support incremental sync during migration window. Validate data parity before cutover.
    - NO -> Standard provisioning flow. No migration phase needed.
 
-## Agent Protocol
-
-### Trigger
-Exact user phrases: multi-tenant, multi-tenancy, SaaS architecture, tenant isolation, tenant onboarding, tenant data, tenant migration, per-tenant config, tenant scaling, tenancy model, tenant routing, data isolation.
-
-### Input Context
-Before activating, verify:
-- What isolation model is required (DB per tenant / schema per tenant / row-level)?
-- What compliance requirements apply to tenant data separation?
-- What is the tenant lifecycle (provision, onboard, suspend, delete)?
-- How are cross-tenant operations handled (analytics, billing, migrations)?
-
-### Output Artifact
-Tenant isolation architecture document + lifecycle automation plan + cross-tenant operations guide.
-
-### Response Format
-```
-## Multi-Tenant Architecture
-### Isolation Model: {model}
-### Tenants: {total count}
-### Data Boundary: {strategy}
-
-### Tenant Lifecycle
-{flow: provision -> config -> activate -> operate -> suspend -> delete}
-
-### Isolation Enforcement
-{middleware, connection routing, encryption, caching}
-
-### Cross-Tenant Operations
-{analytics, migrations, backups - how they work across boundaries}
-
-### Operational Runbooks
-{suspend, data export, full delete}
-```
-
-No preamble. No postamble. No explanations.
-
-### Completion Criteria
-- [ ] Isolation model selected and justified
-- [ ] Tenant ID propagation through entire request lifecycle
-- [ ] Tenant provisioning automated
-- [ ] Data isolation verified at storage layer
-- [ ] Tenant-aware rate limiting and caching configured
-- [ ] Cross-tenant operations designed
-- [ ] Tenant deletion/suspension runbooks written
-- [ ] Tenant migration strategy documented
-
-### Max Response Length
-7000 tokens
+## Scope
+Reference folded into the parent `../SKILL.md` (the entry point; use its trigger and Response Format). This file keeps only material the parent does not cover: the TENANT-ISOLATE framework, isolation/migration/onboarding decision trees, governance and compliance mapping.
 
 ## Workflow
 

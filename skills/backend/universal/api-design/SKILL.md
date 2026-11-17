@@ -1,10 +1,11 @@
 ---
 name: backend-api-design
 description: >
-  Use this skill when the user says 'API design', 'REST API', 'GraphQL schema', 'endpoint design', 'API conventions', 'URL structure', 'HTTP methods', 'response format', 'API versioning', 'pagination', or when designing new API endpoints. This skill enforces consistent REST or GraphQL conventions: plural nouns, kebab-case URLs, consistent response envelopes, versioned endpoints, paginated lists, and structured error responses. Applies to any backend stack. Do NOT use for: database schema design, frontend data fetching, or authentication implementation.
+  Use when the user asks about REST API design, designing REST endpoints, URL and resource naming, HTTP methods and status codes, pagination, filtering or error formats. Produces endpoint contracts with conventions. Not for the response envelope (use backend-api-response) or versioning (use backend-api-versioning).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

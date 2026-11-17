@@ -1,12 +1,11 @@
 ---
 name: microfrontend
 description: >
-  Use this skill when the user asks about microfrontend, Module Federation, Web
-  Components, iframe integration, shared dependencies, or cross-app communication
-  between frontend applications.
+  Use when the user asks to split the web app into independently deployed micro frontends, Module Federation, remoteEntry/mf-manifest, import maps, single-spa, Native Federation, shared singletons or cross-app communication. Produces the composition choice, host/remote config and deployment rules. Not for a single-team monorepo (use monorepo).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -175,8 +174,9 @@ new ModuleFederationPlugin({
     products: 'products@https://products.app.com/remoteEntry.js',
   },
   shared: {
-    react: { singleton: true, requiredVersion: '^18.2.0', eager: true },
-    'react-dom': { singleton: true, requiredVersion: '^18.2.0', eager: true },
+    // eager only in the host; remotes must not set eager (see bootstrap pattern)
+    react: { singleton: true, requiredVersion: '^19.0.0', eager: true },
+    'react-dom': { singleton: true, requiredVersion: '^19.0.0', eager: true },
     'react-router-dom': { singleton: true },
   },
 });
@@ -194,8 +194,8 @@ new ModuleFederationPlugin({
     './OrderDetail': './src/components/OrderDetail.tsx',
   },
   shared: {
-    react: { singleton: true, requiredVersion: '^18.2.0' },
-    'react-dom': { singleton: true, requiredVersion: '^18.2.0' },
+    react: { singleton: true, requiredVersion: '^19.0.0' },
+    'react-dom': { singleton: true, requiredVersion: '^19.0.0' },
   },
 });
 ```
@@ -263,17 +263,16 @@ Orders app sets URL `/orders/123`, Products app reads URL param via router.
 ## Microfrontend by Framework
 
 ### React (via Module Federation)
-- `@module-federation/enhanced` for Rspack support
-- `@module-federation/nextjs-mf` for Next.js
-- Remix support via `@module-federation/remix`
+- `@module-federation/enhanced` (webpack/Rspack) and `@module-federation/vite`
+- Next.js: `@module-federation/nextjs-mf` supports the Pages Router only and is in maintenance; for App Router apps prefer route-level (multi-zone) composition
 
 ### Vue (via Module Federation / Vite)
-- `@originjs/vite-plugin-federation` for Vite-based MFE
-- Webpack 5 federation for Vue CLI
+- `@module-federation/vite` (official) or `@originjs/vite-plugin-federation` for Vite-based MFE
+- Webpack 5 federation only for legacy Vue CLI apps (Vue CLI is in maintenance mode)
 
 ### Angular
-- `@angular-architects/module-federation` plugin
-- Custom webpack config per Angular app
+- `@angular-architects/native-federation` for the default esbuild-based Angular CLI builder (Angular 17+)
+- `@angular-architects/module-federation` only for projects still on the webpack builder
 
 ## Deployment
 
@@ -295,7 +294,7 @@ orders-app/
       main.js
 ```
 
-**Rule**: Always version remoteEntry.js with content hash or timestamp. Never share `remoteEntry.js` directly — use CDN with long cache + versioned paths.
+**Rule**: Either serve `remoteEntry.js` / `mf-manifest.json` from a stable URL with `Cache-Control: no-cache` (hashed chunks get long-lived caching), or pin the host to versioned paths. Never long-cache an unversioned entry file, or users keep a stale remote after deploy.
 
 ## Migration from Monolith SPA
 
@@ -552,6 +551,12 @@ jest.mock('orders/OrderList', () => ({
   - references/microfrontend-integration.md — Microfrontend Integration
   - references/microfrontend-testing.md — Microfrontend Testing Reference
   - references/module-federation.md — Module Federation Reference
+
+### Essentials from Merged Material
+- Micro-frontends solve team-scaling problems, not page speed; if the goal is "faster page loads", the answer is no.
+- Composition options in order of cost: build-time packages, route-level/server composition, runtime Module Federation, Web Components, iframes (see `merged-micro-frontends-adoption.md`).
+- Framework-agnostic alternative to Module Federation: native import maps + mount/unmount lifecycle, single-spa or Native Federation (see `merged-web-micro-frontends-import-maps.md`).
+- Remotes never set `eager: true`; use the async bootstrap pattern to avoid "Shared module is not available for eager consumption". Wrap every remote in an error boundary with a fallback (see `merged-module-federation-runtime-sharing.md`).
 
 ### Merged Material
 Content folded in from overlapping skills and notes.

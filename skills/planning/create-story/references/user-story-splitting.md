@@ -141,7 +141,7 @@ Phase 1 (Foundation):
   STORY-503: Support SAML 2.0 protocol
 
 Phase 2 (Expansion):
-  STORY-504: Add Azure AD as SSO provider
+  STORY-504: Add Microsoft Entra ID as SSO provider
   STORY-505: Add Google Workspace as SSO provider
   STORY-506: Add OneLogin as SSO provider
 

@@ -28,13 +28,8 @@ client.create_model_version(
     tags={"dataset": "transactions_2025Q1", "auc": "0.942"},
 )
 
-# Stage transitions
-client.transition_model_version_stage(
-    name="fraud-detector",
-    version=4,
-    stage="Staging",
-    archive_existing_versions=True,
-)
+# Stages are deprecated since MLflow 2.9: point an alias at the version instead
+client.set_registered_model_alias("fraud-detector", "staging", version=4)
 ```
 
 ## Deployment Strategies
@@ -124,15 +119,11 @@ model_metadata = {
 # Automated rollback script
 def rollback(model_name, from_version, to_version):
     print(f"Rolling back {model_name} v{from_version} → v{to_version}")
-    client.transition_model_version_stage(
-        name=model_name,
-        version=to_version,
-        stage="Production",
-        archive_existing_versions=True,
-    )
+    client.set_registered_model_alias(model_name, "production", version=to_version)
     # Verify
-    current = client.get_latest_versions(model_name, stages=["Production"])
-    assert current[0].version == to_version
+    current = client.get_model_version_by_alias(model_name, "production")
+    if str(current.version) != str(to_version):
+        raise RuntimeError(f"rollback of {model_name} failed: alias points to v{current.version}")
     print(f"Rollback complete. Production now uses v{to_version}")
 ```
 

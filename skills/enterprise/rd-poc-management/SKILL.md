@@ -1,10 +1,12 @@
 ---
 name: enterprise-rd-poc-management
 description: >
-  Use this skill when the user says 'proof of concept', 'poc', 'spike', 'prototype to production', 'r&d project', 'poc success criteria', 'build vs buy', 'poc handoff', 'innovation sandbox'. It runs time-boxed, hypothesis-driven PoCs with explicit exit criteria and a production-readiness path (throwaway vs evolutionary, sandbox isolation, contract mocking, security retrofit, PoC-to-MVP handoff). Do NOT use for: writing a single ADR or tech spec (use planning/create-tech-spec), product MVP scoping and PRDs (use create-prd), vendor contract negotiation (use enterprise/vendor-management).
+  Use when the user asks about a proof of concept (PoC), spike, R&D project, PoC success criteria, build vs buy evaluation, innovation sandbox or taking a prototype to production. Produces a time-boxed,
+  hypothesis-driven PoC plan with exit criteria. Not for product PRDs (use create-prd) or vendor contracts (use enterprise-vendor-management).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [enterprise, r&d, poc, prototyping, innovation, build-vs-buy]
 ---
 

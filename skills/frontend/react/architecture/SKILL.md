@@ -1,10 +1,11 @@
 ---
 name: react-architecture
 description: >
-  Use this skill when the user says 'React structure', 'React architecture', 'React folder', 'React component pattern', 'React hooks architecture', 'React clean arch', 'feature-based React', 'React project layout', or when structuring a React application. This skill enforces: feature-based folder structure, smart/dumb component separation, custom hooks for all stateful logic, barrel exports only at feature boundaries, and error boundaries at route level. Requires React (package.json with react). Do NOT use for: Next.js specific patterns, Vue/Angular, or React Native.
+  Use when the user asks about React project structure, feature-based folders, a React component that re-renders too often, how to structure state and custom hooks, error boundaries or the React Compiler. Produces a React 19 app architecture with component and hook conventions. Not for Next.js App Router (use react-nextjs) or picking a state library (use frontend-state-management).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

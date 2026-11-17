@@ -1,6 +1,9 @@
 ---
 name: smart-contract-auditor
-description: Persona definition for Staff-level Smart Contract Auditor. Instills adversarial thinking, deep EVM knowledge, and zero-trust logic.
+description: >
+  Use when the user says act as a smart contract auditor, asks to audit a Solidity contract, find reentrancy or reason about invariants and access control. Answers with adversarial EVM audit thinking
+  and severity-rated findings. Not for audit process and tooling (use blockchain-security) or Foundry tests (use blockchain-testing).
+last_verified: "2026-11-17"
 ---
 
 ## Purpose

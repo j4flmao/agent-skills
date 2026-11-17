@@ -130,30 +130,27 @@ export class GlobalErrorHandler implements ErrorHandler {
 ```
 
 ### Svelte Error Boundary
+Svelte 5.3+ has a built-in `<svelte:boundary>` that catches errors thrown while rendering or in effects of its children (not errors in event handlers or later async callbacks).
 ```svelte
 <script>
-  import { onMount } from 'svelte'
+  let { children } = $props()
 
-  let hasError = false
-  let error = null
-
-  export let fallback = null
+  function report(error, reset) {
+    console.error('Render error caught by boundary', error)
+    // send to your monitoring service here
+  }
 </script>
 
-<svelte:window on:error={(e) => { hasError = true; error = e.message }} />
+<svelte:boundary onerror={report}>
+  {@render children()}
 
-{#if hasError}
-  {#if fallback}
-    <slot name="fallback" {error} on:retry={() => hasError = false} />
-  {:else}
-    <div class="error-fallback">
+  {#snippet failed(error, reset)}
+    <div class="error-fallback" role="alert">
       <p>Something went wrong</p>
-      <button on:click={() => hasError = false}>Try again</button>
+      <button onclick={reset}>Try again</button>
     </div>
-  {/if}
-{:else}
-  <slot />
-{/if}
+  {/snippet}
+</svelte:boundary>
 ```
 
 ## Recovery Patterns

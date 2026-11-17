@@ -1,10 +1,11 @@
 ---
 name: frontend-testing
 description: >
-  Use this skill when the user says 'frontend testing', 'component test', 'React testing', 'Vue testing', 'Angular testing', 'testing library', 'Cypress', 'Playwright', 'snapshot test', 'what to test frontend', or when writing frontend tests. This skill enforces: Testing Library queries by user-facing attributes (getByRole, getByLabelText), userEvent over fireEvent, component tests for every component state, E2E for critical journeys only (5-10 per app), accessibility assertions in every test, and zero snapshot tests. Works with any frontend framework. Do NOT use for: backend testing, API testing, or manual QA.
+  Use when the user asks about frontend testing, component tests with Testing Library, Vitest or Jest, userEvent, mocking APIs with MSW, Playwright or Cypress for critical journeys, and what to test in the UI. Produces a test strategy and component/E2E tests. Not for Storybook stories (use frontend-storybook) or cross-team E2E suites (use quality-e2e-testing).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

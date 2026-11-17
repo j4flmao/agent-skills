@@ -3,26 +3,8 @@
 ## Purpose
 GraphQL resolvers run per field, so a naive implementation issues one database query per parent object (N+1) and lets clients send arbitrarily expensive queries. This skill removes N+1 with batching, bounds query cost, and adds caching where it is safe.
 
-## Agent Protocol
-
-### Trigger
-Exact user phrases: "graphql n+1", "dataloader", "graphql slow", "graphql performance", "batch resolvers", "query complexity", "depth limit", "persisted queries", "graphql caching".
-
-### Input Context
-- Server library (Apollo Server, GraphQL Yoga, Mercurius, graphql-java, Strawberry, gqlgen, Hot Chocolate).
-- Data layer (SQL/ORM, REST backends) and the slow query or resolver.
-- Whether the API is public (untrusted clients) or first-party only.
-
-### Output Artifact
-Loader definitions, context wiring, and server validation/caching config. No files unless requested.
-
-### Response Format
-```
-Problem: {N+1 on Type.field | unbounded query | no caching}
-Fix: {DataLoader keyed by X | depth<=N, complexity<=M | APQ/persisted | cache hint}
-Queries before/after: {n} -> {m}
-Code: {loader + resolver + server config}
-```
+## Scope
+Reference folded into the parent `../SKILL.md` (the entry point; use its trigger and Response Format). This file keeps only material the parent does not cover: N+1 diagnosis, Node.js DataLoader code, query-cost limits and GraphQL caching.
 
 ## Diagnosing N+1
 Enable SQL logging (or tracing via OpenTelemetry) and run a list query such as:
@@ -155,4 +137,4 @@ When the parent resolver can see the selection set, fetch children in the same S
 - [ ] Resolver timings traced (OpenTelemetry) to find hot fields.
 
 ## References
-- Related skills: `skills/backend/universal/graphql-patterns/SKILL.md`, `skills/backend/universal/api/graphql-federation/SKILL.md`, `skills/backend/universal/caching/SKILL.md`.
+- Parent skill: `../SKILL.md`. Related: `skills/backend/universal/api/graphql-federation/SKILL.md`, `skills/backend/universal/caching/SKILL.md`.

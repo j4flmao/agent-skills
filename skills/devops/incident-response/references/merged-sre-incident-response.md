@@ -93,6 +93,5 @@ Action-item governance: track in the normal backlog with a label; review open it
 - [ ] Postmortem template + weekly review of action items.
 
 ## References
-- `../references/incident_management.md`
-- `../references/on_call.md`
-- `../references/toil_reduction.md`
+- [incident-lifecycle.md](incident-lifecycle.md), [incident-runbooks.md](incident-runbooks.md), [postmortem.md](postmortem.md)
+- Toil reduction: `skills/devops/sre-practices/references/toil-automation.md`

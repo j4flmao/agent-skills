@@ -1,10 +1,11 @@
 ---
 name: nextjs-internals
 description: >
-  Use this skill when the user says 'how does Next.js render', 'RSC payload', 'Next.js streaming internals', 'partial prerendering', 'cache components', 'use cache', 'static vs dynamic route', 'why is my route dynamic', 'router cache', 'Next.js request lifecycle'. It explains how the App Router renders, streams, prerenders and caches (Next.js 15/16) so you can diagnose static/dynamic behaviour and stale data. Do NOT use for: general App Router feature usage (use react-nextjs), framework-agnostic RSC concepts (use react-server-components), or Core Web Vitals tuning (use web-performance).
+  Use when the user asks why a Next.js route is dynamic, how the App Router renders and streams, the RSC payload, partial prerendering, Cache Components / 'use cache', the router cache or the request lifecycle. Produces a diagnosis of static vs dynamic rendering and stale data in Next.js 15/16. Not for everyday App Router features (use react-nextjs).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [frontend, nextjs, app-router, rsc, streaming, ppr, caching]
 ---
 

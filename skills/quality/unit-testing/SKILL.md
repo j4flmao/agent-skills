@@ -1,10 +1,12 @@
 ---
 name: quality-unit-testing
 description: >
-  Use when the user asks about unit testing, test doubles, mocking, stubbing, test-driven development (TDD), FIRST principles, code coverage, test structure (AAA), or unit test patterns. Do NOT use for: integration testing (quality-integration-testing), E2E testing (quality-e2e-testing), or frontend testing (frontend-testing).
+  Use when the user asks to write unit tests with mocks, stubs or fakes, test doubles, TDD, the AAA pattern, Jest, Vitest, pytest or JUnit, or meaningful coverage. Produces isolated unit tests and test
+  structure. Not for real database or HTTP tests (use quality-integration-testing) or UI component tests (use frontend-testing).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

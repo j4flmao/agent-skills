@@ -1,12 +1,12 @@
 ---
 name: product-go-to-market
 description: >
-  Use this skill when planning product launches: GTM strategy, launch tiers, channel selection, messaging, and beta programs.
-  This skill enforces: ICP definition, launch tier classification, channel strategy, messaging and positioning.
-  Do NOT use for: paid advertising execution, sales enablement, event planning, PR campaigns.
+  Use when the user asks for a go-to-market (GTM) strategy, product launch plan, launch tiers, ICP, positioning and messaging, beta program or launch channels. Produces a GTM plan with tiers, channels
+  and success metrics. Not for pricing (use product-pricing-strategy) or market sizing (use planning-market-analysis).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -100,9 +100,9 @@ const canonical = Astro.url;
 | Metric | Good | Needs Work | Poor |
 |--------|------|------------|------|
 | LCP | ≤ 2.5s | ≤ 4.0s | > 4.0s |
-| FID / INP | ≤ 100ms / ≤ 200ms | ≤ 300ms / ≤ 500ms | > 300ms / > 500ms |
+| INP (replaced FID in March 2024) | ≤ 200ms | ≤ 500ms | > 500ms |
 | CLS | ≤ 0.1 | ≤ 0.25 | > 0.25 |
-| TTFB | ≤ 800ms | ≤ 1800ms | > 1800ms |
+| TTFB (diagnostic, not a Core Web Vital) | ≤ 800ms | ≤ 1800ms | > 1800ms |
 
 ## Preload Critical Assets
 

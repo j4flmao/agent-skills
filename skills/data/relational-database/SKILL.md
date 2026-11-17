@@ -1,10 +1,14 @@
 ---
 name: data-relational-database
 description: >
-  Use this skill when asked about PostgreSQL, MySQL, relational database, partitioning, replication, indexing, vacuum, connection pooling, query optimization, EXPLAIN, CTE, window functions, or transaction isolation. This skill enforces: PostgreSQL architecture understanding (MVCC, WAL, vacuum), indexing strategies (B-tree, GiST, GIN, BRIN), partitioning (range, list, hash), replication (streaming, logical), connection pooling (PgBouncer), query optimization (EXPLAIN ANALYZE, CTE, window functions), transaction isolation levels, and migration tools. Do NOT use for: NoSQL database design, graph database modeling, or search engine configuration.
+  Use when the user asks about PostgreSQL or MySQL indexing, EXPLAIN ANALYZE, partitioning, streaming or logical
+  replication, autovacuum, connection pooling (PgBouncer) or query optimization. Produces index, partition,
+  replication and pooling configs. Not for engine theory such as MVCC internals (use
+  database-internals-mechanics) or sharding (use architecture-database-scaling).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

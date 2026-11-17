@@ -1,10 +1,11 @@
 ---
 name: backend-bulk-import
 description: >
-  Use this skill when the user says 'bulk import', 'CSV upload', 'Excel import', 'import pipeline', 'import validation', 'upsert from file', 'import progress', 'import error report'. Designs file-based bulk import: upload handling, streaming CSV/Excel parsing, row validation with error reports, preview/confirm flow, batched background processing with progress, deduplication and rollback. Do NOT use for: real-time or streaming ingestion (backend-data-streaming), warehouse ETL (data etl skills), report/export generation (backend-report-generation).
+  Use when the user asks about bulk import, CSV upload, importing a million-row CSV without locking the table, Excel import, row validation error reports, upsert from file or import progress. Produces a streaming import pipeline with staging, batching and an error report. Not for file upload storage itself (use backend-file-storage).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

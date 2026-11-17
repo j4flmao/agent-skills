@@ -8,6 +8,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, assets, cook, hot-reload, engine]
 ---
 
@@ -73,8 +74,8 @@ Runtime conversion, deterministic, offline:
 
 | Input | Cook | Output |
 |-------|------|--------|
-| .blend mesh | weld verts, tangent calc, LOD gen, KTX2/BCn compress | `.mesh` (with LODs) |
-| .png texture | mipgen (8–13 mips), swizzle, DXT/BC7/ETC2/BCn | `.tex` |
+| .blend/FBX/glTF mesh | weld verts, tangent calc, LOD gen, vertex-cache optimise, quantize/compress (e.g. meshoptimizer) | `.mesh` (with LODs) |
+| .png texture | mipgen (full chain), swizzle, BC1–BC7 (desktop/console) or ASTC/ETC2 (mobile), optionally in KTX2 | `.tex` |
 | WAV | resample, ADX/Ogg Vorbis/Opus | `.audio` |
 | anim | compress (key-bit quantization, per-track reindex) | `.anim` |
 | HLSL/GLSL | compile to DXIL/SPIR-V/machine blobs | `.shader` |

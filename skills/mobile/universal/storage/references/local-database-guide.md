@@ -508,7 +508,7 @@ CREATE TABLE accounts (
 | **ORM** | No (thin wrappers) | Yes | Yes | No | No | Yes | Yes |
 | **Reactive** | No | Yes (Rx) | Yes (Observables) | Yes (LiveQuery) | Yes (onSnapshot) | Yes (Flow) | Yes (Combine) |
 | **Encryption** | SQLCipher | Built-in | SQLCipher | Built-in | GCM-at-rest | SQLCipher | SQLCipher |
-| **Sync** | Add-on | MongoDB Realm | Custom sync | Couchbase Sync | Built-in | Add-on | Add-on |
+| **Sync** | Add-on | None built in (Atlas Device Sync EOL Sep 2025) | Custom sync | Couchbase Sync | Built-in | Add-on | Add-on |
 | **Size** | ~500KB | ~5MB | ~2MB (w/SQLite) | ~10MB | ~8MB | ~500KB+bridge | ~500KB |
 | **Platforms** | All | iOS/Android/Node | RN | iOS/Android/Unity | iOS/Android/Web | Android | iOS |
 | **Memory** | Low | Moderate | Low | Moderate | High | Low | Low |
@@ -529,7 +529,7 @@ choose_sqlite_if:
 
 choose_realm_if:
   - "Object-oriented data model preferred over relational"
-  - "Built-in sync with MongoDB Realm Atlas"
+  - "Sync: Atlas Device Sync reached end of life in September 2025 — bring your own sync"
   - "Live objects (auto-updating objects in memory)"
   - "Swift/Obj-C integration (Apple ecosystem)"
 

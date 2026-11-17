@@ -8,6 +8,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -55,8 +56,8 @@ What are you testing?
 │   └── Unit test with mocked dependencies — no UI rendering
 ├── UI component rendering (displays correct data in states)
 │   ├── Flutter → Widget test (pumpWidget, find, expect)
-│   ├── SwiftUI → ViewInspector / snapshot tests
-│   ├── Jetpack Compose → compose-test with semijson tree
+│   ├── SwiftUI → snapshot tests (swift-snapshot-testing) or ViewInspector (third-party)
+│   ├── Jetpack Compose → Compose UI test (`createComposeRule`, semantics tree finders)
 │   └── React Native → React Native Testing Library
 ├── Visual regression (design fidelity)
 │   └── Golden/snapshot test — compare rendered UI to reference image

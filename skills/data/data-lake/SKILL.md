@@ -1,10 +1,14 @@
 ---
 name: data-data-lake
 description: >
-  Use this skill when building or operating data lakes with Delta Lake, Apache Iceberg, or Apache Hudi. This skill enforces: table format selection, ACID transactions on object storage, time travel, schema evolution, compaction and vacuum, Z-order/Hilbert clustering, incremental queries, CDC with merge-on-read vs copy-on-write. Do NOT use for: legacy Hive-style external tables (no ACID), raw file ingestion without table format, or data warehouse design.
+  Use when the user asks to choose between Iceberg, Delta Lake and Hudi, ACID tables on object storage, time
+  travel, schema evolution, compaction, vacuum, Z-order, merge-on-read vs copy-on-write or data lake
+  architecture. Produces table-format choice and table maintenance plan. Not for medallion and Unity Catalog
+  platform design (use data-data-lakehouse).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

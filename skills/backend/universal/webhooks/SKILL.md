@@ -1,10 +1,11 @@
 ---
 name: backend-webhooks
 description: >
-  Use this skill when the user says 'webhook', 'webhook receiver', 'webhook delivery', 'signature verification', 'HMAC', 'event delivery', 'outgoing webhook', 'incoming webhook', 'retry webhook', 'webhook endpoint'. This skill implements receiving, verifying, retrying, and delivering webhooks securely. Applies to any backend stack. Do NOT use for: server-sent events (SSE), WebSockets, or long-polling fallbacks.
+  Use when the user asks about webhooks, receiving Stripe or GitHub webhooks safely, verifying webhook signatures (HMAC), sending outgoing webhooks, retries or replay protection. Produces webhook receiver and delivery code. Not for payment flows themselves (use ecommerce-payment-processing).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

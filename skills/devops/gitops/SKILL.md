@@ -5,6 +5,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -481,6 +482,8 @@ GitOps (pull-based): agent in cluster pulls desired state from Git. No cluster A
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: folder-per-environment layout with immutable image references; CODEOWNERS on prod overlays; enable server-side diff and narrow `ignoreDifferences` to fix spurious OutOfSync; secrets via ESO, Sealed Secrets or SOPS.
 
 - `references/merged-cloud-native-gitops-workflows.md` — GitOps Workflows and Promotion (merged from `cloud-native/gitops-workflows`)
 - `references/merged-cloud-native-argocd-reconciliation.md` — Argo CD Reconciliation and Drift Detection (merged from `cloud-native/gitops`)

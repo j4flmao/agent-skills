@@ -103,7 +103,7 @@
 ## Robust
 
 ### Compatible (4.1)
-- [ ] 4.1.1 Parsing (A): Elements have complete start/end tags, no duplicate IDs
+- [ ] ~~4.1.1 Parsing~~: obsolete and removed in WCAG 2.2; still check duplicate IDs that break label/ARIA references (1.3.1, 4.1.2)
 - [ ] 4.1.2 Name, Role, Value (A): Custom controls have correct `role`, `aria-*` states, and properties
 - [ ] 4.1.3 Status Messages (AA): Status changes via `role="status"` or `aria-live="polite"`
 

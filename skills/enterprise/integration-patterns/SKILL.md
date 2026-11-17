@@ -1,12 +1,12 @@
 ---
 name: enterprise-integration-patterns
 description: >
-  Use this skill when designing enterprise system integrations with message routing, protocol transformation, and error handling.
-  This skill enforces: anti-corruption layers, SLA-defined integrations, dead letter queue monitoring.
-  Do NOT use for: in-process function calls, simple REST API clients, database replication tools.
+  Use when the user asks about enterprise integration patterns, ESB vs iPaaS, integrating legacy or ERP systems, message routing and transformation, anti-corruption layer or dead letter queues. Produces
+  an integration design with contracts, SLAs and error handling. Not for app-level messaging (use backend-message-queue) or webhooks (use backend-webhooks).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

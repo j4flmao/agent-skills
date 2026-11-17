@@ -1,31 +1,9 @@
 # Micro-frontends Adoption & Composition
 
+> Reference for the `microfrontend` skill; [SKILL.md](../SKILL.md) is the entry point. Merged from the former `frontend/advanced-architecture/micro-frontends` skill.
+
 ## Purpose
-Micro-frontends apply microservice ideas to the UI: independently built and deployed slices owned by separate teams and composed into one product. They solve organisational scaling problems (many teams blocked on one release train), not performance problems, and they add runtime, consistency and operational cost. This skill decides if the cost is worth it and which composition style fits.
-
-## Agent Protocol
-
-### Trigger
-"micro-frontend", "microfrontend adoption", "split frontend by team", "host/remote", "app shell", "independent frontend deploys".
-
-### Input Context
-- Number of teams touching the frontend and their release cadence.
-- Frameworks in use (single framework vs. mixed/legacy).
-- Hosting: SSR (Next.js, Remix, Nuxt) or static SPA on CDN.
-- Pain point: deploy coupling, build time, legacy migration, ownership confusion.
-
-### Output Artifact
-Architecture decision (ADR-style) with composition style, slice boundaries and contracts. No files unless requested.
-
-### Response Format
-```
-Decision: {adopt|defer|reject} micro-frontends
-Composition: {build-time|server-side|runtime-MF|iframe|web-components}
-Slices: {slice -> owning team -> route/region}
-Shared: {design system, auth, routing, telemetry} via {package|runtime singleton}
-Contracts: {events, URL params, props schema}
-Risks: {top 3}
-```
+Micro-frontends apply microservice ideas to the UI: independently built and deployed slices owned by separate teams and composed into one product. They solve organisational scaling problems (many teams blocked on one release train), not performance problems, and they add runtime, consistency and operational cost. This reference helps decide if the cost is worth it and which composition style fits.
 
 ## Decision: Do You Need Micro-frontends?
 

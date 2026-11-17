@@ -1,12 +1,14 @@
 ---
 name: data-data-platform
 description: >
-  Use this skill when designing end-to-end data platforms: data lake architecture, data lakehouse architecture, distributed storage (S3, ADLS, GCS), distributed compute (Spark, Trino, Presto), data catalog (Datahub, Amundsen, Marquez), data mesh, data versioning (LakeFS, DVC), data virtualization (Dremio, Starburst).
-  This skill enforces: platform architecture selection, storage/compute separation, catalog implementation, data mesh boundaries, version control for data.
-  Do NOT use for: individual ETL pipelines (use etl-pipeline), streaming infrastructure (use streaming), BI tools (use bi-tools), data warehouse modeling (use data-warehouse).
+  Use when the user asks to design an end-to-end data platform: storage/compute separation, S3/ADLS/GCS, Spark
+  and Trino, catalog, orchestration and data platforms on Kubernetes (Strimzi, Spark operator). Produces a
+  platform architecture with component choices and interfaces. Not for one component in depth (use
+  data-data-lakehouse or data-streaming).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

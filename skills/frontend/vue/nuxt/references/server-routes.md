@@ -1,7 +1,7 @@
 # Nuxt Server Routes and API Endpoints
 
 ## Overview
-Nuxt 3 provides built-in server engine (Nitro) that supports API routes, server middleware, and server-only code. Server routes live in the `server/` directory and handle HTTP requests, database access, and business logic.
+Nuxt (3 and 4) provides a built-in server engine (Nitro) that supports API routes, server middleware, and server-only code. Server routes live in the `server/` directory and handle HTTP requests, database access, and business logic.
 
 ## Server Route Structure
 

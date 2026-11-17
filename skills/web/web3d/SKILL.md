@@ -1,10 +1,11 @@
 ---
 name: web3d-webgl
 description: >
-  Use this skill when the user says 'Three.js', 'React Three Fiber', 'R3F', 'drei', '3D in the browser', 'GLTF model loading', 'product configurator 3D', 'WebGL scene performance', 'three.js memory leak'. It builds and optimises Three.js / React Three Fiber scenes: renderer setup, GLTF/Draco/KTX2 loading, instancing, resize and DPR handling, disposal, and frame-loop rules. Do NOT use for: raw WebGPU/WebGL pipeline code (use webgpu-webgl-rendering), game engines (use the game skills), or CSS 3D transforms (use frontend-animation).
+  Use when the user asks about Three.js, React Three Fiber (R3F), drei, GLTF/Draco/KTX2 model loading, 3D product configurators, WebGL scene performance or three.js memory leaks. Produces Three.js/R3F scenes with loading, instancing, disposal and frame-loop rules. Not for raw WebGPU/WebGL pipelines (use webgpu-webgl-rendering) or game engines (use unity).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [web, 3d, threejs, react-three-fiber, webgl, webgpu, gltf]
 ---
 

@@ -1,12 +1,12 @@
 ---
 name: management-change-management
 description: >
-  Use this skill when managing organizational change: ADKAR, Kotter 8-Step, stakeholder impact analysis, adoption metrics.
-  This skill enforces: ADKAR assessment per stakeholder, Kotter 8-Step framework, stakeholder mapping, adoption measurement.
-  Do NOT use for: project management, team communication, agile transformation, culture initiatives without defined scope.
+  Use when the user asks about organizational change management, ADKAR, Kotter's 8 steps, resistance to change, change impact analysis or adoption metrics for a new tool or process. Produces a change
+  plan with stakeholder impact and adoption tracking. Not for IT change approval (use enterprise-itil-service-mgmt) or stakeholder comms alone (use management-stakeholder).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -1,35 +1,9 @@
 # Data Lake Architecture
 
+> Merged reference for the data-lake skill (folded in from `data/data-engineering/data-lake-architecture`). The entry point is the parent [SKILL.md](../SKILL.md); this file keeps only the material that the parent does not cover.
+
 ## Purpose
 Decide where analytical data lives and how it is laid out so that it stays cheap, queryable by several engines, governed, and does not turn into a "data swamp". Modern designs keep data in open formats (Parquet + an open table format) on object storage, with a catalog and access control, and attach compute engines as needed.
-
-## Agent Protocol
-
-### Trigger
-"data lake", "lake vs warehouse", "lakehouse", "s3/gcs/adls layout", "bronze/silver/gold", "medallion", "partitioning", "small files", "iceberg vs delta vs hudi", "storage-compute separation".
-
-### Input Context
-- Sources (OLTP/CDC, events, files, SaaS), volumes and growth, latency needs (batch, hourly, near real time).
-- Consumers: BI, data science/ML, reverse ETL, external sharing.
-- Cloud/vendor constraints, existing warehouse, governance/compliance (PII, residency, deletion requests).
-
-### Output Artifact
-Architecture decision + layer definitions + layout conventions + engine/catalog choice. No file unless requested.
-
-### Response Format
-```
-Pattern: {warehouse|lake|lakehouse} because {reason}
-Storage: {bucket layout} format={Parquet + Iceberg/Delta/Hudi}
-Layers: bronze={...} silver={...} gold={...}
-Catalog/governance: {catalog, access control, PII handling}
-Engines: {Spark/Trino/Flink/warehouse}
-```
-
-### Completion Criteria
-- [ ] Decision recorded with alternatives (ADR).
-- [ ] Every table has an owner, layer, partition spec and retention.
-- [ ] PII identified and access-controlled; deletion path exists (GDPR/CCPA).
-- [ ] File sizing/compaction plan to avoid small files.
 
 ## Warehouse vs Lake vs Lakehouse
 | | Warehouse | Data lake (files only) | Lakehouse (open table format) |
@@ -107,5 +81,5 @@ WHEN NOT MATCHED THEN INSERT *;
 - Never expiring snapshots (storage cost, undeleted PII).
 
 ## References
-- Related skills: `../../data-lake/SKILL.md` (table-format operations), `../../data-lakehouse/SKILL.md`, `../../data-formats/SKILL.md`, `../kafka-event-streaming/SKILL.md`.
+- Related skills: `../SKILL.md` (parent: table-format operations), `../../data-lakehouse/SKILL.md`, `../../data-formats/SKILL.md`, `../../streaming/SKILL.md` (Kafka ingestion).
 - Apache Iceberg, Delta Lake and Apache Hudi documentation.

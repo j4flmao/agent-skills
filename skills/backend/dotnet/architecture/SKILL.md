@@ -1,10 +1,11 @@
 ---
 name: dotnet-architecture
 description: >
-  Use this skill when the user says 'dotnet clean architecture', 'dotnet vertical slice', 'dotnet CQRS', 'dotnet solution structure', '.NET project layout', 'dotnet DI', 'dotnet MediatR', 'ASP.NET Core architecture'. Structures .NET solutions (Clean Architecture, vertical slices, N-tier): project boundaries and references, DI composition, mediator pipelines, EF Core configuration and architecture tests. Do NOT use for: .NET implementation patterns such as Result types and EF Core query tuning (dotnet-patterns), non-.NET stacks.
+  Use when the user asks about .NET clean architecture, ASP.NET Core solution structure, vertical slices, dotnet DI registration, minimal APIs vs controllers or project references. Produces a layered .NET solution layout with dependency rules. Not for MediatR, Result or EF Core recipes (use dotnet-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

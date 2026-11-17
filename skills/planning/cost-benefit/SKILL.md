@@ -1,10 +1,12 @@
 ---
 name: planning-cost-benefit
 description: >
-  Use this skill when the user says 'cost-benefit analysis', 'ROI', 'TCO', 'cost estimation', 'benefit estimation', 'business case', 'investment analysis', 'build vs buy', 'net present value', 'payback period', 'sensitivity analysis'. This skill enforces: comprehensive cost estimation covering build vs buy, TCO components (labor, infrastructure, maintenance, training, migration), benefit quantification across efficiency gains, revenue impact, and risk reduction, ROI and NPV calculation with discount rates, sensitivity analysis for key variables, and structured business case presentation. Do NOT use for: market analysis, pricing strategy, or financial accounting.
+  Use when the user asks whether something is worth it, a cost-benefit analysis, ROI, TCO, NPV, IRR, payback period, build vs buy or a business case for migrating to the cloud. Produces cost and benefit
+  tables, ROI/NPV, sensitivity analysis and a recommendation. Not for pricing your product (use product-pricing-strategy) or market sizing (use planning-market-analysis).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

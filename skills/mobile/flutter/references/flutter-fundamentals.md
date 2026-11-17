@@ -26,7 +26,7 @@ Repository abstracts data sources (remote API, local DB, cache). ViewModel/Contr
 Business Logic Component: Events (input) → Bloc (logic) → States (output). `BlocProvider` provides Bloc to widget tree. `BlocBuilder` rebuilds on state change. `BlocListener` for one-shot events (navigation, snackbar). Test with `bloc_test` package.
 
 ### Riverpod
-Declarative state management with compile-time safety. `Provider` for synchronous values. `FutureProvider` for async data. `StateNotifierProvider` for mutable state. `StreamProvider` for streams. `ref.watch` for reactivity, `ref.read` for one-shot access.
+Declarative state management with compile-time safety. `Provider` for synchronous values. `FutureProvider` for async data. `NotifierProvider`/`AsyncNotifierProvider` for mutable state (`StateNotifierProvider` is legacy in Riverpod 3). `StreamProvider` for streams. `ref.watch` for reactivity, `ref.read` for one-shot access.
 
 ## Data Management
 
@@ -37,7 +37,7 @@ Declarative state management with compile-time safety. `Provider` for synchronou
 `http` package for simple requests. `dio` for advanced use: interceptors, retry, cancellation, progress tracking. `graphql_flutter` for GraphQL APIs. `chopper` for Retrofit-like generated API clients. Always use `catchError` / try-catch for network calls.
 
 ### Secure Storage
-`flutter_secure_storage` wraps Keychain (iOS) and EncryptedSharedPreferences (Android). AES encryption with platform key stores. Use for tokens, credentials, and sensitive data. Never use `SharedPreferences` for secrets.
+`flutter_secure_storage` wraps Keychain (iOS) and Keystore-backed encryption (Android; recent versions moved off the deprecated EncryptedSharedPreferences). AES encryption with platform key stores. Use for tokens, credentials, and sensitive data. Never use `SharedPreferences` for secrets.
 
 ## Security Fundamentals
 

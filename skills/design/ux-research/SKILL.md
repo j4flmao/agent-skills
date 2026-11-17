@@ -1,10 +1,11 @@
 ---
 name: design-ux-research
 description: >
-  Use this skill when planning UX research, user research, usability testing, user interviews, personas, user journeys, information architecture, or card sorting. This skill enforces: method selection (generative vs evaluative), structured interview protocols, usability test plans, persona templates, journey mapping, and synthesis frameworks. Do NOT use for: visual design critiques, A/B test design, or analytics/quantitative analysis.
+  Use when the user asks about UX research, usability testing, user interviews, research plans, personas, journey maps, card sorting or synthesizing findings. Produces method selection, interview guides, test plans and synthesis frameworks. Not for A/B test design (use product-ab-testing) or product analytics (use product-analytics).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

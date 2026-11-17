@@ -1,10 +1,12 @@
 ---
 name: dev-loop-readme-writer
 description: >
-  Use when the user asks about writing README files, project documentation, README structure, README best practices, or documentation for open source projects. Do NOT use for: changelogs (dev-loop-changelog-generator), or API documentation.
+  Use when the user asks to write a README for this repository, improve project documentation, add quick start, installation, usage or contributing sections, or badges. Produces a structured README.md.
+  Not for API reference docs (use backend-openapi-documentation) or changelogs (use dev-loop-changelog-generator).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

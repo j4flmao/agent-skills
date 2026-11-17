@@ -1,10 +1,14 @@
 ---
 name: data-batch-processing
 description: >
-  Use this skill when designing batch processing with Hive, Spark SQL, Pig, or HQL. This skill enforces: Hive metastore management, Spark SQL Catalyst optimization, file format selection (Parquet, ORC, Avro), partitioning and bucketing strategies, query tuning with statistics and dynamic partition pruning. Do NOT use for: real-time streaming, CDC pipelines, distributed compute framework selection (see data-distributed-compute), or lake table format design.
+  Use when the user asks about Hive, HiveQL, Spark SQL batch jobs, Hive metastore, partitioning and bucketing,
+  ORC vs Parquet for batch, Catalyst/AQE tuning or dynamic partition pruning. Produces batch job designs with
+  table layout, file format and query tuning steps. Not for choosing Spark vs Dask vs Ray (use
+  data-distributed-compute) or real-time pipelines (use data-streaming).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

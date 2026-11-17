@@ -1,12 +1,11 @@
 ---
 name: backend-sms-messaging
 description: >
-  Enforce SMS and messaging patterns including Twilio/AWS SNS/Vonage integration,
-  WhatsApp Business API, 2FA OTP delivery, TCPA compliance, message templates,
-  rate limiting, and delivery analytics. NOT for push notifications or in-app messaging.
+  Use when the user asks about sending SMS, Twilio, Amazon SNS SMS, Vonage, OTP codes by SMS, WhatsApp Business API, STOP/opt-out handling, 10DLC or TCPA. Produces SMS/OTP sending code with consent, rate limits and failover. Not for push notifications (use mobile-push-notifications) or email (use backend-transactional-email).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -1,10 +1,11 @@
 ---
 name: python-django-architecture
 description: >
-  Use this skill when the user says 'Django structure', 'Django architecture', 'Django apps', 'Django clean arch', 'Django ORM', 'Django REST framework', 'DRF', or when building a Django application. This skill enforces: one Django app per bounded context, service layer pattern separating business logic from models, thin views that delegate to services, DRF serializers as DTOs, and signals that trigger services (no business logic in signals). Requires Django in dependencies. Do NOT use for: FastAPI projects, Flask, or non-Django Python backend.
+  Use when the user asks about Django, Django ORM queries that are slow, select_related and prefetch_related, Django REST framework (DRF), Django apps structure or migrations. Produces Django code with a service layer and N+1-free queries. Not for FastAPI (use python-fastapi-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

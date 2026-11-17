@@ -1,12 +1,12 @@
 ---
 name: product-growth-engineering
 description: >
-  Use this skill when designing growth engineering initiatives: viral loops, activation optimization, referral mechanics, and conversion experiments.
-  This skill enforces: growth loop design, activation optimization, viral mechanics, conversion optimization.
-  Do NOT use for: paid acquisition, SEO strategy, content marketing, sales funnel optimization.
+  Use when the user asks about growth engineering, product-led growth (PLG), growth loops, viral loops, referral programs, activation and conversion experiments or paywall tests. Produces growth loop
+  designs and an experiment backlog. Not for first-run onboarding UX (use product-onboarding-flow) or SEO (use seo-fundamentals).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

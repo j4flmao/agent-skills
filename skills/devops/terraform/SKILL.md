@@ -5,6 +5,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -120,7 +121,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 6.0"   # AWS provider 6.x is current (released mid-2025)
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -136,7 +137,7 @@ terraform {
 | **S3 + DynamoDB** | Yes (DynamoDB) | SSE-S3/KMS | AWS-native teams |
 | **GCS** | Yes (native) | AES256/CMEK | GCP-native teams |
 | **AzureRM** | Yes (Blob lease) | SSE | Azure-native teams |
-| **Terraform Cloud** | Yes (native) | At rest + in transit | Team collaboration, remote runs |
+| **HCP Terraform** (formerly Terraform Cloud) | Yes (native) | At rest + in transit | Team collaboration, remote runs |
 | **Consul** | Yes (session) | TLS | Self-hosted, simple |
 | **local** | No | No | Personal projects only |
 
@@ -486,7 +487,7 @@ resource "aws_db_instance" "this" {
 - Always pin provider versions in required_providers.
 
 ## Production Considerations
-- Use Terraform Cloud or Atlantis for collaborative plan/apply workflow.
+- Use HCP Terraform (formerly Terraform Cloud), Atlantis, or another PR-driven runner for collaborative plan/apply workflow.
 - Set up state file versioning (S3 versioning, GCS object versioning).
 - Run `terraform validate` and `tflint` in CI before plan.
 - Use Terraform workspaces only for dev/test, not production.
@@ -519,6 +520,8 @@ resource "aws_db_instance" "this" {
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: state split per environment x component; `moved`/`import`/`removed` blocks for refactors instead of manual `state mv`; CI applies exactly the reviewed plan file.
 
 - `references/merged-terraform-patterns.md` — Terraform IaC Patterns (merged from `devops/iac/terraform-patterns`)
 

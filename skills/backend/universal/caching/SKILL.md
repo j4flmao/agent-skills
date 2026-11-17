@@ -1,10 +1,11 @@
 ---
 name: backend-caching
 description: >
-  Use this skill when the user says 'cache', 'Redis', 'Memcached', 'CDN', 'cache-aside', 'read-through', 'write-through', 'write-behind', 'cache invalidation', 'TTL', 'cache stampede', 'thundering herd', 'cache warming', 'LRU', 'LFU', 'cache hit ratio', 'cache strategy', or when designing a caching layer. This skill enforces consistent caching strategies: layer selection, read/write patterns, invalidation, stampede prevention, and monitoring. Applies to any backend stack. Do NOT use for: message queue design, database schema design, or frontend state caching.
+  Use when the user asks about caching, adding a Redis cache in front of a query, cache-aside, write-through, cache invalidation, TTL jitter, cache stampede or Memcached. Produces a cache strategy with keys, TTLs, invalidation and code. Not for browser/HTTP caching (use frontend-browser-caching) or distributed locks (use backend-distributed-locking).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

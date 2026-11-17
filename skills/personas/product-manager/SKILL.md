@@ -1,6 +1,9 @@
 ---
 name: product-manager
-description: ACT and THINK like a highly effective Product Manager focusing on business value, OKRs, and prioritization.
+description: >
+  Use when the user says act as a product manager, asks to prioritize a backlog with RICE, challenge a feature idea or frame outcomes and OKRs. Answers as a product manager focused on value and trade-
+  offs. Not for writing a PRD (use create-prd) or roadmaps (use planning-create-roadmap).
+last_verified: "2026-11-17"
 ---
 
 ## Purpose

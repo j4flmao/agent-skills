@@ -15,6 +15,7 @@ tags: [mobile, dotnet, maui, phase-7]
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Mobile .NET MAUI
@@ -123,9 +124,9 @@ Volume of platform code?
 ## Common Pitfalls
 
 - **Missing linker configuration**: .NET MAUI linker strips unused assemblies. Add `Preserve` attribute or linker config XML for dynamically accessed types.
-- **CollectionView inside ScrollView**: Causes ambiguous scroll direction exception. Use `CollectionView` alone or set `NestedScrollEnabled=false`.
+- **CollectionView inside ScrollView**: gives the list infinite height, so virtualization stops and every item is created. Use `CollectionView` alone with `Header`/`Footer`, or a fixed-height container.
 - **iOS simulator keyboard**: Hardware keyboard on simulator doesn't trigger `Completed` event. Test keyboard on real device.
-- **Android WebView mixed content**: `usesCleartextTraffic="true"` in AndroidManifest for HTTP resources in WebView.
+- **Android cleartext traffic**: blocked by default. Fix the server to use HTTPS; for local development only, allow a specific host through `network_security_config.xml` instead of setting `usesCleartextTraffic="true"` app-wide.
 - **XAML Hot Reload limitations**: Doesn't work for constructor changes, new page creation, or C# changes — only XAML property edits.
 
 ## Anti-Patterns
@@ -145,21 +146,21 @@ MAUI app startup involves: native initialization, XAML parsing, Shell constructi
 - **AOT compilation**: iOS/Mac Catalyst are always AOT-compiled (no JIT on iOS). Native AOT (`<PublishAot>true</PublishAot>`) is available for iOS and Mac Catalyst (experimental in .NET 8, supported from .NET 9) and gives smaller, faster-starting apps but requires trim-safe code (compiled bindings, no unbounded reflection). On Android, use startup-tracing/profiled AOT (`<AndroidEnableProfiledAot>`, default in Release) rather than full AOT unless you measured a win.
 - **Trim assemblies**: `<TrimMode>full</TrimMode>` with linker configuration. Reduces app size but requires `[DynamicallyAccessedMembers]` attributes on types accessed via reflection.
 - **Lazy initialization**: Defer non-critical services: `Lazy<IService>` or `Task.Run(() => InitializeHeavyService())` after first frame render. Register heavy services as transient or use `Lazy<T>` wrapper.
-- **Shell caching**: Shell caches pages by default — pages remain in memory after navigation. Use `Shell.Current.CachingStrategy = CachingStrategy.RetainElement` judiciously. Prefer `CachingStrategy.RecycleElement` for memory-bound scenarios.
+- **Page lifetime**: Shell keeps pages on its navigation stacks alive; register pages/ViewModels as transient and release subscriptions when a page is popped. (`CachingStrategy.RecycleElement` is a `ListView` setting, not a Shell one; `CollectionView` virtualizes by default.)
 - **Startup tracing**: Measure with `Activity` or `DiagnosticListener` between `Application.OnStart()` and first frame `Appearing` event. Target: <2s cold start on mid-range Android/iOS devices.
 
 ### Memory Management
 - **CollectionView recycling**: Virtualization recycles cell templates — ensure views are data-bound, not created in `ItemTemplate` code-behind. Avoid `DataTemplate` with complex nested layouts.
-- **Image caching**: Use `FFImageLoading` (community) or `MAUI CommunityToolkit`'s `CachedImage`. Set `CacheType` to `Disk` for large images. Avoid `ImageSource.FromStream` on UI thread.
+- **Image caching**: `UriImageSource` caches downloaded images on disk (`CachingEnabled`, `CacheValidity`, default one day). Downsample large images before display and avoid `ImageSource.FromStream` work on the UI thread. FFImageLoading is unmaintained; evaluate maintained community forks before adopting one.
 - **Weak event patterns**: Event subscriptions (PropertyChanged, CollectionChanged) prevent GC of pages. Use `WeakEventManager` or `WeakReference` for subscribers.
-- **Dispose pattern**: Implement `IDisposable` on ViewModels that hold subscriptions. Call `Dispose()` in page `OnDisappearing` or via `Lifecycle` events. Unsubscribe from `MessagingCenter`/`WeakReferenceMessenger` in ViewModel cleanup.
+- **Dispose pattern**: Implement `IDisposable` on ViewModels that hold subscriptions. Call `Dispose()` in page `OnDisappearing` or via `Lifecycle` events. Unsubscribe from `WeakReferenceMessenger` (`MessagingCenter` is obsolete; migrate it) in ViewModel cleanup.
 - **Large collection handling**: For 1000+ items, use `CollectionView` with `RemainingItemsThreshold` + `RemainingItemsThresholdReachedCommand` for incremental loading (infinite scroll). Never load all items into memory at once.
 
 ### UI Thread and Responsiveness
 - **Async all the way**: All I/O-bound operations (HTTP, database, file system) must use `async`/`await`. Never call `.Result` or `.Wait()` on Task — this deadlocks on MAUI's main thread.
 - **`MainThread.BeginInvokeOnMainThread`**: Only use for UI updates from background threads. Batch UI updates — don't invoke per-item in a loop.
 - **Layout passes**: Minimize layout pass count. Use `HorizontalStackLayout`/`VerticalStackLayout` over `StackLayout` (lighter). Avoid `AbsoluteLayout` for dynamic layouts (measuring pass is expensive). Prefer `Grid` with proportional rows/columns.
-- **XAML compilation**: Enable `XAMLC` (XAML compilation) in all Release configs: add `[XamlCompilation(XamlCompilationOptions.Compile)]` on all Pages. Reduces runtime XAML parsing time.
+- **XAML compilation**: XamlC is on by default for .NET MAUI projects (no `[XamlCompilation]` attribute needed); .NET 10 adds the XAML source generator (`<MauiXamlInflator>SourceGen</MauiXamlInflator>`), which also removes runtime XAML parsing. Keep compiled bindings everywhere.
 
 ```csharp
 [assembly: XamlCompilation(XamlCompilationOptions.Compile)]
@@ -400,9 +401,9 @@ builder.Services.AddSingleton<IDeviceInfo, IosDeviceInfo>();
 - **Ignoring linker configuration**: Linker strips unused IL. Types accessed via reflection (Sqlite, serialization) must be preserved. Use `[Preserve]` attribute or linker XML configuration.
 - **Missing `#if` on platform APIs**: `Android.Graphics.Color` in shared code compiles on all targets but throws on iOS. Always guard platform-specific types with `#if ANDROID`, `#if IOS`.
 - **Nested layouts in ListView**: ListView/CollectionView with complex nested layouts (Grid in StackLayout in Frame) kills scroll performance. Flatten hierarchy for list items.
-- **No `x:DataType` on DataTemplate**: Reflection-based bindings in lists are 3-5x slower than compiled bindings. Always set `x:DataType` on ItemTemplate DataTemplate.
+- **No `x:DataType` on DataTemplate**: Reflection-based bindings in lists are measurably slower than compiled bindings and are not trimming/AOT safe. Always set `x:DataType` on ItemTemplate DataTemplate.
 - **Storing secrets in code**: API keys, connection strings in source code. Use Azure Key Vault, GitHub Secrets, or `Secrets.json` (user secrets in development). Never commit secrets.
-- **Over-engineering with Prism**: Prism adds significant complexity for most apps. CommunityToolkit.Mvvm covers 90% of MVVM needs with less overhead.
+- **Over-engineering with Prism**: Prism adds significant complexity for most apps. CommunityToolkit.Mvvm covers most MVVM needs with less overhead.
 
 ## Configuration Reference
 

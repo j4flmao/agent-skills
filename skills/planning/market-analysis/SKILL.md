@@ -1,10 +1,12 @@
 ---
 name: planning-market-analysis
 description: >
-  Use this skill when the user says 'market analysis', 'competitive analysis', 'market research', 'TAM SAM SOM', 'market sizing', 'competitor research', 'market landscape', 'industry analysis'. Produce market sizing, competitor analysis, SWOT, and differentiation strategy. Do NOT use for: financial projections or business plan writing.
+  Use when the user asks for market analysis, competitive analysis, competitor research, TAM SAM SOM market sizing, SWOT or industry landscape. Produces market sizing, competitor matrix and
+  differentiation strategy. Not for pricing (use product-pricing-strategy) or launch plans (use product-go-to-market).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

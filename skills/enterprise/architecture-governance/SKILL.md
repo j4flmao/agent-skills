@@ -1,12 +1,12 @@
 ---
 name: enterprise-architecture-governance
 description: >
-  Use this skill when establishing or operating architecture governance including review boards, decision rights, and architecture principles.
-  This skill enforces: ARB charter, architecture reviews, decision rights framework, principle compliance.
-  Do NOT use for: enterprise architecture method, solution design, technology implementation.
+  Use when the user asks about an architecture review board (ARB), architecture decision rights, architecture principles, design review gates, exception and waiver process or compliance with standards.
+  Produces ARB charter, review process and principle checks. Not for the TOGAF ADM method (use enterprise-togaf-zachman) or a single design doc (use create-tech-spec).
 version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

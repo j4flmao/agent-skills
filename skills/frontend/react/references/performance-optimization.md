@@ -177,7 +177,7 @@ import Image from 'next/image';
 
 Focus on optimizing:
 - **LCP (Largest Contentful Paint):** Loading performance. Optimize images, use SSR, reduce server response time.
-- **FID (First Input Delay) / INP (Interaction to Next Paint):** Interactivity. Break up long Javascript tasks, use Web Workers, avoid heavy computations on the main thread.
+- **INP (Interaction to Next Paint; replaced FID in March 2024):** Interactivity. Break up long Javascript tasks, use Web Workers, avoid heavy computations on the main thread.
 - **CLS (Cumulative Layout Shift):** Visual stability. Always set `width` and `height` attributes on images, reserve space for dynamic content like ads or loaded lists.
 
 ### Using web-vitals library

@@ -18,7 +18,7 @@ Install these first. They cover the everyday work of this role and rarely confli
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
-| [`memory-management`](../../skills/game/game-engine/memory-management/SKILL.md) | `game/game-engine/memory-management` | Memory is the #1 source of frame-time jank in shipped games. |
+| [`memory-management`](../../skills/game/game-engine/memory-management/SKILL.md) | `game/game-engine/memory-management` | Memory behaviour is one of the most common sources of frame-time jank in shipped games. |
 | [`job-system`](../../skills/game/game-engine/job-system/SKILL.md) | `game/game-engine/job-system` | Modern CPUs give you 8–32 cores; a single-threaded Update() leaves them idle. |
 | [`math-foundation`](../../skills/game/game-engine/math-foundation/SKILL.md) | `game/game-engine/math-foundation` | Every frame pushes millions of floats through vectors, matrices, quaternions, and collision tests. |
 | [`render-graph`](../../skills/game/game-engine/render-graph/SKILL.md) | `game/game-engine/render-graph` | A modern renderer records a graph of dependencies between passes each frame, allocates transient resources, orders passes topologically, and emits… |

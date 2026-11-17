@@ -177,6 +177,8 @@ solid({
 
 ### Sitemap Integration Options
 
+> Google ignores `changefreq` and `priority` in sitemaps; an accurate `lastmod` matters more.
+
 ```js
 sitemap({
   filter: (page) => !page.includes('/draft/'),

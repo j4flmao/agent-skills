@@ -44,7 +44,7 @@ Design tokens must include accessible color pairings, not just individual colors
 
 ### Color Palette Accessibility Requirements
 
-Every color in the palette must meet WCAG 2.1 AA (4.5:1) contrast against:
+Every color in the palette must meet WCAG 2.2 AA (4.5:1) contrast against:
 - Color-bg-primary (white or light)
 - Color-bg-inverse (dark)
 - Color-brand (for text on brand backgrounds)

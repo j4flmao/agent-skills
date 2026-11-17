@@ -1,10 +1,13 @@
 ---
 name: data-data-mesh
 description: >
-  Use this skill when asked about data mesh, data product, domain ownership, self-serve data platform, federated governance, data-as-a-product, compute-plane architecture, or data topology. This skill enforces: data mesh four principles (domain ownership, data as product, self-serve platform, federated governance), data product definition with input/output ports, domain decomposition, cross-domain data sharing, and platform capability mapping. Do NOT use for: centralized data warehouse design, monolithic data platform architecture, or ETL pipeline implementation within a single domain.
+  Use when the user asks about data mesh, data products with input/output ports, domain data ownership,
+  self-serve data platform or federated computational governance. Produces domain decomposition, data product
+  specs and platform capabilities. Not for overall data strategy and maturity (use data-data-strategy).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

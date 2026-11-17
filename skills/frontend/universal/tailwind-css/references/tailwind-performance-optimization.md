@@ -449,7 +449,7 @@ Get-ChildItem -Recurse -Include *.tsx,*.jsx,*.html |
 ```yaml
 # GitHub Actions example
 - name: Cache Tailwind build
-  uses: actions/cache@v3
+  uses: actions/cache@v6
   with:
     path: |
       node_modules/.cache/tailwindcss

@@ -1,12 +1,12 @@
 ---
 name: product-pricing-strategy
 description: >
-  Use this skill when defining pricing strategy: value metrics, pricing models, packaging tiers, and pricing page experimentation.
-  This skill enforces: value metric identification, pricing model selection, packaging design, willingness-to-pay research.
-  Do NOT use for: discounting strategy, enterprise sales negotiation, contract management, revenue recognition.
+  Use when the user asks to price SaaS tiers, choose a value metric, usage-based vs seat pricing, freemium, packaging, willingness to pay (Van Westendorp) or pricing page tests. Produces pricing model,
+  tiers and validation plan. Not for subscription billing code (use ecommerce-payment-processing) or ROI cases (use planning-cost-benefit).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -336,7 +336,7 @@ Sensitivity: test how revenue changes with ±20% price, ±20% conversion, ±20% 
 
 | Tool | Use Case | Cost |
 |------|----------|------|
-| Google Optimize | Pricing page A/B testing | Free |
+| GrowthBook / PostHog | Pricing page A/B testing | Free tier (Google Optimize was shut down in 2023) |
 | VWO | Full-stack experimentation | Paid |
 | Amplitude Experiment | Product-wide experiments | Paid |
 | Optimizely | Enterprise experimentation | Paid |

@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -103,7 +104,7 @@ Team preference?
 ```
 Single-activity?
 ├── Yes → Jetpack Navigation Compose
-│   NavHost with sealed Route class, type-safe arguments
+│   Type-safe @Serializable routes (Navigation Compose 2.8+), or Navigation 3 for app-owned back stacks
 ├── Multi-activity → Navigation component with XML
 └── Feature-modules → Dynamic feature navigation with NavDeepLink
 ```
@@ -113,7 +114,7 @@ Single-activity?
 Network images needed?
 ├── Yes, Coil — Kotlin coroutines, Compose integration, memory-efficient
 └── Yes, Glide — Mature, animated GIF/WebP, disk cache, OK
-    Coil preferred for new projects — lighter (150KB vs ~500KB)
+    Coil preferred for new Compose projects — Kotlin-first and coroutine-based
 ```
 
 ### Background Work Strategy
@@ -121,7 +122,7 @@ Network images needed?
 WorkManager vs Foreground Service vs AlarmManager
 ├── Deferrable, reliable → WorkManager (constraints, chaining, battery-optimized)
 ├── User-visible must continue → Foreground Service (notification required)
-└── Exact timing needed → AlarmManager (limited, consider ScheduleTaskExecutor)
+└── Exact timing needed → AlarmManager exact alarms (need SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM on Android 12+; check canScheduleExactAlarms())
 ```
 
 ## Project Structure
@@ -301,12 +302,13 @@ object NetworkModule {
         return Retrofit.Builder()
             .baseUrl("https://api.example.com/")
             .addConverterFactory(MoshiConverterFactory.create())
-            .addCallAdapterFactory(CoroutineCallAdapterFactory())
             .client(OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .addInterceptor(HttpLoggingInterceptor().apply {
-                    level = if (BuildConfig.DEBUG) BODY else NONE
+                    level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                            else HttpLoggingInterceptor.Level.NONE
+                    redactHeader("Authorization")          // never log tokens
                 })
                 .build())
             .build()
@@ -321,7 +323,7 @@ object DatabaseModule {
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext ctx: Context): AppDatabase {
         return Room.databaseBuilder(ctx, AppDatabase::class.java, "app-db")
-            .fallbackToDestructiveMigration()
+            .addMigrations(MIGRATION_1_2)   // explicit migrations; destructive fallback deletes user data
             .build()
     }
 
@@ -425,17 +427,17 @@ items(orders, key = { it.id }, contentType = { "order" }) { ... }
 
 ## Compose Modifier Best Practices
 
-- Modifier order matters: `size` → `padding` → `background` → `clickable` (outer to inner)
-- Klibs `Modifier.composed` for reusable modifier chains
+- Modifier order matters: each modifier wraps the ones after it (`padding` before `background` leaves an unpainted margin; `clickable` before `padding` makes the padding tappable) — choose the order for the effect you want
+- Reusable custom modifiers: chain existing modifiers in an extension function, or implement `Modifier.Node`; `Modifier.composed` is discouraged for performance
 - Avoid `Modifier.absoluteOffset` — prefer `Modifier.offset` for RTL support
 - `Modifier.clipToBounds()` to prevent content overflow
-- `Modifier.alpha(0f)` vs `Modifier.visible(false)` — invisible keeps layout space, gone releases it
+- Hiding content: `Modifier.alpha(0f)` keeps layout space; removing the composable from composition (`if (visible) { ... }`) releases it
 
 ## Production Considerations
 
 - ProGuard/R8 rules: keep `@Keep` annotations, Moshi adapters, Retrofit interfaces
 - Network security config for certificate pinning
-- Baseline Profiles for startup optimization (30%+ faster cold start)
+- Baseline Profiles for startup and jank (measure the gain with Macrobenchmark)
 - LeakCanary for memory leak detection in debug builds
 - Chucker for network inspection in debug builds
 - StrictMode for detecting disk/network on main thread during development
@@ -444,7 +446,7 @@ items(orders, key = { it.id }, contentType = { "order" }) { ... }
 ## Kotlin Coroutines & Flow Best Practices
 
 - `viewModelScope.launch` for fire-and-forget operations (logging, analytics)
-- `viewModelScope.async` for concurrent decomposition (parallel API calls)
+- Parallel calls: `coroutineScope { val a = async { ... }; val b = async { ... } }` inside a launched coroutine, so one failure cancels the other
 - `flatMapLatest` for search-as-you-type debounced queries
 - `stateIn(WhileSubscribed(5000))` to keep upstream active for 5s after last subscriber
 - `catch { emit(UiState.Error(it)) }` for error recovery in Flow chains
@@ -475,26 +477,26 @@ com.example.app/
 
 - **God ViewModels**: ViewModel handling logic for multiple screens — split per screen
 - **Repository exposing raw data sources**: Never return `ApiResult` or `DbModel` — map to domain models
-- **Hilt unscoped bindings**: Always declare scope — unscoped = new instance every injection
+- **Wrong Hilt scope**: unscoped bindings create a new instance per injection (fine for stateless classes); use `@Singleton`/`@ViewModelScoped` only for objects that must be shared
 - **CollectAsState instead of collectAsStateWithLifecycle**: Without lifecycle awareness, collection leaks when screen is in background
 - **MutableStateFlow exposure**: Expose as `StateFlow`, keep `MutableStateFlow` private
 - **Using GlobalScope**: Never use `GlobalScope.launch` — creates leaked coroutines tied to app process
 - **Main thread DB access**: Room on main thread throws — use `suspend` functions or `Flow`
 - **Ignoring configuration changes**: State in ViewModel survives rotation; state in `remember` does not
-- **Deep layout hierarchy**: Compose recomposes deeply nested layouts inefficiently — keep composable depth <10 levels
+- **Unstable parameters and wide recomposition**: read fast-changing state as late as possible (lambda modifiers, `derivedStateOf`) and check recomposition counts in Layout Inspector
 
 ## Rules
 
 - Repository interfaces belong in domain layer; implementations in data layer
 - ViewModels expose state via StateFlow, never expose mutable state
-- Hilt modules must declare explicit scopes — no unscoped bindings for singletons
+- Hilt: scope only what must be shared (`@Singleton` for database, OkHttp, Retrofit)
 - Room operations on IO thread — use coroutine dispatchers or Room's built-in threading
 - Compose screens collect StateFlow with collectAsStateWithLifecycle, not collectAsState
 - Use sealed interfaces for UI state to represent loading, success, and error
 - DI modules are in a separate package — never scatter provides across feature packages
 - Baseline Profiles for all release builds targeting startup performance
-- Compose Modifier order: size → padding → background → clickable (outside-in)
-- Navigation routes defined in a single sealed class — never stringly-typed routes
+- Compose Modifier order is deliberate and reviewed (it changes layout, drawing and touch area)
+- Navigation routes are type-safe (`@Serializable` route classes) — never stringly-typed routes
 - Image loading via Coil in Compose with `AsyncImage` or `rememberAsyncImagePainter`
 - ProGuard rules must keep all Moshi/Retrofit/Kotlin serialization classes
 

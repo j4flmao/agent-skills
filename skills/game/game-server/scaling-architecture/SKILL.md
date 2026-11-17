@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, scaling, server, infrastructure]
 ---
 
@@ -80,7 +81,7 @@ Use interest gating to keep the handshake *small* (only edge entities travel, no
 
 ## 4. Region Routing & the Edge Band
 
-- Region = a cloud region with its own pod pool (see `regions-and-ping`).
+- Region = a cloud region with its own pod pool (see `references/region-and-edge.md`).
 - Player → nearest region (measured, not claimed).
 - **Edge relay**: a regional UDP proxy in front of game pods — hides pod IPs (DDoS protection), lets players enter a private backbone close to home, and lets you move/replace pods without changing what clients connect to. It does not remove jitter; it can only shorten the public-internet part of the path.
 
@@ -132,6 +133,7 @@ SLOs (examples):
 ## 7. Capacity & Autoscaling
 
 - Pods are **ephemeral**; capacity = "pods per region" decided by predicted DAU × match rate.
+- On Kubernetes, Agones models this directly: `GameServer` (one match process), `Fleet` (a warm pool), `FleetAutoscaler` (buffer or webhook policy) and `GameServerAllocation` (the matchmaker claims a Ready server, which Agones then protects from scale-down until it shuts down). Managed alternatives include AWS GameLift.
 - Autoscale signals: queue→match latency rising, pod CPU/bandwidth, relay capacity.
 - Predictive: pre-warm pods for big events (launch, sale, weekend) from telemetry — *never* first-tick to scale.
 

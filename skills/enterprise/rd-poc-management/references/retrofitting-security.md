@@ -13,7 +13,7 @@ Before the PoC can be promoted to an MVP, this "Innovation Debt" must be paid in
 
 ### Step 2: Identity & Access Management (IAM)
 - **Audit**: PoCs often use "mock" authentication (e.g., passing `?user_id=1` in the URL).
-- **Retrofit**: Integrate the enterprise's standard Identity Provider (IdP) like Okta or Azure AD. Implement strict **OIDC / OAuth 2.0** flows. Ensure the API validates JWT signatures on every request and enforces Role-Based Access Control (RBAC).
+- **Retrofit**: Integrate the enterprise's standard Identity Provider (IdP) like Okta or Microsoft Entra ID. Implement strict **OIDC / OAuth 2.0** flows. Ensure the API validates JWT signatures on every request and enforces Role-Based Access Control (RBAC).
 
 ### Step 3: Structured Logging & PII Redaction
 - **Audit**: PoCs often use `print()` or `console.log()`, dumping raw user data (emails, credit cards, passwords) into the standard output.

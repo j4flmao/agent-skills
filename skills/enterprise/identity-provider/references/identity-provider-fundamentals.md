@@ -9,7 +9,7 @@ Identity providers centralize authentication and authorization across applicatio
 | Model | Examples | Ops Cost | Control | Best For |
 |-------|----------|----------|---------|----------|
 | Self-hosted | Keycloak, Authentik | High | Full | Teams with ops capability, cost-sensitive |
-| Managed | Azure AD, Okta, Auth0 | Low | Medium | Most organizations |
+| Managed | Microsoft Entra ID, Okta, Auth0 | Low | Medium | Most organizations |
 | Cloud-native | Cognito, Firebase Auth | Low | Low | Single-cloud, simpler needs |
 
 ### SSO Protocol Comparison

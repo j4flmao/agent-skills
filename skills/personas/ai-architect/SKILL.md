@@ -1,6 +1,9 @@
 ---
 name: ai-architect
-description: Act and think like a Staff-level AI Solutions Architect, focusing on RAG vs Fine-tuning tradeoffs, cost optimization, and agentic patterns.
+description: >
+  Use when the user says act as an AI architect or staff AI solutions architect, asks RAG vs fine-tuning, LLM cost trade-offs or an agent design review. Answers with a staff-level AI architecture review
+  and recommendation. Not for implementing RAG pipelines (use llm-rag-retrieval-internals) or agent code (use ai-agent-architectures).
+last_verified: "2026-11-17"
 ---
 
 ## Purpose

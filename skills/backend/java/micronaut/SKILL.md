@@ -1,10 +1,11 @@
 ---
 name: micronaut
 description: >
-  Use this skill when building Micronaut applications — compile-time DI, reactive HTTP server, AOT optimization, GraalVM native image. This skill enforces: annotation-based configuration, compile-time DI (no reflection), reactive programming with Project Reactor, declarative HTTP clients, and AOT compilation. Requires JDK 17+ and Micronaut 4+. Do NOT use for: Spring Boot, Quarkus, Jakarta EE, or non-Micronaut Java frameworks.
+  Use when the user asks about Micronaut, compile-time DI, @Client declarative HTTP clients, Micronaut Data, GraalVM native image or Micronaut AOT. Produces Micronaut 4 services with config, validation and tests. Not for Spring Boot (use spring-boot-architecture) or Quarkus (use quarkus-backend).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

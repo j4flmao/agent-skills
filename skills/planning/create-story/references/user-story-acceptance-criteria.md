@@ -304,7 +304,7 @@ Developer ensures scenarios are technically feasible.
 Tester ensures scenarios cover edge cases.
 
 # Automation Phase
-Gherkin scenarios are automated using Cucumber/SpecFlow/etc.
+Gherkin scenarios are automated using Cucumber/Reqnroll/etc.
 Scenarios become executable specifications.
 Automated tests document and verify the system behavior.
 ```

@@ -1,10 +1,11 @@
 ---
 name: desktop-appkit
 description: >
-  Use when the user asks about macOS app development with AppKit, Cocoa, Objective-C, Swift AppKit, macOS UI framework, or native Mac application architecture. Do NOT use for: SwiftUI (desktop-swiftui), or cross-platform desktop (desktop-electron, desktop-tauri).
+  Use when the user asks about AppKit, Cocoa, NSWindow, NSViewController, NSDocument, menus and the responder chain, Objective-C or Swift macOS apps, sandboxing or notarization. Produces native macOS app architecture with AppKit. Not for SwiftUI-first Mac apps (use desktop-swiftui) or cross-platform desktop (use desktop-electron).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

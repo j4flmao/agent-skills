@@ -1,12 +1,14 @@
 ---
 name: ml-model-interpretability
 description: >
-  Use this skill when explaining model predictions, computing feature importance, generating SHAP/LIME explanations, creating dependence plots, or building trust in ML model decisions.
-  This skill enforces: global + local explanation coverage, SHAP value computation, permutation importance baseline, visualization choice (waterfall/force/dependence/summary), model-specific methods, feature interaction detection.
-  Do NOT use for: model evaluation metrics (use ml-model-evaluation), hyperparameter tuning (use ml-hyperparameter-tuning), causal inference, or privacy-preserving explanations.
+  Use when the user asks to explain model predictions with SHAP or LIME, permutation importance, partial
+  dependence, waterfall and summary plots, feature interactions or model explanations for audits. Produces
+  global and local explanations with caveats. Not for feature selection (use ml-feature-engineering) or LLM
+  reasoning traces (use agent-observability).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

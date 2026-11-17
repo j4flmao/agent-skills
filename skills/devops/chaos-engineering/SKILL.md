@@ -5,6 +5,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [devops, chaos-engineering, resilience, chaos-mesh, litmus, aws-fis, gameday]
 ---
 
@@ -170,6 +171,8 @@ Gate releases on resilience regressions in staging; keep prod experiments schedu
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: write the hypothesis and steady-state SLI before injecting; bound blast radius and duration; abort automatically on SLO breach; know the Linux mechanism (tc netem, cgroups, iptables) a tool uses so cleanup is verifiable.
 
 - `references/merged-qa-chaos-engineering.md` — Chaos Engineering & Fault Injection (merged from `quality-assurance/testing-strategies/chaos-engineering`)
 - `references/merged-sre-chaos-engineering.md` — Chaos Engineering: Fault-Injection Mechanics (merged from `site-reliability-engineering/chaos-engineering`)

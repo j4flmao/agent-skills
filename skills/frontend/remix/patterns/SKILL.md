@@ -1,10 +1,11 @@
 ---
 name: frontend-remix-patterns
 description: >
-  Use this skill when the user says 'Remix pattern', 'Remix form validation', 'Remix optimistic UI', 'Remix error boundary', 'Remix SEO', 'Remix caching', 'Remix PWA'. This skill enforces: server-side form validation with Zod, route-level error boundaries, meta exports for SEO, Cache-Control strategies, optimistic updates with useFetcher, and service workers for offline support. Requires existing Remix project (package.json with @remix-run/*). Do NOT use for: React-only validation, client-side-only forms.
+  Use when the user asks about Remix form validation with Zod, optimistic UI with useFetcher, route error boundaries, meta/SEO exports, Cache-Control headers or PWA support in Remix / React Router v7. Produces production patterns for an existing Remix app. Not for routing and deployment setup (use frontend-remix-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -18,6 +19,9 @@ tags: [frontend, remix, react, patterns, phase-7]
 ## Purpose
 Apply production-grade patterns to Remix applications: server validation, error boundaries per route, SEO metadata, caching, optimistic UI, and PWA support.
 
+## Version Note (2026)
+Remix v2 continues as **React Router v7 framework mode**: same loaders, actions, `<Form>`, `useFetcher` and nested routes, but imports come from `react-router` / `@react-router/*` instead of `@remix-run/*`, and `json()`/`defer()` are no longer needed (return plain objects). New projects start with `npx create-react-router@latest`; existing Remix v2 apps upgrade via the future flags and the official "Upgrading from Remix" guide. "Remix 3" is a separate, non-React framework and is not the upgrade path. Examples below use Remix v2 imports; map them as described when the project uses React Router v7.
+
 ## Agent Protocol
 
 ### Trigger
@@ -25,7 +29,7 @@ Exact user phrases: "Remix pattern", "Remix form validation", "Remix optimistic 
 
 ### Input Context
 Before activating, verify:
-- Remix project with @remix-run/react and a routing structure.
+- Remix v2 (@remix-run/*) or React Router v7 framework-mode project and its routing structure.
 - Whether Zod is already installed for validation.
 - Existing meta/SEO setup.
 - Target deployment platform for caching strategy.

@@ -5,7 +5,7 @@
 | Platform | API | What to store |
 |----------|-----|---------------|
 | iOS | Keychain | Tokens, keys, biometric data |
-| Android | EncryptedSharedPreferences | Small sensitive data |
+| Android | Keystore-backed AES-GCM key + DataStore (EncryptedSharedPreferences is deprecated) | Small sensitive data |
 | Android | Android Keystore | Crypto keys (never expose) |
 | Flutter | flutter_secure_storage | Cross-platform keychain/keystore |
 | RN | react-native-keychain | Cross-platform keychain |

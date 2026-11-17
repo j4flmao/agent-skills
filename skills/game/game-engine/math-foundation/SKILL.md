@@ -8,6 +8,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, math, simd, quaternion, engine]
 ---
 
@@ -43,7 +44,7 @@ Edge cases: {normalisation, epsilon, degeneracy}
 | `float2/3/4` | position, uv, color, dir | 8/12/16 B |
 | `quat` | orientation | 16 B |
 | `mat3/mat4` | transforms, projections | 36/64 B |
-| `aabb`, `sphere`, `plane`, `frustum` | volume queries | 24/16/16/64 B |
+| `aabb`, `sphere`, `plane`, `frustum` | volume queries | 24/16/16/96 B (6 planes) |
 | `ray` | intersection tests | 32 B |
 | `transform` (pos, rot, scale) | rigid + scale | 48 B (hot tier) |
 

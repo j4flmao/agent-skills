@@ -170,11 +170,11 @@ stringData:
     username: 00000000-0000-0000-0000-000000000000
     password: <access-token>
   docker.io: |
-    username: myuser
-    password: mytoken
+    username: <docker-hub-user>
+    password: <docker-hub-access-token>
   ghcr.io: |
     username: myuser
-    password: ghp_xxxxxxxxxxxx
+    password: <github-token>   # read:packages only; create this Secret from a secret manager (External Secrets), not from Git
 ```
 
 ## Monitoring

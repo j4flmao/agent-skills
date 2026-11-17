@@ -27,7 +27,7 @@ Effective AR/VR interactions balance natural movement, feedback clarity, and per
 ```
 Source model (.fbx, .obj, .blend)
 → Export to glTF 2.0 or USDZ
-→ Draco compression (glTF) or SceneKit compression (USDZ)
+→ Draco or meshopt compression (glTF); for USDZ, optimise meshes and textures before packaging (Reality Converter, usdzip)
 → Generate LODs (100%, 60%, 30% vertex count)
 → Build texture atlas (max 1024×1024, ASTC/ETC2)
 → Bundle into app assets

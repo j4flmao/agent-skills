@@ -678,6 +678,10 @@ When FAQ is part of a larger page, nest it:
 
 ## HowTo Schema
 
+> Google deprecated HowTo rich results in 2023 (no longer displayed). Keep this markup only if other consumers use it.
+
+> Google deprecated HowTo rich results in 2023 (no longer displayed). Keep this markup only if other consumers use it.
+
 ```html
 <script type="application/ld+json">
 {
@@ -873,10 +877,11 @@ function JsonLd({ data }: { data: Record<string, unknown> }) {
     <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{
+        // escape '<' so data containing </script> cannot break out of the tag
         __html: JSON.stringify({
           '@context': 'https://schema.org',
           ...data,
-        }),
+        }).replace(/</g, '\\u003c'),
       }}
     />
   )

@@ -60,14 +60,14 @@ Scenario Outline: Discount applied by order value
 
 ## BDD Framework Selection
 
-| Feature | pytest-bdd | behave (Python) | Cucumber (JS) | SpecFlow (.NET) |
+| Feature | pytest-bdd | behave (Python) | Cucumber (JS) | Reqnroll (.NET) |
 |---------|-----------|----------------|---------------|-----------------|
 | Language | Python | Python | JS/TS | C# |
 | Gherkin parser | Native | Native | Native | Native |
 | Scenario outlines | Yes | Yes | Yes | Yes |
 | Background steps | Yes | Yes | Yes | Yes |
 | Tag filtering | Yes | Yes | Yes | Yes |
-| Parallel execution | pytest-xdist | Limited | @jest/parallel | SpecFlow+ |
+| Parallel execution | pytest-xdist | Limited | @jest/parallel | NUnit/xUnit parallel |
 | Report formats | JUnit, JSON, HTML | JUnit, JSON | JSON, HTML | TRX, HTML |
 | CI integration | Native pytest | Native | Jest/Cucumber | VSTest |
 | Best for | Python projects | Quick BDD | JS/TS full-stack | .NET ecosystem |

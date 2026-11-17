@@ -1,10 +1,14 @@
 ---
 name: data-science-experimentation
 description: >
-  Use this skill when designing experiments, A/B tests, multi-armed bandits, randomized controlled trials, statistical hypothesis tests, sample size calculations, experiment design, power analysis, or causal inference for product changes. This skill enforces: rigorous experiment design with pre-registered hypotheses, proper sample size calculations, statistical significance testing, multiple comparison corrections, guardrail metrics, and result interpretation. Do NOT use for: observational causal inference (see causal-inference skill), general statistical analysis (see statistical-analysis), or ML model evaluation.
+  Use when the user asks whether an A/B test result is statistically significant, sample size and power for an
+  experiment, CUPED, sequential testing, sample ratio mismatch, multiple comparisons or bandits. Produces
+  design, power calculation and analysis. Not for product A/B test strategy (use product-ab-testing) or
+  observational causal studies (use data-science-causal-inference).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -93,11 +97,13 @@ For continuous metrics: n = 2 × (Z_(α/2) + Z_β)² × σ² / δ²
 #### Practical Examples
 | Baseline | MDE (relative) | α | Power | N per variant |
 |---|---|---|---|---|
-| 5% | 10% (0.5pp) | 0.05 | 0.80 | ~13,500 |
-| 5% | 20% (1.0pp) | 0.05 | 0.80 | ~3,600 |
-| 10% | 10% (1.0pp) | 0.05 | 0.80 | ~3,400 |
-| 10% | 5% (0.5pp) | 0.05 | 0.80 | ~13,800 |
-| 20% | 10% (2.0pp) | 0.05 | 0.80 | ~2,500 |
+| 5% | 10% (0.5pp) | 0.05 | 0.80 | ~31,200 |
+| 5% | 20% (1.0pp) | 0.05 | 0.80 | ~8,200 |
+| 10% | 10% (1.0pp) | 0.05 | 0.80 | ~14,800 |
+| 10% | 5% (0.5pp) | 0.05 | 0.80 | ~57,800 |
+| 20% | 10% (2.0pp) | 0.05 | 0.80 | ~6,500 |
+
+Values are two-sided, per variant, from the pooled-variance formula in the code below; check with `statsmodels.stats.power.NormalIndPower` before committing traffic.
 
 ### Step 4: Randomization
 
@@ -240,7 +246,7 @@ def sample_size_continuous(mu, sigma, mde_absolute, alpha=0.05, power=0.80):
     return int(np.ceil(n))
 
 # Example: baseline 10%, MDE 5% relative (0.5pp), α=0.05, power=0.80
-# sample_size_proportion(0.10, 0.05) → ~13,800 per variant
+# sample_size_proportion(0.10, 0.05) → ~57,800 per variant (two-sided)
 ```
 
 ### Ratio Metrics and the Delta Method

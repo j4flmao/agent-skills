@@ -1,12 +1,12 @@
 ---
 name: alerting
 description: >
-  Use this skill when the user asks about alert rules, Alertmanager, Prometheus
-  alerts, Grafana alerts, notification routing, PagerDuty, on-call, escalation,
-  alert fatigue, or threshold tuning.
+  Use when the user asks about alert rules, Prometheus Alertmanager, Grafana alerts, alert fatigue, PagerDuty or Opsgenie routing, escalation policies or threshold tuning. Produces actionable alert
+  rules with severity and routing. Not for dashboards and metrics stacks (use monitoring) or SLO burn-rate design (use enterprise-sla-management).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

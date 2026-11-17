@@ -1,10 +1,14 @@
 ---
 name: data-bi-tools
 description: >
-  Use this skill when asked about BI, dashboard, Metabase, Superset, Looker, Tableau, PowerBI, reporting, data visualization, business intelligence, KPI dashboards, semantic layer, embedded analytics, or LookML. This skill enforces: tool selection based on team size and use case, semantic layer design with business-friendly metrics, dashboard layout patterns (KPI, trend, comparison, funnel), embedded analytics via SDK/iFrame, data source configuration, caching strategy, permissions model with row-level security, and scheduling. Do NOT use for: data warehouse schema design, ETL pipeline configuration, or ad-hoc SQL queries.
+  Use when the user asks about BI dashboards in Metabase, Superset, Looker/LookML, Tableau or Power BI, KPI
+  dashboards, a BI semantic layer or embedded analytics. Produces tool selection, semantic model, dashboard
+  layout and row-level access setup. Not for dbt metric definitions (use data-science-analytics-engineering) or
+  warehouse design (use data-data-warehouse).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

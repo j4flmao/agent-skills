@@ -186,7 +186,7 @@ As a {persona}, I want to {action} so that {value}.
 ### Compliance
 - GDPR: data minimization, right to deletion, data portability
 - SOC 2 Type II: annual audit, access controls, change management
-- WCAG 2.1 AA: accessibility compliance for all user-facing features
+- WCAG 2.2 AA: accessibility compliance for all user-facing features
 
 ### Browser and Device Support
 | Category | Supported Versions |
@@ -312,7 +312,7 @@ Project
 
 | Question | Owner | Deadline | Current Status |
 |----------|-------|----------|----------------|
-| Should we support SSO for enterprise? | Product | Sprint 2 | Researching Okta/Azure AD |
+| Should we support SSO for enterprise? | Product | Sprint 2 | Researching Okta/Microsoft Entra ID |
 | What is the max file upload size? | Engineering | Sprint 1 | Load testing needed |
 | Do we need SOC 2 before launch? | Legal | Sprint 1 | Awaiting compliance assessment |
 

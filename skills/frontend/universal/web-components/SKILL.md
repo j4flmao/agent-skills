@@ -1,10 +1,11 @@
 ---
 name: frontend-web-components
 description: >
-  Use this skill when the user says 'web component', 'custom element', 'shadow DOM', 'HTML template', 'CustomElementsRegistry', 'ElementInternals', 'form-associated element', 'cross-framework component', 'vanilla web component'. This skill enforces: custom element lifecycle methods, shadow DOM for style encapsulation, <slot> and <template> patterns, ElementInternals for form participation, and attribute/property reflection for cross-framework compatibility. Requires no specific framework — works in any web project. Do NOT use for: Lit-specific components, framework-specific components (React/Vue/Angular), or projects that should use a library-based approach.
+  Use when the user asks about custom elements, shadow DOM, slots and templates, ElementInternals, form-associated elements, declarative shadow DOM or framework-free cross-framework components. Produces standards-based web components. Not for Lit (use frontend-lit) or Stencil (use stencil).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -166,7 +167,11 @@ class UserAvatar extends HTMLElement {
 
   constructor() {
     super()
-    this.attachShadow({ mode: 'open' })
+    const root = this.attachShadow({ mode: 'open' })
+    // Build the DOM once; never interpolate attribute values into innerHTML (XSS)
+    this._img = document.createElement('img')
+    this._img.style.borderRadius = '50%'
+    root.append(this._img)
   }
 
   connectedCallback() {
@@ -178,10 +183,10 @@ class UserAvatar extends HTMLElement {
   }
 
   _render() {
-    this.shadowRoot.innerHTML = `
-      <img src="${this.src}" alt="${this.alt}"
-           style="width:${this.size}px;height:${this.size}px;border-radius:50%;" />
-    `
+    this._img.src = this.src
+    this._img.alt = this.alt
+    this._img.width = this.size
+    this._img.height = this.size
   }
 }
 customElements.define('user-avatar', UserAvatar)
@@ -258,7 +263,10 @@ class FormInput extends HTMLElement {
   constructor() {
     super()
     this._internals = this.attachInternals()
-    this.attachShadow({ mode: 'open' })
+    const root = this.attachShadow({ mode: 'open' })
+    this._input = document.createElement('input')
+    this._input.type = 'text'
+    root.append(this._input)
     this._internals.setFormValue('')
   }
 
@@ -271,8 +279,7 @@ class FormInput extends HTMLElement {
 
   connectedCallback() {
     this._render()
-    this.shadowRoot.querySelector('input')
-      .addEventListener('input', (e) => {
+    this._input.addEventListener('input', (e) => {
         this.value = e.target.value
         this._internals.setValidity({})
         this.dispatchEvent(new Event('input', { bubbles: true, composed: true }))
@@ -284,11 +291,10 @@ class FormInput extends HTMLElement {
   }
 
   _render() {
-    this.shadowRoot.innerHTML = `
-      <input type="text" .value="${this.value}"
-             ?disabled="${this.hasAttribute('disabled')}"
-             ?required="${this.hasAttribute('required')}" />
-    `
+    // Update the existing input instead of re-creating it (keeps focus and listeners)
+    if (this._input.value !== this.value) this._input.value = this.value
+    this._input.disabled = this.hasAttribute('disabled')
+    this._input.required = this.hasAttribute('required')
   }
 }
 customElements.define('form-input', FormInput)

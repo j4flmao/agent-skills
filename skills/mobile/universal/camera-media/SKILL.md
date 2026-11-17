@@ -14,6 +14,7 @@ tags: [mobile, camera, media, phase-7, universal]
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Mobile Camera & Media
@@ -84,7 +85,7 @@ Use case for the captured image?
 
 2. **Camera capture — photo** — iOS: `UIImagePickerController` (legacy, simpler) or `AVFoundation` `AVCapturePhotoOutput` (full control over camera settings: flash, focus, exposure, white balance). Use `AVFoundation` for custom camera UI (overlays, filters, manual controls). `UIImagePickerController` is simpler for quick capture with standard UI. Android: CameraX (recommended) provides lifecycle-aware camera APIs with `ImageCapture` for photos. Configure `CaptureMode.MINIMIZE_LATENCY` (fast shutter) or `MAXIMIZE_QUALITY` (better image). Camera2 API for full manual control (RAW capture, manual focus, exposure bracketing). After capture: show preview with accept/retry buttons, manage quality vs size tradeoff, save to app-internal storage (not gallery unless explicitly requested). Return content URI for further processing.
 
-3. **Camera capture — video** — iOS: `AVCaptureMovieFileOutput` or `UIImagePickerController.sourceType = .camera` with `cameraCaptureMode = .video`. Configure video quality: `AVCaptureSessionPresetHigh` (1080p), `AVCaptureSessionPresetMedium` (480p), `AVCaptureSessionPresetLow` (360p). Limit duration with `maxRecordedDuration`. Android CameraX: `VideoCapture` with `VideoCaptureConfig` — set bit rate (2-20 Mbps depending on resolution), frame rate (24/30/60fps), resolution (720p/1080p/4K). Enable audio with `AudioConfig`. Both platforms: microphone permission is required for video with audio. Show recording indicator (red dot + timer). Handle interruptions (phone call). After recording: show preview, allow retake or use.
+3. **Camera capture — video** — iOS: `AVCaptureMovieFileOutput` or `UIImagePickerController.sourceType = .camera` with `cameraCaptureMode = .video`. Configure video quality: `AVCaptureSession.Preset.high` (highest quality the device supports), `AVCaptureSessionPresetMedium` (480p), `AVCaptureSessionPresetLow` (360p). Limit duration with `maxRecordedDuration`. Android CameraX: `VideoCapture` with `VideoCaptureConfig` — set bit rate (2-20 Mbps depending on resolution), frame rate (24/30/60fps), resolution (720p/1080p/4K). Enable audio with `AudioConfig`. Both platforms: microphone permission is required for video with audio. Show recording indicator (red dot + timer). Handle interruptions (phone call). After recording: show preview, allow retake or use.
 
 4. **Media picker (gallery)** — iOS 14+: `PHPickerViewController` (modern, no read permission required for limited library access, search support, multi-select). Legacy: `UIImagePickerController.sourceType = .photoLibrary`. PHPicker advantages: doesn't require full photo library access, user can grant access to selected photos only, configurable filter (images only, videos only), multi-select support. Android: `ActivityResultContracts.PickVisualMedia` (API 19+, modern photo picker), `GetContent` (generic file picker), or `OpenDocument` (document picker). The system photo picker (API 19+) doesn't require `READ_EXTERNAL_STORAGE` permission. Always prefer the system picker over custom gallery implementation. Cross-platform: `@capacitor/camera` with `source: CameraSource.Photos`, or Expo Image Picker with `launchImageLibraryAsync`.
 
@@ -159,11 +160,11 @@ Live filters during camera preview require GPU-accelerated processing via Metal 
 
 | Format | Compression | Quality | Encoding Speed | Decode Support |
 |--------|------------|---------|---------------|----------------|
-| H.264 (AVC) | Good (1x) | Good | Fast | Universal — all devices |
-| H.265 (HEVC) | Better (2x H.264) | Better | Slower | iOS 11+, Android 5+ hardware |
-| VP9 | Better (1.5x H.264) | Good | Slow | Android native, iOS via software |
-| AV1 | Best (3x H.264) | Best | Very slow (real-time encoding limited) | Google Pixel 7+, iOS 17+ |
-| ProRes | Uncompressed | Lossless | Fast | iOS 15+ (iPhone 13 Pro+)
+| H.264 (AVC) | Baseline | Good | Fast, hardware everywhere | Universal |
+| H.265 (HEVC) | Roughly half the bitrate of H.264 at similar quality | Better | Hardware on recent devices | iOS 11+; Android support depends on device hardware |
+| VP9 | Between H.264 and HEVC | Good | Hardware encode on some Android devices | Android; Apple platforms only in limited contexts |
+| AV1 | Best | Best | Hardware encode rare on phones | Hardware decode on recent flagships (e.g. iPhone 15 Pro and later, many recent Android SoCs) |
+| ProRes | Very low (intra-frame, mezzanine) | Visually lossless | Fast, huge files | Capture on Pro iPhones (iPhone 13 Pro and later) |
 
 For most mobile apps: use H.265 on devices that support it (hardware encoder), fallback to H.264 on older devices. AV1 encoding is not yet practical for real-time mobile capture but is the future. Always test encode/decode speed vs file size tradeoff for your use case.
 

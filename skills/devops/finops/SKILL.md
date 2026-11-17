@@ -5,6 +5,7 @@ description: >
 version: 1.1.0
 author: j4flmao
 license: MIT
+last_verified: "2026-11-17"
 compatibility:
   cli: true
   core: true
@@ -393,6 +394,8 @@ Detection: monthly RI report shows coverage dropped from 65% to 45%. Investigati
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: visibility and allocation first, then remove waste, rightsize, and only then buy commitments for the proven baseline; review data-transfer paths (NAT, cross-AZ, egress); track a unit cost metric.
 
 - `references/finops_optimization.md` — FinOps optimization reference
 - `references/merged-enterprise-finops-cloud-cost.md` — FinOps & Cloud Cost Optimization (merged from `enterprise/finops-cloud-cost`)

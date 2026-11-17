@@ -1,10 +1,12 @@
 ---
 name: aspirational-roadmapping
 description: >
-  Use this skill when the user asks about strategic roadmapping, technology roadmapping, product roadmap creation, prioritization frameworks (RICE, WSJF, MoSCoW), OKR alignment, stakeholder alignment, timeline planning, or roadmap communication. Do NOT use for: project management task tracking, sprint planning, or technical architecture design.
+  Use when the user asks about strategic or technology roadmapping, multi-year roadmaps, aligning a roadmap with OKRs, RICE, WSJF or MoSCoW prioritization, dependency maps or roadmap reviews with
+  executives. Produces an outcome-based strategic roadmap. Not for a quarterly feature roadmap (use planning-create-roadmap) or sprint planning (use pm).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 type: skill
 compatibility:
   claude-code: true

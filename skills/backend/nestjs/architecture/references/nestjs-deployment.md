@@ -20,7 +20,7 @@ pm2 start dist/main.js -i max --name "app"
 ## Docker Deployment
 
 ```dockerfile
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
@@ -28,7 +28,7 @@ RUN npm ci && npm cache clean --force
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:24-alpine
 WORKDIR /app
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
@@ -105,7 +105,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - run: npm ci
       - run: npm run lint
       - run: npm run test:cov

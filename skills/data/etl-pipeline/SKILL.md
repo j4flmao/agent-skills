@@ -1,10 +1,14 @@
 ---
 name: data-etl-pipeline
 description: >
-  Use this skill when asked about ETL, ELT, data pipeline, Airflow, dbt, data transformation, data ingestion, batch processing, or pipeline orchestration. This skill enforces: pipeline architecture with Airflow DAG design, dbt transformation with incremental loading, error handling with retry and dead-letter, data validation checks, and observability. Do NOT use for: real-time streaming (Kafka/Flink), data warehouse schema design, or BI dashboard configuration.
+  Use when the user asks to orchestrate a daily ETL with Airflow and dbt, ETL vs ELT, data ingestion,
+  incremental loads, Airflow 3 DAG design, retries and dead-letter handling. Produces pipeline architecture, DAG
+  and transformation design with validation and observability. Not for real-time CDC (use data-streaming) or
+  wiring dbt into Airflow in depth (use data-airflow-dbt-orchestration).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

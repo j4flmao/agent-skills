@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, streaming, open-world, async-loading, client-engine]
 ---
 
@@ -59,7 +60,7 @@ Scope is defined by **player relevance** (distance bands + occlusion), not "whol
 | Enabling trigger | scripted beams | event-driven | linear-ish |
 | Persistent + streaming | base + rare | base always | hub + quest areas |
 
-Hybrid is the norm: base persistent + spatial cells around it + scripted chunks for set-pieces.
+Hybrid is the norm: base persistent + spatial cells around it + scripted chunks for set-pieces. Unreal's World Partition implements the spatial-grid model (runtime grids, streaming sources, data layers, HLODs for unloaded cells); Unity uses additive scenes or Addressables for the same idea.
 
 ## 3. Cell Management (The Heart)
 
@@ -85,7 +86,7 @@ Never "load when the player is already inside the cell" — that guarantees visi
 
 - File reads on **IO threads** (see `platform-abstraction` filesystem refs), decompress on workers.
 - Main→worker handoff is *deferred*: the level gets a "Loading" proxy (an occluder shell / low-poly stand-in) until the resident data arrives.
-- Never `fread` on the main thread — the streaming profiler flags any > 8 ms main-thread load.
+- Never `fread` on the main thread — make your profiler flag any synchronous load on the game thread as a bug.
 
 ## 6. Dependency Closure (The Silent Loader-Breaker)
 

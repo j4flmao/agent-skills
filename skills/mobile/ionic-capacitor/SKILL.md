@@ -15,6 +15,7 @@ tags: [mobile, ionic, capacitor, phase-7]
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Mobile Ionic & Capacitor
@@ -195,14 +196,14 @@ Need native device access?
 
 ## Performance
 
-- WebView startup: 200-600ms on modern devices depending on OS version and hardware
-- Ionic component rendering: ion-* components use Shadow DOM for style isolation — adds ~50-100ms initial render per component tree
+- WebView startup is a fixed cost before your JS runs; measure cold start on a low-end Android device and keep the initial bundle small
+- Ionic components are web components (many use Shadow DOM); render cost grows with component count, so lazy-load routes and avoid huge initial trees
 - Navigation transitions: Ionic uses GPU-accelerated CSS animations — target 60fps, avoid layout-triggering property animations (top, left, width, height)
 - Image-heavy lists: use `ion-img` with lazy loading (Intersection Observer-based) instead of `<img>` tags
-- Plugin call latency: each JS-to-native plugin call adds 5-15ms round-trip overhead. Batch related native calls into a single plugin method
-- Memory: WebView on Android is a separate process with ~100-200MB default heap. Monitor with `window.performance.memory`
-- Bundle size: Ionic core components ~2MB gzipped — use `@ionic/core` tree-shaking with Vite or webpack
-- Scrolling: `ion-content` uses native scrolling on iOS and synthetic scrolling on Android — virtual scrolling (`ion-virtual-scroll`) for lists over 100 items
+- Plugin calls are asynchronous messages across the bridge with serialization cost; batch related native calls into a single plugin method
+- Memory: profile WebView memory with Chrome DevTools (remote debugging) on Android and Safari Web Inspector on iOS
+- Bundle size: import only the components you use (standalone/tree-shakable imports in Ionic 7+) and check output with a bundle analyzer
+- Scrolling: `ion-virtual-scroll` was removed in Ionic 6; for long lists use a framework virtual scroller (Angular CDK `cdk-virtual-scroll-viewport`, `@tanstack/virtual`, `vue-virtual-scroller`) inside `ion-content`
 - Startup optimization: lazy-load routes with framework-specific patterns, defer heavy plugin initialization to after first meaningful paint
 
 ## Tooling
@@ -278,9 +279,9 @@ The WebView is the bottleneck in Ionic apps. Optimize for 60fps scrolling and sm
 - **Avoid layout thrashing**: Batch DOM reads and writes. Use `FastDom` or wrapper that schedules writes after reads. Measure with Chrome DevTools Performance tab — look for "Layout" events >10ms.
 - **CSS containment**: `contain: layout style paint` on off-screen components prevents the browser from recalculating layout/style/paint for elements outside the viewport. Apply to static sidebars, headers, footers.
 - **`ion-img` over `<img>`**: Ionic's image component uses IntersectionObserver for lazy loading — images outside viewport don't load. Set `--lazy-load-threshold` for pre-load buffer. Fallback: `loading="lazy"` attribute on native `<img>`.
-- **Virtual scrolling**: `ion-virtual-scroll` renders only visible items + buffer. For lists >100 items, always use virtual scrolling. Configure `approxItemHeight` for smoother scroll. Replaced with `ion-list` + `virtual-scroll` in newer Ionic versions; consider `cdk-virtual-scroll-viewport` from Angular CDK for Angular projects.
+- **Virtual scrolling**: for lists over ~100 items render only visible rows. `ion-virtual-scroll` was removed in Ionic 6: use `cdk-virtual-scroll-viewport` (Angular CDK) with `ion-content-scroll-host`, or a virtualizer such as TanStack Virtual in React/Vue.
 - **Reduce DOM node count**: Target <1500 DOM nodes for good performance. Audit with Chrome DevTools Elements panel. Replace nested `<div>` chains with CSS Grid/Flexbox single-layer layouts. Use `ion-item` directly without wrapping in extra `<div>` elements.
-- **WebView pool (Android)**: Android WebView instances consume ~100MB each. If the app opens secondary WebViews (for external links, in-app browsers), reuse the existing WebView instance or use Custom Tabs (Chrome custom tabs) instead.
+- **WebView pool (Android)**: Each extra Android WebView instance costs significant memory. If the app opens secondary WebViews (for external links, in-app browsers), reuse the existing WebView instance or use Custom Tabs (Chrome custom tabs) instead.
 
 ### JavaScript Bundle Optimization
 
@@ -291,7 +292,7 @@ The WebView is the bottleneck in Ionic apps. Optimize for 60fps scrolling and sm
 
 ### Native Bridge Optimization
 
-- **Batch native calls**: Each JS → native call costs 5-15ms round-trip. For bulk operations (reading 100 contacts), create a single plugin method that returns an array instead of 100 individual calls.
+- **Batch native calls**: Each JS → native call is an asynchronous bridge round trip with serialization cost. For bulk operations (reading 100 contacts), create a single plugin method that returns an array instead of 100 individual calls.
 - **Capacitor `runOutsideAngular` (Ionic Angular)**: Plugin callbacks outside Angular's zone reduce change detection cycles. Wrap plugin calls:
   ```typescript
   import { NgZone } from '@angular/core';

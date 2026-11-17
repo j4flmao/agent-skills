@@ -1,10 +1,11 @@
 ---
 name: frontend-rendering-strategies
 description: >
-  Use this skill when the user says 'rendering strategy', 'CSR', 'SSR', 'SSG', 'ISR', 'RSC', 'React Server Components', 'server-side rendering', 'static site generation', 'incremental static regeneration', 'hydration', 'client-side rendering', 'partial hydration', 'progressive hydration', 'streaming SSR', 'edge rendering', 'SSR vs SSG vs ISR', 'rendering decision'. This skill helps choose the right rendering strategy per route/page based on data freshness, SEO, user interactivity, and performance requirements. Works with Next.js, Astro, Nuxt, Remix, Gatsby, and similar frameworks. Do NOT use for: backend rendering patterns, CDN caching, or build tool configuration.
+  Use when the user asks about CSR vs SSR vs SSG vs ISR, streaming SSR, hydration and partial hydration, islands, edge rendering or picking a rendering mode per route. Produces a per-route rendering decision based on freshness, SEO and interactivity. Not for Server Components mechanics (use react-server-components) or Next.js caching internals (use nextjs-internals).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -338,7 +339,8 @@ async function PostPage({ params }: PostPageProps) {
   return (
     <article>
       <h1>{post.title}</h1>
-      <div dangerouslySetInnerHTML={{ __html: post.content }} />
+      {/* post.content is stored HTML: sanitize it (e.g. DOMPurify / sanitize-html) before rendering */}
+      <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }} />
       <CommentSection postId={post.id} /> {/* Client Component */}
     </article>
   )

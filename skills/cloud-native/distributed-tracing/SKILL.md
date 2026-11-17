@@ -5,6 +5,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [cloud-native, tracing, opentelemetry, w3c-trace-context, sampling, observability]
 ---
 

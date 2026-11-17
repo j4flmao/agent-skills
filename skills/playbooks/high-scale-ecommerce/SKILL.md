@@ -1,6 +1,9 @@
 ---
 name: high-scale-ecommerce
-description: Playbook for building a High-Scale E-Commerce platform.
+description: >
+  Use when the user asks for a high-scale ecommerce playbook, to build a scalable online store, flash-sale ready checkout or headless storefront at scale. Produces a reference architecture: CDN,
+  headless frontend, sharded checkout and SEO. Not for cart logic (use ecommerce-checkout-cart) or Shopify Hydrogen (use headless-ecommerce).
+last_verified: "2026-11-17"
 ---
 
 ## Purpose
@@ -68,10 +71,16 @@ spec:
     spec:
       containers:
       - name: checkout-app
-        image: registry/checkout:latest
+        image: registry/checkout@sha256:<digest>   # pin by digest, never :latest
+        securityContext:
+          runAsNonRoot: true
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
         resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
           limits:
-            cpu: "4"
             memory: "8Gi"
         env:
         - name: SHARDING_STRATEGY

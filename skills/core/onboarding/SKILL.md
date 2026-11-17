@@ -1,7 +1,8 @@
 ---
 name: core-onboarding
 description: >
-  Use this skill when the user says 'onboarding', 'new developer', 'new team member', 'setup guide', 'getting started', 'dev environment setup', 'new joiner', 'ramp up'. Produces a structured onboarding plan and environment setup guide for new team members. Do NOT use for: project initialization or README writing.
+  Use when the user asks about onboarding a new developer, new team member or new joiner, a getting started guide, dev environment setup, ramp-up plan or first-week checklist. Produces an onboarding
+  plan and environment setup guide. Not for scaffolding a new repository (use project-init) or writing the README (use dev-loop-readme-writer).
 compatibility:
   claude-code: true
   cursor: true
@@ -11,6 +12,7 @@ tags: [core, onboarding, phase-7]
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Core Onboarding

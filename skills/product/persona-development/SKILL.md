@@ -1,12 +1,12 @@
 ---
 name: product-persona-development
 description: >
-  Use this skill when developing user personas: persona creation, empathy mapping, persona-driven feature prioritization.
-  This skill enforces: data-driven persona creation, empathy mapping methodology, persona-to-feature connection, user story mapping.
-  Do NOT use for: user research interviews, quantitative segmentation, market sizing, customer journey mapping.
+  Use when the user asks to create user personas, empathy maps, jobs-to-be-done profiles, proto-personas or persona-driven prioritization. Produces evidence-based personas linked to features. Not for
+  running interviews (use product-user-research) or journey maps (use product-customer-journey).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

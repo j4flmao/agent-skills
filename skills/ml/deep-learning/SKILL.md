@@ -1,10 +1,14 @@
 ---
 name: ml-deep-learning
 description: >
-  Use this skill when asked about PyTorch, TensorFlow, Keras, neural network, CNN, RNN, LSTM, transformer, GAN, autoencoder, training loop, backpropagation, gradient descent, CUDA, distributed training, or mixed precision. This skill enforces: PyTorch training loop with nn.Module and DataLoader, TensorFlow Keras Sequential/Functional APIs, CNN architectures (ResNet, EfficientNet), RNN/LSTM/GRU for sequences, transformer implementations (self-attention, positional encoding), distributed training (DDP, FSDP), mixed precision (AMP), and CUDA optimization. Do NOT use for: classical ML models, feature engineering, or MLOps pipeline configuration.
+  Use when the user asks about PyTorch or Keras training loops, nn.Module and DataLoader, CNNs, RNN/LSTM,
+  transformers, mixed precision, torch.compile, gradient clipping or debugging a model that will not converge.
+  Produces architecture and training-loop code with checkpoints and evaluation. Not for multi-GPU parallelism
+  (use distributed-training) or LLM fine-tuning (use llm-finetuning).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -431,7 +435,7 @@ Scalability: single GPU for models up to 7B params (quantized). 4-8 GPUs for 7B-
 | Weights & Biases | Experiment tracking and visualization |
 | TensorBoard | Training metrics visualization |
 | ONNX | Cross-platform model export |
-| TorchServe / TF Serving | Model serving |
+| Triton / TF Serving | Model serving |
 | NVIDIA DALI | GPU-accelerated data loading |
 | FlashAttention | Memory-efficient attention implementation |
 | bitsandbytes | 4-bit/8-bit quantization for large models |
@@ -538,7 +542,7 @@ for epoch in range(num_epochs):
 ### Scalability
 - **Distributed training**: Use FSDP or DeepSpeed for large models. Enable activation checkpointing for memory efficiency.
 - **Model parallelism**: Split large models across GPUs using pipeline parallelism. Use Tensor Parallelism for very large models.
-- **Inference serving**: Deploy with TorchServe or Triton Inference Server. Use dynamic batching for throughput optimization.
+- **Inference serving**: Deploy with Triton Inference Server, BentoML or Ray Serve (TorchServe is archived). Use dynamic batching for throughput optimization.
 
 ### Reproducibility
 - **Seed everything**: Set seeds for all random generators. Log seed with each experiment in MLflow.

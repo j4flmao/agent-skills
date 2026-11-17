@@ -32,32 +32,18 @@ let eligibility = await Product.SubscriptionInfo.isEligibleForIntroOffer(product
 
 ## Grace Periods
 
-```kotlin
-// Android — billing retry config
-val params = BillingClient.newBuilder(context)
-    .setPendingPurchaseListener { /* handle billing retry UI */ }
-    .setListener { result, purchases ->
-        for (purchase in purchases) {
-            when (purchase.purchaseState) {
-                Purchase.PurchaseState.PENDING -> {
-                    // Payment method issue — don't block access yet
-                }
-                Purchase.PurchaseState.PURCHASED -> {
-                    // Acknowledge and deliver
-                }
-            }
-        }
-    }
-```
+Grace period and account hold are server-side states, not client purchase states. Detect them from Real-time Developer Notifications (`SUBSCRIPTION_IN_GRACE_PERIOD`, `SUBSCRIPTION_ON_HOLD`) and `purchases.subscriptionsv2.get` (`subscriptionState`) on Android, and from App Store Server Notifications (`DID_FAIL_TO_RENEW` with `GRACE_PERIOD` subtype) plus `gracePeriodExpiresDate` on iOS. Keep access during grace period, show a "fix your payment method" prompt, and revoke on hold/expiry.
 
-| Platform | Grace Period | Default |
-|----------|-------------|---------|
-| iOS | 7-30 days | 16 days for monthly, 30 for annual |
-| Android | 7 days | Configurable in Play Console |
+| Platform | Grace period | Configured in |
+|----------|-------------|---------------|
+| iOS | Opt-in Billing Grace Period; you choose the length (3, 16 or 28 days) | App Store Connect |
+| Android | Grace period length chosen per base plan, followed by account hold | Play Console |
+
+Check the current options in each console; Apple and Google adjust the allowed durations.
 
 ## Billing Retry
 
-- iOS: Apple retries for up to 30 days; `expiration_intent` = 2 indicates billing issue
+- iOS: Apple retries billing for up to 60 days; `expiration_intent` = 2 indicates billing issue
 - Android: `BillingClient.BillingFlowState.BILLING_UNAVAILABLE` signals retry; use `queryPurchaseHistoryAsync` on relogin
 
 ## Churn Prevention

@@ -178,7 +178,7 @@ def update_watermark(table_name, watermark_value, row_count, batch_id):
     "database.hostname": "mysql.primary",
     "database.port": "3306",
     "database.user": "debezium",
-    "database.password": "secure_password",
+    "database.password": "${file:/opt/kafka/secrets/db.properties:password}",
     "database.server.name": "orders-db",
     "table.include.list": "orders.orders,orders.order_items",
     "database.history.kafka.bootstrap.servers": "kafka:9092",

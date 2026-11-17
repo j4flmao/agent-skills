@@ -41,8 +41,10 @@ Use `context.filesDir` for app-private files, `context.cacheDir` for temporary d
 
 ## Security Fundamentals
 
-### EncryptedSharedPreferences
-Wrap sensitive key-value data with `EncryptedSharedPreferences` using AES256 encryption. Master key stored in Android KeyStore (hardware-backed on supported devices). Mark the key as `KeyProperties.PURPOSE_ENCRYPT | PURPOSE_DECRYPT`.
+### Encrypted Key-Value Storage
+> Jetpack Security (`androidx.security:security-crypto`, including `EncryptedSharedPreferences` and `MasterKey`) is deprecated. Keep it only for existing data; new code should generate a non-exportable AES-GCM key in the Android Keystore (or use Tink with a Keystore-wrapped key) and store ciphertext in DataStore.
+
+Encrypt sensitive key-value data with a non-exportable AES-GCM key generated in the Android Keystore (hardware-backed on supported devices, `KeyProperties.PURPOSE_ENCRYPT or PURPOSE_DECRYPT`) and store the ciphertext in DataStore. `EncryptedSharedPreferences` (Jetpack Security) is deprecated; keep it only to read existing data during migration.
 
 ### Network Security Config
 Use `network_security_config.xml` to enforce HTTPS, pin certificates, and disable cleartext traffic. Reference in `AndroidManifest.xml` via `android:networkSecurityConfig`. Include backup pins with expiration dates.

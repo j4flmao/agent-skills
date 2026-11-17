@@ -1,10 +1,11 @@
 ---
 name: rate-limiting
 description: >
-  Use this skill when the user says 'rate limit', 'rate limiting', 'throttle requests', 'token bucket', 'leaky bucket', 'sliding window', '429 too many requests', 'API quota', 'per-user limit', 'distributed rate limiter', 'Retry-After'. Chooses a rate-limiting algorithm, key and enforcement point, and implements it (in-process or Redis-backed) with correct 429 responses and headers. Do NOT use for: overload protection inside a service such as bulkheads and circuit breakers (backend-resilience-patterns), gateway product configuration in depth (devops api-gateway skills), DDoS mitigation at the network edge.
+  Use when the user asks about rate limiting, protecting a public API from abuse with request throttling, token bucket, sliding window, 429 Too Many Requests, Retry-After or per-user quotas. Produces an algorithm, key and Redis-backed limiter. Not for circuit breakers and bulkheads (use backend-resilience-patterns).
 version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -134,6 +135,8 @@ export function rateLimit(opts: { capacity: number; perSecond: number; cost?: nu
   };
 }
 ```
+
+Failure rule: if the limiter store (Redis) is down, fail open for ordinary endpoints (log and alert) and fail closed for abuse-sensitive ones (login, OTP, signup).
 
 Header note: `429 Too Many Requests` is defined in RFC 6585 and `Retry-After` in RFC 9110. The `RateLimit` / `RateLimit-Policy` fields come from the IETF httpapi working-group draft and are not yet an RFC; many APIs still emit the older `X-RateLimit-Limit/Remaining/Reset`. Pick one convention and document it.
 

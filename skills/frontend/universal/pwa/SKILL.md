@@ -1,10 +1,11 @@
 ---
 name: frontend-pwa
 description: >
-  Use this skill when the user says 'PWA', 'progressive web app', 'service worker', 'offline support', 'web app manifest', 'installable web app', 'Workbox', 'vite-plugin-pwa', 'web push notifications', 'background sync', 'update available prompt'. It makes a web app installable and offline-capable: manifest, service worker caching strategies with Workbox, safe update flow, web push and offline write queues, with real browser-support limits. Do NOT use for: HTTP cache headers and CDN caching (use frontend-browser-caching), native mobile apps (use the mobile skills), or Core Web Vitals tuning (use web-performance).
+  Use when the user asks to make the site installable and work offline, PWA, web app manifest, service worker with Workbox or vite-plugin-pwa, update prompts, background sync or web push. Produces manifest, caching strategies and a safe update flow with real browser limits. Not for HTTP cache headers (use frontend-browser-caching).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [frontend, pwa, service-worker, workbox, manifest, offline, web-push]
 ---
 

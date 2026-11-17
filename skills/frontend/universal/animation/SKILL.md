@@ -1,7 +1,7 @@
 ---
 name: frontend-animation
 description: >
-  Use this skill when the user says 'animation', 'motion', 'Framer Motion', 'GSAP', 'CSS animation', 'page transition', 'enter animation', 'exit animation', 'gesture animation', 'spring animation', 'keyframe', 'motion design'. Delivers animation strategies and code for web applications. Do NOT use for: backend animation or video processing.
+  Use when the user asks about Motion (Framer Motion), GSAP, CSS keyframes and transitions, the View Transitions API, page transitions, enter/exit or spring animations and prefers-reduced-motion. Produces performant, accessible web animation code. Not for motion principles and specs (use design-motion-design) or 3D scenes (use web3d-webgl).
 compatibility:
   claude-code: true
   cursor: true
@@ -11,6 +11,7 @@ tags: [frontend, animation, phase-7, universal]
 version: "1.2.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Frontend Animation

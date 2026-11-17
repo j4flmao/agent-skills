@@ -1,10 +1,12 @@
 ---
 name: dev-loop-changelog-generator
 description: >
-  Use when the user asks about generating changelogs, release notes, conventional commits to changelogs, automated release notes, or CHANGELOG.md management. Do NOT use for: git commit messages (dev-loop-git-workflow), or code review (dev-loop-code-review).
+  Use when the user asks to generate a CHANGELOG.md, release notes, semantic versioning bumps, or automate changelogs from conventional commits with release-please, changesets or semantic-release.
+  Produces changelog entries and release automation config. Not for PR descriptions (use dev-loop-pr-writer) or branching strategy (use dev-loop-git-workflow).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

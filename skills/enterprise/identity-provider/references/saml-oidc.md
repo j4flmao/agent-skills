@@ -17,7 +17,7 @@
 ## When to Use SAML
 
 ### Good for SAML
-- Enterprise B2B SSO (Okta, Azure AD, OneLogin)
+- Enterprise B2B SSO (Okta, Microsoft Entra ID, OneLogin)
 - Legacy applications (on-prem, intranet)
 - Government and regulated industries
 - Complex attribute requirements (multiple IdPs)

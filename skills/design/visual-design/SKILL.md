@@ -1,10 +1,11 @@
 ---
 name: design-visual-design
 description: >
-  Use when the user asks about visual design, color theory, typography, layout, visual hierarchy, spacing, proportion, or UI aesthetics, or wants a UI that does not look AI-generated or generic. Do NOT use for: design systems (design-design-systems), UX research (design-ux-research), or prototyping (design-prototyping).
+  Use when the user asks about visual design, color palettes, typography and type scales, spacing, layout grids, visual hierarchy, or says the UI looks AI-generated or generic and should look designed. Produces concrete visual decisions and critique. Not for token pipelines (use design-systems) or brand guidelines (use design-brand-identity).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

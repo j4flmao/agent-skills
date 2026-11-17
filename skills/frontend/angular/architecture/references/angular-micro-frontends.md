@@ -2225,7 +2225,10 @@ export class CentralizedLoggingService {
 
   constructor() {
     setInterval(() => this.flush(), this.flushInterval)
-    window.addEventListener('unload', () => this.flush())
+    // 'unload' is deprecated and blocks bfcache; flush when the page is hidden instead
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this.flush()
+    })
   }
 
   log(level: LogLevel, app: string, message: string, data?: unknown): void {

@@ -1,10 +1,11 @@
 ---
 name: design-information-architecture
 description: >
-  Use when the user asks about information architecture, sitemaps, user flows, content hierarchy, navigation design, content organization, labeling, or taxonomy. Do NOT use for: UX research (design-ux-research), visual design (design-visual-design), or prototyping (design-prototyping).
+  Use when the user asks about information architecture, sitemaps, navigation design, user flows, content hierarchy, labeling, taxonomy or card sorting results. Produces IA maps, navigation structures and flow diagrams. Not for running user research studies (use design-ux-research) or visual layout (use design-visual-design).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

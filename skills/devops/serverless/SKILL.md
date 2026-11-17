@@ -5,6 +5,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -429,6 +430,8 @@ Lambda response streaming:
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: initialize clients at module scope; timeout below the caller's timeout and SQS visibility timeout at least 6x the function timeout; idempotent handlers with partial batch failure reporting for SQS and streams.
 
 - `references/merged-backend-serverless.md` — Serverless Backend Development (merged from `backend/universal/serverless`)
 

@@ -9,6 +9,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -75,7 +76,7 @@ Platform?
 │   ├── GetIt (service locator, simple, fast)
 │   └── Riverpod (declarative, auto-dispose, testable)
 └── React Native
-    ├── InversifyJS (decorators, container)
+    ├── Module-level factories or a small container (decorator DI such as InversifyJS is rare in RN)
     └── Manual context-based DI (React Context + hooks)
 ```
 

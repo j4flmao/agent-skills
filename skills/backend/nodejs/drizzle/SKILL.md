@@ -1,10 +1,11 @@
 ---
 name: nodejs-drizzle
 description: >
-  Use this skill when working with Drizzle ORM — schema definition, SQL-like queries, migrations, relations, and edge deployment. This skill enforces: schema-first design, explicit SQL patterns, drizzle-kit for migrations, relational query builder, and connection management. Requires drizzle-orm and drizzle-kit. Do NOT use for: Prisma, TypeORM, Mongoose, or non-Drizzle ORM frameworks.
+  Use when the user asks about Drizzle ORM, drizzle-kit migrations, Drizzle schema, relational queries (db.query), prepared statements or Drizzle with Neon/Turso. Produces Drizzle schemas, queries and migrations. Not for Prisma (use nodejs-prisma).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

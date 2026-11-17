@@ -1,10 +1,12 @@
 ---
 name: quality-property-based-testing
 description: >
-  Use when the user asks about property-based testing, fuzzing, generative testing, QuickCheck, fast-check, invariant testing, or random testing. Do NOT use for: example-based unit testing (quality-unit-testing), or integration testing (quality-integration-testing).
+  Use when the user asks about property-based testing, Hypothesis, fast-check, QuickCheck, generators and shrinking, invariants, stateful testing or fuzzing. Produces properties, generators and stateful
+  models. Not for example-based unit tests (use quality-unit-testing) or smart contract invariants (use blockchain-testing).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

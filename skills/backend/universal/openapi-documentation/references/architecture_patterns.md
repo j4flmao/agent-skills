@@ -130,7 +130,7 @@ Portals should link REST operations to the events they emit (AsyncAPI channel re
 | Reference docs | Redoc, Swagger UI, Scalar, Stoplight Elements |
 | SDKs | OpenAPI Generator, Speakeasy, Fern, Kiota, Stainless |
 | Mock servers | Prism, Microcks, WireMock (OpenAPI import) |
-| Contract tests | Schemathesis, Dredd, Pact (consumer-driven) |
+| Contract tests | Schemathesis, Prism proxy, Pact (consumer-driven); Dredd is archived |
 | Gateway config | Import into Kong/APIM/API Gateway |
 
 ## Ownership

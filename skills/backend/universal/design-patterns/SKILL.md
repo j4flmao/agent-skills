@@ -1,10 +1,11 @@
 ---
 name: design-patterns
 description: >
-  Use this skill when selecting or reviewing any design pattern — GoF creational/structural/behavioral, enterprise, integration, concurrency, architectural, or anti-pattern avoidance. This skill enforces: pattern selection decision framework, trade-off analysis, anti-pattern rejection, explicit elimination criteria for rejected candidates, and pattern composition rules. Do NOT use for: framework-specific patterns (e.g. Angular DI), language-specific idioms (e.g. Rust ownership), infrastructure patterns (e.g. Kubernetes operators).
+  Use when the user asks which design pattern to use, GoF patterns (strategy, factory, observer, decorator, adapter), enterprise patterns, anti-patterns or composition vs inheritance. Produces a pattern choice with trade-offs and code. Not for system layering (use backend-clean-architecture) or microservice patterns (use microservices).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

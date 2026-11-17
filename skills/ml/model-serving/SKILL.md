@@ -1,12 +1,14 @@
 ---
 name: ml-model-serving
 description: >
-  Use this skill when deploying models for inference: TorchServe, BentoML, Ray Serve, KServe, Seldon Core, model deployment, A/B testing, autoscaling, canary deployment, model versioning, inference optimization.
-  This skill enforces: framework selection based on model type, deployment strategy documentation, autoscaling configuration, model versioning scheme, rollback procedure, inference optimization.
-  Do NOT use for: model training, feature store serving, pipeline orchestration, prompt engineering.
+  Use when the user asks to serve a PyTorch model with batching and autoscaling, BentoML, Ray Serve, KServe,
+  Triton Inference Server, Seldon, canary or A/B model rollout, model versioning and rollback. Produces serving
+  framework choice, deployment config and rollback procedure. Not for LLM engine tuning (use
+  ml-inference-optimization) or TensorRT engines (use tensorrt-optimization).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -26,7 +28,7 @@ Design model serving architecture with framework selection, deployment strategy,
 ```
 Model framework and requirements
   ├── PyTorch model
-  │   ├── Need native PyTorch support → TorchServe (model archive, metrics)
+  │   ├── Need native PyTorch support → BentoML / Ray Serve / KServe (TorchServe is archived, no security fixes)
   │   ├── Complex pipeline (multi-model) → Ray Serve (composition)
   │   └── K8s native → KServe (K8s CRD, auto-scaling to zero)
   ├── TensorFlow model
@@ -130,7 +132,7 @@ No preamble. No postamble. No explanations. No filler. Compress output.
 ## Workflow
 
 ### Step 1: Select Serving Framework
-- **TorchServe**: PyTorch-native, built-in model archive, metrics. Best for PyTorch models.
+- **TorchServe**: archived in August 2025 (limited maintenance, no security patches). Keep only for existing deployments; choose BentoML, Ray Serve, KServe or Triton for new work.
 - **BentoML**: Framework-agnostic, Python-first, OpenAPI spec. Best for Python ML ecosystem.
 - **Ray Serve**: Distributed, composition of models, Python-native. Best for complex pipelines.
 - **KServe**: Kubernetes-native, serverless, auto-scaling to zero. Best for K8s infra.

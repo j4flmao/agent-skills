@@ -1,10 +1,11 @@
 ---
 name: frontend-lit
 description: >
-  Use this skill when the user says 'Lit', 'LitElement', 'lit-html', 'web component Lit', 'reactive element', '@lit/reactive-element', 'Lit SSR', 'Lit component', 'Lit decorator', 'Lit reactive property'. This skill enforces: LitElement base class with reactive properties, declarative templates with lit-html, shadow DOM encapsulation by default, typed events with CustomEvent, and Lit SSR for server rendering. Requires Lit project (package.json with lit). Do NOT use for: vanilla web components, non-Lit custom elements, or framework-specific components (React/Vue/Angular).
+  Use when the user asks about Lit, LitElement, lit-html templates, reactive properties, Lit decorators, Lit context or Lit SSR. Produces typed Lit web components with shadow DOM styles and custom events. Not for framework-free custom elements (use frontend-web-components) or Stencil (use stencil).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

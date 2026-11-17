@@ -3,27 +3,8 @@
 ## Purpose
 With a database per service, one business operation spans several local transactions. This skill picks the pattern that keeps such operations consistent (sagas with compensation), separates read and write models when needed (CQRS), and shows how event sourcing and the outbox fit in.
 
-## Agent Protocol
-
-### Trigger
-Exact user phrases: "saga pattern", "distributed transaction", "compensating transaction", "choreography vs orchestration", "CQRS with event sourcing", "cross-service consistency", "two-phase commit microservices".
-
-### Input Context
-- Business flow and participating services with their data stores.
-- Which steps are reversible, and which have external side effects (payments, emails).
-- Existing messaging infrastructure and workflow engines (Temporal, Camunda, AWS Step Functions).
-
-### Output Artifact
-Saga step table with compensations, chosen coordination style, and the event/command contracts. No files unless requested.
-
-### Response Format
-```
-Saga: {name}   Style: {orchestration | choreography}
-| # | Service | Action | Compensation | Retryable |
-Pivot step: {step after which saga only moves forward}
-Isolation countermeasure: {semantic lock | commutative update | reread}
-Read model: {CQRS projection or none}
-```
+## Scope
+Reference folded into the parent `../SKILL.md` (the entry point; use its trigger and Response Format). This file keeps only material the parent does not cover: saga choreography vs orchestration, a persisted orchestrated saga, how saga/CQRS/ES/outbox combine.
 
 ## 1. Saga: Distributed Transactions Without 2PC
 Two-phase commit (XA) needs every participant to support it and holds locks while a coordinator decides; most brokers, NoSQL stores and SaaS APIs cannot participate, and a coordinator failure blocks participants. Sagas replace one global transaction with a sequence of local transactions, each publishing an event or replying to a command. On failure, already-completed steps are undone by **compensating transactions** (semantic undo such as "refund", not a rollback).
@@ -160,4 +141,4 @@ Publishing must be atomic with the state change: use the transactional outbox or
 - [ ] Read models have lag metrics and a rebuild procedure.
 
 ## References
-- Related skills: `skills/backend/universal/microservices/SKILL.md`, `skills/backend/universal/cqrs-patterns/SKILL.md`, `skills/backend/universal/event-sourcing/SKILL.md`, `skills/backend/universal/transactional-outbox/SKILL.md`.
+- Parent skill: `../SKILL.md`. Related: `skills/backend/universal/cqrs-patterns/SKILL.md`, `skills/backend/universal/event-sourcing/SKILL.md`, `skills/backend/universal/transactional-outbox/SKILL.md`.

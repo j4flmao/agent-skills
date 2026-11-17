@@ -1,16 +1,12 @@
 ---
 name: enterprise-capacity-planning
 description: >
-  Use this skill when forecasting infrastructure capacity needs, calculating headroom, sizing for growth,
-  modeling peak vs sustained load, planning procurement lead times for bare-metal/colo, computing
-  cost-per-unit-of-work, and planning multi-quarter capacity roadmap. This skill enforces: usage baseline
-  + p99 + peak measurement, growth modeling (linear/exponential/seasonal), headroom math by tier, lead-time
-  aware ordering, autoscale boundaries, and capacity drill cadence. Do NOT use for: cloud cost optimization
-  (see devops-cloud-cost-optimization), FinOps governance (see devops-finops), or per-team budget allocation
-  (see enterprise-cost-governance).
+  Use when the user asks about capacity planning, forecasting infrastructure growth, headroom, peak vs sustained load, hardware procurement lead times or cost per unit of work. Produces a capacity model
+  and multi-quarter roadmap. Not for cloud bill optimization (use devops-finops) or autoscaling config (use devops-kubernetes-autoscaling).
 version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

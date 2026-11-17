@@ -1,10 +1,11 @@
 ---
 name: backend-transactional-outbox
 description: >
-  Use this skill when the user says 'outbox', 'transactional outbox', 'outbox pattern', 'reliable event publishing', 'dual write', 'CDC outbox', 'message relay', 'publish events reliably', 'exactly-once publish', 'debezium outbox'. This skill enforces: event publication in the same DB transaction as business data, separate message relay process, at-least-once delivery guarantee, deduplication in consumers, idempotent consumption. Applies to any backend stack. Do NOT use for: in-process events, fire-and-forget messaging, or already-reliable message broker setups.
+  Use when the user asks about the transactional outbox, when a database write and a Kafka publish get out of sync, dual writes, reliable event publishing, Debezium outbox or a message relay. Produces outbox table, relay and consumer dedupe. Not for event schema design (use backend-event-driven).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

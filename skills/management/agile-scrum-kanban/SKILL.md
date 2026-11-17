@@ -1,10 +1,12 @@
 ---
 name: agile-scrum-kanban
 description: >
-  Use this skill when the user says 'scrum or kanban', 'kanban board', 'WIP limits', 'cycle time', 'throughput', 'flow metrics', 'scrumban', 'cumulative flow diagram', 'monte carlo forecast', 'backlog management', 'scaling agile', 'SAFe', 'LeSS'. It selects and tunes an agile delivery approach (Scrum, Kanban, Scrumban), designs boards and WIP policies, measures flow and forecasts delivery with data, and advises on scaling frameworks. Do NOT use for: Scrum event mechanics and Definition of Done setup (use agile-scrum-kanban), retrospective facilitation (use sprint-retro), team boundaries (use team-topology), OKRs (use okr-kpi).
+  Use when the user asks about Scrum vs Kanban, sprint planning, Definition of Done, WIP limits, cycle time, throughput, Monte Carlo forecasts, cumulative flow diagrams, Scrumban, SAFe or LeSS. Produces
+  an agile approach, board policies and data-based forecasts. Not for retrospectives (use sprint-retro) or team boundaries (use management-team-topology).
 version: "3.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

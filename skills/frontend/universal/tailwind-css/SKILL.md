@@ -1,10 +1,11 @@
 ---
 name: frontend-tailwind-css
 description: >
-  Use this skill when the user says 'tailwind', 'utility css', 'design tokens', 'responsive tailwind', 'tailwind config', 'custom theme'. This skill enforces utility-first CSS principles, design token extraction, responsive breakpoint patterns, and Tailwind config best practices. Applies to any frontend stack.
+  Use when the user asks to configure Tailwind v4 theme tokens, @theme, migrating tailwind.config from v3, utility classes, responsive and dark variants, @apply, plugins or class sorting. Produces Tailwind setup and token configuration. Not for choosing a styling approach (use frontend-css-strategy) or token tiers in a component library (use frontend-design-system).
 version: "1.2.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -1,10 +1,11 @@
 ---
 name: backend-auth-patterns
 description: >
-  Use this skill when the user says 'auth', 'authentication', 'authorization', 'JWT', 'OAuth', 'RBAC', 'permissions', 'login', 'session', 'refresh token', 'guard', 'middleware auth', or when implementing or reviewing authentication and authorization. This skill enforces: JWT structure and validation, refresh token rotation, OAuth2/OIDC flows, RBAC vs ABAC decision, middleware placement, and password security. Applies to any backend stack. Do NOT use for: specific OAuth provider implementation details, frontend auth UI, or passwordless login flows.
+  Use when the user asks about authentication, JWT login with refresh tokens, sessions, OAuth 2.0 / OIDC login, password hashing, MFA, passwordless or refresh token rotation. Produces server-side auth flows. Not for roles and permissions (use backend-authorization) or browser login UI (use frontend-authentication).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

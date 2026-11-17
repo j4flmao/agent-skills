@@ -1,10 +1,11 @@
 ---
 name: elysia-patterns
 description: >
-  Use this skill when the user says 'elysia pattern', 'elysia eden treaty', 'elysia websocket', 'elysia macro', 'elysia validation', 'elysia file upload', 'elysia custom plugin'. Implements Elysia recipes: Eden Treaty clients, built-in WebSocket pub/sub, parameterized macros, custom plugins with lifecycle hooks, TypeBox validation, uploads, error mapping and DI via decorate. Do NOT use for: overall project structure and lifecycle order (elysia-architecture), Express middleware, non-Elysia frameworks.
+  Use when the user asks about Elysia Eden Treaty clients, Elysia WebSocket pub/sub, Elysia macros, custom plugins, hook scopes (local, scoped, global) or file upload validation. Produces Elysia recipe code. Not for app folder structure (use elysia-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

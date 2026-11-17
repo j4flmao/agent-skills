@@ -1,12 +1,12 @@
 ---
 name: enterprise-togaf-zachman
 description: >
-  Use this skill when applying TOGAF ADM or Zachman Framework for enterprise architecture.
-  This skill enforces: ADM phase governance, Zachman cell analysis, architecture content production, stakeholder viewpoint alignment.
-  Do NOT use for: solution architecture, implementation coding, infrastructure provisioning.
+  Use when the user asks about TOGAF, the ADM phases, Zachman Framework, enterprise architecture frameworks, architecture building blocks or stakeholder viewpoints. Produces ADM phase plans, Zachman
+  cell mapping and EA deliverables. Not for review boards and decision rights (use enterprise-architecture-governance) or solution design (use create-tech-spec).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

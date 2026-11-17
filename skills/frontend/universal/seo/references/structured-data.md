@@ -140,6 +140,10 @@
 
 ## FAQPage
 
+> Since August 2023 Google shows FAQ rich results only for well-known, authoritative government and health sites. The markup stays valid but usually produces no SERP feature.
+
+> Since August 2023 Google shows FAQ rich results only for well-known, authoritative government and health sites. The markup stays valid but usually produces no SERP feature.
+
 ```json
 {
   "@context": "https://schema.org",

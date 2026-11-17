@@ -1,10 +1,11 @@
 ---
 name: frontend-state-management
 description: >
-  Use this skill when the user says 'state management', 'global state', 'Redux', 'Zustand', 'Pinia', 'NgRx', 'React Context', 'state architecture', 'where to put state', 'server state vs client state', or when deciding how to manage application state. This skill enforces: server state goes in server state libraries (TanStack Query, SWR, Apollo), local state goes in useState/ref/signals, shared state goes in lightweight stores (Zustand, Pinia, Signal Store), and complex state goes in XState or Redux Toolkit. Works with React, Vue, Angular. Do NOT use for: database design, backend caching, or API design.
+  Use when the user asks about state management, where to put state, global state, Redux Toolkit, Zustand, Jotai, Pinia, NgRx, React Context, server state vs client state, or components re-rendering from store updates. Produces a state placement decision and store setup. Not for TanStack Query caching details (use frontend-data-fetching).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -348,6 +349,11 @@ Cached server state should be normalized by ID to avoid duplication. TanStack Qu
   - references/state-patterns.md — State Management Patterns
   - references/state-testing.md — State Testing Patterns
 
+### Essentials from Merged Material
+- Filters, sorting and pagination that should survive reload or be shareable belong in URL search params, not a store.
+- Next.js App Router: a module-level store is shared across all server requests. Create per-user stores per request inside a Client Component provider and keep Server Components store-free.
+- Always subscribe with a selector (Zustand `useStore(s => s.x)`, `useShallow` for objects; RTK `createSelector`); never put mouse positions or animation frames in a global store.
+
 ### Merged Material
 Content folded in from overlapping skills and notes.
 
@@ -536,5 +542,5 @@ What type of state?
 
 - **Zustand shallow comparison**: Use `useStore(state => ({...}), shallow)` to avoid unnecessary re-renders when selecting multiple values. Shallow compare checks reference equality for each property.
 - **Jotai atom splitting**: Split large atoms into small focused atoms. Only re-render subscribers of the changed atom. 10 small atoms outperform 1 large store for independent values.
-- **TanStack Query stale time**: Set `staleTime` to avoid refetching data that doesn't change often. Use `cacheTime` to control GC of unused query results.
+- **TanStack Query stale time**: Set `staleTime` to avoid refetching data that doesn't change often. Use `gcTime` (named `cacheTime` before TanStack Query v5) to control GC of unused query results.
 - **Memoized selectors**: Use `createSelector` (Reselect) for derived data. Avoids recomputation unless input selectors change. Essential for expensive computations.

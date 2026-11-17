@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, animation, skinning, ik, client-engine]
 ---
 
@@ -73,7 +74,7 @@ struct Skeleton { vector<Bone> bones; /* sorted so parent < child */ };
 - Store *local* pose (per-bone, parent-relative) — the evaluator blends local, then multiplies down the chain once.
 - Interleave: a clip = array of bone channels; load once to cache.
 - **Constant/linear track reduction**: bones that do not move (fingers in a run cycle, most scale tracks) collapse to one key; keys reconstructible by interpolation within error tolerance are removed.
-- Off-the-shelf: ACL (Animation Compression Library, used by Unreal) with per-bone error thresholds measured in object space at the skin, not raw quaternion error.
+- Off-the-shelf: ACL (Animation Compression Library; integrated into Unreal as a plugin) with per-bone error thresholds measured in object space at the skin, not raw quaternion error.
 - Deterministic: same clip + same t → same pose (see `compression` ref).
 
 ## 4. Blending & The State Machine
@@ -130,12 +131,12 @@ Per-character cost budget (skinned):
 
 | Metric | Target/char (100 chars) |
 |--------|-------------------------|
-| CPU pose eval (LOD0) | ~0.1–0.3 ms |
-| Skinning GPU | ~0.05–0.2 ms |
-| skin vertices | 3–8k quads LOD0 |
-| animation memory (decompressed) | LOD0 ~1 MB/char-anim-set |
+| CPU pose eval (LOD0) | set from frame budget ÷ visible characters; measure |
+| Skinning GPU | measure per LOD in a GPU capture |
+| Skinned vertices | per-LOD triangle budget from art guidelines |
+| Animation memory | compressed clip size per character set, tracked in the asset report |
 
-- **LOD**: distant characters → half poses (24 bones) → single-skin → no-ASM (a "idle texture" / impostor).
+- **LOD**: distant characters → reduced skeleton (fewer bones) → lower update rate → vertex-animation textures or impostors with no state machine.
 - Skin on GPU (vertex shader matrices), pose on CPU (cheap per-bone); lifting skinned verts to GPU = your budget lever.
 - Histogram "bones skinned / second" in profiler is the first tuning hand crank.
 

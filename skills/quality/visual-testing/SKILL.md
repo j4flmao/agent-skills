@@ -1,10 +1,12 @@
 ---
 name: quality-visual-testing
 description: >
-  Use this skill when the user says 'visual regression', 'visual testing', 'screenshot diff', 'pixel diff', 'toHaveScreenshot', 'toMatchScreenshot', 'snapshot baseline', 'Chromatic', 'Percy', 'Argos', 'Applitools', 'Happo', 'Paparazzi', 'Roborazzi', 'swift-snapshot-testing', 'golden tests', 'Alchemist', 'flaky screenshots', or 'vision model UI review'. Covers tool selection for web and mobile, render determinism (pinned Docker image, render flags, frozen clock/network), threshold math (threshold vs maxDiffPixels vs maxDiffPixelRatio), baseline storage and review workflow, coverage modes (viewport, theme, locale/RTL, forced-colors, reduced-motion), accessibility pairing, and how AI coding agents should verify UI with measurements instead of VLM guesses. Do NOT use for functional E2E assertions, performance benchmarking, or standalone accessibility audits.
+  Use when the user asks to catch unintended UI changes with screenshot diffs in CI, visual regression, toHaveScreenshot, Chromatic, Percy, Argos, Applitools, Paparazzi, Roborazzi or golden tests.
+  Produces deterministic rendering, threshold and baseline review setup. Not for functional e2e flows (use quality-e2e-testing) or Storybook setup (use frontend-storybook).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

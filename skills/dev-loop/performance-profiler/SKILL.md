@@ -1,10 +1,12 @@
 ---
 name: dev-loop-performance-profiler
 description: >
-  Use when the user asks about performance profiling, application performance, profiling tools, performance optimization, bottleneck analysis, or performance testing. Do NOT use for: debugging bugs (dev-loop-debugging-strategy), or code review (dev-loop-code-review).
+  Use when the user asks to profile slow code, find a CPU or memory bottleneck, read a flame graph, use pprof, py-spy, perf or Chrome DevTools profiler, or chase a memory leak or high latency. Produces
+  a measure-first profiling plan and targeted optimizations. Not for functional bugs (use dev-loop-debugging-strategy) or load tests (use quality-load-testing).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

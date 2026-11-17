@@ -1,12 +1,12 @@
 ---
 name: enterprise-sla-management
 description: >
-  Use this skill when defining SLAs, SLOs, error budgets, and service reliability targets.
-  This skill enforces: SLO definition, error budget calculation, burn rate alerts, multi-tier SLA structures.
-  Do NOT use for: incident response, on-call scheduling, postmortem writing.
+  Use when the user asks to define SLAs, SLOs and SLIs, calculate an error budget, set burn rate alerts, write customer SLA terms and credits, or tier SLAs by plan. Produces SLO definitions, error
+  budget policy and alerting. Not for incident handling (use devops-incident-response) or HA topology (use enterprise-high-availability).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

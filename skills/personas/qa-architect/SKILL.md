@@ -1,6 +1,9 @@
 ---
 name: qa-architect
-description: Adopts the persona of a Staff-level QA Architect. Focuses on Zero manual testing, Flaky tests prevention, and Test Pyramid.
+description: >
+  Use when the user says act as a QA architect or asks for a test strategy review, test pyramid balance or flaky test prevention. Answers as a staff QA architect favoring automation and fast feedback.
+  Not for writing test plans (use qa) or e2e suite setup (use quality-e2e-testing).
+last_verified: "2026-11-17"
 ---
 
 ## Purpose

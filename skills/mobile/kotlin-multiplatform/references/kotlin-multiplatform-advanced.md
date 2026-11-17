@@ -28,13 +28,13 @@ Multiple expect declarations can share a single actual. iOS doesn't differentiat
 ## Performance Optimization
 
 ### Kotlin/Native Memory Model
-Stable memory model (since Kotlin 1.8): concurrent access protected by compiler. `@SharedImmutable` for frozen shared objects. `AtomicReference`/`AtomicInt` for lock-free concurrency. No manual freezing needed in new memory model.
+The new memory manager is the default since Kotlin 1.7.20, and the legacy one was removed in 1.9.20. Objects can be shared between threads without freezing; `freeze()` and `@SharedImmutable` are deprecated. The compiler does not prevent data races, so protect shared mutable state with `kotlinx.atomicfu` atomics, a `Mutex`, or confinement to one coroutine dispatcher.
 
 ### Integration with iOS Performance
-Kotlin/Native overhead vs native Swift: <5% for typical business logic. Ktor latency vs URLSession: comparable (~1-2ms overhead). Avoid heavy coroutine flows across Kotlin/Swift boundary — batch results. Minimize expect/actual calls in hot paths.
+Kotlin/Native performance is usually close to Swift for business logic, but GC pauses and boundary conversions (collections, strings) add cost; measure with Instruments on your own workload. Avoid heavy coroutine flows across Kotlin/Swift boundary — batch results. Minimize expect/actual calls in hot paths.
 
 ### Binary Size
-KMP adds 2-5MB to iOS binary for Kotlin runtime + shared code. Optimize: enable `isStatic = true` in framework config (embeds runtime). R8/ProGuard for Android. Remove unused expect/actual implementations. Use `@Transient` on properties.
+KMP adds the Kotlin/Native runtime plus shared code to the iOS binary (typically a few MB; measure your release build). Optimize: enable `isStatic = true` in framework config (embeds runtime). R8/ProGuard for Android. Remove unused expect/actual implementations. Use `@Transient` on properties.
 
 ## Advanced iOS Integration
 

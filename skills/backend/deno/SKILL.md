@@ -1,10 +1,11 @@
 ---
 name: deno
 description: >
-  Use this skill when the user says 'deno', 'deno 2', 'deno.json', 'deno task', 'deno compile', 'deno test', 'Deno.serve', 'Deno KV', 'JSR', 'deno permissions', 'Fresh framework'. Builds Deno 2 backends: project config, permission flags, JSR/npm imports, Deno.serve or Hono/Oak servers, Deno KV, testing, compilation and deployment. Do NOT use for: Oak-specific architecture in depth (oak-backend), Node.js projects (nodejs-architecture), Bun projects (bun), frontend-only TypeScript.
+  Use when the user asks about Deno 2, deno.json, deno task, Deno.serve, Deno KV, JSR imports, deno compile or permission flags. Produces Deno projects with least-privilege permissions, tests and deployment. Not for the Oak framework specifically (use oak-backend).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -43,16 +43,29 @@ FROM target.orders;
 
 ### Sampling Verification
 ```python
-def verify_sample(source_conn, target_conn, table, sample_pct=5):
-    source = source_conn.execute(f"SELECT * FROM {table} TABLESAMPLE SYSTEM({sample_pct})")
-    target = target_conn.execute(f"SELECT * FROM {table} TABLESAMPLE SYSTEM({sample_pct})")
-    
-    # Compare row by row
-    for s_row, t_row in zip(source, target):
+ALLOWED_TABLES = {"orders": "order_id", "customers": "customer_id"}  # table -> primary key
+
+def verify_sample(source_conn, target_conn, table: str, sample_pct: float = 5.0) -> dict:
+    # Identifiers cannot be bound as parameters, so allow-list them instead of interpolating user input.
+    if table not in ALLOWED_TABLES:
+        raise ValueError(f"verify_sample: table {table!r} is not in the migration allow-list")
+    pk = ALLOWED_TABLES[table]
+    # Sample keys once on the source, then fetch the SAME keys from the target;
+    # two independent TABLESAMPLE calls would return different rows.
+    keys = [r[0] for r in source_conn.execute(
+        f"SELECT {pk} FROM {table} TABLESAMPLE SYSTEM (%s)", (sample_pct,))]
+    query = f"SELECT * FROM {table} WHERE {pk} = ANY(%s) ORDER BY {pk}"
+    source_rows = source_conn.execute(query, (keys,)).fetchall()
+    target_rows = {row[pk]: row for row in target_conn.execute(query, (keys,)).fetchall()}
+
+    for s_row in source_rows:
+        t_row = target_rows.get(s_row[pk])
+        if t_row is None:
+            return {"match": False, "missing_key": s_row[pk]}
         for col in s_row.keys():
             if normalize(s_row[col]) != normalize(t_row[col]):
-                return {"match": False, "column": col, "source": s_row[col], "target": t_row[col]}
-    return {"match": True}
+                return {"match": False, "key": s_row[pk], "column": col}
+    return {"match": True, "rows_checked": len(source_rows)}
 ```
 
 ## Smoke Tests

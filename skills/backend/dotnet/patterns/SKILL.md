@@ -1,10 +1,11 @@
 ---
 name: dotnet-patterns
 description: >
-  Use this skill when the user says 'dotnet MediatR pattern', 'dotnet pipeline behavior', 'dotnet Result pattern', 'EF Core performance', 'EF Core outbox', 'dotnet FluentValidation', 'dotnet event sourcing'. Implements .NET application patterns: mediator pipeline behaviors, Result types, EF Core query optimization, outbox, simple event store and caching decorators. Do NOT use for: solution/project structure (dotnet-architecture), non-.NET stacks.
+  Use when the user asks about MediatR pipeline behaviors, the Result pattern in C#, FluentValidation, EF Core performance (AsNoTracking, ExecuteUpdate), EF Core outbox or dotnet CQRS handlers. Produces C# implementations of these patterns. Not for solution layout (use dotnet-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

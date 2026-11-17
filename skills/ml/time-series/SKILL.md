@@ -1,12 +1,14 @@
 ---
 name: ml-time-series
 description: >
-  Use this skill when forecasting time series data, modeling trend/seasonality, applying ARIMA/SARIMA/Prophet/LSTM/TFT, or performing temporal cross-validation.
-  This skill enforces: decomposition analysis (trend/seasonality/residual), stationarity testing, model selection by data characteristics, temporal cross-validation, forecast evaluation with MASE/sMAPE.
-  Do NOT use for: generic regression on non-temporal data, anomaly detection in time series (use ml-anomaly-detection), causal inference with time series, or real-time streaming (use data-streaming skill).
+  Use when the user asks to forecast weekly demand for the next quarter, time series forecasting, ARIMA/SARIMA,
+  Prophet, ETS, statsforecast, LightGBM lag models, TFT, seasonality or backtesting with temporal
+  cross-validation. Produces model choice, backtest design and MASE/sMAPE evaluation. Not for anomaly alerts
+  (use ml-anomaly-detection).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

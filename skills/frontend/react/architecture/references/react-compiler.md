@@ -45,24 +45,26 @@ function ProductList({ products, onSelect }: ProductListProps) {
 ## Installation
 
 ```bash
-npm install -D babel-plugin-react-compiler
-# or for Vite
-npm install -D vite-plugin-react-compiler
+npm install -D babel-plugin-react-compiler   # React Compiler 1.0 (stable since Oct 2025)
+# React 17/18 also need: npm install react-compiler-runtime
 ```
 
 ## Configuration
 
 ### Vite
 ```typescript
-import reactCompiler from 'vite-plugin-react-compiler'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
+// The compiler runs as a Babel plugin through @vitejs/plugin-react.
+// Check the React Compiler docs for the setup matching your plugin-react major.
 export default defineConfig({
   plugins: [
-    reactCompiler({
-      target: '19', // React 19
-      // or '18' for React 18
+    react({
+      babel: {
+        plugins: [['babel-plugin-react-compiler', { target: '19' }]], // '18'/'17' for older React
+      },
     }),
-    react(),
   ],
 })
 ```
@@ -87,17 +89,9 @@ const nextConfig = {
 ```
 
 ### ESLint Plugin
+The compiler-aware lint rules ship in `eslint-plugin-react-hooks` (recommended presets); the separate `eslint-plugin-react-compiler` package is no longer needed. The rules work even before the compiler is enabled.
 ```bash
-npm install -D eslint-plugin-react-compiler
-```
-
-```json
-{
-  "plugins": ["react-compiler"],
-  "rules": {
-    "react-compiler/react-compiler": "error"
-  }
-}
+npm install -D eslint-plugin-react-hooks@latest
 ```
 
 ## Rules of React Compiler
@@ -209,11 +203,11 @@ function ProductList({ products, onSelect }) {
 
 ```bash
 # 1. Install compiler and ESLint plugin
-npm install -D vite-plugin-react-compiler eslint-plugin-react-compiler
+npm install -D babel-plugin-react-compiler eslint-plugin-react-hooks@latest
 
-# 2. Enable compiler in config
-# 3. Run ESLint to find violations
-npx eslint src/ --rule 'react-compiler/react-compiler: error'
+# 2. Run ESLint with the react-hooks recommended preset to find violations
+npx eslint src/
+# 3. Enable the compiler in the bundler config (start with a directory or annotation opt-in if needed)
 
 # 4. Fix violations iteratively
 # 5. Enable compiler in CI
@@ -224,23 +218,18 @@ npx eslint src/ --rule 'react-compiler/react-compiler: error'
 
 ```typescript
 // eslint.config.js
-import reactCompiler from 'eslint-plugin-react-compiler'
+import reactHooks from 'eslint-plugin-react-hooks'
 
 export default [
-  {
-    plugins: { 'react-compiler': reactCompiler },
-    rules: {
-      'react-compiler/react-compiler': 'error',
-    },
-  },
+  reactHooks.configs.flat.recommended,
 ]
 ```
 
-Common lint errors:
-- "TODO: this mutation may be shared" — mutate local values only
-- "TODO: hook may be called conditionally" — hooks must be unconditional
-- "TODO: prop mutation" — don't mutate props
-- "TODO: call to ... may be a side effect" — move side effects to useEffect
+What the compiler-aware rules flag (fix these before enabling the compiler on that code):
+- mutating props, state or values created during render
+- reading or writing `ref.current` during render
+- calling `setState` during render or synchronously in an effect
+- impure calls during render (`Date.now()`, `Math.random()`) and components defined inside components
 
 ## Compiler + React 19
 

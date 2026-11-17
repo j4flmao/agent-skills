@@ -1,10 +1,11 @@
 ---
 name: backend-idempotency
 description: >
-  Use this skill when the user says 'idempotency', 'idempotent', 'idempotency key', 'exactly-once', 'retry safety', 'deduplication', 'duplicate detection', 'idempotent endpoint', 'safe retry'. This skill implements idempotency keys and exactly-once semantics so retries never result in duplicate side effects. Applies to any backend stack. Do NOT use for: read-only endpoints (they are naturally idempotent), optimistic concurrency, or database-level unique constraints alone.
+  Use when the user asks about idempotency keys, a payment endpoint that charges twice when the client retries, safe retries, duplicate requests or deduplication. Produces an idempotency-key store and middleware. Not for message consumer dedupe in brokers (use backend-message-queue) or locks (use backend-distributed-locking).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

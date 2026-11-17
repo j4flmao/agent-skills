@@ -208,7 +208,7 @@ def log_dvc_data_version():
 ```python
 # environment_capture.py
 import mlflow
-import pkg_resources
+from importlib import metadata
 import platform
 import subprocess
 import json
@@ -224,11 +224,8 @@ def capture_environment() -> dict:
     }
 
     # Capture all installed packages with versions
-    for pkg in sorted(
-        pkg_resources.working_set,
-        key=lambda x: x.key
-    ):
-        env['packages'][pkg.key] = pkg.version
+    for dist in sorted(metadata.distributions(), key=lambda d: d.metadata['Name'].lower()):
+        env['packages'][dist.metadata['Name'].lower()] = dist.version
 
     return env
 
@@ -672,12 +669,12 @@ class ReproducibilityVerifier:
 
     def verify_environment(self):
         """Verify package versions match."""
-        import pkg_resources
+        from importlib import metadata
         source_packages = self._parse_requirements(
             self.source_run.data.params.get('env.python', '')
         )
         for pkg_name, expected_version in source_packages.items():
-            actual_version = pkg_resources.get_distribution(pkg_name).version
+            actual_version = metadata.version(pkg_name)
             assert actual_version == expected_version, (
                 f"Package version mismatch for {pkg_name}: "
                 f"expected {expected_version}, got {actual_version}"

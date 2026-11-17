@@ -74,4 +74,4 @@ Define one or two unit metrics tied to revenue drivers: cost per 1k requests, pe
 ### Shared References
 Additional reference material for this skill, stored outside its own `references/` folder.
 
-- `../references/finops_optimization.md` — FinOps: Cloud Financial Operations & Optimization
+- `finops_optimization.md` — FinOps: Cloud Financial Operations & Optimization

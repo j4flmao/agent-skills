@@ -1,12 +1,14 @@
 ---
 name: ml-anomaly-detection
 description: >
-  Use this skill when detecting anomalies or outliers in data, building unsupervised anomaly detection systems, applying statistical methods (Z-score/IQR), proximity-based (LOF), ensemble (Isolation Forest), deep learning (autoencoder/VAE), or time-series anomaly detection.
-  This skill enforces: method selection by data characteristics (tabular/time-series/high-dim), statistical baseline (Z-score/IQR), model configuration (contamination rate, threshold), evaluation with precision/recall at k, real-time pipeline design.
-  Do NOT use for: supervised fraud detection with labeled data (use classification skill), data quality checks (use data-validation skill), root cause analysis of detected anomalies, or forecasting (use ml-time-series).
+  Use when the user asks about anomaly or outlier detection: Z-score/IQR baselines, Isolation Forest, LOF,
+  autoencoders, time-series anomalies, fraud or sensor outliers and alert thresholds. Produces method choice by
+  data type, model config and evaluation with labeled or synthetic anomalies. Not for data pipeline volume
+  monitors (use data-data-observability).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

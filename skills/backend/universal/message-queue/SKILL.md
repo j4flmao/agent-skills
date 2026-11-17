@@ -1,10 +1,11 @@
 ---
 name: backend-message-queue
 description: >
-  Use this skill when the user says 'message queue', 'Kafka', 'RabbitMQ', 'SQS', 'pub-sub', 'event bus', 'consumer group', 'topic', 'queue', 'at-least-once', 'exactly-once', 'idempotent consumer', 'event sourcing', 'dead letter queue', 'DLQ', 'message broker', 'producer', 'consumer', 'event-driven', 'async processing', or when designing asynchronous messaging. This skill enforces consistent messaging patterns: broker selection, topic/queue topology, message schema, consumer groups, retry, DLQ, and idempotency. Applies to any backend stack. Do NOT use for: gRPC streaming, WebSocket real-time, REST API design, or database CDC.
+  Use when the user asks about Kafka topics and partitions, RabbitMQ exchanges, SQS, consumer groups, consumer lag, dead letter queues, retention or message size limits. Produces broker topology and producer/consumer configuration. Not for event design between services (use backend-event-driven) or stream processing (use data-streaming).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

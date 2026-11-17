@@ -1,12 +1,14 @@
 ---
 name: ml-computer-vision
 description: >
-  Use this skill when building computer vision systems for image classification, object detection, segmentation, or image preprocessing/augmentation.
-  This skill enforces: task selection (classification/detection/segmentation), model choice by task and budget, image preprocessing pipeline, augmentation strategy, training config with metrics (mAP, IoU), inference optimization.
-  Do NOT use for: video streaming analytics, OCR (use separate OCR skill), medical imaging (requires domain-specific skill), NLP with image captions (use ml-nlp).
+  Use when the user asks about image classification, object detection, segmentation, Ultralytics YOLO,
+  torchvision models, augmentation, mAP/IoU or CV model export (ONNX, TensorRT). Produces task and model choice,
+  preprocessing and augmentation pipeline and training/eval config. Not for VLM image understanding (use
+  multimodal-pipelines) or image generation (use genai-vision).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

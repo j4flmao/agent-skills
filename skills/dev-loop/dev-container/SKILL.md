@@ -1,10 +1,12 @@
 ---
 name: dev-loop-dev-container
 description: >
-  Use when the user asks about development containers, devcontainer.json, Dev Containers in VS Code/GitHub Codespaces, Docker-based dev environments, or reproducible development setups. Do NOT use for: production Dockerfiles, or CI/CD pipelines.
+  Use when the user asks about devcontainer.json, Dev Containers in VS Code, GitHub Codespaces, a reproducible Docker-based development environment or dev container features. Produces devcontainer
+  config, Dockerfile and compose setup for local development. Not for production images (use docker-patterns) or CI pipelines (use github-actions).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

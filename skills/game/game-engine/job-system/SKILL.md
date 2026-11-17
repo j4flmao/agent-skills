@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, jobs, multithreading, scheduler, engine]
 ---
 
@@ -99,7 +100,7 @@ The single join at frame end is what makes job systems cheap — workers run eve
 
 ### 3.1 Central Work Queue (Simple)
 
-One global queue of runnable jobs; workers pop from it (mutex-protected). Works up to ~8 threads before contention. Simple, deterministic-ish.
+One global queue of runnable jobs; workers pop from it (mutex-protected). Fine for a few workers; contention on the shared lock grows with core count, so measure before scaling it up. Simple, deterministic-ish.
 
 ```cpp
 class WorkQueue {

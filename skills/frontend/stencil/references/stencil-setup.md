@@ -175,7 +175,8 @@ defineCustomElements()
 ### Vanilla HTML (CDN)
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/my-components/dist/my-components/my-components.esm.js"
+<!-- Pin an exact version (and add integrity="sha384-..." for SRI) instead of loading "latest" -->
+<script src="https://cdn.jsdelivr.net/npm/my-components@1.4.2/dist/my-components/my-components.esm.js"
         type="module"></script>
 
 <my-button variant="primary">Click Me</my-button>

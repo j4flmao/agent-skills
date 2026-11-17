@@ -1,10 +1,12 @@
 ---
 name: management-hiring
 description: >
-  Use this skill when the user says 'hiring', 'interviewing', 'technical interview', 'coding interview', 'system design interview', 'interview rubric', 'candidate assessment', 'interview debrief', 'offer decision', 'interview process', 'phone screen', 'onsite interview', 'behavioral interview', 'HackerRank', 'CodeSignal', 'interview pipeline', 'candidate evaluation', 'interview scoring', 'anti-bias hiring'. This skill enforces: structured interview rubrics with scoring criteria per skill dimension, multi-format technical assessment (coding, system design, debugging), behavioral evaluation aligned to company values using STAR method, consistent debrief process with calibration, data-driven offer decisions using decision matrix, anti-bias practices, and positive candidate experience. Do NOT use for: performance reviews, career development, or team structuring.
+  Use when the user asks to plan interviews, a hiring loop, technical or system design interview questions, an interview rubric, scorecards, debriefs, offer decisions or reducing bias for an engineering
+  hire. Produces a structured interview process with rubrics. Not for onboarding the new hire (use core-onboarding) or team design (use management-team-topology).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

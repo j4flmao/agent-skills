@@ -1,10 +1,11 @@
 ---
 name: backend-graphql-patterns
 description: >
-  Use this skill when designing GraphQL schemas, resolvers, or data loading strategies. This skill enforces: schema-first design, N+1 prevention via DataLoader, directive-based auth, cursor-based pagination, and structured error handling. Applies to any backend stack with GraphQL. Do NOT use for: REST API design, gRPC service definition, or internal-only RPC endpoints.
+  Use when the user asks about GraphQL schema design, resolvers, fixing N+1 queries in GraphQL resolvers, DataLoader, cursor pagination, query depth/complexity limits or persisted queries. Produces schema and resolver code. Not for subgraph composition (use api-graphql-federation).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

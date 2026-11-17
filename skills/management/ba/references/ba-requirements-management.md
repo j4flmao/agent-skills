@@ -75,7 +75,7 @@ Transition Requirements (During change)
 | Functional | What the system must do | Search orders, process payment, generate report |
 | Performance | Speed and throughput | Response under 2s, 1000 concurrent users |
 | Security | Protection of data and access | TLS 1.3, OAuth2, role-based access |
-| Usability | User experience and accessibility | WCAG 2.1 AA, mobile-responsive, 3-click rule |
+| Usability | User experience and accessibility | WCAG 2.2 AA, mobile-responsive, 3-click rule |
 | Reliability | Uptime and fault tolerance | 99.9% uptime, automatic failover |
 | Scalability | Growth capacity | Horizontal scaling, stateless design |
 | Maintainability | Ease of change | Code documentation, modular architecture |

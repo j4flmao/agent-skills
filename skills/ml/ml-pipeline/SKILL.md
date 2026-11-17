@@ -1,12 +1,14 @@
 ---
 name: ml-ml-pipeline
 description: >
-  Use this skill when building ML pipelines: Kubeflow Pipelines, TFX, SageMaker Pipelines, Vertex AI Pipelines, ML CI/CD, model training pipeline, data validation, model validation, pipeline orchestration.
-  This skill enforces: pipeline component decomposition, data validation gates, model validation thresholds, CI/CD integration, artifact tracking, pipeline versioning.
-  Do NOT use for: model training hyperparameter tuning, feature store configuration, model serving deployment.
+  Use when the user asks about ML pipelines with Kubeflow Pipelines (kfp v2), TFX, SageMaker Pipelines, Vertex
+  AI Pipelines, ML CI/CD, data and model validation gates or training pipeline orchestration. Produces pipeline
+  components, validation gates and CI/CD integration. Not for MLOps platform setup (use devops-mlops) or
+  experiment logging (use ml-experiment-tracking).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

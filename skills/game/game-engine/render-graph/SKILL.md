@@ -8,6 +8,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, rendering, render-graph, gpu, engine]
 ---
 
@@ -152,9 +153,9 @@ Watch: cratering if frontend record is single-threaded or the resolve does full 
 ## 9. Debug & Validation
 
 - Draw the graph as a DAG with per-pass attributes (a graphviz export or a built-in "graph view").
-- `--validate-sync` shows the barrier dump; assert: every resource has a defined initial state; no pass reads a resource not yet written (undefined → #error).
+- A sync-validation mode in your graph (plus the Vulkan/D3D12 validation layers' synchronization checks) dumps barriers; assert: every resource has a defined initial state; no pass reads a resource not yet written (undefined → #error).
 - Debug labels per pass (`BeginLabel`/`EndLabel`).
-- On frame dump (`--capture-frame`): include the resolved schedule + all barriers, useful for NVIDIA Nsight / PIX.
+- On a frame capture, include the resolved schedule + all barriers as debug markers so RenderDoc, NVIDIA Nsight or PIX show them.
 
 ## 10. References
 

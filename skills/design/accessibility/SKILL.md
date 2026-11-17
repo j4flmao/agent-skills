@@ -1,10 +1,11 @@
 ---
 name: design-accessibility
 description: >
-  Use this skill when performing an accessibility (a11y) audit, fixing WCAG/Section 508 failures, implementing ARIA patterns, adding screen-reader support, or auditing keyboard navigation and color contrast. This skill enforces: WCAG 2.2 AA compliance (AAA where possible), semantic HTML before ARIA, correct ARIA patterns, keyboard interaction design, sufficient color contrast, and a screen-reader testing protocol. Do NOT use for: general frontend performance optimization, visual design aesthetics, or mobile gesture-only interactions.
+  Use when the user asks for an accessibility audit, to make a page pass WCAG 2.2 AA, Section 508 or EN 301 549, color contrast review, accessible design specs, a screen reader test protocol or a VPAT. Produces audit findings, design annotations and a test protocol. Not for implementing ARIA and focus code (use frontend-accessibility).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

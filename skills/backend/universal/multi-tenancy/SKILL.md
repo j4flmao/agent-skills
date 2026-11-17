@@ -1,10 +1,11 @@
 ---
 name: backend-multi-tenancy
 description: >
-  Use this skill when the user says 'multi-tenancy', 'SaaS', 'tenant isolation', 'row-level security', 'DB per tenant', 'schema per tenant', 'tenant provisioning', 'tenant migration', 'multi-tenant database', 'tenant context'. This skill implements tenant isolation strategies: row-level, schema-per-tenant, and DB-per-tenant with provisioning and migration. Applies to any backend stack. Do NOT use for: single-tenant applications, IAM/authentication, or RBAC within a single organization.
+  Use when the user asks about multi-tenancy, SaaS where each customer must only see their own data, tenant isolation, row-level security, schema or database per tenant, tenant context or tenant provisioning. Produces an isolation model with enforcement code. Not for Supabase RLS specifics (use supabase).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

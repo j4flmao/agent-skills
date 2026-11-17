@@ -9,6 +9,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -517,23 +518,23 @@ jobs:
 ## Rules
 
 1. Never hardcode user-facing strings in code — always use resource files.
-2. Always use NSLocalizedString (iOS) or @string/ (Android) for all strings.
+2. Always resolve strings through the platform API: `String(localized:)`/`LocalizedStringResource` or SwiftUI `Text("key")` with String Catalogs (iOS; `NSLocalizedString` in older code), `@string/` and `stringResource()` (Android).
 3. Never assume English-like plural rules — always use CLDR plural categories (zero, one, two, few, many, other).
 4. Always use start/end instead of left/right for layout attributes (RTL support).
 5. Never concatenate translated strings — use format specifiers and placeholders.
 6. Always provide base locale (en) as the development language.
 7. Never use images with embedded text — use separate localized asset catalogs.
 8. Always support Dynamic Type/ font scaling per locale (different scripts need different sizes).
-9. Never use string interpolation with positional arguments for non-English languages.
+9. Always use numbered placeholders (`%1$@`, `%1$s`) when a string has more than one argument, so translators can reorder them.
 10. Always test with longest translation (German, Russian) to prevent truncation.
 11. Never assume date format is MM/DD/YYYY — use locale-aware formatters.
 12. Always set supportsRtl=true in AndroidManifest.xml.
-13. Never use UIWebView language detection — use app-level locale management.
+13. Use the system per-app language settings (iOS Settings > App > Language, Android 13+ `LocaleManager` / AppCompat `setApplicationLocales`) instead of a custom in-app language switcher where possible.
 14. Always consider text direction in animations and gestures.
 15. Never cache formatted strings — re-format when locale changes.
 16. Always provide localized accessibility labels (VoiceOver, TalkBack).
 17. Never use string keys as UI display text.
-18. Always implement OTA localization updates for critical strings.
+18. Consider OTA localization updates only when copy must change between releases; bundle translations in the app as the fallback.
 19. Never ignore pseudo-localization build warnings.
 20. Always validate all languages when adding new translatable strings.
 
@@ -548,4 +549,4 @@ jobs:
 - `mobile/mobile-widgets` — Widget localization and RTL support
 - `backend/transactional-email` — Email template localization patterns
 - `backend/sms-messaging` — Localized SMS/WhatsApp message templates
-- `frontend/web-localization` — Shared locale strategy for web + mobile consistency
+- `frontend/universal/internationalization` — Shared locale strategy for web + mobile consistency

@@ -1,17 +1,11 @@
 ---
 name: backend-authorization
 description: >
-  Use this skill when the user says 'authorization', 'access control', 'RBAC', 'ABAC', 'ReBAC',
-  'permissions', 'role', 'policy', 'Casbin', 'Cerbos', 'permission delegation', 'temporary access',
-  'break glass', 'super admin', 'JIT elevation', 'role hierarchy', or when designing or implementing
-  authorization for any backend application. This skill covers: authorization model selection (RBAC/ABAC/ReBAC),
-  permission architecture design, role hierarchy and inheritance, admin/master admin patterns,
-  temporary JIT elevation, permission delegation, fine-grained ABAC policies, policy engine integration
-  (Casbin, OPA, Cerbos, Permit.io), and authorization testing. Do NOT use for: authentication flows,
-  JWT implementation, OAuth2/OIDC configuration, session management, or frontend route guards.
+  Use when the user asks about authorization, role based permissions for admins, editors and viewers, RBAC, ABAC, ReBAC, Casbin, Cerbos, OpenFGA, break-glass or JIT elevation. Produces a server-side permission model with enforcement code. Not for login and tokens (use backend-auth-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

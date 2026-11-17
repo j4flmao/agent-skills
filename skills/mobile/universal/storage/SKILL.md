@@ -9,6 +9,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -376,6 +377,9 @@ class OrderRepository {
 ## Implementation — Document/NoSQL
 
 ### Flutter — Isar
+
+> Maintenance note: the original `isar` package is no longer actively maintained; check the community fork (`isar_community`) or prefer Drift/sqflite for new projects.
+
 ```dart
 import 'package:isar/isar.dart';
 
@@ -427,6 +431,9 @@ class OrderRepository {
 ```
 
 ### Flutter — Hive
+
+> Maintenance note: the original `hive` package is no longer actively maintained; the community edition `hive_ce` is the maintained continuation. Hive is a key-value/box store, not encrypted by default — never put secrets in it without a key from secure storage.
+
 ```dart
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -653,28 +660,28 @@ suspend fun complexBatch() {
 ```
 
 ## Anti-Patterns
-- **Storing tokens in UserDefaults/SharedPreferences**: Plaintext on disk. Always use Keychain/EncryptedSharedPrefs
+- **Storing tokens in UserDefaults/SharedPreferences**: Plaintext on disk. Use the Keychain (iOS) or a Keystore-backed key (Android; EncryptedSharedPreferences is deprecated)
 - **No migration from v1**: Impossible to update schema without data loss. Version from day one
 - **SELECT * without LIMIT**: Loads entire table into memory. Always paginate
-- **Storing files in database**: BLOBs in SQLite kill performance. Store file path, keep file on disk
+- **Large files in the database**: big BLOBs bloat the database and slow backups and queries; store large files on disk and keep the path (small BLOBs are fine)
 - **Synchronous DB access on main thread**: ANR/frozen UI. Always async with coroutines/async-await
 - **No indexes on query columns**: Full table scans on every query. Index WHERE, JOIN, and ORDER BY columns
 - **One storage solution for everything**: Settings (K/V) + business data (SQLite) + files (FileManager) need different strategies
 - **Not closing database connections**: Leaks file handles. Use dependency injection with scoped lifecycle
 - **No reactive queries**: Manually re-fetching data creates stale UI. Use Flow/Combine/Stream/watch for automatic updates
-- **Over-indexing**: Every index slows writes 5-15%. Index only what you query on
+- **Over-indexing**: every index adds write and storage cost; index only what you query on
 - **Mutable state outside DB**: In-memory list diverges from persisted state. DB is source of truth
 - **Not handling concurrent access**: Multiple threads writing simultaneously causes corruption. Use transactions
 - **Ignore foreign keys**: SQLite doesn't enforce by default. Execute `PRAGMA foreign_keys = ON` after connection
 
 ## Performance Considerations
-- Batch writes into transactions: 100 single inserts = 100x slower than 1 batch of 100
+- Batch writes into transactions: each autocommitted insert pays its own commit and fsync, so 100 single inserts are far slower than one transaction of 100
 - Index columns used in WHERE, JOIN, ORDER BY, GROUP BY
-- Composite indexes for multi-column queries — column order matters (most selective first)
+- Composite indexes for multi-column queries — column order matters (equality-filtered columns first, then range/sort columns)
 - Project only needed columns — never `SELECT *`
 - Use prepared statements — reuse query plan, prevent SQL injection
 - In-memory cache (LRU) for frequently read, rarely changed data
-- Cache TTL: 5min for user data, 1h for reference data, never for critical state
+- Cache TTL chosen per data type from how stale it may be (e.g. minutes for user data, longer for reference data); never cache critical state without revalidation
 - L2 cache: serialize to disk for app restart recovery
 - WatermelonDB/Isar lazy-load only visible records — ideal for large datasets
 - SQLite WAL mode for concurrent read/write performance

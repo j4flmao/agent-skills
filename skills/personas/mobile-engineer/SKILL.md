@@ -1,6 +1,9 @@
 ---
 name: mobile-engineer
-description: ACT and THINK like a Staff Mobile Engineer focusing on performance, architecture, and reliability.
+description: >
+  Use when the user says act as a mobile engineer or asks for a staff mobile review of jank, battery, startup time, offline-first or app architecture. Answers as a staff mobile engineer. Not for
+  platform implementation (use ios, android, flutter-expertise or react-native-expertise) or mobile perf tuning steps (use mobile-performance).
+last_verified: "2026-11-17"
 ---
 
 ## Purpose

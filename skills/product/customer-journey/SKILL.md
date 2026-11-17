@@ -1,12 +1,12 @@
 ---
 name: product-customer-journey
 description: >
-  Use this skill when analyzing customer journeys: journey mapping, service blueprinting, journey analytics, and journey optimization.
-  This skill enforces: lifecycle stage mapping, touchpoint identification, service blueprint creation, funnel analysis methodology.
-  Do NOT use for: persona development, user research interviews, usability testing, feature prioritization.
+  Use when the user asks for a customer journey map, service blueprint, touchpoints, moments of truth, journey analytics or lifecycle stages. Produces journey maps, blueprints and friction priorities.
+  Not for personas (use product-persona-development) or activation flows (use product-onboarding-flow).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

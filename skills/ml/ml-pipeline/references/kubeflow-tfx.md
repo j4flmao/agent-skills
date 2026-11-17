@@ -49,6 +49,7 @@ def evaluate_model(model_path: str, data_path: str) -> dict:
     df = pd.read_parquet(data_path)
     X = df.drop("target", axis=1)
     y = df["target"]
+    # pickle executes code on load: only load artifacts this pipeline produced (verify a checksum)
     with open(model_path, "rb") as f:
         model = pickle.load(f)
     preds = model.predict(X)

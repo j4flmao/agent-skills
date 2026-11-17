@@ -15,6 +15,7 @@ tags: [mobile, analytics, phase-7, universal]
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Mobile Analytics
@@ -102,7 +103,7 @@ User lifecycle?
 
 ## Workflow
 
-1. **Analytics SDK selection** — Three categories of analytics providers. Free tier: Firebase Analytics (Google) — unlimited events, 500 user properties per app, basic segmentation (by device, country, version), funnels in Google Analytics 4, no cost. Good for most apps. Paid tiers: Mixpanel and Amplitude — advanced user profiling, behavioral cohorts, retention analysis, A/B testing, revenue tracking, funnel analysis with time-to-convert, custom dashboards, data warehouses export. Pricing based on MTU (monthly tracked users). Custom server: full data control, no third-party dependency, implement your own event ingestion, storage, dashboard, GDPR compliance certainty, higher engineering cost. Recommendation: start with Firebase Analytics (free + sufficient), migrate to Mixpanel/Amplitude when advanced segmentation needed.
+1. **Analytics SDK selection** — Three categories of analytics providers. Free tier: Firebase Analytics (Google) — unlimited events (up to 500 distinct event names), 25 custom user properties, basic segmentation (by device, country, version), funnels in Google Analytics 4, no cost. Good for most apps. Paid tiers: Mixpanel and Amplitude — advanced user profiling, behavioral cohorts, retention analysis, A/B testing, revenue tracking, funnel analysis with time-to-convert, custom dashboards, data warehouses export. Pricing based on MTU (monthly tracked users). Custom server: full data control, no third-party dependency, implement your own event ingestion, storage, dashboard, GDPR compliance certainty, higher engineering cost. Recommendation: start with Firebase Analytics (free + sufficient), migrate to Mixpanel/Amplitude when advanced segmentation needed.
 
 2. **Event naming taxonomy** — Consistent naming convention is critical for usable analytics. Event names: `snake_case`, max 40 characters. Pattern: `{domain}_{action}_{object}` or `{screen}_{action}`. Examples: `profile_edit_name`, `cart_add_item`, `settings_toggle_notifications`, `checkout_payment_complete`. Reserved prefixes: `screen_`, `error_`, `funnel_`, `perf_`. Event properties: up to 25 per event, typed (string, number, boolean), keys also `snake_case`, max 40 chars per key, max 100 chars per string value. Never pass PII in properties. Use enum or constant class for event names and property keys to avoid typos and ensure discoverability. Version event schemas in a tracking plan document shared across team.
 
@@ -114,7 +115,7 @@ User lifecycle?
 
 6. **Consent management and GDPR compliance** — GDPR: consent dialog on first launch (opt-in required for non-essential events). Categories: essential (app lifecycle, crashes — always tracked), functional (user preferences, feature usage), analytics (behavioral tracking), personalization (advertising, content recommendation). CCPA: "Do Not Sell My Info" toggle in app settings. ATT (iOS 14.5+): `ATTrackingManager.requestTrackingAuthorization()` before accessing IDFA — required for personalized analytics, ad attribution, and cross-app tracking. Flow: Launch -> check consent status -> if not decided -> show consent dialog -> user choices -> persist preferences -> configure analytics provider accordingly. Android: Google Consent Management SDK for serving consent dialogs. For EU users, analytics must be stopped until consent is granted.
 
-7. **Data retention and deletion** — Configure data retention in analytics provider: Firebase Analytics max 24 months, Mixpanel/Amplitude configurable (up to unlimited on enterprise). Implement user data deletion: (a) Call provider's deletion API (`analytics.deleteUserData()`), (b) Clear local analytics cache/queue, (c) Reset analytics user ID (generate new anonymous ID). For custom server: implement `DELETE /api/analytics/user/{userId}` endpoint that removes all events, properties, and profiles. Trigger deletion from app settings with confirmation dialog. Audit compliance: maintain a record of what data is collected, where it's stored, and how it can be deleted. Review at each major release.
+7. **Data retention and deletion** — Configure data retention in analytics provider: Google Analytics 4 (Firebase) event-level retention is 2 or 14 months on the standard tier; Mixpanel/Amplitude retention depends on plan. Implement user data deletion: (a) call the provider's server-side deletion API (GA4 User Deletion API, Mixpanel/Amplitude GDPR deletion endpoints) and reset client data (`Analytics.resetAnalyticsData()` on Firebase), (b) Clear local analytics cache/queue, (c) Reset analytics user ID (generate new anonymous ID). For custom server: implement `DELETE /api/analytics/user/{userId}` endpoint that removes all events, properties, and profiles. Trigger deletion from app settings with confirmation dialog. Audit compliance: maintain a record of what data is collected, where it's stored, and how it can be deleted. Review at each major release.
 
 8. **Event batching and offline queue** — Mobile analytics must handle unreliable network conditions. Implement an event queue that persists events to local storage when the device is offline and flushes when connectivity returns. Batch configuration: batch size of 25-50 events or 60-second interval (whichever comes first). Queue limits: cap at 500 events in the offline queue to avoid excessive storage usage. Oldest events are dropped first if the cap is exceeded. Flush priority: critical events (purchases, errors) flush on an expedited timer of 10 seconds. Implement exponential backoff for failed flushes: 2s, 4s, 8s, 16s, max 60s. On app background: force flush all queued events synchronously.
 
@@ -127,11 +128,11 @@ User lifecycle?
 | Feature | Firebase | Mixpanel | Amplitude | Custom |
 |---------|----------|----------|-----------|--------|
 | Cost | Free | Paid (MTU) | Paid (MTU) | Engineering |
-| Event limit | Unlimited | 20M/mo (starter) | 10M/mo (starter) | Unlimited |
-| User properties | 500 | Unlimited | Unlimited | Unlimited |
+| Event limit | Unlimited events, 500 event names | Plan-dependent | Plan-dependent | Unlimited |
+| User properties | 25 custom | Plan-dependent | Plan-dependent | Unlimited |
 | Funnels | Basic | Advanced | Advanced | Custom |
 | Retention | Yes | Yes | Yes | Custom |
-| A/B testing | No | Yes | Yes | Custom |
+| A/B testing | Firebase A/B Testing (with Remote Config) | Yes | Yes (Amplitude Experiment) | Custom |
 | Data export | BigQuery | Warehouse sync | Warehouse sync | Direct |
 | Real-time | Near-real-time | Real-time | Real-time | Configurable |
 | Offline support | Built-in | Built-in | Built-in | Custom |
@@ -167,12 +168,11 @@ User lifecycle?
 
 ## Performance
 
-- Event batching: 25-50 events or 60-second interval reduces network calls by 95% vs per-event dispatch
-- Payload size: average event ~500 bytes JSON compressed (device info, timestamp, properties)
-- Network overhead: batched flush of 50 events ~5KB per request — negligible for cellular
-- Storage: offline queue capped at 500 events ~250KB max local storage
-- CPU impact: analytics SDK adds 1-3ms on the main thread per event fire — use background thread for serialization
-- Memory: analytics libraries add 2-8MB to the app binary (Firebase ~5MB, Mixpanel ~3MB, Amplitude ~4MB)
+- Event batching: flush by count or interval (most SDKs batch by default) instead of one request per event
+- Keep event payloads small: send IDs and enums, not free text or full objects
+- Cap the offline queue (by count and age) so a long offline period cannot grow storage without bound
+- Serialize and persist events off the main thread; SDK calls on the main thread should only enqueue
+- Each SDK adds binary size and startup work; measure with the platform size report before adding a second vendor
 - Startup delay: async analytics SDK init avoids blocking TTI — init in background, flush after first frame
 
 ## Rules
@@ -244,7 +244,7 @@ Event volume?
 - Verify events appear in provider debug view after 5 minutes
 - Check device logs for analytics SDK errors (look for provider name)
 - Confirm consent status is correctly persisted between app launches
-- Validate event payload size is under 32KB
+- Validate event parameter limits (Firebase: 25 parameters per event, 40-character names, 100-character string values)
 - Ensure analytics SDK initialized before navigation system
 - Test on airplane mode: events should queue and flush when reconnected
 - Check user property cardinality — high-cardinality properties break segmentation

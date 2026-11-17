@@ -1,10 +1,12 @@
 ---
 name: ecommerce-checkout-cart
 description: >
-  Use when the user asks about shopping cart, checkout flow, cart management, order management, discount/coupon system, tax calculation, shipping logic, or e-commerce backend patterns. Do NOT use for: payment processing (ecommerce-payment-processing), or general backend API design (backend-api-design).
+  Use when the user asks about a shopping cart, checkout flow, cart abandonment, guest checkout, order state machine, coupon or discount engine, tax calculation or shipping rates. Produces cart,
+  checkout and order designs with conversion fixes. Not for payment gateway integration (use ecommerce-payment-processing) or headless storefronts (use headless-ecommerce).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

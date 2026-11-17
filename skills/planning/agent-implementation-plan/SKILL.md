@@ -1,10 +1,12 @@
 ---
 name: write-implementation-plan
 description: >
-  Use this skill when the user says 'plan before coding', 'write an implementation plan', 'implementation_plan.md', 'propose changes first', 'what files would you change', 'plan this feature', or when a coding task touches multiple files/modules and approval is expected before edits. It makes the agent research the codebase and produce a reviewable, file-level implementation plan with open questions and a verification plan before writing code. Do NOT use for: product requirements (use create-prd), architecture-level design docs (use create-tech-spec), progress tracking during execution (use agent-task-checklist), post-work summaries (use agent-walkthrough-report).
+  Use when the user says plan before coding, write an implementation plan or implementation_plan.md, propose changes first, or what files would you change for a multi-file task. Produces a file-level
+  implementation plan with open questions and verification steps before edits. Not for product requirements (use create-prd) or architecture docs (use create-tech-spec).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [planning, agent-workflow, implementation-plan, code-changes]
 ---
 

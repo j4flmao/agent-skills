@@ -82,7 +82,9 @@ common:
       store: consul
 ```
 
-## Promtail Configuration
+## Promtail Configuration (legacy)
+
+> Promtail reached end of life on 2026-03-02. Use Grafana Alloy for new setups; `alloy convert --source-format=promtail` translates an existing config. The config below is kept for migrating existing installs.
 
 ```yaml
 # promtail-config.yaml

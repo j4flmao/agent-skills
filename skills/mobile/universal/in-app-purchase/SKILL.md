@@ -9,6 +9,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -30,7 +31,7 @@ User request includes: `in-app purchase`, `IAP`, `subscription`, `consumable`, `
 ### Input Context
 - Platform (iOS, Android, Flutter, React Native)
 - Product types (consumable, non-consumable, subscription)
-- Existing billing integration (StoreKit 2, Play Billing 5+, RevenueCat)
+- Existing billing integration (StoreKit 2, Play Billing 8+, RevenueCat)
 
 ### Output Artifact
 A markdown document containing product configuration and type selection, purchase flow implementation, receipt validation (client and server-side), subscription management (grace period, billing retry), restore purchases and entitlement verification, and platform-specific StoreKit / Play Billing APIs.
@@ -78,9 +79,9 @@ Does app have own backend server?
 ```
 Target platforms?
 ├── iOS only → StoreKit 2 (async/await, automatic receipt verification)
-├── Android only → Play Billing 6+ (with BillingClient.queryProductDetailsAsync)
+├── Android only → Play Billing 8+ (with BillingClient.queryProductDetailsAsync)
 ├── iOS + Android cross-platform
-│   ├── Native per platform → StoreKit 2 + Play Billing 6 (maximum control)
+│   ├── Native per platform → StoreKit 2 + Play Billing 8+ (maximum control)
 │   └── Unified cross-platform → RevenueCat Purchases SDK
 └── Flutter/React Native
     ├── RevenueCat Flutter/RN SDK (recommended, handles cross-platform)
@@ -208,7 +209,7 @@ enum PurchaseResult {
 }
 ```
 
-### Step 4: Implement Purchase Flow (Android — Play Billing 6+)
+### Step 4: Implement Purchase Flow (Android — Play Billing 8+)
 
 ```kotlin
 class BillingRepository(private val context: Context) {
@@ -224,7 +225,8 @@ class BillingRepository(private val context: Context) {
         }
       }
     }
-    .enablePendingPurchases()
+    .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+    .enableAutoServiceReconnection()
     .build()
 
   fun queryProducts(productIds: List<String>, type: ProductType, callback: (List<Product>) -> Unit) {
@@ -283,44 +285,37 @@ class BillingRepository(private val context: Context) {
 
 ```javascript
 // Node.js server-side validation
-const APPLE_SHARED_SECRET = process.env.APPLE_SHARED_SECRET;
+// iOS: verifyReceipt and the shared secret are deprecated (WWDC 2023). Verify the
+// StoreKit 2 signed transaction (JWS) with Apple's official library instead.
+import { SignedDataVerifier, Environment } from '@apple/app-store-server-library';
+
 const GOOGLE_SERVICE_ACCOUNT = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
-// iOS — Apple VerifyReceipt
-async function verifyAppleReceipt(receiptData) {
-  const url = isSandbox
-    ? 'https://sandbox.itunes.apple.com/verifyReceipt'
-    : 'https://buy.itunes.apple.com/verifyReceipt';
+const appleVerifier = new SignedDataVerifier(
+  loadAppleRootCertificates(),          // Apple root CAs downloaded from apple.com/certificateauthority
+  true,                                 // enable online revocation checks
+  process.env.NODE_ENV === 'production' ? Environment.PRODUCTION : Environment.SANDBOX,
+  process.env.IOS_BUNDLE_ID,
+  Number(process.env.IOS_APP_APPLE_ID)  // required for production
+);
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      'receipt-data': receiptData,
-      'password': APPLE_SHARED_SECRET,
-      'exclude-old-transactions': true
-    })
-  });
-
-  const body = await response.json();
-
-  if (body.status === 21007) {
-    // Received production response from sandbox — retry sandbox
-    return verifyAppleReceiptSandbox(receiptData);
+// iOS — verify a signedTransaction sent by the app (Transaction.jwsRepresentation)
+async function verifyAppleTransaction(signedTransaction, expectedUserId) {
+  const tx = await appleVerifier.verifyAndDecodeTransaction(signedTransaction); // throws if invalid
+  if (tx.appAccountToken && tx.appAccountToken !== expectedUserId) {
+    throw new Error(`Apple transaction ${tx.transactionId} belongs to another account`);
   }
-
-  if (body.status !== 0) {
-    throw new Error(`Apple verification failed: ${body.status}`);
-  }
-
   return {
-    valid: true,
-    transactionId: body.receipt.in_app[0]?.transaction_id,
-    productId: body.receipt.in_app[0]?.product_id,
-    expiresDate: body.latest_receipt_info?.[0]?.expires_date_ms,
-    isTrialPeriod: body.latest_receipt_info?.[0]?.is_trial_period === "true"
+    valid: !tx.revocationDate,
+    transactionId: tx.transactionId,
+    originalTransactionId: tx.originalTransactionId,
+    productId: tx.productId,
+    expiresDate: tx.expiresDate,
+    isTrialPeriod: tx.offerType === 1   // introductory offer
   };
 }
+// For renewal state use the App Store Server API (Get All Subscription Statuses)
+// and App Store Server Notifications V2 rather than polling receipts.
 
 // Android — Google Play Developer API
 async function verifyGooglePurchase(productId, purchaseToken) {
@@ -606,7 +601,7 @@ fun purchaseWithOffer(activity: Activity, product: ProductDetails, offerToken: S
 
 ## Performance Considerations
 - Product listing fetch once at app launch. Cache for session lifetime
-- Receipt validation adds 200-500ms. Perform async after purchase, not on main thread
+- Server verification is a network round trip; run it asynchronously after purchase and show a pending state, never block the main thread
 - Subscription status check on app foreground, not every screen load
 - Server-side validation caches responses to avoid rate limiting
 - iOS receipt up to 200KB. Use `exclude-old-transactions: true` to minimize

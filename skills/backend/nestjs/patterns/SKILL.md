@@ -1,10 +1,11 @@
 ---
 name: nestjs-patterns
 description: >
-  Use this skill when implementing NestJS patterns — CQRS with @nestjs/cqrs, guards/interceptors/pipes/filters, event sourcing, custom decorators, microservices, and provider patterns. This skill enforces: ExecutionContext-based guards, RxJS in interceptors, decorator composition, typed event payloads. Requires @nestjs/core. Do NOT use for: Module structure, project setup, or non-NestJS applications.
+  Use when the user asks about NestJS guards, interceptors, pipes, exception filters, custom decorators, @nestjs/cqrs or NestJS microservices (@MessagePattern). Produces NestJS request-pipeline and CQRS code. Not for module layout and DI scopes (use nestjs-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

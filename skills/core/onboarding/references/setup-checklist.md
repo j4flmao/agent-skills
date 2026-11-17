@@ -15,7 +15,7 @@
 ### Required Accounts
 - [ ] GitHub or GitLab account with SSH keys configured
 - [ ] Password manager access (1Password, Bitwarden, or LastPass)
-- [ ] Cloud provider access (AWS IAM user / GCP service account / Azure AD)
+- [ ] Cloud provider access (AWS IAM user / GCP service account / Microsoft Entra ID)
 - [ ] Project management tool access (Jira, Linear, or GitHub Projects)
 - [ ] Communication tools (Slack, Discord, or Teams)
 - [ ] CI/CD platform access (GitHub Actions, GitLab CI, or CircleCI)

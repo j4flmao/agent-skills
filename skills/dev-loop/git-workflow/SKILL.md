@@ -1,10 +1,12 @@
 ---
 name: dev-loop-git-workflow
 description: >
-  Use when the user asks about Git workflows, branching strategies, git hooks, merge strategies, git history management, or team git conventions. Do NOT use for: code review (dev-loop-code-review), changelogs (dev-loop-changelog-generator), or CI/CD configuration.
+  Use when the user asks about git branching strategy, trunk-based development vs git flow, rebase vs merge, a messy rebase or merge conflict, commit conventions, squash or history cleanup. Produces
+  team git conventions and commands. Not for multi-team release trains (use enterprise-release-engineering) or changelogs (use dev-loop-changelog-generator).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

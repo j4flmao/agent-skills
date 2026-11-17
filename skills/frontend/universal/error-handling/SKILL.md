@@ -1,10 +1,11 @@
 ---
 name: frontend-error-handling
 description: >
-  Use this skill when the user says 'error handling', 'error boundary', 'error recovery', 'graceful degradation', 'fallback UI', 'error reporting', 'error logging', 'crash recovery', 'error fallback', 'retry pattern', 'error state', 'error boundary React', 'Vue error handler', 'Angular error handler', 'error boundary Svelte'. This skill enforces error boundary implementation at key UI levels, graceful degradation patterns, error reporting to monitoring services, and user-facing recovery options. Works with any frontend framework (React, Vue, Angular, Svelte). Do NOT use for: API error handling patterns (use data-fetching skill), form validation errors (use form-handling skill), or backend error handling.
+  Use when the user asks about React error boundaries, Vue errorHandler, Angular ErrorHandler, svelte:boundary, fallback UI, retry and recovery, unhandled promise rejections or reporting frontend errors to Sentry. Produces layered error boundaries and user-facing recovery. Not for form validation messages (use frontend-form-handling).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

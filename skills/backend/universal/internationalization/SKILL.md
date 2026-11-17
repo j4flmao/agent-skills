@@ -1,10 +1,11 @@
 ---
 name: backend-internationalization
 description: >
-  Use this skill when implementing multi-language support, translation workflows, or locale-aware formatting. This skill enforces: BCP 47 locale tags, ICU MessageFormat for complex messages, dot-separated namespaced keys, fallback chains, and CI-validated translation files. Applies to any backend stack serving multi-region users. Do NOT use for: simple string key-value without plural/gender, or single-language applications.
+  Use when the user asks about backend i18n, translating API messages, locale negotiation (Accept-Language), ICU MessageFormat, pluralization, BCP 47 tags or locale-aware dates and currency. Produces a server-side localization setup. Not for UI string handling (use frontend-internationalization).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

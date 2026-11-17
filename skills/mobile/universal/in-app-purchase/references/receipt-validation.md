@@ -1,5 +1,7 @@
 # Receipt Validation
 
+> **Deprecated API below:** Apple deprecated `verifyReceipt` and app-specific shared secrets in 2023. Keep this only for legacy StoreKit 1 receipts; new code verifies StoreKit 2 signed transactions with the App Store Server Library (`SignedDataVerifier`) and the App Store Server API, as shown in `../SKILL.md` Step 5.
+
 ## Local vs Server Validation
 
 | Approach | Pros | Cons |

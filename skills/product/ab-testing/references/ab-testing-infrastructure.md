@@ -96,7 +96,7 @@ Cons: high upfront investment (6-12 months to build viable platform). Ongoing ma
 #### Buy (SaaS Platform)
 Best for: companies with <10M users, lean infrastructure team, standard experimentation needs, no complex integration requirements.
 
-Platforms: Optimizely, Google Optimize, VWO, LaunchDarkly, Statsig, Eppo, Split.
+Platforms: Optimizely, VWO, PostHog, GrowthBook, LaunchDarkly, Statsig, Eppo, Split.
 
 Pros: fast time-to-value (weeks to launch first experiment). Built-in statistical engine. Professional support and documentation. Feature management alongside experimentation. Lower upfront investment.
 
@@ -304,7 +304,7 @@ Eppo: experimentation platform focused on statistical rigor. Built for enterpris
 #### Mid-Market Platforms
 VWO: web experimentation with visual editor. A/B, multivariate, split URL testing. Built-in heatmaps and session recordings. Mid-market pricing. Less suitable for mobile and server-side experiments.
 
-Google Optimize: integrated with Google Analytics. Free tier available. A/B, multivariate, redirect tests. Limited statistical features (no sequential testing, no CUPED). Good for small teams getting started.
+Google Optimize was shut down in September 2023; small teams usually move to GrowthBook (open source, warehouse-native) or PostHog experiments, both with free tiers.
 
 Split: feature management and experimentation. SDK-based implementation. Server-side focus. Good for engineering teams. Statistical engine is basic.
 

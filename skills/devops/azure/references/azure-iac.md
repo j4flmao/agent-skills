@@ -50,7 +50,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-08-01' = {
   location: location
   tags: tags
   properties: {
-    kubernetesVersion: '1.27'
+    kubernetesVersion: '<supported-version>'   // az aks get-versions --location <region>
     dnsPrefix: 'aks-${environment}'
     enableRBAC: true
     aadProfile: {

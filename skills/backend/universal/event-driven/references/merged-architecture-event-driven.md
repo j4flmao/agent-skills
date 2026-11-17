@@ -3,35 +3,8 @@
 ## Purpose
 In EDA, services publish facts ("OrderPlaced") and other services react, so producers do not depend on consumers being available or even known. The price is eventual consistency, harder debugging, and the need for reliable publishing and idempotent consumption. This skill covers the architectural decisions that make EDA correct, not just decoupled.
 
-## Agent Protocol
-
-### Trigger
-"event-driven", "EDA", "domain events", "pub/sub", "message broker choice", "dual-write problem", "outbox", "at-least-once", "event ordering", "event versioning", "choreography".
-
-### Input Context
-- Business flows and which steps must be synchronous for the user.
-- Throughput, ordering needs (per entity?), retention/replay needs.
-- Existing infra (Kafka, RabbitMQ, cloud queues) and team experience.
-- Consistency requirements and failure tolerance.
-
-### Output Artifact
-Event catalog, broker/topology choice, delivery and idempotency design, schema/versioning policy, observability plan.
-
-### Response Format
-```
-Event: {Name}(past tense) v{n}  Producer: {service}  Consumers: {services}
-Key (ordering): {aggregate id}  Topic/queue: {name}  Retention: {duration}
-Publish: outbox -> {relay: CDC|poller}  Delivery: at-least-once
-Consumer: idempotent via {inbox table|natural upsert}; DLQ: {name}
-Schema: {Avro|Protobuf|JSON Schema} compatibility={BACKWARD}
-```
-
-### Completion Criteria
-- [ ] Each message classified as event (fact) or command (request).
-- [ ] No dual writes: outbox or CDC for publishing.
-- [ ] Consumers idempotent; DLQ and retry policy defined.
-- [ ] Ordering key chosen per aggregate where order matters.
-- [ ] Trace context propagated in message headers.
+## Scope
+Reference folded into the parent `../SKILL.md` (the entry point; use its trigger and Response Format). This file keeps only material the parent does not cover: broker comparison, events vs commands, CloudEvents envelope, EDA hazards.
 
 ## Events vs Commands vs Queries
 | Kind | Meaning | Addressed to | Can be rejected? | Transport |

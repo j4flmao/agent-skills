@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, matchmaking, lobby, rating, server]
 ---
 
@@ -138,7 +139,7 @@ Atomicity: the token single-use prevents double-join. If a member never arrives,
 | Metric | Watch |
 |--------|-------|
 | P50/P95 queue wait | compare per mode/bucket |
-| Match quality score distribution | mean rising = bad |
+| Match quality score distribution | a falling mean or a growing low-quality tail means rules are relaxing too far |
 | Abandon rate post-match-made | dodge tool |
 | Avg rating delta per side | fairness guard |
 | Region hops | cross-region rate |

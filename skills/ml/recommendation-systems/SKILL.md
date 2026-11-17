@@ -1,10 +1,14 @@
 ---
 name: ml-recommendation-systems
 description: >
-  Use this skill when the user says 'recommendation system', 'recommender', 'collaborative filtering', 'matrix factorization', 'ALS', 'implicit feedback', 'two-tower', 'candidate generation', 'ranking model', 'cold start', 'recall@k', 'ndcg'. Designs and builds recommenders: data/feedback modeling, baselines, matrix factorization, two-stage retrieval + ranking, offline evaluation without leakage, cold start and online testing. Do NOT use for: generic tabular classification (ml-classical-ml), vector database operations (data-vector-database-internals), A/B test statistics (data-science-experimentation), search relevance with BM25 (data-search-engine).
+  Use when the user asks about a recommender system, collaborative filtering, matrix factorization, ALS with
+  implicit feedback, two-tower retrieval, candidate generation and ranking, cold start or recall@k and NDCG.
+  Produces baselines, two-stage architecture and leakage-free offline evaluation. Not for search ranking (use
+  data-search-engine).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [ml, recommender-systems, collaborative-filtering, matrix-factorization, ranking]
 ---
 

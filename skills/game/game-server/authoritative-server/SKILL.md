@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, server, authoritative, netcode]
 ---
 
@@ -84,7 +85,7 @@ while (running) {
 
 ### 2.2 Deterministic Sim
 
-The server sim must be **deterministic given a seed**: lockstep (see `game-engine/multiplayer-netcode` determinism refs) so replay, spec or tests reproduce identically. No `fast-math`, no wall-clock, no `rand()` global.
+The server sim must be **deterministic given a seed**: with lockstep-grade discipline (see `multiplayer-netcode` and `skills/game/game-engine/ecs-pattern/references/ecs-netcode.md`) so replay, spec or tests reproduce identically. No `fast-math`, no wall-clock, no `rand()` global.
 
 - RNG: per-entity/instance seeded, tick-advanced — reproducible.
 - Physics stepping: fixed dt = stable.
@@ -184,7 +185,7 @@ Combined with validation hooks in `anti-cheat-server`.
 
 ## 8. Scalability & Cost (Server-Side Budgets)
 
-| Per-player server budget | Target |
+| Per-player server budget (illustrative; set per title) | Target |
 |--------------------------|--------|
 | Bandwidth out | ≤ ~60 kB/s (deltas) |
 | Memory | ≤ 2 MB (state) |

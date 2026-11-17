@@ -1,10 +1,11 @@
 ---
 name: frontend-svelte-architecture
 description: >
-  Use this skill when the user says 'Svelte architecture', 'Svelte 5', 'Svelte runes', 'Svelte component', 'Svelte reactivity', 'Svelte store', 'Svelte compiler', '.svelte file'. This skill enforces: Svelte 5 runes ($state, $derived, $effect, $props, $bindable), .svelte file syntax, compile-time reactivity, and lifecycle tied to component tree. Requires Svelte 5 project (package.json with svelte ^5). Do NOT use for: Svelte 4 with legacy $: syntax, or non-Svelte frameworks.
+  Use when the user asks about Svelte 5, runes ($state, $derived, $effect, $props, $bindable), .svelte component structure, snippets, or migrating from Svelte 4 stores and $: syntax. Produces Svelte 5 component and state architecture. Not for SvelteKit routing, load functions or form actions (use sveltekit).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

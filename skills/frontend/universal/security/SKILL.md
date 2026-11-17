@@ -1,10 +1,11 @@
 ---
 name: frontend-security
 description: >
-  Use this skill when the user says 'XSS', 'CSP', 'CSRF', 'SRI', 'secure cookies', 'security headers', 'frontend security', 'sanitize input', 'content security policy', 'cross-site scripting', 'cross-site request forgery', or when auditing frontend security. This skill enforces: CSP headers blocking inline scripts by default, SRI on all external resources, HttpOnly/Secure/SameSite cookies, CSRF tokens on state-changing requests, and output encoding to prevent XSS. Works with any frontend framework. Do NOT use for: backend authentication, server-side SQL injection, network security.
+  Use when the user asks how to prevent XSS and set a content security policy, CSP nonces, Trusted Types, DOMPurify, CSRF tokens, SRI, secure cookies, clickjacking or security headers for a web app. Produces frontend hardening code and header config. Not for server-side OWASP testing (use owasp-web-security) or login flows (use frontend-authentication).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -12,7 +12,8 @@ import type { User, LoginCredentials } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
-  const token = ref<string | null>(localStorage.getItem('token'))
+  // Keep the access token in memory only; persist the session with an HttpOnly refresh cookie set by the server
+  const token = ref<string | null>(null)
   const loading = ref(false)
 
   const isAuthenticated = computed(() => !!token.value)
@@ -24,7 +25,6 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await api.login(credentials)
       user.value = res.user
       token.value = res.token
-      localStorage.setItem('token', res.token)
     } finally {
       loading.value = false
     }
@@ -33,7 +33,6 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     user.value = null
     token.value = null
-    localStorage.removeItem('token')
   }
 
   return { user, token, loading, isAuthenticated, userName, login, logout }

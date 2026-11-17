@@ -3,28 +3,8 @@
 ## Purpose
 Decouple services by having producers publish facts ("OrderPlaced") to a broker and consumers react independently. The skill covers the design decisions that make this reliable in practice: what goes in an event, how ordering and delivery guarantees work, and how consumers stay correct under redelivery.
 
-## Agent Protocol
-
-### Trigger
-Exact user phrases: "event-driven architecture", "EDA", "publish domain events", "kafka producer", "kafka consumer", "rabbitmq exchange", "event broker", "at-least-once delivery", "event ordering", "consumer group".
-
-### Input Context
-- Business flow and which services produce/consume.
-- Broker in use or candidates (Kafka, RabbitMQ, cloud: SNS/SQS, Pub/Sub, Event Hubs).
-- Ordering, latency and replay requirements.
-- Language and client library.
-
-### Output Artifact
-Event catalogue, topology (topics/exchanges, keys, consumer groups), and producer/consumer code. No files unless requested.
-
-### Response Format
-```
-Event: {PastTenseName} v{n}   Key: {partition key}
-Topic/Exchange: {name}         Producers: {svc}   Consumers: {svc,...}
-Delivery: at-least-once        Ordering: per {key}
-Consumer idempotency: {dedupe table | natural upsert}
-Failure: retry {n} with backoff -> DLQ {name}
-```
+## Scope
+Reference folded into the parent `../SKILL.md` (the entry point; use its trigger and Response Format). This file keeps only material the parent does not cover: Go Kafka producer/consumer code with manual commits, retry and dead-letter flow.
 
 ## Core Concepts
 
@@ -185,4 +165,4 @@ ON CONFLICT DO NOTHING;   -- 0 rows affected => duplicate, skip side effect
 - [ ] Trace context propagated in message headers.
 
 ## References
-- Related skills: `skills/backend/universal/event-driven/SKILL.md`, `skills/backend/universal/message-queue/SKILL.md`, `skills/backend/universal/transactional-outbox/SKILL.md`, `skills/backend/universal/event-sourcing/SKILL.md`.
+- Parent skill: `../SKILL.md`. Related: `skills/backend/universal/message-queue/SKILL.md`, `skills/backend/universal/transactional-outbox/SKILL.md`, `skills/backend/universal/event-sourcing/SKILL.md`.

@@ -87,6 +87,6 @@ Chaos Mesh's daemon enters the target pod's namespaces and applies the same `tc`
 - [ ] Findings turned into tickets; experiment re-run after fixes.
 
 ## References
-- `../references/disaster_recovery.md`
-- `../references/incident_management.md`
+- [chaos-experiments.md](chaos-experiments.md), [chaos-tools.md](chaos-tools.md)
+- Related skill for restore drills: `skills/devops/backup-dr/SKILL.md`.
 - Related skill: `skills/devops/chaos-engineering/SKILL.md`.

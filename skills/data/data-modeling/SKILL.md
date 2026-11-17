@@ -1,10 +1,14 @@
 ---
 name: data-modeling
 description: >
-  Use this skill when designing relational or graph data models — 3NF, star schema, Data Vault, property graphs, RDF graphs, table inheritance, temporal tables, graph traversal patterns, knowledge graphs. This skill enforces: normalization 3NF by default, denormalization only when performance-proven, surrogate keys over natural keys, graph modeling with node/edge design patterns, and schema-first design. Covers relational databases (PostgreSQL, MySQL) and graph databases (Neo4j, Amazon Neptune, Dgraph). Do NOT use for: dimensional modeling (see dimensional-modeling skill), NoSQL document modeling, or streaming data schemas.
+  Use when the user asks about relational or graph data modeling: 3NF normalization, surrogate keys, temporal
+  tables, table inheritance, property graph vs RDF or knowledge graph schemas. Produces a schema-first model
+  with keys, constraints and denormalization rules. Not for Kimball star schemas (use data-dimensional-modeling)
+  or graph DB operations (use data-graph-database).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

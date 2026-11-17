@@ -202,7 +202,7 @@ data_security_patterns:
 iam_patterns:
   federated_identity:
     protocols: ["OAuth 2.0", "OIDC", "SAML 2.0"]
-    providers: ["Azure AD", "Okta", "Auth0", "Keycloak"]
+    providers: ["Microsoft Entra ID", "Okta", "Auth0", "Keycloak"]
     pattern: "Users authenticate with IdP; services trust IdP-issued tokens"
     
   role_based_access_control_rbac:

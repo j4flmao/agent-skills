@@ -53,7 +53,7 @@ registry:
 
 online_store:
   type: redis
-  connection_string: redis://redis-cluster:6379
+  connection_string: "redis-cluster:6379,ssl=true,password=${REDIS_PASSWORD}"   # host:port[,options]; env var expanded by Feast
   key_ttl_seconds: 86400  # 24 hour TTL on features
   password_encrypted: ${FEAST_REDIS_PASSWORD}
   

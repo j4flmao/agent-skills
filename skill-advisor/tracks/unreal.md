@@ -32,7 +32,7 @@ Add when the project grows: production concerns, scaling and team workflows.
 | [`physics-engine`](../../skills/game/game-development/physics-engine/SKILL.md) | `game/game-development/physics-engine` | A physics engine simulates rigid bodies through three pipelines every tick: collision detection (find contacts), collision resolution (apply… |
 | [`animation-systems`](../../skills/game/client-engine/animation-systems/SKILL.md) | `game/client-engine/animation-systems` | Animation makes characters feel alive. |
 | [`level-streaming`](../../skills/game/client-engine/level-streaming/SKILL.md) | `game/client-engine/level-streaming` | Open worlds don't fit in RAM or load in one frame. |
-| [`memory-management`](../../skills/game/game-engine/memory-management/SKILL.md) | `game/game-engine/memory-management` | Memory is the #1 source of frame-time jank in shipped games. |
+| [`memory-management`](../../skills/game/game-engine/memory-management/SKILL.md) | `game/game-engine/memory-management` | Memory behaviour is one of the most common sources of frame-time jank in shipped games. |
 
 ## Level 3 — Specialist (3 skills)
 

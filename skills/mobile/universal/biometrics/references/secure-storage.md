@@ -1,6 +1,9 @@
 # Secure Storage with Biometrics
 
-## Android — EncryptedSharedPreferences
+## Android — EncryptedSharedPreferences (deprecated)
+
+> Jetpack Security (`androidx.security:security-crypto`, including `EncryptedSharedPreferences` and `MasterKey`) is deprecated. Keep it only for existing data; new code should generate a non-exportable AES-GCM key in the Android Keystore (or use Tink with a Keystore-wrapped key) and store ciphertext in DataStore.
+
 
 ```kotlin
 val masterKey = MasterKey.Builder(context)

@@ -8,13 +8,14 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, memory, allocators, performance, engine]
 ---
 
 # Game Engine Memory Management — Deep Engineering Guide
 
 ## Purpose
-Memory is the #1 source of frame-time jank in shipped games. A 15 ms GC stop-the-world, a cache miss chain, or a fragmented heap turns a 60 FPS target into slideshow. This skill covers the full memory stack of a production game engine: from the raw allocator hierarchy, through cache-aware data layout, to memory tracking and GPU memory management.
+Memory behaviour is one of the most common sources of frame-time jank in shipped games. A 15 ms GC stop-the-world, a cache miss chain, or a fragmented heap turns a 60 FPS target into slideshow. This skill covers the full memory stack of a production game engine: from the raw allocator hierarchy, through cache-aware data layout, to memory tracking and GPU memory management.
 
 ## Agent Protocol
 
@@ -41,7 +42,7 @@ Tracking: {how leaks/overruns are caught}
 
 ### 1.1 Where Memory Goes
 
-| Region | Owner | Budget (typical PC AAA) |
+| Region | Owner | Illustrative budget (large PC title; set your own per platform) |
 |--------|-------|--------------------------|
 | Code + read-only data | OS loader | 50–200 MB |
 | Simulation (ECS archetypes) | World/systems | 200–800 MB |
@@ -286,7 +287,7 @@ Create heavy GPU resources (pipelines, swapchains, descriptor heaps) once and bi
 
 ### 7.1 For Managed Runtimes (Unity C#/Mono/IL2CPP, Godot C#)
 
-- Zero allocations in `Update`/`FixedUpdate` — cap at one per subsystem per 100 ms.
+- Zero allocations in `Update`/`FixedUpdate`; track the GC allocation counter per frame in the profiler and fail perf tests when it is non-zero on hot paths.
 - Object pools for everything hot: bullets, particles, damage numbers.
 - Avoid LINQ, allocations from boxing, and per-frame `string` building.
 - Use `MemoryMarshal`/`unsafe` fast paths for hot arrays.
@@ -323,12 +324,12 @@ Before merging, verify:
 3. **Budget**: every subsystem has a `MemoryTag` budget under the platform cap.
 4. **Leaks**: shutdown report clean; debug fill patterns on.
 5. **GPU**: staging ring + suballocator; no per-frame `vkAllocateMemory`/`CreateCommittedResource`.
-6. **Managed runtimes**: pooling everywhere; GC pressure measured per frame (ms of GC time) and glued under 0.5 ms.
+6. **Managed runtimes**: pooling everywhere; GC pressure measured per frame (ms of GC time) and kept under an explicit per-frame budget.
 
 ## 10. References
 
 - `references/allocator-hierarchy.md` — stack/arena/pool/free-list implementations, block allocators, alignment math
-- `references/cache-aware-layout.md` — AoS↔SoA, hot/cold splitting, false sharing, prefetch, brunch predictors
+- `references/cache-aware-layout.md` — AoS↔SoA, hot/cold splitting, false sharing, prefetch, branch predictors
 - `references/memory-tracking.md` — tags, budgets, leak detection, fill patterns, profiler integration
 - `references/virtual-memory.md` — reserve/commit, huge pages, mmap, NUMA awareness
 - `references/gpu-memory.md` — device-local vs host vs unified, staging rings, suballocation, deferred frees

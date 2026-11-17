@@ -1,10 +1,12 @@
 ---
 name: create-story
 description: >
-  Use this skill when the user says 'create story', 'next story', 'implement STORY-XXX', 'pick up next ticket', 'what should I build next', 'story from PRD', or when the planning phase is done and implementation needs to start. This skill selects the next unimplemented story from the PRD backlog and produces a single, detailed implementation story file with acceptance criteria and technical notes. Do NOT use for: creating epics, writing briefs, technical specs, or recording ADRs.
+  Use when the user asks for the next story, to implement STORY-XXX, pick up the next ticket, or create one implementation story from the PRD backlog. Produces a single detailed story file with
+  acceptance criteria and technical notes. Not for writing the whole PRD (use create-prd) or backlog refinement (use ba).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

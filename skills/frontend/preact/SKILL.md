@@ -1,10 +1,11 @@
 ---
 name: preact
 description: >
-  Use this skill when the user says 'Preact', 'Preact setup', 'Preact signals', 'Preact hooks', 'Preact vs React', 'Preact project', 'Preact SSR', or when creating a Preact application. This skill enforces: Preact as React drop-in, signals for state management, compat layer usage, tiny bundle patterns, hooks compliance. Requires package.json with preact dependency. Do NOT use for: React-specific patterns (createContext, ReactDOM), Vue/Angular/Svelte, or non-Preact projects.
+  Use when the user asks about Preact, Preact signals, preact/compat, Preact vs React, Preact SSR or cutting bundle size with a React-compatible library. Produces Preact components, signal-based state and compat aliasing. Not for React-specific architecture (use react-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

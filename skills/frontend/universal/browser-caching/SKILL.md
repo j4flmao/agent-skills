@@ -1,10 +1,11 @@
 ---
 name: frontend-browser-caching
 description: >
-  Use this skill when the user says 'browser caching', 'cache headers', 'service worker', 'SW', 'stale-while-revalidate', 'SWR', 'cache strategy', 'Cache-Control', 'ETag', 'cache busting', 'offline caching', or when optimizing frontend load performance. This skill enforces: Cache-Control headers with appropriate max-age, service worker caching with stale-while-revalidate pattern, cache-busted asset URLs, and offline fallback. Works with any frontend framework. Do NOT use for: backend response caching, CDN configuration, database query caching.
+  Use when the user asks about Cache-Control headers, ETag, immutable hashed assets, cache busting, stale-while-revalidate, bfcache or service worker cache strategies for page loads. Produces browser caching headers and asset versioning rules. Not for installable offline apps (use frontend-pwa) or CDN edge config (use cdn-edge).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

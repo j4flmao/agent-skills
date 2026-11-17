@@ -12,7 +12,7 @@ import "context"
 // Background context - root of all contexts
 ctx := context.Background()
 
-// TODO context - when unsure which context to use
+// context.TODO(): placeholder when unsure which context to use
 ctx := context.TODO()
 
 // WithCancel - context with manual cancellation
@@ -321,6 +321,6 @@ func processRequest(ctx context.Context) (*Result, error) {
 - Middleware adds authentication and tracing values
 - Context values should be few and well-defined
 - Background context should not carry values
-- TODO context marks migration points
+- `context.TODO()` marks migration points
 - Avoid storing context in structs - pass explicitly
 - Signal handling integrates with context cancellation

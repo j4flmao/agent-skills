@@ -5,6 +5,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -421,6 +422,8 @@ alpine: smallest with apk, musl libc compatibility issues possible. slim: debian
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: build in CI and push by digest; keep secrets in BuildKit secret mounts or the orchestrator, never in layers; sign images (cosign/Notation).
 
 - `references/merged-devops-docker.md` — Docker (merged from `devops/docker`)
 - `references/compose-networking.md` — Docker Compose and Networking

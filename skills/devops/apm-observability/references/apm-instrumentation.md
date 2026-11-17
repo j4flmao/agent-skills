@@ -134,7 +134,9 @@ common: &default_settings
     enabled: true
 ```
 
-### Grafana Agent (Flow Mode)
+### Grafana Agent (Flow Mode) — legacy
+
+> Grafana Agent is end of support; Grafana Alloy uses the same River-style syntax and is the replacement.
 ```river
 // Grafana Agent Flow mode for traces
 otelcol.receiver.otlp "default" {

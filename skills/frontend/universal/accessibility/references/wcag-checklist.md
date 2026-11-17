@@ -1,4 +1,4 @@
-# WCAG 2.1 AA Checklist
+# WCAG 2.1 AA Checklist (with WCAG 2.2 additions)
 
 ## Perceivable
 
@@ -79,3 +79,12 @@
 <input id="email" type="email" aria-describedby="email-hint" />
 <span id="email-hint">We'll never share your email.</span>
 ```
+
+## WCAG 2.2 Additions (Level A and AA)
+WCAG 2.2 (W3C Recommendation, October 2023) is the current target. It keeps every 2.1 criterion except 4.1.1 Parsing (removed) and adds:
+- [ ] 2.4.11 Focus Not Obscured (Minimum) (AA): the focused element is not fully hidden by sticky headers, banners or chat widgets
+- [ ] 2.5.7 Dragging Movements (AA): every drag action has a single-pointer alternative (buttons, tap-to-move)
+- [ ] 2.5.8 Target Size (Minimum) (AA): pointer targets are at least 24x24 CSS px or have enough spacing
+- [ ] 3.2.6 Consistent Help (A): help links/contact options appear in the same relative place across pages
+- [ ] 3.3.7 Redundant Entry (A): information already entered in the same process is auto-filled or selectable
+- [ ] 3.3.8 Accessible Authentication (Minimum) (AA): no cognitive function test to log in; allow paste and password managers

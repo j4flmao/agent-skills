@@ -1,10 +1,11 @@
 ---
 name: python-fastapi-architecture
 description: >
-  Use this skill when the user says 'FastAPI structure', 'FastAPI architecture', 'FastAPI folder', 'FastAPI clean arch', 'FastAPI router', 'FastAPI dependency injection', 'Python backend structure', or when building a FastAPI application. This skill enforces: Clean Architecture folder structure (api/core/domain/application/infrastructure/schemas), Pydantic schemas at the API boundary only, Depends for DI, repository pattern with ABC, pure domain entities with dataclasses. Requires FastAPI in dependencies. Do NOT use for: Django projects, Flask, or non-Python backend stacks.
+  Use when the user asks about FastAPI, setting up a FastAPI project with dependency injection and Pydantic models, Depends(), APIRouter structure, lifespan events or async SQLAlchemy. Produces a layered FastAPI project. Not for Django (use python-django-architecture) or Flask (use flask-backend).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

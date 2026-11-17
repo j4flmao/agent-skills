@@ -96,27 +96,59 @@ logs:
 
 ## Kafka Strimzi
 
-### Kafka CRD
+### Kafka CRD (KRaft with node pools)
+
+Strimzi 0.46+ supports only KRaft: brokers and controllers are defined in `KafkaNodePool`
+resources and the `Kafka` resource has no `zookeeper` section. Pin the Kafka version to one
+your Strimzi release supports (Kafka 4.x).
 
 ```yaml
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: controllers
+  labels: { strimzi.io/cluster: data-platform-kafka }
+spec:
+  replicas: 3
+  roles: [controller]
+  storage:
+    type: persistent-claim
+    size: 100Gi
+    deleteClaim: false
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: brokers
+  labels: { strimzi.io/cluster: data-platform-kafka }
+spec:
+  replicas: 6
+  roles: [broker]
+  resources:
+    requests: { cpu: "4", memory: "8Gi" }
+    limits: { cpu: "8", memory: "16Gi" }
+  storage:
+    type: jbod
+    volumes:
+    - id: 0
+      type: persistent-claim
+      size: 2Ti
+      deleteClaim: false
+---
 apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
 metadata:
   name: data-platform-kafka
 spec:
   kafka:
-    version: 3.6.0
-    replicas: 6
-    resources:
-      requests: { cpu: "4", memory: "8Gi" }
-      limits: { cpu: "8", memory: "16Gi" }
-    storage:
-      type: jbod
-      volumes:
-      - id: 0
-        type: persistent-claim
-        size: 2Ti
-        deleteClaim: false
+    version: 4.1.0            # must be supported by the installed Strimzi operator
+    listeners:
+    - name: tls
+      port: 9093
+      type: internal
+      tls: true
+      authentication: { type: tls }
+    authorization: { type: simple }
     config:
       offsets.topic.replication.factor: 3
       transaction.state.log.replication.factor: 3
@@ -124,18 +156,6 @@ spec:
       default.replication.factor: 3
       min.insync.replicas: 2
       auto.create.topics.enable: false
-    template:
-      pod:
-        labels: { team: "platform", workload: "kafka" }
-  zookeeper:
-    replicas: 3
-    resources:
-      requests: { cpu: "1", memory: "2Gi" }
-      limits: { cpu: "2", memory: "4Gi" }
-    storage:
-      type: persistent-claim
-      size: 100Gi
-      deleteClaim: false
   entityOperator:
     topicOperator: {}
     userOperator: {}

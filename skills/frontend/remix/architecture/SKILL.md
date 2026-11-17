@@ -1,10 +1,11 @@
 ---
 name: frontend-remix-architecture
 description: >
-  Use this skill when the user says 'Remix', 'Remix architecture', 'Remix routing', 'Remix loader', 'Remix action', 'Remix form', 'Remix server', 'Remix session', 'Remix deployment', 'Remix Vite'. This skill enforces: file-based colocation, nested routes with Outlet, layout routes for shared UI, loaders for data, actions for mutations, session storage strategies, and deployment per runtime. Requires Remix + Vite (package.json with @remix-run/*). Do NOT use for: Next.js, TanStack Router, or React Router alone.
+  Use when the user asks about Remix v2 or React Router v7 framework mode, Remix loaders and actions, nested routes with Outlet, sessions, Remix Vite setup, deployment adapters or upgrading Remix to React Router v7. Produces route structure, loader/action code and runtime config. Not for validation, optimistic UI or caching (use frontend-remix-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -18,6 +19,9 @@ tags: [frontend, remix, react, phase-7]
 ## Purpose
 Build Remix applications with file-based routing, server-side data loading, progressive form mutations, and per-runtime deployment. Everything runs on the server by default.
 
+## Version Note (2026)
+Remix v2 continues as **React Router v7 framework mode**: same loaders, actions, `<Form>`, `useFetcher` and nested routes, but imports come from `react-router` / `@react-router/*` instead of `@remix-run/*`, and `json()`/`defer()` are no longer needed (return plain objects). New projects start with `npx create-react-router@latest`; existing Remix v2 apps upgrade via the future flags and the official "Upgrading from Remix" guide. "Remix 3" is a separate, non-React framework and is not the upgrade path. Examples below use Remix v2 imports; map them as described when the project uses React Router v7.
+
 ## Agent Protocol
 
 ### Trigger
@@ -25,10 +29,10 @@ Exact user phrases: "Remix", "Remix architecture", "Remix routing", "Remix loade
 
 ### Input Context
 Before activating, verify:
-- package.json has @remix-run/react and @remix-run/node dependencies.
+- package.json has @remix-run/* (Remix v2) or react-router + @react-router/* (React Router v7 framework mode).
 - Check entry.server.tsx and root.tsx patterns.
 - Determine server runtime: Node, Cloudflare Workers, or Deno.
-- Confirm Vite plugin setup (@remix-run/vite).
+- Confirm Vite plugin setup (`vitePlugin` from @remix-run/dev in Remix v2; `reactRouter()` from @react-router/dev/vite in v7).
 
 ### Output Artifact
 No file output. Produces route structure, loader/action code, and deployment configs as text.

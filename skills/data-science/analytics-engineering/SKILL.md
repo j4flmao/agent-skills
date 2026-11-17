@@ -1,10 +1,14 @@
 ---
 name: data-science-analytics-engineering
 description: >
-  Use this skill when asked about analytics engineering, dbt, data modeling, metrics layer, semantic layer, Cube.js, MetricFlow, dbt metrics, SQL analytics, window functions, CTEs, pivot/unpivot, data modeling for analytics, OBT, dimensional modeling, medallion architecture, bronze/silver/gold, or analytical SQL. This skill enforces: dbt Core (models in SQL/Python, materializations, Jinja/macros, ref/source, tests, docs), metrics layer (dbt Metrics, MetricFlow, Cube.js, semantic layer design, metric definitions, dimensions, filters, time granularity), data modeling for analytics (marts approach, OBT, dimensional modeling, medallion architecture), and SQL for analytics (window functions, CTEs, pivot/unpivot, statistical functions, time series SQL, performance optimization, UDFs). Do NOT use for: general data engineering (use data-engineering skills), statistical analysis (use statistical-analysis skill), or experiment design (use experimentation skill).
+  Use when the user asks about analytics engineering with dbt: staging/intermediate/mart models,
+  materializations, incremental models, Jinja macros, the dbt Semantic Layer / MetricFlow, Cube or analytical
+  SQL. Produces dbt project layout, models, tests and metrics. Not for Kimball grain and SCD design (use
+  data-dimensional-modeling) or Airflow wiring (use data-airflow-dbt-orchestration).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

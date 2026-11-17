@@ -9,6 +9,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -288,7 +289,7 @@ support_website("https://example.com/support")
 | Apple Distribution | App Store builds | 1 year |
 | iOS Distribution (Ad Hoc) | Limited device testing | 1 year |
 | iOS Distribution (In House) | Enterprise distribution | 1 year |
-| Apple Push Services | Push notifications | 1 year |
+| Apple Push Services | Push notifications (prefer an APNs auth key `.p8`, which does not expire) | 1 year |
 | Pass Type ID | Apple Wallet passes | 1 year |
 
 ### Fastlane Match Workflow
@@ -305,9 +306,10 @@ fastlane match appstore
 # Generate ad-hoc certs
 fastlane match adhoc
 
-# Nuke and regenerate (use sparingly)
-fastlane match nuke distribution
-fastlane match nuke development
+# DESTRUCTIVE: revokes every certificate of that type in the team, breaking
+# other apps and CI that use them. Only with team sign-off.
+# fastlane match nuke distribution
+# fastlane match nuke development
 
 # Use in Matchfile
 git_url("https://github.com/org/certs.git")
@@ -521,24 +523,23 @@ end
 | Track | Purpose | Review Required | Max Testers |
 |---|---|---|---|
 | Internal Testing | Internal testing | No | 100 |
-| Closed Alpha | Per-group testing | No | 100 per group |
-| Open Beta | Public beta | No | Unlimited |
+| Closed testing | Invited testers (email lists / Google Groups) | Yes | Large lists supported |
+| Open testing | Public beta | Yes | Unlimited (optionally capped) |
 | Production | Public release | Yes | Unlimited |
 
 ## Phased Releases
 
 ### iOS — App Store Connect Phased Release
 ```bash
-# Enable phased release (7-day gradual rollout via API)
-xcrun altool --upload-app --phased-release true
+# Phased release is a property of the App Store version, set in App Store
+# Connect or through the App Store Connect API (appStoreVersionPhasedReleases);
+# altool has no phased-release flag.
 
-# Via Fastlane
+# Via Fastlane (authenticates with an App Store Connect API key, not a password)
 upload_to_app_store(
-  phased_release: true      # 7-day gradual
+  api_key_path: ENV["ASC_API_KEY_JSON"],   # JSON written by CI from a secret
+  phased_release: true                     # 7-day automatic ramp
 )
-
-# Download previous release metadata
-xcrun altool --list-apps -u "user" -p "pass"
 ```
 
 Phased release ramp schedule (automatic):
@@ -582,7 +583,8 @@ end
 
 Play Console staged rollout schedule:
 - 1% → 5% → 10% → 20% → 50% → 100%
-- Pause at any stage if crash rate spikes
+- Percentages are chosen manually per step (Play has no automatic ramp); pause at any stage if crash rate spikes
+- New personal developer accounts must run a closed test with at least 12 opted-in testers for 14 days before production access
 - Rollback by halting fraction increase
 
 ## Enterprise Distribution
@@ -648,7 +650,7 @@ request.beginAccessingResources { error in
 Three thinning mechanisms:
 1. **App Slicing** — device-specific variants (automatic)
 2. **On-Demand Resources** — download assets when needed
-3. **Bitcode** — App Store re-optimization (deprecated in Xcode 14, removed in 16)
+3. **Bitcode** — App Store re-optimization (deprecated in Xcode 14; the App Store no longer accepts bitcode submissions)
 
 ## Android App Bundle (AAB)
 Always upload AAB (not APK) to Play Console — Google handles app slicing:
@@ -765,12 +767,12 @@ android {
 - **Checking certs into repo**: Exposes signing identities. Use Match with encrypted git repo
 - **Manual provisioning profile management**: Time-consuming and error-prone. Always automate with Match
 - **One cert for CI and local**: CI server generates new certs independently via Match
-- **Expired certs blocking builds**: Match nuke + re-gen; add cert expiry monitoring to CI
+- **Expired certs blocking builds**: renew through match before expiry and monitor expiry dates in CI; `match nuke` only as a last resort because it revokes certificates for the whole team
 - **Using distribution cert for dev**: Blocks debugging on device — use development certs
 - **Revokable enterprise cert shared widely**: One leak = all apps dead. Restrict cert access to 1-2 people
 
 ### CI/CD Anti-Patterns
-- **Running iOS builds on Linux**: Multiple emulator-only, no signing. macOS is required
+- **Running iOS builds on Linux**: Xcode, signing and archiving need macOS runners
 - **Hardcoding secrets in pipeline YAML**: Always use CI secrets/stores
 - **Building without caching**: Adds 5-10 min per run. Cache Gradle/Pods/SwiftPM
 - **No build artifact retention**: Can't debug production issues. Store IPAs/AABs for 30 days
@@ -780,7 +782,7 @@ android {
 ### Release Management Anti-Patterns
 - **Releasing on Friday**: Weekend incidents. Release Tuesday-Thursday
 - **Phased release at 100% immediately**: No gradual ramp. Always start at 1%
-- **No rollback plan**: App Store rejects can't revert. Maintain last-known-good binary
+- **No rollback plan**: neither store lets you reinstate an older binary for existing users; pause the phased/staged rollout, then ship a fix forward (keep remote kill switches for risky features)
 - **Skipping beta testing**: Production bugs caught too late. Always TestFlight/Internal first
 - **Manual version bumps**: Inconsistent and error-prone. Automate via git tags or commit count
 - **No crash monitoring during phased release**: Can't detect regressions. Monitor crash rate vs baseline

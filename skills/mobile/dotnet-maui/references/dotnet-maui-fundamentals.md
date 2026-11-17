@@ -42,7 +42,7 @@ Lightweight ORM for SQLite. `[Table]`, `[PrimaryKey]`, `[Indexed]` attributes. `
 ## Security Fundamentals
 
 ### Platform Security
-iOS: Keychain via SecureStorage, data protection APIs, ATS. Android: EncryptedSharedPreferences, network security config. Windows: DPAPI for data protection. Use MAUI's abstractions over platform-specific APIs. Validate HTTPS certificates.
+iOS: Keychain via SecureStorage, data protection APIs, ATS. Android: SecureStorage (Keystore-backed), network security config. Windows: DPAPI for data protection. Use MAUI's abstractions over platform-specific APIs. Validate HTTPS certificates.
 
 ### Authentication
 `WebAuthenticator` for OAuth flows (opens system browser, captures callback). Native platform auth: Apple Sign In, Google Sign In. `CommunityToolkit.Maui` provides additional auth helpers. Secure token storage with SecureStorage. Biometric via platform-specific code.

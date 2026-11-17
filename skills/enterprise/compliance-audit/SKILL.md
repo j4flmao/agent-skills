@@ -1,12 +1,12 @@
 ---
 name: enterprise-compliance-audit
 description: >
-  Use this skill when performing compliance audits (SOC2, ISO 27001, GDPR, HIPAA, PCI).
-  This skill enforces: control mapping, evidence collection, audit readiness, continuous monitoring.
-  Do NOT use for: internal security reviews, vulnerability scans, pen test execution.
+  Use when the user asks to prepare evidence for a SOC 2 audit, ISO 27001 certification, GDPR, HIPAA or PCI DSS compliance, control mapping, auditor requests or continuous compliance monitoring.
+  Produces a control matrix, evidence plan and audit-readiness checklist. Not for vulnerability scanning (use dev-loop-security-auditor) or pentests (use pentesting).
 version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -297,7 +297,7 @@ Practice 6: Conduct periodic tabletop audits. Walk through an audit scenario wit
 - AWS Audit Manager for AWS-native compliance
 - Jira / Asana for remediation tracking
 - Confluence / Notion for policy documentation
-- Okta / Azure AD for access control evidence
+- Okta / Microsoft Entra ID for access control evidence
 - Splunk / ELK for log management and audit trails
 
 ### Automated Compliance Testing Patterns

@@ -1,52 +1,9 @@
 # Feature Store
 
+> Merged reference for the ml-feature-store skill (folded in from `data/feature-store`). The entry point is the parent [SKILL.md](../SKILL.md); this file keeps only the material that the parent does not cover.
+
 ## Purpose
 Manage ML features through their lifecycle: define feature definitions, compute from batch/streaming sources, serve at low latency for online inference, and generate point-in-time correct training datasets.
-
-## Agent Protocol
-
-### Trigger
-Exact user phrases: "feature store", "Feast", "Tecton", "feature engineering", "feature serving", "feature registry", "point-in-time join", "online features", "offline features", "feature pipeline", "feature retrieval", "feature management", "ML feature".
-
-### Input Context
-Before activating, verify:
-- ML framework (PyTorch, TensorFlow, scikit-learn)
-- Inference mode (batch scoring, real-time API)
-- Feature sources (data warehouse, streaming, real-time APIs)
-- Infrastructure (Kubernetes, cloud provider, on-prem)
-- Online serving requirements (latency, throughput, freshness)
-- Existing feature definitions location
-
-### Output Artifact
-Feature store configuration with Feast deployment, feature definitions, serving infrastructure, and training dataset generation pipeline.
-
-### Response Format
-```yaml
-# Feast feature definitions
-# Serving config
-```
-```python
-# Feature retrieval for training
-# Online feature serving
-# Point-in-time join
-```
-```sql
-# Feature engineering queries
-```
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions. Compress output — why use many token when few do trick.
-
-### Completion Criteria
-- [ ] Feast or Tecton deployed with offline and online store
-- [ ] Feature definitions registered with types, sources, and owners
-- [ ] Feature engineering pipeline producing batch and streaming features
-- [ ] Point-in-time correct training dataset generation working
-- [ ] Online serving endpoint providing features under 10ms p99
-- [ ] Feature registry browsable for discovery and documentation
-- [ ] Feature validation and monitoring configured
-
-### Max Response Length
-300 lines of code and configuration.
 
 ## Feast Feature Definitions
 
@@ -71,7 +28,7 @@ registry:
   cache_ttl_seconds: 3600
 online_store:
   type: redis
-  connection_string: redis://redis-feast:6379
+  connection_string: "redis-feast:6379,ssl=true,password=${REDIS_PASSWORD}"   # host:port[,options]; env var expanded by Feast
 offline_store:
   type: bigquery
   dataset: feast_offline
@@ -200,7 +157,7 @@ def predict(request: PredictionRequest):
 # Redis cluster for production online serving
 online_store:
   type: redis
-  connection_string: redis://redis-cluster:6379
+  connection_string: "redis-cluster:6379,ssl=true,password=${REDIS_PASSWORD}"   # host:port[,options]; env var expanded by Feast
   key_ttl_seconds: 86400  # 24 hour TTL on feature keys
   password_encrypted: ${FEAST_REDIS_PASSWORD}
 
@@ -377,7 +334,7 @@ feast_architecture:
     
     online_store:
       type: "redis"
-      connection_string: "redis://redis-cluster:6379"
+      connection_string: "redis-cluster:6379,ssl=true,password=${REDIS_PASSWORD}"   # host:port[,options]; env var expanded by Feast
 
   serving_patterns:
     batch_serving:
@@ -413,47 +370,6 @@ Feature freshness requirement?
     ├── Push to online store via streaming sink
     └── Feature TTL: minutes-hours for event-time features
 ```
-
-## Rules
-- All features have point-in-time correctness — no future data leakage
-- Entity definitions use the same ID type across all feature views
-- Online store supports p99 < 10ms for batch of 100 entity keys
-- Offline store uses columnar format (Parquet) for training data generation
-- Feature TTL prevents staleness — stale features not served online
-- Feature registry is the single source of truth for all feature definitions
-- Feature validation runs before materialization
-- Monitoring tracks feature freshness, serving latency, and retrieval errors
-- Feature engineering pipelines are idempotent and incremental
-- Match serving store to latency requirements — batch for training, online for inference
-- Use Feast feature repository for version-controlled feature definitions
-
-## References
-  - feast-setup-guide.md — Feast Setup Guide
-  - feature-engineering-pipeline.md — Feature Engineering Pipeline Reference
-  - feature-registry.md — Feature Registry & Governance
-  - feature-validation-monitoring.md — Feature Validation and Monitoring
-  - offline-feature-computation.md — Offline Feature Computation
-  - online-serving.md — Online Feature Serving Reference
-## Architecture Decision Trees
-
-```
-Feature Store Selection
-├── ML framework ecosystem?
-│   ├── Python-heavy → Feast (Python-native, great with scikit-learn/XGBoost)
-│   ├── Spark ecosystem → Feature Store on Databricks / SageMaker
-│   └── Multi-language → Tecton (SaaS, Python + SQL + Spark)
-├── Online serving required?
-│   ├── Yes → Feast + Redis/DynamoDB (low-latency serving)
-│   └── No → Offline-only (Feast BigQuery/Redshift)
-├── Point-in-time correct joins?
-│   ├── Yes → Feast (temporal join built-in)
-│   └── No → Custom SQL with window functions
-└── Feature sharing across teams?
-    ├── Yes → Centralized registry (Feast with GCS/S3 registry)
-    └── No → Per-team feature definitions
-```
-
-**Decision criteria**: Evaluate online/offline serving needs, team ML maturity, feature reuse goals, and infrastructure compatibility.
 
 ## Implementation Patterns
 
@@ -513,25 +429,6 @@ class FeatureServingClient:
         return job.to_df()
 ```
 
-## Production Considerations
-
-- **Online store sizing**: Provision Redis cluster with enough memory for all active features (~2x expected size for overhead).
-- **Feature freshness**: Set TTL per feature view based on update frequency; stale features auto-expire.
-- **Feature validation**: Validate feature distributions against training baseline; alert on drift > 2σ.
-- **Registry synchronization**: Sync feature registry across environments (dev → staging → prod) via CI/CD.
-- **Point-in-time correctness**: Ensure training datasets use point-in-time joins to prevent data leakage.
-- **Monitoring**: Track online serving latency (p99 < 10ms), feature retrieval rate, and cache hit rate.
-
-## Anti-Patterns
-
-| Anti-Pattern | Consequence | Solution |
-|---|---|---|
-| No point-in-time join in training | Data leakage, inflated model accuracy | Use Feast temporal joins |
-| Features not shared between models | Duplicate computation, inconsistency | Register features in central registry |
-| Overly long TTL on features | Serving stale features for inference | Set TTL based on feature update cadence |
-| Online store without failover | Serving outage on Redis failure | Deploy Redis cluster with replica nodes |
-| Ignoring feature correlation | Colinear features degrade models | Track feature correlation matrix in registry |
-
 ## Performance Optimization
 
 - **Online store caching**: Add local cache (Redis on same node) for frequently accessed features; TTL 60s.
@@ -548,6 +445,3 @@ class FeatureServingClient:
 - **Audit trail**: Log all feature registry changes, materialization runs, and online serving requests.
 - **Compliance**: Tag features containing PII; strip or hash PII features in non-production environments.
 
-## Handoff
-`streaming` for real-time feature computation with Kafka and Flink
-`etl-pipeline` for batch feature engineering orchestration with Airflow

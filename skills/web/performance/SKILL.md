@@ -1,10 +1,11 @@
 ---
 name: web-performance
 description: >
-  Use this skill when the user says 'Core Web Vitals', 'LCP', 'INP', 'CLS', 'page is slow', 'improve Lighthouse score', 'long tasks', 'web-vitals library', 'field data vs lab data', 'CrUX'. It diagnoses and fixes Core Web Vitals with field measurement (web-vitals, CrUX), LCP resource prioritisation, INP long-task breaking, and CLS layout stability. Do NOT use for: framework-specific bundle architecture (use frontend-performance), image pipeline setup (use frontend-image-optimization), or backend latency/load testing (use backend load-testing).
+  Use when the user asks to improve Core Web Vitals, a slow LCP (e.g. 4 seconds), INP or CLS problems, long tasks, Lighthouse scores, field vs lab data, CrUX or the web-vitals library. Produces a diagnosis and fixes for LCP, INP and CLS based on field data. Not for bundle architecture inside a framework (use frontend-performance).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [web, performance, core-web-vitals, lcp, inp, cls, rum]
 ---
 

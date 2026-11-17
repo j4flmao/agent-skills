@@ -1,10 +1,11 @@
 ---
 name: angular-architecture
 description: >
-  Use this skill when the user says 'Angular structure', 'Angular architecture', 'Angular folder', 'Angular standalone', 'Angular signals', 'Angular clean arch', 'Angular feature', 'Angular project layout', 'NgModule vs standalone', or when structuring an Angular application (v17+). This skill enforces: standalone components by default (no NgModule), feature-based folder organization with lazy loading, Signals for component state (not RxJS for local state), new control flow (@if, @for, @switch), inject() function for DI, and OnPush change detection. Requires Angular 17+ (angular.json). Do NOT use for: AngularJS, React, Vue, or pre-standalone Angular versions.
+  Use when the user asks about Angular architecture, Angular signals and standalone components, NgModule to standalone migration, feature folders, lazy routes, @if/@for control flow, inject() or zoneless/OnPush change detection. Produces an Angular 17+ project structure and component conventions. Not for interceptors, guards, RxJS or NgRx (use angular-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

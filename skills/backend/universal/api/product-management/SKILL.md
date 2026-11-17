@@ -1,10 +1,11 @@
 ---
 name: api-product-management
 description: >
-  Use when the user asks about API as product, API product management, API strategy, API monetization, developer portal, API documentation portal, API deprecation, versioning strategy, or API lifecycle management. Do NOT use for: API implementation (backend-api-design), API documentation generation (api-documentation), or technical API specification (backend-openapi-documentation).
+  Use when the user asks about API as a product, API strategy, API monetization, developer portal, API lifecycle or developer experience metrics. Produces an API product plan with tiers, onboarding and lifecycle policy. Not for endpoint design (use backend-api-design) or versioning mechanics (use backend-api-versioning).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 type: skill
 compatibility:
   claude-code: true

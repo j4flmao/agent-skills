@@ -1,10 +1,11 @@
 ---
 name: desktop-tauri
 description: >
-  Use this skill when the user says 'Tauri', 'Tauri v2', 'tauri command', 'invoke from frontend', 'tauri capabilities', 'tauri permissions', 'tauri plugin', 'tauri updater', 'Rust desktop app with web UI'. It builds secure Tauri 2 desktop (and mobile) apps: Rust commands, typed IPC, capability/permission files, plugins, events, state and bundling. Do NOT use for: Electron apps (use desktop-electron), pure Rust backends (use the rust backend skill), or native toolkit UIs like Qt/GTK (use desktop-qt / desktop-gtk).
+  Use when the user asks to build a desktop app with Tauri and a Rust backend, Tauri v2, commands and invoke, capabilities and permissions, Tauri plugins, the updater or mobile targets. Produces secure Tauri 2 apps with typed IPC, capability files and bundling. Not for Electron apps (use desktop-electron).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [desktop, tauri, rust, ipc, capabilities, security, webview]
 ---
 

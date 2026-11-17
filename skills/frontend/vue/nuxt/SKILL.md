@@ -1,10 +1,11 @@
 ---
 name: vue-nuxt
 description: >
-  Use this skill when the user says 'Nuxt', 'Nuxt 3', 'Nuxt structure', 'Nuxt composables', 'Nuxt server routes', 'useFetch', 'useAsyncData', 'Nuxt layers', 'Nuxt architecture', or when building a Nuxt 3 application. This skill enforces: directory-based routing in pages/, useFetch for data fetching (preferred over useAsyncData), server routes in server/api/, auto-import from components/ and composables/, layouts with definePageMeta, and Nuxt layers for shared code across projects. Requires Nuxt 3 (nuxt.config.ts). Do NOT use for: plain Vue 3, Vite-only Vue, or React/Next.js.
+  Use when the user asks about Nuxt 4 or Nuxt 3, useFetch and useAsyncData, server routes in server/api, Nitro, Nuxt layers, route rules, the app/ directory, auto-imports or upgrading Nuxt 3 to 4. Produces Nuxt app structure, data fetching and server code. Not for plain Vue 3 SPA structure (use vue-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -16,7 +17,7 @@ tags: [frontend, vue, nuxt, phase-3]
 # Nuxt
 
 ## Purpose
-Build Nuxt 3/4 applications with directory-based routing, server-side data fetching, and auto-imported components and composables. useFetch for data, server/api/ for backend endpoints. Nuxt 4 (2025) moves app code into `app/` by default, makes `data` a `shallowRef`, defaults it to `undefined` instead of `null`, and changes `pending` semantics, so check `status` instead.
+Build Nuxt 4 applications (Nuxt 3 reached end of life on 31 July 2026; upgrade with `npx nuxt upgrade` and the v4 migration guide) with directory-based routing, server-side data fetching, and auto-imported components and composables. useFetch for data, server/api/ for backend endpoints. Nuxt 4 (2025) moves app code into `app/` by default, makes `data` a `shallowRef`, defaults it to `undefined` instead of `null`, and changes `pending` semantics, so check `status` instead.
 
 ## Agent Protocol
 
@@ -249,7 +250,7 @@ useCookie is reactive — changing value updates the cookie and triggers re-rend
 
 ### Caching
 ```typescript
-// Nuxt 3 hybrid rendering per route
+// Hybrid rendering per route (Nuxt 3 and 4)
 export default defineNuxtConfig({
   routeRules: {
     '/': { prerender: true },
@@ -377,7 +378,7 @@ const { data: posts } = await useFetch('/api/posts')
 
 ## Anti-Patterns
 
-### mixins in Nuxt 3
+### mixins in Nuxt 3/4
 
 ```typescript
 // Anti-pattern: mixing logic across concerns
@@ -428,7 +429,7 @@ async function logout() { await $fetch('/api/logout') }
 
 ## Compared With
 
-| Aspect | Nuxt 3 | Next.js App | SvelteKit |
+| Aspect | Nuxt 4 | Next.js App | SvelteKit |
 |--------|--------|-------------|-----------|
 | Data fetching | useFetch | fetch in RSC | load() |
 | Server routes | server/api/ | route.ts | +server.ts |

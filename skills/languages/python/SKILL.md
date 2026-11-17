@@ -9,6 +9,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -63,7 +64,7 @@ Project type?
 ```
 Deployment context?
 ├── Containerized (Docker) → single venv in container, no system Python
-├── Local development → pyenv + virtualenv / uv venv (isolated per project)
+├── Local development → uv (manages Python versions and the project venv; pyenv + venv is the legacy route)
 ├── CI/CD → fresh venv per run (cache pip/uv between runs)
 └── Monorepo → PDM workspace / hatch.env per project
 ```
@@ -296,7 +297,7 @@ mypy src/ --strict --python-version 3.11
 - **Not using `__slots__` for data classes**: Each instance wastes dict overhead. Use `@dataclass(slots=True)` (Python 3.10+)
 - **Sync I/O in async context**: `requests.get()` blocks event loop. Use `httpx.AsyncClient()` or `aiohttp`
 - **No type annotations on public API**: Makes library unusable for consumers. Always annotate public functions
-- **`pip install` outside venv**: Corrupts system Python. Always activate venv or use `pip install --user`
+- **`pip install` outside a venv**: corrupts or is blocked by the system Python (PEP 668 "externally managed" environments). Use `uv` projects/venvs, or `uv tool install`/`pipx` for CLI tools
 - **Threading for CPU-bound work**: GIL limits parallelism. Use `multiprocessing` or `asyncio` for I/O, `ProcessPoolExecutor` for CPU
 
 ## Performance Patterns

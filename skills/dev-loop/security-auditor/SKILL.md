@@ -1,10 +1,12 @@
 ---
 name: dev-loop-security-auditor
 description: >
-  Use when the user asks about security auditing, vulnerability scanning, security review, dependency vulnerabilities, SAST, DAST, penetration testing, or security best practices. Do NOT use for: code review (dev-loop-code-review), or performance profiling (dev-loop-performance-profiler).
+  Use when the user asks for a security audit of a codebase, dependency vulnerability scan (npm audit, pip-audit, Trivy), secret scanning, Semgrep or CodeQL findings, or OWASP Top 10 review. Produces
+  prioritized findings with fixes. Not for SAST/DAST pipeline design (use security-sast-dast) or pentest engagements (use pentesting).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -1,10 +1,11 @@
 ---
 name: frontend-performance
 description: >
-  Use this skill when the user says 'performance', 'slow page', 'bundle size', 'lazy loading', 'code splitting', 'LCP', 'CLS', 'INP', 'web vitals', 'image optimization', 'caching strategy', or when optimizing frontend performance. This skill enforces: measure-first optimization, Core Web Vitals targets (LCP <2.5s, CLS <0.1, INP <200ms), code splitting by route, image optimization (WebP/AVIF, srcset, dimensions), and caching with stale-while-revalidate. Works with any frontend framework. Do NOT use for: backend performance, database optimization, or infrastructure tuning.
+  Use when the user asks about bundle size, slow page loads, code splitting by route, lazy loading, rendering cost, memoization or a frontend performance budget in a framework app. Produces measure-first, framework-level optimizations. Not for Core Web Vitals field data and CrUX diagnosis (use web-performance) or image pipelines (use frontend-image-optimization).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

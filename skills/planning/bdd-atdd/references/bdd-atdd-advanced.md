@@ -84,7 +84,7 @@ Scenario: Trial expires after 14 days
 ### Parallel Execution Strategies
 | Strategy | Tool Support | Speedup | Trade-offs |
 |----------|-------------|---------|------------|
-| Scenario-level parallel | Cucumber 7+, SpecFlow | 2-4x | Shared state management |
+| Scenario-level parallel | Cucumber 7+, Reqnroll | 2-4x | Shared state management |
 | Feature-level parallel | CI matrix builds | 4-8x | Report aggregation |
 | Multi-process execution | Custom CI setup | 1-2x | Infrastructure complexity |
 
@@ -152,7 +152,7 @@ Feature: User Service API Contract
 ```
 Feature Files → Test Execution → JSON Results → GerkinDoc/Cluecumber → HTML Living Doc
       ↓                                                              ↓
-  SpecFlow + LivingDoc                                           Static Site
+  Reqnroll + HTML report                                         Static Site
 ```
 
 ### Stakeholder Dashboards

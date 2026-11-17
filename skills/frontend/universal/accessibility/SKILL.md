@@ -1,10 +1,11 @@
 ---
 name: frontend-accessibility
 description: >
-  Use this skill when the user says 'accessibility', 'a11y', 'WCAG', 'screen reader', 'ARIA', 'keyboard navigation', 'color contrast', 'focus management', 'semantic HTML', or when ensuring frontend applications are accessible. This skill enforces: semantic HTML first (no div soup), ARIA only when native semantics are insufficient, WCAG 2.2 AA compliance, and automated a11y testing in CI. Works with any frontend framework. Do NOT use for: backend API accessibility, database design, or performance optimization.
+  Use when the user asks to make a page pass WCAG 2.2 AA in code, fix ARIA, keyboard navigation, focus management, accessible forms and modals, screen reader bugs or add axe tests in CI. Produces accessible component code and automated a11y checks for any framework. Not for design-side audits, contrast reviews or VPATs (use design-accessibility).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -688,7 +689,7 @@ jobs:
 - `references/a11y-tools.md` -- Accessibility Tools
 - `references/accessible-data-visualization.md` -- Accessible Data Visualization
 - `references/accessible-forms.md` -- Accessible Forms
-- `references/wcag-checklist.md` -- WCAG 2.1 AA Checklist
+- `references/wcag-checklist.md` -- WCAG 2.1 AA base checklist plus the WCAG 2.2 additions
 - `references/wcag-22-compliance.md` -- WCAG 2.2 Compliance Deep Dive
 - `references/accessible-component-patterns.md` -- Accessible Component Patterns
 

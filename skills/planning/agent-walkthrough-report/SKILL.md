@@ -1,10 +1,12 @@
 ---
 name: agent-walkthrough-report
 description: >
-  Use this skill when the user says 'walkthrough', 'summarize what you did', 'walkthrough.md', 'change report', 'explain the changes', 'handoff report' after an agent completed implementation work. It produces a concise, evidence-based report of what changed, why, how it was verified and what remains, using GitHub-flavored Markdown (tables, diff blocks, alerts, Mermaid). Do NOT use for: pre-work planning (use write-implementation-plan), progress tracking (use agent-task-checklist), pull request descriptions (use dev-loop/pr-writer), release notes (use changelog-generator).
+  Use when the user asks for a walkthrough, walkthrough.md, summary of what you did, change report or handoff report after an agent finished work. Produces an evidence-based report of changes,
+  verification and open items. Not for PR descriptions (use dev-loop-pr-writer) or release notes (use dev-loop-changelog-generator).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [planning, agent-workflow, report, walkthrough, markdown]
 ---
 

@@ -87,7 +87,7 @@ jobs:
         components: rustfmt, clippy
 
     - name: Cache Cargo Registry
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: ~/.cargo/registry
         key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}

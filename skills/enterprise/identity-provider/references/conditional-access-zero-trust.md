@@ -66,7 +66,7 @@ Bind tokens to the device's TLS connection. Prevents token theft and replay. Imp
 
 ## Implementation
 
-### Azure AD / Entra ID Conditional Access
+### Microsoft Entra ID Conditional Access
 ```json
 {
   "displayName": "Require MFA for Admin Apps",
@@ -122,7 +122,7 @@ Keycloak provides conditional authentication through authentication flows with c
 Track: total authentications evaluated, number of MFA challenges, number of blocked requests, policy evaluation failures, user-reported access issues. Review policy effectiveness monthly.
 
 ### Troubleshooting
-When users report access issues: check sign-in logs for policy evaluation details, verify device compliance status, check risk score at time of sign-in, review conditional access policy order, test with what-if tool (Azure AD).
+When users report access issues: check sign-in logs for policy evaluation details, verify device compliance status, check risk score at time of sign-in, review conditional access policy order, test with what-if tool (Microsoft Entra ID).
 
 ## Key Points
 - Conditional access evaluates user, device, location, and risk at every authentication

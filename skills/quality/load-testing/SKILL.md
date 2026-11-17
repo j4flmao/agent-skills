@@ -1,10 +1,12 @@
 ---
 name: quality-load-testing
 description: >
-  Use this skill when setting up load testing, performance testing, stress tests, k6, Locust, artillery, JMeter, or benchmarking throughput and latency. This skill enforces: scenario design (load, stress, spike, soak), metric collection (latency p50/p95/p99, throughput, error rate), distributed execution, and CI integration. Do NOT use for: frontend performance testing (Lighthouse), database query optimization, or unit-level benchmarks.
+  Use when the user asks to load test an API with k6, Locust, JMeter, Gatling or Artillery, run stress, spike or soak tests, measure p95/p99 latency and throughput, or gate performance in CI. Produces
+  scenarios, thresholds and scripts. Not for profiling code (use dev-loop-performance-profiler) or frontend Web Vitals (use frontend-performance).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

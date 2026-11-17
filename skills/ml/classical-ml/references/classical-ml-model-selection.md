@@ -227,7 +227,7 @@ def optimize_xgboost_optuna(X_train, y_train, n_trials: int = 100, cv=5) -> dict
             "random_state": 42,
         }
 
-        model = XGBClassifier(**params, use_label_encoder=False, eval_metric="logloss")
+        model = XGBClassifier(**params, eval_metric="logloss")
         scores = cross_val_score(model, X_train, y_train, cv=cv,
                                  scoring="roc_auc", n_jobs=-1)
         return scores.mean()

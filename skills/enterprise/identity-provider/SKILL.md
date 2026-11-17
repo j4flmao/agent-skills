@@ -1,12 +1,12 @@
 ---
 name: enterprise-identity-provider
 description: >
-  Use this skill when implementing identity provider solutions: SSO, federation, directory sync, and access governance.
-  This skill enforces: IdP selection, SSO configuration, directory synchronization, MFA enforcement.
-  Do NOT use for: application-level auth, password policies, TLS configuration, network security.
+  Use when the user asks about SSO, SAML, OIDC federation, choosing an IdP (Okta, Entra ID, Keycloak), SCIM directory sync, MFA enforcement or access reviews. Produces IdP selection, federation and
+  provisioning design. Not for in-app login code (use backend-auth-patterns) or permission models (use backend-authorization).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -70,10 +70,10 @@ Client Credentials Flow (machine-to-machine):
 Do you have an operations team to run HA infrastructure?
 ├── Yes → Do you need full control over identity data?
 │   ├── Yes → Self-hosted (Keycloak, Authentik)
-│   └── No → Managed (Azure AD, Okta, Auth0)
+│   └── No → Managed (Microsoft Entra ID, Okta, Auth0)
 └── No → Are you fully on a single cloud provider?
     ├── Yes → Cloud-native (Cognito, Firebase Auth)
-    └── No → Managed (Azure AD, Okta, Auth0)
+    └── No → Managed (Microsoft Entra ID, Okta, Auth0)
 ```
 
 ### Protocol Selection Decision Tree
@@ -109,10 +109,10 @@ Is the client a modern SPA or mobile app?
 ## Agent Protocol
 
 ### Trigger
-Exact user phrases: identity provider, IdP, SSO, SAML, OIDC, Keycloak, Azure AD, Okta, federation, SCIM, user provisioning, identity federation.
+Exact user phrases: identity provider, IdP, SSO, SAML, OIDC, Keycloak, Microsoft Entra ID (Azure AD), Okta, federation, SCIM, user provisioning, identity federation.
 
 ### Input Context
-- What IdP options are available (Keycloak self-hosted, Azure AD/Okta managed, Cognito)?
+- What IdP options are available (Keycloak self-hosted, Microsoft Entra ID/Okta managed, Cognito)?
 - What applications need SSO integration (OIDC vs SAML)?
 - What directory services exist (LDAP, Active Directory)?
 - What compliance requirements apply (SOC2, HIPAA, FedRAMP)?
@@ -157,7 +157,7 @@ No preamble. No postamble. No explanations.
 ## Workflow
 
 ### Step 1: IdP Selection
-Evaluate three categories: self-hosted (Keycloak -- full control, complex ops, open source), managed (Azure AD, Okta -- low ops, feature-rich, per-user cost), cloud-native (Cognito -- AWS integrated, limited federation). Choose based on team size, compliance needs, and existing cloud investment.
+Evaluate three categories: self-hosted (Keycloak -- full control, complex ops, open source), managed (Microsoft Entra ID, Okta -- low ops, feature-rich, per-user cost), cloud-native (Cognito -- AWS integrated, limited federation). Choose based on team size, compliance needs, and existing cloud investment.
 
 ### Step 2: SSO Configuration
 Configure OIDC for modern SPA/mobile apps (authorization code flow with PKCE). Configure SAML for legacy enterprise apps (SP-initiated, signed assertions). Implement federation between IdPs for acquisition/migration scenarios. Validate token exchange and attribute mapping per app.
@@ -265,8 +265,8 @@ Machine accounts and service principals bypass MFA. They become the weakest link
 
 ## Compared With
 
-### Self-Hosted Keycloak vs Azure AD vs Okta
-Keycloak: full control, no per-user cost, complex ops. Azure AD: deep Office 365 integration, conditional access, per-user cost. Okta: best workflow engine, broadest app catalog, premium pricing. Keycloak for cost-conscious with ops team. Azure AD for Microsoft-centric orgs. Okta for complex identity workflows.
+### Self-Hosted Keycloak vs Microsoft Entra ID vs Okta
+Keycloak: full control, no per-user cost, complex ops. Microsoft Entra ID: deep Office 365 integration, conditional access, per-user cost. Okta: best workflow engine, broadest app catalog, premium pricing. Keycloak for cost-conscious with ops team. Microsoft Entra ID for Microsoft-centric orgs. Okta for complex identity workflows.
 
 ### OIDC vs SAML
 OIDC: modern (REST/JSON), simpler, native mobile/web support, better for OAuth2 integration. SAML: enterprise legacy (XML), complex, old but proven, broad enterprise app support. OIDC preferred for new integrations. SAML only when OIDC unsupported.

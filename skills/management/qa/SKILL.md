@@ -1,16 +1,12 @@
 ---
 name: qa
 description: >
-  Use this skill when the user says 'test strategy', 'test plan', 'test case',
-  'test scenario', 'equivalence partitioning', 'boundary value analysis',
-  'defect report', 'test metrics', 'regression testing', 'smoke test',
-  'automation strategy', 'test coverage', or needs quality assurance.
-  Covers: test strategy, test case design, defect management, test metrics,
-  automation strategy, and regression testing. Do NOT use for: code quality
-  standards (use qc), performance testing (use performance-profiler).
+  Use when the user asks for a test strategy, test plan, test cases, equivalence partitioning, boundary value analysis, defect reports, test metrics or test automation strategy. Produces a QA strategy
+  with test design and defect workflow. Not for code quality gates (use qc) or writing unit tests (use quality-unit-testing).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

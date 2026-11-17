@@ -1,10 +1,14 @@
 ---
 name: database-internals-mechanics
 description: >
-  Use this skill when the user says 'database internals', 'b-tree vs lsm', 'lsm tree', 'storage engine', 'write amplification', 'compaction', 'wal', 'write-ahead log', 'mvcc', 'isolation level', 'write skew', 'serializable snapshot isolation', 'vacuum bloat'. Explains how storage engines, logging/recovery and concurrency control work, and turns that into concrete engine choice, schema/key design and isolation-level decisions. Do NOT use for: SQL schema/query tuning in a specific RDBMS (data-relational-database), NoSQL data modeling (data-nosql-database), sharding/replication topology (system-design database sharding), migrations (database-migration).
+  Use when the user asks to explain MVCC and the write-ahead log (WAL), B-tree vs LSM tree, compaction, write
+  amplification, storage engines, isolation levels, write skew, serializable snapshot isolation or vacuum bloat.
+  Produces an engine explanation turned into concrete engine, key and isolation choices. Not for PostgreSQL ops
+  tuning (use data-relational-database).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [data, database-internals, b-tree, lsm-tree, wal, mvcc, isolation]
 ---
 

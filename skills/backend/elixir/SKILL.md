@@ -1,10 +1,11 @@
 ---
 name: backend-elixir
 description: >
-  Use this skill when the user says 'elixir backend', 'phoenix', 'phoenix liveview', 'ecto', 'otp supervision tree', 'genserver', 'oban', 'phoenix pubsub', 'mix phx.new'. Builds Phoenix/Elixir backends: contexts, Ecto schemas and migrations, LiveView, supervision trees, GenServer/ETS state, Oban jobs, releases and observability. Do NOT use for: Elixir language fundamentals outside web backends (languages skill for Elixir), non-Elixir stacks, frontend JavaScript.
+  Use when the user asks about Phoenix, Phoenix LiveView, Ecto schemas and changesets, GenServer state, OTP supervision trees, Oban jobs or Phoenix PubSub. Produces Phoenix/Elixir backend code organized by contexts. Not for Elixir language basics (use lang-elixir).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

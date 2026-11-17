@@ -1,10 +1,11 @@
 ---
 name: seo-fundamentals
 description: >
-  Use this skill when the user says 'SEO audit', 'technical SEO', 'why is my page not indexed', 'robots.txt', 'sitemap', 'canonical tag', 'noindex', 'crawl budget', 'hreflang', 'redirects for SEO', 'title and meta description', 'traffic dropped after Google update'. It audits and fixes technical and on-page SEO: crawlability, indexing directives, canonicalisation, sitemaps, redirects, international targeting, rendering and Search Console workflow. Do NOT use for: framework meta-tag implementation (use frontend-seo), JSON-LD markup (use seo-structured-data), thousands of template pages (use programmatic-seo), AI-assisted content (use seo-ai-content-optimization), or Core Web Vitals engineering (use web-performance).
+  Use when the user asks for an SEO audit, technical SEO, why a page is not indexed, robots.txt, sitemaps, canonical tags, noindex, hreflang, redirects, crawl budget or a traffic drop after a Google update. Produces crawl/index fixes and a Search Console workflow. Not for JSON-LD (use seo-structured-data) or framework meta tags (use frontend-seo).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [seo, technical-seo, indexing, robots, sitemaps, canonical, hreflang]
 ---
 

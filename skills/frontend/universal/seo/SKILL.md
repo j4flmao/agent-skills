@@ -1,10 +1,11 @@
 ---
 name: frontend-seo
 description: >
-  Use this skill when the user says 'seo', 'meta tags', 'open graph', 'structured data', 'JSON-LD', 'sitemap', 'robots.txt', 'canonical url', 'ssr seo'. This skill enforces SEO best practices — meta tag optimization, structured data injection, XML sitemap generation, robots.txt configuration, canonical URL handling, and SSR strategies for search engine crawlers. Applies to any frontend stack.
+  Use when the user asks about meta tags, Open Graph and Twitter cards, canonical URLs, generateMetadata, generating sitemap.xml and robots.txt, or SSR for crawlers in a React/Vue/Svelte app. Produces framework metadata code and generated sitemaps. Not for technical SEO audits (use seo-fundamentals) or JSON-LD rich results (use seo-structured-data).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -109,7 +110,7 @@ Content type?
   |     Required: position, name, item URL for each level
   |
   |-- FAQ page -->
-  |     Schema: FAQPage
+  |     Schema: FAQPage (rich result shown only for authoritative government/health sites since Aug 2023)
   |     Required: mainEntity array with Question/Answer pairs
   |
   |-- Organization / Local Business -->
@@ -232,7 +233,8 @@ function JsonLd({ data }: { data: Record<string, unknown> }) {
     <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{
-        __html: JSON.stringify({ '@context': 'https://schema.org', ...data }),
+        // escape '<' so data containing </script> cannot break out of the tag
+        __html: JSON.stringify({ '@context': 'https://schema.org', ...data }).replace(/</g, '\\u003c'),
       }}
     />
   )
@@ -398,7 +400,7 @@ function BreadcrumbJsonLd({ path }: { path: { name: string; slug: string }[] }) 
 
 ### Step 15: Advanced Structured Data Patterns
 ```html
-<!-- FAQ Schema (rich snippet with expandable Q&A) -->
+<!-- FAQ Schema: valid markup, but Google shows the FAQ rich result only for authoritative government/health sites (since Aug 2023) -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -414,7 +416,7 @@ function BreadcrumbJsonLd({ path }: { path: { name: string; slug: string }[] }) 
 }
 </script>
 
-<!-- HowTo Schema (step-by-step, shown in search results) -->
+<!-- HowTo Schema: Google removed HowTo rich results in 2023; markup is harmless but not displayed -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",

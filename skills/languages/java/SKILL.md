@@ -9,6 +9,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -301,12 +302,12 @@ async-profiler -e cpu -d 30 -f profile.jfr
 - `StringBuilder` for concatenation in loops (not `+` operator)
 - `record` for lightweight data carriers (no boilerplate, value-based)
 - `ConcurrentHashMap` over synchronized maps for concurrent access
-- `ZGC` or `Shenandoah` for sub-millisecond GC pauses (Java 17+)
+- `ZGC` (generational by default since JDK 23) or `Shenandoah` for sub-millisecond GC pauses
 - Flyweight pattern for repeated small objects (Integer cache, custom pools)
 - Off-heap storage with `ByteBuffer.allocateDirect` for large caches
 - `var` keyword doesn't affect performance but reduces noise
 - Profile with async-profiler before optimizing — JVM is already very good
-- Use `--enable-preview` in development to test upcoming features (pattern matching, string templates)
+- Use `--enable-preview` only in development to try preview features (e.g. structured concurrency); string templates were withdrawn in JDK 23, so do not build on them
 
 ## Virtual Threads & Structured Concurrency (Java 21+)
 

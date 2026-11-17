@@ -1,10 +1,11 @@
 ---
 name: frontend-responsive-design
 description: >
-  Use this skill when the user says 'responsive design', 'container queries', 'breakpoints', 'mobile-first', 'fluid typography', 'responsive layout', 'media queries', 'clamp', 'adaptive design', or when building responsive frontend UIs. This skill enforces: mobile-first CSS, container queries for component-level responsiveness, a consistent breakpoint system, and fluid typography with clamp(). Works with any frontend framework. Do NOT use for: print styles, email templates, or native mobile app layout.
+  Use when the user asks about responsive layouts, mobile-first CSS, breakpoints, media queries, container queries, fluid typography with clamp(), dynamic viewport units or responsive grids. Produces a breakpoint system and responsive component CSS. Not for responsive images (use frontend-image-optimization) or native mobile layout (use mobile-patterns).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

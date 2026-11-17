@@ -1,10 +1,11 @@
 ---
 name: desktop-swiftui
 description: >
-  Use when the user asks about SwiftUI for macOS, SwiftUI desktop patterns, AppKit bridging, SwiftUI app lifecycle, or SwiftUI multiplatform apps. Do NOT use for: AppKit-only (desktop-appkit), or iOS SwiftUI (mobile skill).
+  Use when the user asks about SwiftUI on macOS, WindowGroup, MenuBarExtra, Settings scenes, Observation (@Observable), NavigationSplitView, AppKit bridging or multiplatform SwiftUI apps. Produces SwiftUI Mac app architecture. Not for AppKit-only apps (use desktop-appkit) or iOS apps (use ios).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

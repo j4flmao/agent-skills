@@ -1,10 +1,12 @@
 ---
 name: dev-loop-tech-debt-tracker
 description: >
-  Use when the user asks about technical debt tracking, tech debt management, code quality metrics, debt prioritization, or establishing a tech debt reduction process. Do NOT use for: refactoring implementation (dev-loop-refactor-guide), or code review (dev-loop-code-review).
+  Use when the user asks to track technical debt, build a tech debt register, prioritize debt by interest and cost, measure code health, or set a debt budget per sprint. Produces a debt inventory with
+  scoring and a paydown plan. Not for doing the refactor (use dev-loop-refactor-guide) or quality gates (use qc).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

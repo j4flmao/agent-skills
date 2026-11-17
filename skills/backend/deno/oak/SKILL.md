@@ -1,10 +1,11 @@
 ---
 name: oak-backend
 description: >
-  Use this skill when the user says 'oak', 'oak backend', 'deno oak', 'oak middleware', 'oak router', 'oak context'. Structures Oak (jsr:@oak/oak) applications on Deno: router modules, middleware pipeline, typed context state, body parsing, error handling and handler-level testing. Do NOT use for: general Deno setup and permissions (deno), Hono on Deno (nodejs-hono), Express on Node.js (nodejs-express-skill).
+  Use when the user asks about Oak, jsr:@oak/oak, Deno Oak router, Oak middleware, ctx.state or Oak body parsing. Produces Oak apps with router modules, ordered middleware, error handling and tests. Not for general Deno runtime setup (use deno).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, patterns, game-loop, architecture, engine]
 ---
 
@@ -253,8 +254,8 @@ public:
 |-----------|----------|------|
 | **Uniform grid** | Large counts, uniform density (bullets, particles) | O(1) lookup per cell |
 | **Quadtree/Octree** | Non-uniform density (RTS world, terrain) | O(log n) traversal |
-| **BVH** (Dynamic Bounding Volume Hierarchy) | Physics broad-phase, ray casts | rebuild each frame |
-| **Spatial hash** | String-to-pattern matching of positions | hash table, O(1) avg |
+| **BVH** (Dynamic Bounding Volume Hierarchy) | Physics broad-phase, ray casts | O(log n) query; refit moving leaves, rebuild/rotate occasionally |
+| **Spatial hash** | Sparse or unbounded worlds (hash of cell coordinates) | hash table, O(1) avg |
 
 ### 5.2 Spatial Hash
 
@@ -339,7 +340,7 @@ public:
 };
 ```
 
-This is literally how shared audio/video backends work (e.g., GameAudioClient in Xbox, SDL_Audio).
+Engines commonly expose audio, input and rendering backends this way so a null or mock service can be swapped in for tests and headless servers.
 
 ## 7. Behavioral Patterns
 
@@ -368,7 +369,7 @@ class AttackState : public CharacterState { /* ... */ };
 
 ### 7.2 Hierarchical State Machines
 
-Add parent/child states for repeated sub-behavior (e.g., `Combat` state with `Meelee/Throw/Guard` children).
+Add parent/child states for repeated sub-behavior (e.g., `Combat` state with `Melee/Throw/Guard` children).
 
 ### 7.3 Behavior Trees (for AI)
 
@@ -438,8 +439,8 @@ flowchart TD
 
 1. **Automatic resource aliasing**: Temp buffers share memory when lifetimes don't overlap.
 2. **Multi-GPU / async compute**: Passes with no dependency run on separate queues.
-3. **Deterministic rendering**: Stable pass order avoids flicker/tearing.
-4. **X-plat portability**: RenderDoc + Vulkan/D3D12 backends from one description.
+3. **Automatic barriers and pass culling**: transitions derived from declared reads/writes; unused passes dropped.
+4. **Backend portability**: one pass description drives Vulkan, D3D12 and Metal backends.
 
 ## 10. Audio & Asset Patterns
 

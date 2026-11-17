@@ -197,7 +197,7 @@ export default defineConfig({
 
 ```yaml
 - name: Cache Webpack cache
-  uses: actions/cache@v3
+  uses: actions/cache@v6
   with:
     path: |
       .temp/cache

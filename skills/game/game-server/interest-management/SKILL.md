@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, networking, interest-management, server]
 ---
 
@@ -43,7 +44,7 @@ Code: {snippet}
 1. **State replication** — entity position/hp/anim may repeat at different rates.
 2. **Event delivery** — spell casts, deaths, pickups happen once, must be reliable.
 
-IM solves *state* (per-entity rate, per-observer mask). Events live in a separate **reliable queue** (see `event-queue`).
+IM solves *state* (per-entity rate, per-observer mask). Events live in a separate **reliable queue** (see `references/event-queue.md`).
 
 ## 2. The Interest Model
 
@@ -110,7 +111,7 @@ Send loop per observer:
 for id in valueSet(interestedIntersection dirty):
     send delta bytes for changed channels (quantized)
 ```
-Complexity ≈ O(|interest(O)|) per observer, per tick — a *per-observer packet builder* that stops early on a byte budget (see `world-state-snapshot` budgets).
+Complexity ≈ O(|interest(O)|) per observer, per tick — a *per-observer packet builder* that stops early on a byte budget (see `skills/game/game-server/authoritative-server/references/world-state-snapshot.md` budgets).
 
 ## 7. Reliability Split (State vs Events)
 

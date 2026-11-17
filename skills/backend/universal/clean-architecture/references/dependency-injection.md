@@ -200,7 +200,7 @@ class OrderService {
 
 ### When Constructor Injection is Difficult
 
-If constructor injection is impractical (legacy code, poor framework support), use setter injection or method injection as a migration stepping stone. Document all TODO items to move toward constructor injection.
+If constructor injection is impractical (legacy code, poor framework support), use setter injection or method injection as a migration stepping stone. Track each remaining setter-injected dependency as tech debt to move to constructor injection.
 
 ```typescript
 // Temporary setter injection (migration path only)

@@ -1,10 +1,14 @@
 ---
 name: data-data-lakehouse
 description: >
-  Use this skill when designing lakehouse architectures with medallion layers (bronze/silver/gold), Databricks Unity Catalog, Delta Sharing, Apache Paimon, or multi-cloud lakehouse. This skill enforces: medallion architecture layers and data flow, Unity Catalog metastore and RBAC, Delta Sharing for data mesh, Apache Paimon table format, multi-cloud replication strategy, open format commitment. Do NOT use for: single-layer data lakes without tiering, streaming-only pipelines, or BI dashboard design.
+  Use when the user asks about lakehouse architecture, choosing Iceberg or Delta for our lakehouse, medallion
+  bronze/silver/gold layers, Databricks Unity Catalog, Delta Sharing, Apache Paimon or multi-engine catalogs
+  (Polaris, Glue). Produces layer design, catalog and access model and format commitment. Not for single-table
+  operations (use data-data-lake).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -1,18 +1,12 @@
 ---
 name: enterprise-high-availability
 description: >
-  Use this skill when architecting end-to-end high-availability systems combining database replicas,
-  load balancers, slave/standby nodes, application version sync across nodes, data sync during rolling
-  migrations, and availability tiering from 95% (two nines) up to 99.99% (four nines) or 99.999% (five nines).
-  This skill enforces: availability budget math, replica topology selection, L4/L7 load balancer health-check
-  contracts, zero-downtime app version rollout (blue-green, canary, rolling), backward/forward compatible
-  schema migrations (expand-contract), data backfill + dual-write sync, quorum + split-brain prevention,
-  RPO/RTO targeting per tier, and runbook-driven failover. Do NOT use for: pure SLA contract negotiation
-  (see enterprise-sla-management), CDC streaming pipelines (see data-cdc-patterns), or basic Kubernetes
-  rollout configs (see devops-kubernetes-patterns).
+  Use when the user asks about 99.99% availability, five nines, database replicas and failover, active-active vs active-passive, load balancer health checks or zero-downtime deploys with expand-contract
+  migrations. Produces availability math and HA topology. Not for business continuity plans (use enterprise-business-continuity) or SLO targets (use enterprise-sla-management).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

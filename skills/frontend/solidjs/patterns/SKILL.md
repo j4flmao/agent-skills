@@ -1,10 +1,11 @@
 ---
 name: frontend-solidjs-patterns
 description: >
-  Use this skill when the user says 'SolidJS pattern', 'SolidJS form', 'SolidJS data fetching', 'SolidJS component pattern', 'SolidJS animation'. This skill enforces: createResource for async data with Suspense, controlled forms via signals, component composition via JSX children as functions, and transitions/animation with createTransition and CSS. Requires existing SolidJS project (package.json with solid-js). Do NOT use for: React or Vue data fetching patterns.
+  Use when the user asks about SolidJS forms, createResource and Suspense data fetching, SolidJS component composition, transitions or animation. Produces reusable Solid patterns for an existing app. Not for Solid project structure and reactivity basics (use frontend-solidjs-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

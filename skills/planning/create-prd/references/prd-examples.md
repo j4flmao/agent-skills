@@ -152,7 +152,7 @@ data so that I don't need to manually enter vendor records.*
 - [ ] Code complete with unit tests (>80% coverage on new code)
 - [ ] Integration tests for email processing, OCR, and approval flow
 - [ ] All acceptance criteria met and verified by QA
-- [ ] Accessibility compliance (WCAG 2.1 AA)
+- [ ] Accessibility compliance (WCAG 2.2 AA)
 - [ ] API documentation updated (OpenAPI 3.0)
 - [ ] Migration script tested with 10K invoice dataset
 - [ ] Rollback plan documented for DB migrations

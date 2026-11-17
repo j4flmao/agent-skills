@@ -56,7 +56,9 @@ wandb sweep sweep.yaml
 wandb agent <sweep_id>
 ```
 
-## Neptune
+## Neptune (discontinued)
+
+Neptune.ai's hosted service shut down in March 2026 after its acquisition by OpenAI, and stored data was deleted. The snippet below is kept only to help read legacy code during migration to MLflow or W&B.
 
 ```python
 import neptune

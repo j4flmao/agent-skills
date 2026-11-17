@@ -1,10 +1,11 @@
 ---
 name: seo-ai-content-optimization
 description: >
-  Use this skill when the user says 'AI generated content SEO', 'will Google penalize AI content', 'E-E-A-T', 'helpful content', 'scaled content abuse', 'optimize content for AI Overviews', 'LLM-written blog posts', 'generative engine optimization'. It sets up an editorial pipeline where AI drafts are turned into people-first content that meets Google's spam policies and E-E-A-T signals, and structures pages to be cited by AI search features. Do NOT use for: generating thousands of template pages (use programmatic-seo), schema markup (use seo-structured-data), or technical crawl/indexing issues (use seo-fundamentals).
+  Use when the user asks whether Google penalizes AI-generated content, E-E-A-T, helpful content, scaled content abuse, LLM-written blog posts, or optimizing for AI Overviews and generative engine optimization (GEO). Produces an editorial pipeline for people-first content. Not for template pages at scale (use programmatic-seo).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [seo, content, ai-content, eeat, helpful-content, ai-overviews]
 ---
 

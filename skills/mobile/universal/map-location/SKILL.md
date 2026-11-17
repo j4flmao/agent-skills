@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [mobile, universal, maps, location, geofencing]
 ---
 
@@ -473,19 +474,19 @@ function optimizeRoute(points: LatLng[], startIndex: number = 0): LatLng[] {
 
 ## Production Considerations
 
-- **Map tile caching**: Cache map tiles locally (LRU cache of 500MB max) to reduce network requests by 60-80% on repeated views. Set appropriate cache-control headers on tile server responses.
+- **Map tile caching**: rely on the SDK's own tile cache and offline-region APIs (Mapbox offline regions, MapKit/Google Maps SDK caches). Provider terms (for example Google Maps Platform) restrict storing tiles outside the SDK, so check the licence before caching yourself; for self-hosted or OSM-derived tiles, set cache headers and an on-device size cap.
 - **Location accuracy vs. battery**: Use significant-change location service for non-navigation apps. For navigation, reduce update frequency to 1 update per 5 seconds when moving, stop updates when stationary.
 - **Offline maps strategy**: Download map regions at 2 zoom levels above minimum required. Use vector tiles (MBTiles format) for efficient offline storage. Pre-cache geocoding results for common queries.
 - **Map load performance**: Lazy-load map SDKs (dynamic import) to avoid impacting initial page load. Pre-initialize the map view with a low-zoom default before animating to user location.
-- **API rate limiting**: Geocoding APIs have strict rate limits (2-50 req/s). Implement a client-side token bucket and queue requests during rapid pan operations.
+- **API rate limiting**: geocoding limits are provider- and plan-specific (the public Nominatim service allows at most 1 request per second); debounce input, cache results, and queue requests during rapid pan operations.
 
 ## Security Considerations
 
-- **API key protection**: Never embed map API keys in client-side code. Use proxy endpoints or key restriction by HTTP referrer/application bundle ID.
+- **API key protection**: mobile map SDKs need a client key in the app, so treat it as public: restrict it by bundle ID / package name + signing certificate and by API, set quotas, and keep server-side keys (geocoding, routing) behind your own backend.
 - **Location data privacy**: User location is PII in GDPR/CCPA. Anonymize location data by reducing precision (round to 3 decimal places ~111m) before storing or transmitting.
 - **Geofencing consent**: Implement explicit user consent flows for geofencing features. Store consent receipts with timestamps for compliance audits.
 - **Map data attribution**: Map data (OpenStreetMap, etc.) requires attribution. Display attribution in a non-removable location on the map view.
-- **Reverse geocoding data exposure**: Reverse geocoding can reveal home addresses from coordinates. Cache results server-side to avoid leaking address patterns through timing attacks.
+- **Reverse geocoding data exposure**: coordinates sent to a geocoding provider reveal where users are (often home addresses); minimise precision, avoid logging raw coordinates, and disclose the provider in the privacy policy.
 
 ## Anti-Patterns Expanded
 
@@ -496,7 +497,7 @@ function optimizeRoute(points: LatLng[], startIndex: number = 0): LatLng[] {
 | Not handling permission denial gracefully | App crashes or shows blank map | Show explanation card with settings deep-link |
 | Too many markers without clustering | Browser/device freezes beyond ~500 markers | Use clustering (grid-based or distance-based) for >100 markers |
 | No offline fallback for maps | Blank screen when network is unavailable | Cache tile data and show stale tiles with freshness indicator |
-| Excessive location polling | Battery drain (GPS uses 300mW+ continuous) | Use significant-change or region monitoring for most use cases |
+| Excessive location polling | Battery drain (continuous GPS is one of the most power-hungry sensors) | Use significant-change or region monitoring for most use cases |
 | Not setting map bounds and max zoom | Users can pan into empty ocean areas | Constrain visible region and zoom levels (min/max) |
 | Accessing location APIs on main thread | UI freezes during location lookup | Always use async methods and delegate callbacks |
 | No throttle on map region change handlers | Performance degradation during rapid panning | Debounce region change handlers by 300-500ms |
@@ -504,12 +505,12 @@ function optimizeRoute(points: LatLng[], startIndex: number = 0): LatLng[] {
 
 ## Performance Optimization
 
-- **Vector tiles over raster tiles**: Vector tiles are 60-80% smaller than raster tiles and render faster on GPU-accelerated devices.
+- **Vector tiles over raster tiles**: vector tiles are usually much smaller to download and stay sharp at any zoom; they cost GPU work to render, so test on low-end devices.
 - **Viewport-based rendering**: Only render markers and overlays within the current visible viewport. Cull objects more than 2x the viewport extent.
 - **Canvas rendering for heatmaps**: Use Canvas API (not DOM markers) for data visualizations with >1000 points. Enable hardware acceleration.
 - **Prefetch tiles at lower zoom**: When user stops panning, prefetch tiles at 1-2 zoom levels higher for smooth zoom-in experience.
 - **Cluster on the server**: For large datasets (>10K markers), pre-compute clusters on the server and return clustered data based on viewport bounds.
-- **Simplify polylines**: Use the Ramer-Douglas-Peucker algorithm to reduce polyline vertex count by 70-90% without visible quality loss.
+- **Simplify polylines**: Use the Ramer-Douglas-Peucker algorithm to reduce polyline vertex count, choosing the tolerance per zoom level so the simplification stays invisible.
 - **Lazy-load POI details**: Show marker popups with placeholder data first, then fetch details asynchronously. Cache POI responses in local storage.
 
 ## References

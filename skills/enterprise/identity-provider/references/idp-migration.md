@@ -42,7 +42,7 @@ Phase 3 (Week 5): Cutover
 ### Schema Mapping
 ```yaml
 source_idp: "Okta"
-target_idp: "Azure AD"
+target_idp: "Microsoft Entra ID"
 
 mapping:
   uid: "userPrincipalName"

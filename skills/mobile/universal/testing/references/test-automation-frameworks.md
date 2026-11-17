@@ -250,7 +250,9 @@ class LoginTest {
 }
 ```
 
-## Flutter Driver
+## Flutter Driver (deprecated)
+
+`flutter_driver` is deprecated in favour of `integration_test` (plus Patrol or Maestro for native dialogs). Keep this only for maintaining old suites.
 
 ```dart
 import 'package:flutter_driver/flutter_driver.dart';

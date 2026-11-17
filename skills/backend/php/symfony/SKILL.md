@@ -1,10 +1,11 @@
 ---
 name: symfony-backend
 description: >
-  Use this skill when building Symfony backend applications — bundles, Doctrine ORM, Twig templates, Flex recipes, Messenger component. This skill enforces: service container autowiring, proper bundle structure, Doctrine mapping conventions, Flex-driven configuration. Do NOT use for: Laravel projects, WordPress plugins, pure PHP micro-frameworks.
+  Use when the user asks about Symfony, Doctrine ORM entities, Symfony Messenger, autowiring, security voters, Flex recipes or WebTestCase. Produces Symfony 7 services, entities and tests. Not for Laravel (use php-laravel) or Laminas (use php-zend).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

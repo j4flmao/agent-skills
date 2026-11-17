@@ -1,16 +1,12 @@
 ---
 name: pm
 description: >
-  Use this skill when the user says 'project management', 'sprint planning',
-  'estimate', 'story points', 't-shirt sizing', 'risk register', 'stakeholder',
-  'status report', 'blocker', 'retrospective', 'velocity', 'burndown', 'capacity
-  planning', or needs project management guidance. Covers: agile ceremonies,
-  estimation techniques, risk management, stakeholder communication, and status
-  reporting. Do NOT use for: writing technical specs, coding, testing, or
-  requirements analysis (use ba).
+  Use when the user asks about project management, sprint planning, estimation with story points or t-shirt sizes, RICE prioritization, velocity, burndown, blockers or status reports. Produces delivery
+  plans, estimates and status reporting. Not for requirements analysis (use ba) or risk registers (use management-risk-management).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

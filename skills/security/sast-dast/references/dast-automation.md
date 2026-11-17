@@ -15,7 +15,7 @@ dast-scan:
         rules_file_name: 'zap-rules.tsv'
         cmd_options: '-a -j'
     - name: Upload results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v7
       with:
         name: zap-report
         path: report.html

@@ -289,7 +289,7 @@ EMIT CHANGES;
     "database.hostname": "postgres.example.com",
     "database.port": "5432",
     "database.user": "debezium",
-    "database.password": "debezium",
+    "database.password": "${file:/opt/kafka/secrets/db.properties:password}",
     "database.dbname": "orders",
     "database.server.name": "orders-db",
     "table.include.list": "public.orders,public.order_items",

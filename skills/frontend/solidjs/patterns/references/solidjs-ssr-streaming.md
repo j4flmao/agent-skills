@@ -881,6 +881,8 @@ function App() {
 
 ### Sitemaps
 
+> Google ignores `changefreq` and `priority` in sitemaps; an accurate `lastmod` matters more.
+
 ```tsx
 // pages/sitemap.xml.ts
 export async function GET() {

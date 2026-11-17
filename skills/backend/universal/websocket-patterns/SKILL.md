@@ -1,10 +1,11 @@
 ---
 name: backend-websocket-patterns
 description: >
-  Use this skill when the user says 'WebSocket', 'real-time', 'socket.io', 'WS connection', 'reconnection', 'WS rooms', 'broadcast', 'WS scaling', 'WS clustering', 'pub/sub over WS', 'SSE', 'Server-Sent Events', 'long polling', 'WS handshake', or when designing real-time communication. This skill enforces consistent WebSocket patterns: connection lifecycle, room management, reconnection strategies, message framing, and horizontal scaling. Applies to any backend stack. Do NOT use for: REST API design, gRPC streaming, message queue design, or frontend rendering.
+  Use when the user asks about WebSockets, live chat with socket.io and rooms, Server-Sent Events, heartbeats, reconnection, broadcasting or scaling WebSockets with Redis pub/sub. Produces real-time messaging server code. Not for audio/video calls (use backend-web-real-time).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

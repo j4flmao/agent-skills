@@ -1,10 +1,11 @@
 ---
 name: backend-api-response
 description: >
-  Use this skill when designing API response contracts — Response<T>, exception handling, error codes, pagination envelopes, standardized payload contracts. This skill enforces: uniform ApiResponse<T> envelope, UPPER_SNAKE_CASE error codes, pagination for list endpoints, ISO 8601 UTC timestamps. Do NOT use for: endpoint routing design, database schema, authentication flows.
+  Use when the user asks about API response format, ApiResponse<T> envelope, error codes, Problem Details (RFC 9457), validation error responses or pagination envelopes. Produces a uniform success/error response contract. Not for endpoint and URL design (use backend-api-design).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

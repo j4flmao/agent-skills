@@ -1,10 +1,11 @@
 ---
 name: webgpu-webgl-rendering
 description: >
-  Use this skill when the user says 'WebGPU', 'WGSL', 'WebGL2', 'GLSL shader', 'GPU buffer', 'bind group', 'render pipeline', 'compute shader in the browser', 'GPU memory in the browser', 'draw call overhead'. It designs low-level browser GPU rendering and compute: WebGPU pipeline/bind-group setup, buffer alignment and upload strategy, WebGL2 fallback, and per-frame performance rules. Do NOT use for: Three.js / React Three Fiber scene work (use web3d-webgl), native Vulkan engines (use the game vulkan skill), or CSS/DOM animation (use frontend-animation).
+  Use when the user asks about WebGPU, WGSL, WebGL2, GLSL shaders, bind groups, render pipelines, GPU buffers or compute shaders in the browser. Produces low-level browser GPU pipeline setup, buffer alignment, WebGL2 fallback and per-frame performance rules. Not for Three.js or React Three Fiber scenes (use web3d-webgl).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [frontend, webgpu, webgl, wgsl, glsl, gpu, rendering, compute]
 ---
 

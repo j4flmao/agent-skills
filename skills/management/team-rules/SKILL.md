@@ -1,12 +1,12 @@
 ---
 name: team-rules
 description: >
-  Use this skill when the user asks about team rules, collaboration, code review,
-  branch strategy, PR templates, git flow, RFC process, incident response, on-call,
-  or decision making.
+  Use when the user asks about team working agreements, code review rules, branch and PR policies, an RFC process, decision-making rules, on-call norms or communication protocols. Produces written team
+  rules and collaboration protocols. Not for reviewing a specific PR (use code-review) or team structure (use management-team-topology).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

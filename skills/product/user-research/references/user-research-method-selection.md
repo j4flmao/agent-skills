@@ -486,7 +486,7 @@ Research Team: {people involved}
 ### A/B Testing
 **Type:** Evaluative | **Participants:** High volume | **Timeline:** 2-4 weeks
 **Output:** Statistical comparison of variants
-**Tools:** Google Optimize, Optimizely, VWO
+**Tools:** Optimizely, VWO, GrowthBook, PostHog
 **Cost:** Medium
 
 ### Benchmark Study

@@ -1,12 +1,12 @@
 ---
 name: enterprise-data-governance
 description: >
-  Use this skill when implementing data governance frameworks: classification, cataloging, lineage, quality, and retention.
-  This skill enforces: data classification, schema registry, lineage tracking, quality monitoring.
-  Do NOT use for: database administration, ETL implementation, data pipeline engineering.
+  Use when the user asks about data governance, data classification, data ownership and stewardship, retention policy, data catalog policy or PII handling rules. Produces a governance framework with
+  classification, owners and controls. Not for building pipelines (use data-etl-pipeline) or lineage tooling (use data-lineage).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

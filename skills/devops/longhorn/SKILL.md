@@ -5,6 +5,7 @@ description: >
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -66,7 +67,7 @@ helm install longhorn longhorn/longhorn \
   --set defaultSettings.replicaCount=3 \
   --set defaultSettings.defaultDataPath="/var/lib/longhorn" \
   --set persistence.defaultClassReplicaCount=3 \
-  --version 1.6.0
+  --version <tested-chart-version>   # pin the release you validated; check longhorn.io for supported versions
 ```
 
 **Pre-requisites**:
@@ -246,7 +247,7 @@ helm repo update longhorn
 helm upgrade longhorn longhorn/longhorn \
   --namespace longhorn-system \
   --reuse-values \
-  --version 1.6.1
+  --version <tested-chart-version>
 
 # 4. Verify
 kubectl -n longhorn-system get pods -w

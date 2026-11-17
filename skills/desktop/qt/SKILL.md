@@ -1,10 +1,11 @@
 ---
 name: desktop-qt
 description: >
-  Use when the user asks about cross-platform Qt application development with QtWidgets, QtQuick/QML, Qt Creator, signals and slots, or Qt deployment. Do NOT use for: KDE-specific, or non-Qt desktop frameworks.
+  Use when the user asks about Qt 6, QtWidgets, Qt Quick/QML, signals and slots, Qt Creator, CMake for Qt, PySide6/PyQt, model/view or deploying Qt apps with windeployqt/macdeployqt; also KDE apps. Produces cross-platform Qt application code and build setup. Not for GTK (use desktop-gtk).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -1,10 +1,14 @@
 ---
 name: ml-feature-engineering
 description: >
-  Use this skill when asked about feature engineering, featuretools, tsfresh, feature selection, feature extraction, encoding, scaling, one-hot encoding, target encoding, feature interaction, datetime features, text features, or feature importance. This skill enforces: categorical encoding strategies (one-hot, label, target, ordinal), numerical scaling methods (standard, min-max, robust), datetime feature extraction (year, month, day, dayofweek, cyclical encoding), text feature extraction (TF-IDF, count vectorizer, word embeddings), feature interaction generation, feature selection techniques (filter, wrapper, embedded), and automated feature engineering with Featuretools deep feature synthesis and tsfresh for time-series. Do NOT use for: model training, deep learning architecture, or experiment tracking.
+  Use when the user asks about feature engineering: categorical encoding (one-hot, target), scaling, datetime
+  and lag features, text features, feature selection, featuretools or tsfresh. Produces leakage-safe
+  transformation pipelines and selection results. Not for serving features online (use ml-feature-store) or
+  model training (use ml-classical-ml).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

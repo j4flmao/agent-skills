@@ -1,12 +1,12 @@
 ---
 name: product-ab-testing
 description: >
-  Use this skill when designing and analyzing A/B tests: hypothesis formation, experiment design, statistical analysis, and decision framework.
-  This skill enforces: hypothesis structure, sample size calculation, statistical significance, AA test validation.
-  Do NOT use for: multivariate testing, bandit algorithms, personalization engines, survey analysis.
+  Use when the user asks about an A/B test, split test, whether a result is statistically significant, sample size, minimum detectable effect, A/A tests or when to stop an experiment. Produces
+  hypothesis, experiment design, power calculation and a ship/no-ship decision rule. Not for causal analysis without randomization (use data-science-causal-inference).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

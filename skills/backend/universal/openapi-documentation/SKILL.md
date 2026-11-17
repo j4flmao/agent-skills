@@ -1,10 +1,11 @@
 ---
 name: backend-openapi-documentation
 description: >
-  Use this skill when the user says 'OpenAPI', 'Swagger', 'API documentation', 'spec-first', 'API spec', 'openapi.yaml', 'swagger.json', 'codegen', 'openapi-generator', 'API contract first'. This skill enforces spec-first API documentation with OpenAPI 3.x, code generation, and versioned specs. Applies to any backend stack. Do NOT use for: proto/gRPC specs, GraphQL schemas, or internal-only endpoints.
+  Use when the user asks about OpenAPI, writing an OpenAPI spec, Swagger, openapi.yaml, spec-first design, Spectral linting, code generation or API docs hosting. Produces OpenAPI 3.1 documents with lint and CI checks. Not for endpoint semantics (use backend-api-design).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -445,7 +446,7 @@ components:
 - [ ] Input validation defined (min/max, pattern, enum)
 
 ## Rules
-- Spec-first: always edit the spec, never generate backwards from code.
+- Spec-first by default for public or multi-team APIs: edit the spec, then generate code. Code-first is acceptable for internal APIs only if the generated spec is committed, linted and diffed in CI.
 - Every operation must have an operationId — it is used for code generation method names.
 - Use camelCase for property names (language-agnostic convention).
 - Never inline schemas — always use $ref to components/schemas.

@@ -1,10 +1,11 @@
 ---
 name: desktop-wpf
 description: >
-  Use when the user asks about WPF (.NET Framework or .NET Core/5+/6+), XAML desktop apps, MVVM with WPF, XAML data binding, or WPF custom controls. Do NOT use for: WinForms (desktop-winforms), WinUI 3, or UWP (desktop-uwp).
+  Use when the user asks about WPF, XAML desktop apps, MVVM with CommunityToolkit.Mvvm, data binding, commands, styles and templates, custom controls or WPF on modern .NET. Produces WPF application architecture and XAML. Not for WinForms (use desktop-winforms) or UWP/WinUI (use desktop-uwp).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

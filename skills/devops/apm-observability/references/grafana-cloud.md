@@ -32,7 +32,9 @@ Grafana Cloud provides a fully managed observability stack including Grafana das
                     └─────────────────┘
 ```
 
-## Grafana Agent
+## Grafana Agent (legacy)
+
+> Grafana Agent (including Flow mode) reached end of support in late 2025 and Promtail on 2026-03-02; Grafana Alloy replaces both. Treat the Agent examples below as migration input (`alloy convert`).
 
 ### Flow Mode Configuration
 ```yaml
@@ -417,7 +419,7 @@ escalation_chain:
 
 ## Best Practices
 
-1. **Use Grafana Agent Flow mode** for simplified configuration and automatic updates.
+1. **Use Grafana Alloy** (successor to Grafana Agent and Promtail) for collection.
 2. **Set appropriate retention** — shorter for debug logs (7d), longer for metrics (30d+).
 3. **Use TraceQL** for deep trace analysis — it's more powerful than tag-based filtering.
 4. **Configure recording rules** for expensive PromQL queries to reduce costs.

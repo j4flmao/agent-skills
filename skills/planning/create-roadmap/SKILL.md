@@ -1,7 +1,8 @@
 ---
 name: planning-create-roadmap
 description: >
-  Use this skill when the user says 'create roadmap', 'roadmap', 'product roadmap', 'feature roadmap', 'quarterly roadmap', 'release plan', 'timeline', 'roadmap planning'. Build a structured product roadmap with themes, timeline, prioritization, and communication plan. Do NOT use for: sprint planning or project scheduling.
+  Use when the user asks to build a quarterly product roadmap, feature roadmap, release plan, now-next-later roadmap or roadmap timeline with themes. Produces a prioritized roadmap with themes, timeline
+  and communication plan. Not for long-range strategy and OKR alignment (use aspirational-roadmapping) or sprint plans (use pm).
 compatibility:
   claude-code: true
   cursor: true
@@ -11,6 +12,7 @@ tags: [planning, roadmap, phase-7]
 version: "1.2.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Create Roadmap

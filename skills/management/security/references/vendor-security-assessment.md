@@ -1108,19 +1108,19 @@ aws_shared_responsibility:
 azure_shared_responsibility:
   microsoft_responsible:
     infrastructure: ["Physical datacenters", "Network infrastructure", "Hypervisor"]
-    saas: ["Office 365", "Dynamics 365", "Azure AD"]
+    saas: ["Office 365", "Dynamics 365", "Microsoft Entra ID"]
     paas: ["Azure SQL", "App Service", "Functions"]
 
   customer_responsible:
     iaas: ["OS hardening", "VM security", "Network configuration"]
     data: ["Classification", "Encryption keys", "Access management"]
-    identity: ["Azure AD configuration", "Conditional access", "MFA"]
+    identity: ["Microsoft Entra ID configuration", "Conditional access", "MFA"]
     application: ["Code security", "Dependency management"]
     monitoring: ["Azure Monitor", "Microsoft Defender for Cloud"]
 
   assessment_focus:
     identity:
-      - "Is Azure AD P2 in use for identity protection?"
+      - "Is Microsoft Entra ID P2 in use for identity protection?"
       - "Are conditional access policies configured?"
       - "Is MFA enforced for all administrators?"
       - "Are legacy authentication protocols blocked?"

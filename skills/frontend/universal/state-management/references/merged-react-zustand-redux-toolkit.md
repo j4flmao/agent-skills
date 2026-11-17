@@ -1,29 +1,9 @@
 # React State: Zustand & Redux Toolkit
 
+> Reference for the `frontend-state-management` skill; [SKILL.md](../SKILL.md) is the entry point. Merged from the former `frontend/state-management` skill.
+
 ## Purpose
-Most React state is either server data (belongs in TanStack Query / RTK Query / framework loaders) or local UI state (`useState`). The remaining shared client state needs a store. Zustand is the minimal option; Redux Toolkit (RTK) adds strict unidirectional flow, devtools time-travel and RTK Query. This skill picks one and implements it with correct typing and render performance.
-
-## Agent Protocol
-
-### Trigger
-"zustand", "redux toolkit", "RTK", "createSlice", "configureStore", "RTK Query", "store re-renders too much", "persist state".
-
-### Input Context
-- React version and framework (Next.js App Router has per-request store concerns).
-- Kind of state: server cache, URL state, form state, global UI/session state.
-- Team size and need for devtools/strict patterns.
-
-### Output Artifact
-Store definition, typed hooks, selectors and usage in components.
-
-### Response Format
-```
-State kind: {server|url|form|local UI|global client}
-Tool: {useState|Context|Zustand|RTK|TanStack Query|RTK Query}
-Store shape: {fields}
-Selectors: {name -> slice}
-Persistence: {none|localStorage|sessionStorage}
-```
+Most React state is either server data (belongs in TanStack Query / RTK Query / framework loaders) or local UI state (`useState`). The remaining shared client state needs a store. Zustand is the minimal option; Redux Toolkit (RTK) adds strict unidirectional flow, devtools time-travel and RTK Query. This reference helps pick one and implements it with correct typing and render performance.
 
 ## Choosing
 | Situation | Use |

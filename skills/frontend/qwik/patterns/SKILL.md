@@ -1,10 +1,11 @@
 ---
 name: frontend-qwik-patterns
 description: >
-  Use this skill when the user says 'Qwik pattern', 'Qwik resumable', 'Qwik City route', 'useSignal', 'useStore', 'Qwik lazy loading', 'Qwik optimizer', '$()', 'component$()', 'routeLoader$', 'routeAction$'. This skill enforces: resumability over hydration, dollar-sign API for all lazy boundaries, fine-grained reactivity with useSignal/useStore, Qwik City file-based routing with lazy loaders/actions, and optimistic prefetching via PrefetchServiceWorker. Requires Qwik project (package.json with @builder.io/qwik). Do NOT use for: Qwik project setup/architecture, or non-Qwik frameworks.
+  Use when the user asks about useSignal, useStore, component$, routeLoader$, routeAction$, server$, the Qwik optimizer or Qwik prefetching. Produces fine-grained reactive Qwik patterns and serialization-safe lazy boundaries for an existing app. Not for Qwik project setup (use frontend-qwik-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -18,6 +19,9 @@ tags: [frontend, qwik, patterns, phase-10]
 ## Purpose
 Apply production patterns to Qwik applications: resumability-driven architecture, fine-grained reactivity, lazy loading boundaries, Qwik City routing with server functions, and prefetch optimization.
 
+## Version Note (2026)
+Stable Qwik is still v1 (`@builder.io/qwik`, `@builder.io/qwik-city`). Qwik 2 reached release candidate in October 2026 under new package names (`@qwik.dev/core`, `@qwik.dev/router`; Qwik City becomes Qwik Router). Use v1 imports for production unless the project already runs v2, and follow the official "Migrating to Qwik v2" guide when upgrading.
+
 ## Agent Protocol
 
 ### Trigger
@@ -25,7 +29,7 @@ Exact user phrases: "Qwik pattern", "Qwik resumable", "Qwik City", "useSignal", 
 
 ### Input Context
 Before activating, verify:
-- package.json has @builder.io/qwik and @builder.io/qwik-city.
+- package.json has @builder.io/qwik + @builder.io/qwik-city (v1) or @qwik.dev/core + @qwik.dev/router (v2).
 - Vite config has Qwik plugins.
 - Prefetch strategy is configured (PrefetchServiceWorker).
 

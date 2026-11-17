@@ -1,10 +1,13 @@
 ---
 name: data-airflow-dbt-orchestration
 description: >
-  Use this skill when the user says 'airflow dbt', 'run dbt from airflow', 'astronomer cosmos', 'DbtCloudRunJobOperator', 'dbt in airflow dag', 'airflow 3 dbt', 'orchestrate dbt models', 'dbt build schedule'. Wires dbt (Core or Cloud) into Apache Airflow 3: choosing the integration pattern, writing the DAG, model-level retries and lineage, data-aware scheduling with Assets, and CI for both. Do NOT use for: general ETL/ELT pipeline architecture (data-etl-pipeline), dbt modeling style and metrics (data-science-analytics-engineering), streaming (data-streaming), pipeline CI/CD beyond Airflow+dbt (data-pipeline-cicd).
+  Use when the user asks to run dbt from Airflow, Astronomer Cosmos, DbtCloudRunJobOperator, dbt in an Airflow 3
+  DAG, Asset-based scheduling or orchestrate a daily ETL with Airflow and dbt. Produces the integration pattern,
+  DAG code, model-level retries and CI. Not for general ETL architecture (use data-etl-pipeline).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [data, airflow, dbt, orchestration, elt, cosmos]
 ---
 

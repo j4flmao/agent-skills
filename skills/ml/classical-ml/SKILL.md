@@ -1,10 +1,14 @@
 ---
 name: ml-classical-ml
 description: >
-  Use this skill when asked about scikit-learn, XGBoost, LightGBM, CatBoost, regression, classification, clustering, ensemble, random forest, gradient boosting, SVM, PCA, feature importance, or cross-validation. This skill enforces: supervised learning pipelines (regression and classification metrics), ensemble methods (bagging, boosting, stacking), gradient boosting hyperparameter tuning (XGBoost, LightGBM, CatBoost), unsupervised learning (clustering dimensionality reduction), scikit-learn Pipeline and ColumnTransformer, cross-validation strategies, and imbalanced data handling. Do NOT use for: deep neural networks, reinforcement learning, or transformer models.
+  Use when the user asks to train a gradient boosting model on tabular data, XGBoost, LightGBM, CatBoost,
+  scikit-learn pipelines, random forest, SVM, clustering, PCA or cross-validation. Produces a leakage-safe
+  sklearn pipeline, model choice and tuning starting points. Not for neural networks (use ml-deep-learning) or
+  search frameworks (use ml-hyperparameter-tuning).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

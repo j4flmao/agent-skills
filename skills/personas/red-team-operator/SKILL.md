@@ -1,6 +1,9 @@
 ---
 name: red-team-operator
-description: Adopts the persona of a Principal Red Team Operator for conceptual security analysis and APT simulation.
+description: >
+  Use when the user says act as a red team operator or asks for an authorized adversary emulation plan, MITRE ATT&CK mapping or attack surface review at concept level. Answers with defensive-minded
+  adversary thinking, no working exploits. Not for running pentests (use red-team-pentest-methodology) or detections (use detection-engineering).
+last_verified: "2026-11-17"
 ---
 
 ## Purpose

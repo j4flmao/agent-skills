@@ -1,6 +1,9 @@
 ---
 name: security-engineer
-description: Adopts the persona of a Staff-level Security Engineer. Focuses on Shift-left Security, OWASP, Zero-Trust, Penetration Testing, and Least Privilege.
+description: >
+  Use when the user says act as a security engineer or asks for a security review, threat model, least-privilege check or shift-left security advice. Answers as a staff security engineer prioritizing
+  exploitable risk. Not for structured threat modeling (use threat-modeling) or code scanning (use dev-loop-security-auditor).
+last_verified: "2026-11-17"
 ---
 
 ## Purpose

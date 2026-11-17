@@ -1,10 +1,11 @@
 ---
 name: desktop-gtk
 description: >
-  Use when the user asks about GTK (GTK3, GTK4) application development, GtkWidget, GtkBuilder UI files, CSS styling for GTK, or cross-platform GTK development. Do NOT use for: GNOME-specific patterns (desktop-gnome), or KDE/Qt (desktop-qt).
+  Use when the user asks about GTK 4 or GTK 3, GtkWidget, GtkBuilder or Blueprint UI files, GTK CSS, event controllers, GtkListView, gtk-rs or PyGObject apps. Produces GTK application code and UI definitions. Not for GNOME Shell extensions or libadwaita platform integration (use desktop-gnome).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

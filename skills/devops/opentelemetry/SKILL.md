@@ -5,6 +5,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -485,6 +486,8 @@ receivers:
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: configure SDKs with standard `OTEL_*` environment variables; export OTLP to a Collector with `memory_limiter` and `batch`; put trace and span IDs in logs; keep vendor choice in the Collector.
 
 - `references/merged-opentelemetry-tracing.md` — OpenTelemetry Tracing Setup (merged from `devops/observability/opentelemetry-tracing`)
 

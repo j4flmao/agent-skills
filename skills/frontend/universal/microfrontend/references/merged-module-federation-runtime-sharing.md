@@ -1,29 +1,9 @@
 # Module Federation: Runtime Dependency Sharing
 
+> Reference for the `microfrontend` skill; [SKILL.md](../SKILL.md) is the entry point. Merged from the former `frontend/architecture/micro-frontends` skill.
+
 ## Purpose
-Module Federation (MF) lets one build (the host) load modules exposed by another independently deployed build (a remote) at runtime, while negotiating shared dependencies such as React so only one copy loads. This skill produces correct host/remote configuration, shared-scope rules and failure handling for Webpack 5, Rspack and Vite.
-
-## Agent Protocol
-
-### Trigger
-"module federation", "remoteEntry.js", "mf-manifest.json", "shared singleton", "requiredVersion", "eager", "Rspack MF", "federated types", "Shared module is not available for eager consumption".
-
-### Input Context
-- Bundler (Webpack 5, Rspack/Rsbuild, Vite) and framework.
-- Host vs. remote role of each app; SSR or client-only.
-- Shared libraries and their version ranges.
-
-### Output Artifact
-Bundler config for host and remote(s), bootstrap entry, runtime loading code.
-
-### Response Format
-```
-Role: {host|remote}  Bundler: {webpack|rspack|vite}
-Exposes: {./Name -> path}
-Remotes: {name -> manifest URL}
-Shared: {lib: singleton, requiredVersion}
-Notes: {eager/bootstrap, types, fallback}
-```
+Module Federation (MF) lets one build (the host) load modules exposed by another independently deployed build (a remote) at runtime, while negotiating shared dependencies such as React so only one copy loads. This reference covers correct host/remote configuration, shared-scope rules and failure handling for Webpack 5, Rspack and Vite.
 
 ## How It Works
 1. A remote build emits a container (`remoteEntry.js`) and, with the `@module-federation/enhanced` runtime, an `mf-manifest.json` describing exposes and shared deps.

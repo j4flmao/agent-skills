@@ -1,10 +1,11 @@
 ---
 name: design-motion-design
 description: >
-  Use when the user asks about motion design, animation, micro-interactions, Lottie, animation principles, UI animation, transition design, or motion guidelines. Do NOT use for: frontend animation implementation (frontend-animation), or visual design (design-visual-design).
+  Use when the user asks about motion design, micro-interactions, easing and duration guidelines, Lottie, transition choreography, motion specs or reduced-motion rules. Produces motion principles, timing tokens and handoff specs. Not for coding animations (use frontend-animation).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -1,10 +1,12 @@
 ---
 name: quality-e2e-testing
 description: >
-  Use this skill when the user says 'e2e strategy', 'which flows should be e2e', 'flaky e2e tests', 'e2e quarantine', 'mock or real backend in e2e', 'e2e test data', 'e2e in CI gating', 'network conditions in e2e', 'accessibility checks in e2e'. It defines how an organization uses end-to-end tests: journey selection, environment and data strategy, network control, flakiness policy, CI gating and reporting. Do NOT use for: writing the suite scaffolding and page objects (use quality-e2e-testing), Playwright API specifics (use quality-e2e-testing), visual regression baselines (use quality/visual-testing), fault-injection experiments (use devops-chaos-engineering).
+  Use when the user asks about end to end tests with Playwright or Cypress, e2e strategy, which flows to cover, flaky e2e tests, quarantine, test data, mocking the backend or gating CI. Produces journey
+  tiers, environment and data plan, flake policy and suite setup. Not for visual baselines (use quality-visual-testing) or API contracts (use quality-contract-testing).
 version: "3.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

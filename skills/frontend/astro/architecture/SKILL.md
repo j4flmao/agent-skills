@@ -1,10 +1,11 @@
 ---
 name: frontend-astro-architecture
 description: >
-  Use this skill when the user says 'Astro', 'Astro architecture', 'Astro islands', 'Astro component', 'Astro page', 'Astro content collection', 'Astro SSG', 'Astro SSR', '.astro file'. This skill enforces: zero-JS-by-default component model, island architecture with client:* directives, file-based routing, type-safe content collections with Zod schemas, and per-deployment adapter configuration. Requires Astro project (package.json with astro). Do NOT use for: Next.js, SPA-only frameworks, or projects needing full client-side hydration.
+  Use when the user asks about Astro, building a content site with Astro islands, .astro files, content collections, file-based routing, static vs server output or Astro adapters. Produces a zero-JS-by-default Astro project structure with typed content and deployment config. Not for client:* tuning, view transitions or integrations (use frontend-astro-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -150,27 +150,23 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(spec));
 
 ## Documentation Testing
 
-```yaml
-# dredd.yml - Contract testing docs against implementation
-language: node
-server: npm start
-server_wait: 5
-hookfiles: ./dredd-hooks.ts
-color: true
-loglevel: warning
+```bash
+# Contract-test the implementation against the spec (Dredd is archived; use Schemathesis)
+uvx schemathesis run openapi.yaml --url http://localhost:3000
 ```
 
 ```typescript
-// Verify OpenAPI spec matches implementation
-import { testSpec } from 'openapi-tester';
+// Assert responses match the OpenAPI document (jest-openapi)
+import jestOpenAPI from 'jest-openapi';
+import request from 'supertest';
+
+jestOpenAPI(require.resolve('../openapi.yaml'));
 
 describe('API Contract', () => {
-  it('matches the OpenAPI specification', async () => {
-    const result = await testSpec('/v1/orders', {
-      method: 'GET',
-      expectedStatus: 200,
-    });
-    expect(result.valid).toBe(true);
+  it('GET /v1/orders matches the OpenAPI specification', async () => {
+    const res = await request(app).get('/v1/orders');
+    expect(res.status).toBe(200);
+    expect(res).toSatisfyApiSpec();
   });
 });
 ```

@@ -1,12 +1,11 @@
 ---
 name: firebase
 description: >
-  Use this skill when working with Firebase platform — Firestore, Authentication, Cloud Storage, Cloud Functions, Hosting, Security Rules, Firebase Admin SDK, Firebase Extensions.
-  This skill enforces: proper security rules, Firestore data modeling (no nesting >3), auth provider configuration, function cold start mitigation, cost-aware query design.
-  Do NOT use for: Supabase, AWS Amplify, custom backend, general PostgreSQL/NoSQL database design.
+  Use when the user asks about Firebase, Firestore data modeling, Firestore security rules, Firebase Auth, Cloud Functions for Firebase, Firebase Admin SDK, App Check or emulators. Produces Firebase backend code and rules. Not for Supabase/Postgres (use supabase) or push messaging on devices (use mobile-push-notifications).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

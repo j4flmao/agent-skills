@@ -9,6 +9,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -49,8 +50,8 @@ Verify: tsc --noEmit && {test runner}
 ### Module Format Selection
 ```
 Target runtime?
-├── Node.js 22+ (modern) → ESM only ("type": "module" in package.json)
-├── Node.js 18-20 → ESM + CJS fallback (dual package)
+├── Node.js 22+/24 LTS (modern; 20 and older are end-of-life) → ESM only ("type": "module"); `require(esm)` works in current LTS lines
+├── Consumers still on old Node or CJS tooling → ESM + CJS fallback (dual package)
 ├── Library for wide consumption → ESM + CJS with "exports" field
 ├── Browser app → Bundled ESM via esbuild/webpack
 └── Mixed-version Node.js + browsers → tsc + bundler with moduleResolution "bundler"
@@ -305,7 +306,7 @@ it("ExtractParams extracts route params", () => {
 
 ## Performance Patterns
 - Use `tsc --noEmit` for type-check only (separate from bundler for speed)
-- `skipLibCheck: true` in app projects (library type resolution takes 60%+ of typecheck time)
+- `skipLibCheck: true` in app projects (checking dependency `.d.ts` files is often a large share of typecheck time)
 - `incremental: true` + `tsbuildinfo` for faster incremental type-checks
 - Prefer `interface` over `type` for object shapes (faster, mergeable, better error messages)
 - Use `const` assertions over `as const` for arrays: `["a", "b"] as const` creates readonly tuple
@@ -433,7 +434,7 @@ Type of application state?
 ### Performance Optimization (Expanded)
 
 - **Bundle size**: let the bundler (Vite/Rollup/esbuild/tsup) tree-shake ES modules; inspect output with `rollup-plugin-visualizer` or `source-map-explorer`.
-- **Type checking speed**: Use `tsc --noEmit` exclusively for type checking (not for compilation). `--incremental` caches `.tsbuildinfo`.
+- **Type checking speed**: Use `tsc --noEmit` exclusively for type checking (not for compilation). `--incremental` caches `.tsbuildinfo`. Microsoft's Go-based native compiler (TypeScript 7, previewed as `tsgo` via `@typescript/native-preview`) type-checks large projects several times faster; trial it in CI before switching.
 - **`skipLibCheck: true`**: skips checking `.d.ts` files, often a large share of check time in apps; use `tsc --extendedDiagnostics` / `--generateTrace` to see where time goes.
 - **`isolatedModules: true`**: Required for esbuild/Vite transpilation. Ensures each file is independently transformable.
 - **`verbatimModuleSyntax`** (TS 5.0+): imports/exports are emitted as written; type-only imports must use `import type`, so single-file transpilers never keep or drop the wrong import.

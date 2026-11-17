@@ -1,10 +1,11 @@
 ---
 name: golang-patterns
 description: >
-  Use this skill when the user says 'Go goroutine', 'Go concurrency', 'Go channel', 'Go error handling', 'Go HTTP', 'Go middleware', 'Go context', 'Go worker pool', 'Go mutex', 'Go select', or when implementing Go-specific patterns. This skill enforces: goroutine lifecycle (every goroutine has a stop condition), errgroup for parallel work, error wrapping, HTTP handler DI via struct/closure, and graceful shutdown. Requires Go (go.mod). Do NOT use for: Go project structure, interface design, or non-Go patterns.
+  Use when the user asks about goroutines, channels, Go context cancellation, worker pools, errgroup, sync.Mutex, Go error wrapping, net/http middleware or go test -race. Produces idiomatic Go concurrency and error-handling code. Not for package layout (use golang-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

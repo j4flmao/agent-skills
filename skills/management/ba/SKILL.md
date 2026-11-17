@@ -1,15 +1,12 @@
 ---
 name: ba
 description: >
-  Use this skill when the user says 'business analysis', 'requirements', 'user
-  story', 'acceptance criteria', 'Gherkin', 'INVEST', 'process flow', 'use case',
-  'stakeholder analysis', 'BRD', 'functional requirements', 'specification', or
-  needs requirements analysis. Covers: requirements elicitation, user story
-  writing, acceptance criteria (Gherkin), process modeling, and stakeholder
-  analysis. Do NOT use for: project management, coding, or testing.
+  Use when the user asks for business analysis, requirements elicitation, a BRD, functional requirements, use cases, user stories with INVEST, acceptance criteria or stakeholder analysis. Produces
+  analyzed requirements, process flows and traceable stories. Not for a full PRD from a brief (use create-prd) or Gherkin automation (use planning-bdd-atdd).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

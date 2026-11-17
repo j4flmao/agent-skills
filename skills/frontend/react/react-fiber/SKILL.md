@@ -1,10 +1,11 @@
 ---
 name: react-fiber-architecture
 description: >
-  Use this skill when the user says 'React Fiber', 'reconciliation algorithm', 'render phase vs commit phase', 'lanes', 'concurrent rendering', 'time slicing', 'why did my component render twice', 'useTransition internals', 'React scheduler'. It explains React's reconciler internals (Fiber nodes, double buffering, lanes, render/commit phases, effects flags) to debug rendering behaviour and performance. Do NOT use for: everyday React app architecture (use react-architecture), Server Components (use react-server-components), or React Three Fiber 3D (use web3d-webgl).
+  Use when the user asks about React Fiber, reconciliation, render vs commit phase, lanes, concurrent rendering, time slicing, the React scheduler or why a component rendered twice. Produces an explanation of reconciler internals to debug render behaviour. Not for app architecture (use react-architecture) or React Three Fiber (use web3d-webgl).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [frontend, react, fiber, reconciliation, concurrent, scheduler, lanes]
 ---
 

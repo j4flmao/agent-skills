@@ -1,57 +1,9 @@
 # Micro-Frontends
 
+> Reference for the `microfrontend` skill; [SKILL.md](../SKILL.md) is the entry point. Merged from the former `architecture/micro-frontends` skill.
+
 ## Purpose
 Micro-frontends let independent teams build, test, and deploy parts of one web UI separately. They solve an organizational scaling problem (many teams blocking each other on one release), not a technical performance problem, and they add runtime complexity, duplication risk, and consistency work. Use them when team autonomy is the bottleneck; otherwise a well-structured modular monolith is cheaper.
-
-## Agent Protocol
-
-### Trigger
-"micro-frontends", "MFE", "Module Federation", "remoteEntry", "single-spa", "import maps", "app shell", "independent UI deployments".
-
-### Input Context
-- Number of teams and how they map to product areas.
-- Current frontend stack(s), build tooling (webpack, Rspack, Vite), deployment pipeline.
-- Pain points: release coordination, build times, ownership conflicts.
-- SEO/SSR requirements and performance budgets.
-
-### Output Artifact
-Go/no-go decision, domain split, composition approach, shared-dependency policy, contracts (routes, events), and governance rules.
-
-### Response Format
-```
-Decision: {MFE|modular monolith} because {reason}
-Split: {MFE: owning team, routes}
-Composition: {build-time|module federation|web components|server/edge|iframe}
-Shared: {react@x singleton, design-system@y} policy={versions}
-Comms: {URL/state params|CustomEvent|shared minimal store}
-Styling isolation: {CSS Modules|Shadow DOM|prefix}
-Perf budget: {JS KB per route}
-```
-
-### Completion Criteria
-- [ ] MFEs split by business domain/route, not by technical layer.
-- [ ] One framework major version enforced for shared singletons.
-- [ ] Contracts between host and remotes versioned and tested.
-- [ ] Remote failures degrade gracefully (error boundary/fallback).
-- [ ] Performance budget measured per route.
-
-## Should You?
-| Signal | Points to |
-|---|---|
-| 1-3 teams, one product area | Modular monolith (monorepo packages, enforced boundaries) |
-| Many teams blocked on one release train | Micro-frontends |
-| Need to embed legacy app during migration | MFE (strangler pattern) |
-| Mixed frameworks as a goal in itself | Red flag: cost without benefit |
-
-## Composition Techniques
-| Technique | When composed | Pros | Cons |
-|---|---|---|---|
-| Build-time packages (npm) | Build | Simple, type-safe | Not independently deployable (host must rebuild) |
-| Module Federation (webpack 5, Rspack, `@module-federation/*` incl. Vite plugin) | Runtime (JS) | Independent deploys, shared singletons | Tooling coupling, version skew at runtime |
-| single-spa / import maps | Runtime | Framework-agnostic lifecycle | More glue code |
-| Web Components | Runtime (DOM) | Framework-agnostic, Shadow DOM isolation | Passing rich data/callbacks is clunky; SSR limited |
-| Server/edge composition (SSI/ESI, fragments) | Request | Good for SEO and first paint | Infra complexity, interactivity wiring |
-| iframes | Runtime | Strong isolation | Poor UX for layout, routing, overlays, a11y |
 
 ## Module Federation Example (webpack 5)
 

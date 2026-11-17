@@ -5,6 +5,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -310,7 +311,7 @@ spec:
   - count: 5
     machineGroupRef:
       name: on-prem-machines
-  kubernetesVersion: "1.28"
+  kubernetesVersion: "<supported-version>"   # use a version still in provider support
   datacenterRef:
     kind: VSphereDatacenterConfig
     name: vsphere-dc

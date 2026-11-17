@@ -1,10 +1,14 @@
 ---
 name: data-data-strategy
 description: >
-  Use this skill when designing data strategy, data vision, data operating model, data culture, data maturity assessment, data ownership, or data governance roadmap. This skill enforces: maturity model assessment across people/process/tech/governance, vision and strategic pillar definition, operating model selection (centralized/federated/hybrid), data culture building with literacy programs, and data ownership frameworks with RACI and SLA. Do NOT use for: specific data platform architecture, ETL pipeline design, or tool-specific data engineering decisions.
+  Use when the user asks about data strategy, data vision, data maturity assessment, data operating model
+  (centralized, federated, hybrid), data culture or data literacy. Produces a maturity assessment, strategic
+  pillars and a governance roadmap. Not for data mesh implementation (use data-data-mesh) or governance policy
+  (use enterprise-data-governance).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

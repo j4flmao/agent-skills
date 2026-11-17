@@ -1,10 +1,11 @@
 ---
 name: nodejs-architecture
 description: >
-  Use this skill when designing Node.js backend architecture — Express, Fastify, Hono. Project structure, middleware pipeline, routing, error handling, validation. This skill enforces: separation of concerns, correct middleware ordering, global error handling, Zod/Joi validation integration. Do NOT use for: frontend architecture, database schema design, DevOps configuration.
+  Use when the user asks about Node.js backend architecture, choosing Express vs Fastify vs Hono, Node project structure, middleware order, central error handling or env validation with Zod. Produces a Node service layout. Not for one framework in depth (use nodejs-express-skill, nodejs-fastify or nodejs-hono).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -25,7 +26,7 @@ User request includes: `node.js`, `nodejs`, `express`, `fastify`, `hono`, `node 
 
 ### Input Context
 - Framework (Express, Fastify, Hono)
-- Runtime (Node.js v18+, Bun, Deno)
+- Runtime (Node.js 22 or 24 LTS — 18 and 20 are end-of-life; Bun, Deno)
 - Language (JavaScript, TypeScript)
 - Project type (REST API, GraphQL, BFF)
 

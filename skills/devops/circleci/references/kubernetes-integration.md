@@ -235,7 +235,7 @@ jobs:
 jobs:
   kustomize-deploy:
     docker:
-      - image: k8s.gcr.io/kustomize/kustomize:v5.4.0
+      - image: registry.k8s.io/kustomize/kustomize:v5.4.0
     steps:
       - checkout
       - run: |
@@ -254,7 +254,7 @@ jobs:
       overlay:
         type: string
     docker:
-      - image: k8s.gcr.io/kustomize/kustomize:v5.4.0
+      - image: registry.k8s.io/kustomize/kustomize:v5.4.0
     steps:
       - checkout
       - run: |

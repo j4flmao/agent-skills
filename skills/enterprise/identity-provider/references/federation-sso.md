@@ -65,7 +65,7 @@ NameID: email or persistent identifier
 
 ### Trust Establishment
 ```
-Primary IdP (Azure AD) ← Trust → Secondary IdP (Keycloak)
+Primary IdP (Microsoft Entra ID) ← Trust → Secondary IdP (Keycloak)
 - Exchange metadata
 - Configure attribute mapping
 - Test token exchange
@@ -85,7 +85,7 @@ memberOf            → groups (DN to name)
 ### Migration Scenarios
 ```
 Acquisition: Federate both IdPs, migrate groups gradually
-Cloud Migration: On-prem ADFS → Azure AD, phased cutover
+Cloud Migration: On-prem ADFS → Microsoft Entra ID, phased cutover
 Merger: Multi-IdP federation, unified directory buildout
 ```
 

@@ -4,6 +4,10 @@
 
 ```bash
 # Install Rust toolchain
+# Official rustup installer (HTTPS-only). To review it first: download, inspect, then run.
+# On Windows use rustup-init.exe from https://rustup.rs or: winget install Rustlang.Rustup
+# Official rustup installer (HTTPS-only). To review it first: download, inspect, then run.
+# On Windows use rustup-init.exe from https://rustup.rs or: winget install Rustlang.Rustup
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # Platform-specific dependencies

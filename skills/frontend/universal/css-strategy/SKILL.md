@@ -1,10 +1,11 @@
 ---
 name: frontend-css-strategy
 description: >
-  Use this skill when the user says 'CSS strategy', 'CSS Modules', 'CSS-in-JS', 'utility-first CSS', 'Tailwind CSS', 'styled-components', 'Emotion', 'CSS organization', 'CSS architecture', 'CSS approach', 'BEM', 'CSS naming convention', 'CSS preprocessor', 'Sass', 'PostCSS', 'styled-jsx', 'Linaria', 'vanilla-extract', 'CSS decision', 'styling approach'. This skill helps choose the right CSS approach based on project size, team composition, performance requirements, and build tooling. Works with any frontend framework. Do NOT use for: component design (use design-system skill), Tailwind-specific questions (use tailwind-css skill), or design token setup (use theming skill).
+  Use when the user asks which styling approach to use: CSS Modules vs CSS-in-JS vs Tailwind, styled-components, Emotion, vanilla-extract, BEM, Sass, PostCSS, cascade layers or CSS architecture. Produces a styling decision with folder and naming conventions. Not for Tailwind configuration (use frontend-tailwind-css) or dark mode (use frontend-theming).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

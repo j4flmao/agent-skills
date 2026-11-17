@@ -1,10 +1,12 @@
 ---
 name: headless-ecommerce
 description: >
-  Use this skill when the user says 'headless commerce', 'shopify hydrogen', 'storefront api', 'oxygen', 'composable commerce', 'headless shopify', 'commerce frontend caching'. It designs headless storefronts (Shopify Hydrogen/Storefront API and other commerce APIs): data fetching, caching per data type, cart handling, and deployment. Do NOT use for: checkout conversion tactics (use ecommerce-checkout-cart), cart/order backend modeling (use ecommerce-checkout-cart), payment gateways (use ecommerce-payment-processing).
+  Use when the user asks about headless commerce, Shopify Hydrogen, Storefront API, Oxygen, composable commerce or caching a commerce frontend. Produces a headless storefront design: data fetching,
+  cache per data type, cart handling and deployment. Not for checkout and order backends (use ecommerce-checkout-cart) or payments (use ecommerce-payment-processing).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [ecommerce, headless, shopify, hydrogen, storefront-api, caching]
 ---
 

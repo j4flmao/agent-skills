@@ -268,13 +268,14 @@ icon_optimization:
 ### Virtual Scrolling
 
 ```html
-<!-- Ionic Virtual Scroll (deprecated in Ionic 7+, use ion-virtual-scroll or custom) -->
-<ion-content>
-    <ion-virtual-scroll [items]="items" approxItemHeight="80px">
-        <ion-item *virtualItem="let item">
+<!-- ion-virtual-scroll was removed in Ionic 6. In Angular, use the CDK virtual scroller
+     (ScrollingModule from @angular/cdk/scrolling); in React/Vue use a list virtualizer such as TanStack Virtual. -->
+<ion-content [scrollY]="false">
+    <cdk-virtual-scroll-viewport itemSize="80" class="ion-content-scroll-host">
+        <ion-item *cdkVirtualFor="let item of items">
             <ion-label>{{ item.name }}</ion-label>
         </ion-item>
-    </ion-virtual-scroll>
+    </cdk-virtual-scroll-viewport>
 </ion-content>
 ```
 

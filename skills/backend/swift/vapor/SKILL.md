@@ -1,10 +1,11 @@
 ---
 name: vapor-backend
 description: >
-  Use this skill when building Vapor Swift backend applications — async HTTP server, Fluent ORM, WebSocket support, middleware pipeline. This skill enforces: structured concurrency with async/await, proper route grouping, Fluent migration patterns, environment-based configuration. Do NOT use for: iOS apps, macOS desktop apps, Kitura or Hummingbird projects.
+  Use when the user asks about Vapor, server-side Swift, Fluent ORM and migrations, Vapor middleware, Vapor WebSocket or Vapor Queues. Produces async/await Vapor 4 services with tests. Not for iOS apps (use ios).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

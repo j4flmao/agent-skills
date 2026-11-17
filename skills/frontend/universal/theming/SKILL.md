@@ -1,7 +1,7 @@
 ---
 name: frontend-theming
 description: >
-  Use this skill when the user says 'theming', 'dark mode', 'light mode', 'theme switching', 'CSS variables', 'custom properties', 'theme provider', 'theme context', 'color scheme', 'prefers-color-scheme', 'theme toggle', 'design tokens'. Implement theme systems with CSS variables, dark mode, design tokens, and per-framework patterns. Do NOT use for: CSS-in-JS library selection or UI component design.
+  Use when the user asks to set up dark mode with CSS variables, light/dark themes, prefers-color-scheme, a theme toggle without flash, color-scheme, light-dark() or multi-brand themes. Produces theme tokens as custom properties and a switching mechanism. Not for token tiers in a component library (use frontend-design-system).
 compatibility:
   claude-code: true
   cursor: true
@@ -11,6 +11,7 @@ tags: [frontend, theming, phase-7, universal]
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Frontend Theming
@@ -465,7 +466,7 @@ describe('ThemeProvider', () => {
 
 ## Accessibility Considerations
 
-- Ensure WCAG 2.1 AA contrast ratios in ALL themes (4.5:1 normal text, 3:1 large text)
+- Ensure WCAG 2.2 AA contrast ratios in ALL themes (4.5:1 normal text, 3:1 large text)
 - Dark theme should maintain sufficient contrast — not just invert colors
 - Theme toggle button must have accessible label ("Switch to dark mode" / "Switch to light mode")
 - Announce theme change to screen readers using aria-live region

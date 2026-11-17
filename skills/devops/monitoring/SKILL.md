@@ -5,6 +5,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -65,7 +66,7 @@ Produce the artifact directly. No preamble, no postamble, no explanations. No fi
 | **Loki** | Log aggregation (K8s native) | Kubernetes, Prometheus ecosystem |
 | **ELK (Elasticsearch + Logstash + Kibana)** | Log aggregation + search | Complex log parsing, full-text search, SIEM |
 | **Tempo** | Distributed tracing | Need traces correlated with metrics/logs |
-| **Promtail** | Log shipping → Loki | Kubernetes log collection |
+| **Grafana Alloy** | Log shipping → Loki (replaces Promtail, EOL 2026-03-02) | Kubernetes log collection |
 | **Filebeat** | Log shipping → ELK | Lightweight, wide format support |
 | **Metricbeat** | System metrics → ELK | Infrastructure metrics |
 

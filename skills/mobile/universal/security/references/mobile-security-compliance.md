@@ -93,7 +93,7 @@ gdpr:
   requirement: "Appropriate technical measures to protect personal data"
   implementation:
     - "iOS: Data Protection API (NSFileProtectionComplete)"
-    - "Android: EncryptedSharedPreferences, File-based encryption"
+    - "Android: Keystore-backed encryption (Jetpack Security crypto is deprecated), file-based encryption"
     - "Database: SQLCipher for SQLite, Core Data with encryption"
     - "Keychain/Keystore for secrets"
   backup_exclusion:

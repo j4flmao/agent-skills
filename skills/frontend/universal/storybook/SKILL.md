@@ -1,10 +1,11 @@
 ---
 name: frontend-storybook
 description: >
-  Use this skill when the user says 'storybook', 'component documentation', 'visual testing', 'storybook addon', 'CSF', 'component story'. This skill enforces CSF (Component Story Format) 3.x standards, accessible stories, interaction testing, and addon integration. Applies to any frontend stack.
+  Use when the user asks to document button variants or other components in Storybook, CSF 3 stories, args and controls, play functions, interaction or a11y tests in Storybook, Chromatic visual tests or Storybook config. Produces stories, docs and test setup for Storybook 9+. Not for general unit and E2E testing (use frontend-testing).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

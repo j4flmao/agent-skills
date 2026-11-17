@@ -67,7 +67,7 @@ Proposal → Design → Review → Build → Test → Document → Release → M
 ### Accessibility Testing
 - Automated: axe-core, Lighthouse
 - Manual: keyboard navigation, screen reader
-- Compliance: WCAG 2.1 AA minimum
+- Compliance: WCAG 2.2 AA minimum
 
 ## Documentation
 

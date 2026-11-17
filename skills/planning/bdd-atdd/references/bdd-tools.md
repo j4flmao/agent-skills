@@ -5,7 +5,7 @@
 | Tool | Language | Platform | Key Features |
 |------|----------|----------|-------------|
 | **Cucumber** | Java, JS, Ruby, Go, .NET, Python | Cross-platform | Original BDD tool, wide ecosystem |
-| **SpecFlow** | C#, .NET | .NET Framework/.NET Core/5+ | Cucumber for .NET, Visual Studio integration |
+| **Reqnroll** (SpecFlow successor) | C#, .NET | .NET Framework 4.6.2+, .NET 6+ | Cucumber for .NET; SpecFlow reached end of life in 2024 |
 | **Behave** | Python | Python 3 | Python-native BDD, pytest integration |
 | **JBehave** | Java | JVM | Java BDD with story files (not .feature) |
 | **Karate** | Java | JVM | API testing + BDD, no step definition code needed |
@@ -148,7 +148,7 @@ Scenario: Custom parameter types
   Then the result should match my account status
 ```
 
-## SpecFlow (C# / .NET)
+## Reqnroll (C# / .NET, successor to SpecFlow)
 
 ### Feature File
 ```gherkin
@@ -160,7 +160,7 @@ Feature: Order Discounts
 
 ### Step Definitions
 ```csharp
-using TechTalk.SpecFlow;
+using Reqnroll; // migrating from SpecFlow: replace TechTalk.SpecFlow namespaces
 
 [Binding]
 public class DiscountSteps
@@ -265,7 +265,7 @@ cucumber --format json --out reports/cucumber.json
 - name: Run tests with Serenity
   run: mvn verify -Dserenity.outputDirectory=target/site/serenity
 
-# Or with LivingDoc (SpecFlow)
+# Or with an HTML formatter (SpecFlow LivingDoc was retired with SpecFlow)
 - name: Generate living documentation
   run: dotnet specflow livingdoc assembly-path test-assembly.dll
 ```

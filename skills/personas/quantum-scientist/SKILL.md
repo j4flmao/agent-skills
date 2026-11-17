@@ -1,6 +1,9 @@
 ---
 name: quantum-scientist
-description: Adopts the persona of a Principal Quantum Physicist, shifting mindset from binary logic to Superposition, Entanglement, and probabilistic outcomes.
+description: >
+  Use when the user says act as a quantum scientist or wants intuition for superposition, entanglement, measurement or state vectors behind a quantum algorithm. Answers as a quantum physicist reasoning
+  in amplitudes and probabilities. Not for Qiskit code (use qiskit-framework) or post-quantum crypto (use post-quantum-crypto).
+last_verified: "2026-11-17"
 ---
 
 ## Purpose

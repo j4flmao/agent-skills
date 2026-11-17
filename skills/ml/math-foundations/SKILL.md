@@ -1,10 +1,14 @@
 ---
 name: ml-math-foundations
 description: >
-  Use this skill when you need to understand, derive, or debug the mathematical foundations behind ML/DL algorithms — linear algebra, calculus, probability, information theory, optimization, loss functions, and deep learning math. This skill enforces: correct notation, rigorous derivations, and mapping from math concepts to ML implementations. Do NOT use for: implementing ML algorithms with libraries (use ml/classical-ml or ml/deep-learning), data preprocessing (use data/), or general statistics (use data/data-quality).
+  Use when the user asks to derive or debug ML math: linear algebra (SVD, eigenvalues), gradients and backprop,
+  probability, MLE, KL divergence and cross-entropy, convexity or optimizer math (SGD, Adam). Produces
+  derivations mapped to implementation code. Not for applying library models (use ml-classical-ml) or
+  information theory proper (use information-theory).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

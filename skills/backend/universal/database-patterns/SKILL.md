@@ -1,10 +1,11 @@
 ---
 name: backend-database-patterns
 description: >
-  Use this skill when the user says 'database design', 'schema design', 'query optimization', 'slow query', 'migration', 'index', 'ORM', 'repository pattern', 'N+1 problem', 'transaction', or when designing or troubleshooting the data layer. This skill enforces schema design principles, indexing strategy, N+1 detection and fixing, transaction boundaries, migration best practices, and the repository pattern. Applies to PostgreSQL, MySQL, MongoDB, and ORMs (TypeORM, Prisma, SQLAlchemy, Diesel, GORM, Spring Data). Do NOT use for: API design, caching, or frontend state management.
+  Use when the user asks about database schema design, slow queries, indexes, EXPLAIN ANALYZE, N+1 problems, transactions, keyset pagination, connection pooling or repository pattern. Produces schema, index and query fixes. Not for engine internals (use architecture-postgresql-internals) or migrations tooling (use database-migration).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

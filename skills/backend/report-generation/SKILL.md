@@ -1,12 +1,11 @@
 ---
 name: backend-report-generation
 description: >
-  Enforce report generation patterns including PDF generation (Puppeteer, wkhtmltopdf),
-  Excel/CSV export, async generation with queues, report scheduling, large dataset handling,
-  template rendering, and report API design. NOT for real-time dashboards or live charting.
+  Use when the user asks about PDF report generation, Puppeteer or Playwright PDFs, Excel/CSV export, async report jobs, scheduled reports or exporting large datasets. Produces a report pipeline with templates, queued generation and delivery. Not for live dashboards (use data-bi-tools) or bulk import (use backend-bulk-import).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

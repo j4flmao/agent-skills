@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -80,7 +81,7 @@ What type of AR tracking is needed?
 ├── Body tracking (motion capture)
 │   └── ARBodyTrackingConfiguration (iOS A12+) / ARCore 3D Body
 └── Object scanning (3D object recognition)
-    └── ARObjectScanningConfiguration / ARCore Cloud Anchors
+    └── ARObjectScanningConfiguration + ARObjectAnchor (no direct ARCore equivalent; use ML-based detection)
 ```
 
 ### 3D Asset Pipeline Decision
@@ -100,7 +101,7 @@ Budle target size?
 ## Workflow
 
 ### Step 1: Platform Selection
-ARKit (iOS 11+): A12 Bionic or later for LiDAR, ARWorldTrackingConfiguration for 6DOF, ARImageTrackingConfiguration for image targets, ARFaceTrackingConfiguration for face AR. ARCore (Android 7+): Google Play Services for AR, supported devices list at developers.google.com/ar/devices, Depth API for occlusion, Augmented Images for image tracking. Cross-platform: use ARFoundation (Unity) or SceneView (React Native / Flutter).
+ARKit (iOS 11+): LiDAR scene reconstruction only on LiDAR devices (Pro iPhones from iPhone 12 Pro, iPad Pro 2020+), ARWorldTrackingConfiguration for 6DOF, ARImageTrackingConfiguration for image targets, ARFaceTrackingConfiguration for face AR. ARCore (Android 7+): Google Play Services for AR, supported devices list at developers.google.com/ar/devices, Depth API for occlusion, Augmented Images for image tracking. Cross-platform: use ARFoundation (Unity) or SceneView (React Native / Flutter).
 
 | Capability | ARKit | ARCore |
 |-----------|-------|--------|
@@ -147,7 +148,7 @@ Running AR features on unsupported devices crashes the app. Always check `ARConf
 Setting a fixed tracking configuration without handling runtime failures. Always monitor session state changes and provide user recovery prompts for limited tracking.
 
 ### Pitfall 3: Loading Uncompressed 3D Models
-Shipping raw OBJ or FBX files in production bundles. These are 5-10x larger than compressed glTF or USDZ, causing long load times and memory pressure.
+Shipping raw OBJ or FBX files in production bundles. These are usually much larger than compressed glTF (Draco/meshopt) or USDZ, causing long load times and memory pressure.
 
 ### Pitfall 4: Creating Anchors Every Frame
 Adding ARAnchors in the update loop creates anchor overload, degrading tracking quality. Batch anchor operations and reuse existing anchors when possible.
@@ -186,7 +187,7 @@ AR performance on simulators/emulators bears no relation to real-device performa
 - Load time: <2s per model. Show loading indicator if longer.
 - Texture resolution: max 1024x1024 for mobile. Use compressed formats (ASTC, ETC2).
 - Battery: AR session consumes 300-500mW. Optimize render frequency when battery <20%.
-- Memory: ARKit uses ~200MB baseline. Total app memory should stay under 500MB.
+- Memory: the AR session (camera frames, tracking, scene mesh) has a large baseline of its own; profile with Xcode memory gauge / Android Studio Profiler and keep model and texture budgets explicit.
 
 ## Rules
 - Always detect device AR capability before activating AR features. Provide graceful fallback.
@@ -204,7 +205,7 @@ AR performance on simulators/emulators bears no relation to real-device performa
 
 ## Multi-User AR & Cloud Anchors
 
-For shared AR experiences where multiple users see the same virtual content at the same location: iOS ARKit supports `ARWorldMap` for saving and sharing AR scene state. Host device exports the world map (`ARSession.createWorldMap`) and sends it to other devices via network (WebSocket, custom signaling server). Receiving devices import the world map (`ARSession.run(with: worldMapConfiguration)`) to align their AR coordinate system. Android ARCore provides Cloud Anchons via `CloudAnchorManager`. Host resolves anchors to the cloud (`ArCoreResolveAndAttachAnchor`), share the cloud anchor ID, guests resolve. For cross-platform: use ARCore Cloud Anchors from both platforms via the ARCore SDK. Multi-user features require: (1) real-time anchor state sync via network, (2) conflict resolution for simultaneous moves, (3) late-joining support (new users see existing content), (4) persistent content across sessions. Network sync should use WebRTC or a lightweight WebSocket protocol (not polling). Sync frequency: position updates at 20Hz, anchor events on change.
+For shared AR experiences where multiple users see the same virtual content at the same location: iOS ARKit supports `ARWorldMap` for saving and sharing AR scene state. Host device exports the world map (`ARSession.createWorldMap`) and sends it to other devices via network (WebSocket, custom signaling server). Receiving devices import the world map (`ARSession.run(with: worldMapConfiguration)`) to align their AR coordinate system. Android ARCore provides Cloud Anchors: the host calls `Session.hostCloudAnchorAsync(anchor, ttlDays, ...)`, shares the returned cloud anchor ID, and guests call `Session.resolveCloudAnchorAsync(id, ...)`. Hosting requires the ARCore API with keyless (OAuth) or API-key authorization configured on the backend. For cross-platform: use ARCore Cloud Anchors from both platforms via the ARCore SDK. Multi-user features require: (1) real-time anchor state sync via network, (2) conflict resolution for simultaneous moves, (3) late-joining support (new users see existing content), (4) persistent content across sessions. Network sync should use WebRTC or a lightweight WebSocket protocol (not polling). Sync frequency: position updates at 20Hz, anchor events on change.
 
 ## Procedural Content & Dynamic Scene Generation
 
@@ -213,11 +214,11 @@ For AR experiences that need dynamic content without pre-bundled 3D assets, use 
 ### Rendering Pipeline Decision Tree
 ```
 Rendering complexity for AR scene?
-├── Simple (static models, flat lighting) → SceneKit (iOS) / Sceneform (Android)
+├── Simple (static models, flat lighting) → RealityKit (iOS; SceneKit is deprecated since 2025) / SceneView (Android; successor to the archived Sceneform)
 │   Built-in rendering, PBR materials, shadows — good for most product placement
 ├── Medium (animated models, environment lighting) → RealityKit (iOS) / ARCore + Filament (Android)
 │   RealityKit: entity-component, animations, physics, environment probes
-│   Filament: PBR renderer from Google, used by ARCore internally
+│   Filament: Google's PBR renderer, used by SceneView (ARCore itself does no rendering)
 ├── Complex (custom shaders, post-processing, 50k+ polys)
 │   → Metal (iOS) / Vulkan (Android) — full GPU control
 │   Significant engineering cost, only for specialized rendering apps
@@ -290,7 +291,7 @@ Track AR session quality metrics to diagnose user experience issues: (1) trackin
 - Check camera permission granted before starting AR session
 - Validate 3D model format and compression (no raw OBJ/FBX)
 - Confirm LOD levels exist for all models >50k polygons
-- Profile memory: ARKit baseline ~200MB, stay under 500MB total
+- Profile memory on the oldest supported device; the AR session itself uses a large share
 - Check anchor count doesn't grow unbounded over session lifetime
 - Verify environment texturing enabled for realistic lighting
 - Confirm haptic feedback on placement/selection

@@ -15,7 +15,7 @@ This reference covers tools, platforms, and automation patterns for compliance o
 | Policy-as-Code | OPA/Rego, Sentinel, cfn-guard, Checkov | Infrastructure compliance enforcement |
 | IaC Scanning | Checkov, tfsec, Terrascan, Bridgecrew | Pre-deployment compliance checks |
 | SIEM | Splunk, Elastic, Sumo Logic, Azure Sentinel | Log aggregation, monitoring, compliance reporting |
-| Access Control | Okta, Azure AD, OneLogin | Access review automation, SSO compliance |
+| Access Control | Okta, Microsoft Entra ID, OneLogin | Access review automation, SSO compliance |
 | GRC Platform | ServiceNow GRC, Archer, AuditBoard | Enterprise governance, risk, and compliance |
 
 ### Automated Compliance Platforms

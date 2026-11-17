@@ -1,10 +1,11 @@
 ---
 name: backend-background-jobs
 description: >
-  Use this skill when designing background job processing, task queues, or worker systems. This skill enforces: job idempotency, retry with exponential backoff, queue topology with dead letter, and worker concurrency controls. Applies to any backend stack with Redis/SQS/DB-backed queues. Do NOT use for: event streaming (Kafka), real-time pub/sub, or synchronous request processing.
+  Use when the user asks about background jobs, processing uploads in a background worker with retries, task queues, BullMQ, Sidekiq, Celery, dead letter queues or worker concurrency. Produces idempotent job workers with retry policy. Not for cron schedules (use backend-scheduling-cron) or broker design (use backend-message-queue).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

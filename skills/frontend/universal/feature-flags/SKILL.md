@@ -1,10 +1,11 @@
 ---
 name: frontend-feature-flags
 description: >
-  Use this skill when the user says 'feature flags', 'LaunchDarkly', 'split testing', 'A/B testing', 'gradual rollout', 'canary release', 'feature toggle', 'flag provider', 'targeting rule', or when implementing frontend feature flags. This skill enforces: typed flag definitions, provider-agnostic abstraction layer, gradual rollout with percentage targeting, and A/B test assignment tracking. Works with LaunchDarkly, Split.io, Flagsmith, or custom flag backends. Do NOT use for: backend-only flag evaluation, server-side config management, infrastructure provisioning.
+  Use when the user asks about frontend feature flags, LaunchDarkly, OpenFeature, Unleash, Flagsmith, gradual rollout, kill switches or A/B test assignment in the UI. Produces a typed, provider-agnostic flag layer without flicker. Not for server-side flag evaluation (use backend-feature-flags) or experiment statistics (use product-ab-testing).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

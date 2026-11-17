@@ -1,7 +1,7 @@
 ---
 name: frontend-data-fetching
 description: >
-  Use this skill when the user says 'data fetching', 'TanStack Query', 'SWR', 'React Query', 'server state', 'API client', 'data fetching pattern', 'cache invalidation', 'optimistic update', 'pagination data', 'infinite scroll', 'stale-while-revalidate'. Design data fetching layer for frontend apps. Do NOT use for: backend API design or database queries.
+  Use when the user asks how to cache server data on the client with TanStack Query, SWR or RTK Query, query keys, staleTime/gcTime, cache invalidation, optimistic updates, pagination or infinite scroll. Produces a typed data-fetching layer with caching and mutation patterns. Not for backend API design (use backend-api-design).
 compatibility:
   claude-code: true
   cursor: true
@@ -11,6 +11,7 @@ tags: [frontend, data-fetching, phase-7, universal]
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Frontend Data Fetching
@@ -44,7 +45,7 @@ Data fetching architecture with query/mutation patterns and caching strategy.
 <optimistic-updates, invalidation, error-handling>
 
 ## Cache Config
-<staleTime, cacheTime, persistence>
+<staleTime, gcTime, persistence>
 
 —
 Compression footer: frontend-data-fetching/v1 | 4 sections | lib: <selected> | cache: <persisted|memory>

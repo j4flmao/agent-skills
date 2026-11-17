@@ -1,10 +1,11 @@
 ---
 name: ember
 description: >
-  Use this skill when the user says 'Ember.js', 'Ember app', 'Ember setup', 'Ember CLI', 'Ember Data', 'Ember Octane', 'Ember component', 'Ember route', 'Ember service', or when building ambitious web applications with Ember.js. This skill enforces: convention over configuration, Ember CLI for code generation, Ember Data for state management, Octane patterns (glimmer components, tracked properties, native classes). Requires package.json with ember-source or ember-cli. Do NOT use for: React/Vue/Angular projects, vanilla JS, or non-Ember projects.
+  Use when the user asks about Ember.js, Ember CLI, Ember Octane, Glimmer components, tracked properties, Ember routes and services, or Ember Data / WarpDrive. Produces convention-driven Ember code and data-layer setup. Not for React, Vue or Angular apps (use react-architecture, vue-architecture or angular-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -17,6 +18,9 @@ tags: [frontend, ember, phase-2]
 
 ## Purpose
 Build ambitious web applications using Ember's convention-over-configuration approach — Ember CLI for scaffolding, Ember Data for state management, and Octane-era patterns for modern components.
+
+## Version Note (2026)
+Ember Data is now published as **WarpDrive** (`@warp-drive/*`); the `ember-data` package is meant for maintaining existing apps, and recent Ember releases use WarpDrive packages directly. Concepts (store, models, request handling) carry over; check the installed package before writing imports.
 
 ## Agent Protocol
 

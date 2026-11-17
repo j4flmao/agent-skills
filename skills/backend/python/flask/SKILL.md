@@ -1,10 +1,11 @@
 ---
 name: flask-backend
 description: >
-  Use this skill when building Flask backend applications — lightweight, extensions, blueprints, Jinja2 templates, SQLAlchemy ORM. This skill enforces: blueprint-based modularization, proper application factory pattern, extension initialization, request context management. Do NOT use for: Django projects, FastAPI applications, Tornado async servers.
+  Use when the user asks about Flask, Flask application factory, blueprints, Flask extensions (init_app), Flask-SQLAlchemy, Alembic migrations or Flask testing. Produces modular Flask apps. Not for FastAPI (use python-fastapi-architecture) or Django (use python-django-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -1,10 +1,11 @@
 ---
 name: backend-distributed-locking
 description: >
-  Use this skill when the user says 'distributed lock', 'Redis lock', 'Redlock', 'ZooKeeper lock', 'advisory lock', 'PostgreSQL lock', 'pg_advisory_lock', 'lease', 'distributed mutex', 'lock timeouts', 'fencing token'. This skill implements distributed locking using Redis Redlock, ZooKeeper, PostgreSQL advisory locks, or lease-based mechanisms. Applies to any backend stack. Do NOT use for: single-process mutexes, database transaction serialization, or optimistic concurrency.
+  Use when the user asks about a distributed lock, two workers processing the same job, Redis lock (SET NX PX), Redlock, pg_advisory_lock, leases or fencing tokens. Produces a lock design with TTLs, fencing and failure handling. Not for job deduplication via idempotency keys (use backend-idempotency).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

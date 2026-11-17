@@ -1,5 +1,7 @@
 # IAP Receipt Validation Server
 
+> **Deprecated API below:** Apple deprecated `verifyReceipt` and app-specific shared secrets in 2023. Keep this only for legacy StoreKit 1 receipts; new code verifies StoreKit 2 signed transactions with the App Store Server Library (`SignedDataVerifier`) and the App Store Server API, as shown in `../SKILL.md` Step 5.
+
 ## Overview
 
 A receipt validation server is the backend service that verifies in-app purchase receipts from Apple App Store and Google Play Store. It ensures purchases are authentic, prevents fraud, and maintains the canonical source of truth for user entitlements. This reference covers server architecture, validation endpoints, security considerations, error handling, and production deployment.

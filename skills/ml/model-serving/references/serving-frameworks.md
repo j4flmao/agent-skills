@@ -1,6 +1,8 @@
 # Serving Frameworks Comparison
 
-## TorchServe
+## TorchServe (archived)
+
+The pytorch/serve repository was archived in August 2025 and receives no bug or security fixes. Use this section to operate or migrate existing deployments only.
 
 ```python
 # Model archive creation

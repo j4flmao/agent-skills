@@ -1,10 +1,11 @@
 ---
 name: kotlin-backend-patterns
 description: >
-  Use this skill when implementing Kotlin backend patterns — repository pattern, service layer, DTO mapping, DI setup (Koin, Kodein), testing with MockK, and structured concurrency. This skill enforces: proper pattern usage, consistent DI wiring, testable architecture. Do NOT use for: framework-specific setup, database migrations, deployment.
+  Use when the user asks about Koin DI, MockK tests, runTest coroutine testing, Kotlin repository and service layers, DTO mapping with extension functions or sealed error hierarchies. Produces Kotlin backend pattern code. Not for Ktor app structure (use kotlin-architecture) or Android (use android).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

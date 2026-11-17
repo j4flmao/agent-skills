@@ -1,6 +1,9 @@
 ---
 name: ai-saas-playbook
-description: Authoritative playbook for building a full-stack AI SaaS platform integrating LangChain, Kafka, and Stripe.
+description: >
+  Use when the user asks for an AI SaaS playbook, to build an AI SaaS product end to end, or a reference stack of LLM agents with Kafka, Stripe billing and multi-tenant isolation. Produces a reference
+  architecture and build order. Not for agent internals (use ai-agent-architectures) or payment code (use ecommerce-payment-processing).
+last_verified: "2026-11-17"
 ---
 
 ## Purpose
@@ -42,7 +45,7 @@ Risk: {cost, tenancy, failure mode}
 flowchart TD
     A[User Request / Prompt] --> B{Subscription Active?}
     B -- No --> C[Stripe Checkout Flow]
-    C --> D[Stripe Webhook: payment_intent.succeeded]
+    C --> D[Stripe Webhooks: checkout.session.completed, customer.subscription.updated]
     D --> E[(User DB: Upgrade Tier)]
     B -- Yes --> F[API Gateway / Auth]
     F --> G[Kafka Producer]
@@ -57,44 +60,53 @@ flowchart TD
 ## 3. Core Orchestration Logic
 
 ```python
-import os
 import json
-from fastapi import FastAPI, HTTPException
-from kafka import KafkaProducer
-import stripe
+import logging
+import os
+import uuid
 
+from fastapi import Depends, FastAPI, HTTPException
+from kafka import KafkaProducer
+from pydantic import BaseModel, Field
+
+from app.auth import current_user          # verifies the session/JWT server-side
+from app.billing import get_entitlement    # local table synced from verified Stripe webhooks
+
+log = logging.getLogger(__name__)
 app = FastAPI()
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 producer = KafkaProducer(
-    bootstrap_servers='kafka:9092',
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+    bootstrap_servers=os.environ["KAFKA_BOOTSTRAP_SERVERS"],
+    value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+    acks="all",
 )
 
-@app.post("/api/v1/execute-agent")
-async def execute_agentic_workflow(payload: dict):
-    user_id = payload.get("user_id")
-    prompt = payload.get("prompt")
+class AgentRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=8000)
 
-    # 1. Monetization Gate
-    customer = stripe.Customer.retrieve(user_id)
-    if not customer.subscriptions.data:
-        raise HTTPException(
-            status_code=402, 
-            detail="Payment required. Please upgrade your tier."
-        )
+@app.post("/api/v1/execute-agent", status_code=202)
+def execute_agentic_workflow(body: AgentRequest, user=Depends(current_user)):
+    # 1. Monetization gate: read the entitlement your webhooks maintain; never trust a user_id from the body
+    entitlement = get_entitlement(user.id)
+    if entitlement is None or entitlement.status not in ("active", "trialing"):
+        raise HTTPException(status_code=402, detail="Payment required. Please upgrade your tier.")
 
-    # 2. Event-Driven Handoff
-    task_payload = {"user_id": user_id, "prompt": prompt, "status": "QUEUED"}
-    producer.send('ai.tasks.incoming', value=task_payload)
-    
-    return {"message": "Agent workflow initiated. Await completion via WebSocket."}
+    # 2. Event-driven handoff, keyed by tenant for per-tenant ordering
+    task_id = str(uuid.uuid4())
+    producer.send("ai.tasks.incoming", key=user.tenant_id.encode(), value={
+        "task_id": task_id, "user_id": user.id, "tenant_id": user.tenant_id, "prompt": body.prompt,
+    })
+    log.info("queued agent task task_id=%s tenant_id=%s", task_id, user.tenant_id)
+    return {"task_id": task_id, "status": "QUEUED"}
 
 # ---------------------------------------------------------
 # Background Kafka Consumer & LangChain Worker (Conceptual)
 # ---------------------------------------------------------
+# LangChain 1.x: build agents with langchain.agents.create_agent (or LangGraph);
+# initialize_agent / "zero-shot-react-description" are legacy and removed.
 # def consume_and_process():
-#     for msg in consumer('ai.tasks.incoming'):
-#         agent = initialize_agent(tools, llm, agent="zero-shot-react-description")
-#         result = agent.run(msg.value["prompt"])
-#         producer.send('ai.tasks.completed', value={"user_id": msg.value["user_id"], "result": result})
+#     agent = create_agent(model=llm, tools=tools)          # bounded tools, per-tenant limits
+#     for msg in consumer:                                    # KafkaConsumer("ai.tasks.incoming", group_id=...)
+#         state = agent.invoke({"messages": [{"role": "user", "content": msg.value["prompt"]}]},
+#                              config={"recursion_limit": 25})
+#         producer.send("ai.tasks.completed", value={"task_id": msg.value["task_id"], "result": state["messages"][-1].content})
 ```

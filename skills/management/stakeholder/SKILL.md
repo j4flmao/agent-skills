@@ -1,10 +1,12 @@
 ---
 name: management-stakeholder
 description: >
-  Use this skill when the user says 'stakeholder management', 'stakeholder mapping', 'communication plan', 'RACI', 'influence matrix', 'status reporting', 'expectation management', 'stakeholder analysis', 'power influence grid', 'stakeholder engagement', 'escalation management', 'communication cadence', 'stakeholder matrix', 'stakeholder register', 'stakeholder personas'. This skill enforces: stakeholder mapping by power/influence and salience model, structured communication plans with defined cadence and channels per stakeholder group, RACI matrix for decision accountability, regular status reporting with RAG status and risk logs, escalation management with clear paths and triggers, proactive expectation setting with scope guardrails, feedback loops, and stakeholder persona creation. Do NOT use for: team communication (that is internal), project management scheduling (use create-roadmap), or organizational change management.
+  Use when the user asks about stakeholder mapping, a power/interest grid, RACI, a communication plan, steering committee updates, status reports for executives or managing expectations. Produces a
+  stakeholder map, RACI and communication cadence. Not for change adoption plans (use management-change-management) or project plans (use pm).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

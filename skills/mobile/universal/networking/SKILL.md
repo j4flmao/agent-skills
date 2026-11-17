@@ -9,6 +9,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -121,8 +122,8 @@ Queue failed write operations for retry when connectivity resumes, with conflict
 - Pagination must track loading state per page, not globally
 - All network errors must be mapped to domain-specific error types
 - Cache staleness TTL must be configurable per data type
-- Retry with exponential backoff for transient failures (429, 503)
-- SSL pinning required for production apps
+- Retry idempotent requests with capped exponential backoff and jitter for transient failures (connection errors, 408, 429, 502, 503, 504; honour `Retry-After`)
+- Certificate pinning only with a rotation plan (pin SPKI hashes with backup pins, remote kill switch); for most apps platform TLS plus ATS / network security config is the baseline
 - Never log sensitive data (tokens, passwords, PII)
 
 ## REST Client Setup
@@ -774,7 +775,7 @@ Future<void> downloadFile(String url, String savePath) async {
 - Connection pooling: OkHttp keeps alive connections by default; URLSession reuses HTTP/2 multiplexing
 - Response caching with Etag/Last-Modified headers reduces bandwidth
 - Compress request bodies with gzip for large payloads
-- Use protobuf over JSON for high-throughput APIs (60% smaller payloads)
+- Consider protobuf over JSON for high-throughput APIs (smaller payloads and faster parsing; measure with your data)
 - Prefer WebSocket over polling for real-time updates
 - Debounce search requests by 300ms to avoid API spam
 - Cancel in-flight requests when leaving screens (use CancellationToken / auto-dispose)
@@ -788,7 +789,7 @@ Future<void> downloadFile(String url, String savePath) async {
 - **Ignoring 401 globally**: Each request retrying auth independently causes race conditions. Queue and retry once
 - **Blocking main thread with network calls**: ANR on Android, frozen UI on iOS. Always async
 - **Caching without TTL**: Users see stale data forever. Configurable TTL per data type
-- **Loading indicator per page instead of global**: Leads to flickering. Track loading per-page
+- **One global loading flag for paginated lists**: next-page loads blank the whole list or flicker. Track loading state per page (initial, appending, refreshing)
 - **No request cancellation leaving stale observers**: Memory leaks. Cancel on dispose
 - **Logging sensitive data in production**: Security risk. Strip auth headers and PII from logs
 - **Not handling HTTP 304 (Not Modified)**: Wastes bandwidth. Support conditional requests with Etag

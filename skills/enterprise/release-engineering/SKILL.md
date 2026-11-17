@@ -1,10 +1,12 @@
 ---
 name: enterprise-release-engineering
 description: >
-  Use this skill when the user says 'integration hell', 'long-lived branches', 'merge conflicts across teams', 'trunk-based development at scale', 'release train', 'branch by abstraction', 'dark launch', 'migration version collision', 'expand contract migration', 'codeowners'. It designs how many teams integrate into one mainline and release safely: trunk-based development, feature toggles, branch by abstraction, release trains, monorepo ownership and zero-downtime schema changes. Do NOT use for: single-team git commands and branching basics (use dev-loop/git-workflow), CI pipeline syntax (use devops/cicd-pipeline or github-actions), canary/blue-green traffic shifting (use devops/progressive-delivery).
+  Use when the user asks about integration hell, long-lived branches across teams, trunk-based development at scale, release trains, branch by abstraction, dark launches or CODEOWNERS. Produces a multi-
+  team integration and release model. Not for single-team git basics (use dev-loop-git-workflow) or canary rollouts (use devops-progressive-delivery).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [enterprise, release-engineering, trunk-based, feature-flags, release-train, migrations]
 ---
 

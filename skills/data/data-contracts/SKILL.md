@@ -1,10 +1,14 @@
 ---
 name: data-data-contracts
 description: >
-  Use this skill when asked about data contract, data agreement, schema contract, producer/consumer contract, schema evolution, compatibility, data SLA, dbt contracts, or data product contract. This skill enforces: data contract definition with schema, semantics, SLA, and ownership, contract enforcement in CI/CD, schema compatibility checks (backward/forward/full), contract versioning, dbt contract configuration, and automated contract testing. Do NOT use for: data quality testing, data catalog management, or general API contract design.
+  Use when the user asks about data contracts, producer/consumer schema agreements, dbt model contracts, Open
+  Data Contract Standard, schema compatibility checks or data SLAs. Produces a contract spec (schema, semantics,
+  SLA, owner) and CI enforcement. Not for Kafka Schema Registry compatibility modes (use data-schema-registry)
+  or test suites (use data-testing).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

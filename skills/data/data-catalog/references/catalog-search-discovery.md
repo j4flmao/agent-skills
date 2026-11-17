@@ -8,7 +8,7 @@ Data catalog search must handle diverse metadata types including tables, columns
 
 ```python
 from elasticsearch import Elasticsearch
-from elasticsearch_dsl import Document, Text, Keyword, Date, Integer
+from elasticsearch.dsl import Date, Document, Integer, Keyword, Text  # elasticsearch-dsl merged into elasticsearch-py 8.18+
 
 class CatalogDocument(Document):
     name = Text(fields={"raw": Keyword()})
@@ -79,10 +79,10 @@ class FacetedSearch:
                 "by_owner": {"terms": {"field": "owner"}},
             },
             "size": filters.page_size or 20,
-            "from": (filters.page or 0) * (filters.page_size or 20),
+            "from_": (filters.page or 0) * (filters.page_size or 20),
         }
 
-        response = self.client.search(index="data_catalog", body=body)
+        response = self.client.search(index="data_catalog", **body)  # keyword args; `body=` is deprecated
         return SearchResult(
             total=response["hits"]["total"]["value"],
             hits=[hit["_source"] for hit in response["hits"]["hits"]],

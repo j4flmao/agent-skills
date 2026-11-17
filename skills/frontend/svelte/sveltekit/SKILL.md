@@ -1,10 +1,11 @@
 ---
 name: sveltekit
 description: >
-  Use this skill when building SvelteKit applications — routing, load functions, form actions, API endpoints, server-side rendering, stores, deployment. This skill enforces: file-based routing conventions, server load functions for data fetching, form actions with validation and redirects, separated API endpoints in routes/api. Do NOT use for: non-Svelte frontend frameworks, backend-only APIs, static site generation without SvelteKit.
+  Use when the user asks about SvelteKit load functions and form actions, +page.server.ts, +server.ts endpoints, hooks, use:enhance, adapters, SSR/prerendering or SvelteKit deployment. Produces SvelteKit routes, server loads, validated actions and adapter config. Not for Svelte component and rune design (use frontend-svelte-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

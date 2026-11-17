@@ -67,7 +67,7 @@ qa_strategy:
           scope: Business acceptance criteria
           approach: Automated acceptance tests + UAT
           responsibility: QA + Product Owner
-          tools: Cucumber, SpecFlow
+          tools: Cucumber, Reqnroll
 
     - section: 4. Test Types
       types:
@@ -76,7 +76,7 @@ qa_strategy:
         smoke: Every build, critical paths
         performance: Quarterly + per major release
         security: SAST in CI, DAST quarterly, pentest annually
-        accessibility: WCAG 2.1 AA compliance
+        accessibility: WCAG 2.2 AA compliance
         usability: Per major feature release
         compatibility: Latest 2 browser versions, iOS/Android latest
 

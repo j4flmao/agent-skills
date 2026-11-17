@@ -1,10 +1,11 @@
 ---
 name: backend-api-versioning
 description: >
-  Use this skill when the user says 'API versioning', 'version strategy', 'URI versioning', 'header versioning', 'content negotiation', 'accept header', 'breaking change', 'API migration', 'deprecate endpoint', 'sunset endpoint'. This skill manages API version transitions using URI, header, or content-negotiation strategies. Applies to any backend stack. Do NOT use for: database schema versioning, client SDK versioning, or infrastructure versioning.
+  Use when the user asks about API versioning, URI vs header versioning, breaking changes, deprecating or sunsetting an endpoint, Deprecation and Sunset headers or API migration. Produces a versioning and deprecation plan. Not for API product strategy (use api-product-management).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

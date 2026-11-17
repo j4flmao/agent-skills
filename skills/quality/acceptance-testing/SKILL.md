@@ -1,10 +1,12 @@
 ---
 name: quality-acceptance-testing
 description: >
-  Use when the user asks about user acceptance testing (UAT), alpha/beta testing, business scenario testing, acceptance criteria, Gherkin, specification by example, or sign-off processes. Do NOT use for: unit testing (quality-unit-testing), integration testing (quality-integration-testing), or regression testing (quality-regression-testing).
+  Use when the user asks about user acceptance testing (UAT), alpha or beta testing, acceptance criteria sign-off, business scenario tests or exploratory testing charters. Produces UAT plans, scenarios
+  and sign-off criteria. Not for Gherkin automation (use planning-bdd-atdd) or regression suites (use quality-regression-testing).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

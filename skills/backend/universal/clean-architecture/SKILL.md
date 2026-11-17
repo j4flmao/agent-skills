@@ -1,10 +1,11 @@
 ---
 name: backend-clean-architecture
 description: >
-  Use this skill when the user asks 'where does this code go', 'what layer', 'clean architecture', 'hexagonal', 'ports and adapters', 'domain layer', 'application layer', 'infrastructure layer', 'should this be in service or repository', or when designing or reviewing backend code organization. This skill enforces strict Clean/Hexagonal Architecture layer rules — Domain has ZERO dependencies on infrastructure. Applies to NestJS, Go, Rust, Python, Spring Boot. Do NOT use for: database optimization, API endpoint design, or frontend code organization.
+  Use when the user asks where code belongs, clean architecture, hexagonal, ports and adapters, domain vs application vs infrastructure layer, or service vs repository. Produces a layer map and dependency rules. Not for GoF pattern choice (use design-patterns) or DDD modeling (use architecture-domain-driven-design).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

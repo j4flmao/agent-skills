@@ -1,10 +1,12 @@
 ---
 name: quality-smoke-testing
 description: >
-  Use when the user asks about smoke testing, build verification testing (BVT), deployment health checks, canary testing, sanity testing, or CI/CD pipeline health checks. Do NOT use for: full regression testing (quality-regression-testing), acceptance testing (quality-acceptance-testing), or end-to-end testing (quality-e2e-testing).
+  Use when the user asks about smoke tests, build verification tests (BVT), post-deploy health checks, sanity tests or canary verification after release. Produces a fast smoke suite and deployment gate.
+  Not for full regression (use quality-regression-testing) or canary rollout strategy (use devops-progressive-delivery).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -1,10 +1,11 @@
 ---
 name: backend-resilience-patterns
 description: >
-  Use this skill when the user says 'resilience', 'circuit breaker', 'retry', 'bulkhead', 'timeout', 'fallback', 'resilience4j', 'fault tolerance', 'rate limiter', 'backoff', 'retry strategy', 'bulkhead pattern'. This skill applies production fault-tolerance patterns: circuit breaker, retry with backoff, bulkhead isolation, timeouts, and fallback handlers. Applies to any backend stack. Do NOT use for: infrastructure-level resiliency (K8s liveness probes), database replication, or frontend error handling.
+  Use when the user asks about a circuit breaker around a flaky service, retries with backoff and jitter, timeouts, bulkheads, fallbacks, Resilience4j or Polly. Produces fault-tolerance config and code per dependency. Not for API request throttling (use rate-limiting).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

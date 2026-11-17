@@ -1,29 +1,9 @@
 # Next.js Server Components in Practice
 
+> Reference for the `react-nextjs` skill; [SKILL.md](../SKILL.md) is the entry point. Merged from the former `web/nextjs-server-components` skill.
+
 ## Purpose
-In the App Router every `page`/`layout` is a Server Component by default. Done well, this removes client-side fetching waterfalls and ships far less JavaScript; done badly (a `'use client'` at the top of every page), it is a slower SPA. This skill gives the concrete patterns for data loading, streaming, mutations and hydration correctness.
-
-## Agent Protocol
-
-### Trigger
-"server component", "app router data fetching", "loading.tsx", "Suspense streaming", "hydration mismatch", "server action", "use client everywhere", "waterfall".
-
-### Input Context
-- Next.js version (15 or 16; async `params`/`cookies()` required in both).
-- Data sources (ORM, internal API, third-party API) and auth.
-- Which UI must be interactive.
-
-### Output Artifact
-Page/layout/component code with boundaries and Suspense placement; Server Actions.
-
-### Response Format
-```
-Route: {app/... path}
-Server: {components, data they fetch}
-Client: {components with 'use client' and why}
-Streaming: {Suspense boundaries + fallbacks}
-Mutations: {action -> validation -> revalidation}
-```
+In the App Router every `page`/`layout` is a Server Component by default. Done well, this removes client-side fetching waterfalls and ships far less JavaScript; done badly (a `'use client'` at the top of every page), it is a slower SPA. This reference gives the concrete patterns for data loading, streaming, mutations and hydration correctness.
 
 ## Fetch Where You Render, in Parallel
 

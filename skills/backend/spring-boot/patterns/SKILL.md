@@ -1,10 +1,11 @@
 ---
 name: spring-boot-patterns
 description: >
-  Use this skill when implementing Spring Boot patterns — dependency injection, AOP, repository patterns, security configuration, testing patterns, transaction management. This skill enforces: constructor injection (no @Autowired on fields), @Transactional at service layer, AOP for cross-cutting concerns, repository abstraction with Spring Data, slice tests with TestContainers. Do NOT use for: Spring Boot project structure (see architecture skill), non-Spring Java, frontend.
+  Use when the user asks about Spring Boot service layer and transaction boundaries, @Transactional, constructor injection, Spring AOP, Spring Security filter chain or @DataJpaTest/@WebMvcTest. Produces Spring Boot pattern code. Not for package layout (use spring-boot-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -1,10 +1,14 @@
 ---
 name: ml-inference-optimization
 description: >
-  Use this skill when the user says 'llm inference optimization', 'reduce latency llm', 'time to first token', 'ttft', 'tokens per second', 'llm throughput', 'vllm vs tgi', 'speculative decoding', 'continuous batching', 'serve llm cheaper'. Diagnoses and optimizes LLM inference end to end: latency/throughput metrics, memory budget, engine choice, batching, quantization, KV cache, parallelism and speculative decoding. Do NOT use for: deep KV-cache paging internals (paged-attention), quantization algorithm details (extreme-quantization-mastery), TensorRT engine builds (tensorrt-optimization), classical model serving infra (ml-model-serving).
+  Use when the user asks to optimize LLM inference: time to first token (TTFT), tokens per second, throughput,
+  vLLM vs SGLang vs TGI, speculative decoding, continuous batching or serving an LLM cheaper. Produces
+  latency/throughput diagnosis, memory budget and engine and batching settings. Not for classic model serving
+  (use ml-model-serving) or KV math alone (use llm-kv-cache-paged-attention).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [ml, llm, inference, vllm, latency, throughput, optimization]
 ---
 

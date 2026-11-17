@@ -1,10 +1,11 @@
 ---
 name: rust-architecture
 description: >
-  Use this skill when structuring Rust backend applications — workspace layout, crate organization, feature-based modules, error handling architecture, async runtime selection, and type-driven design. This skill enforces: Cargo workspace for multi-crate projects, Result/Option for error handling, trait-based abstraction, async with tokio, and feature flags for conditional compilation. Requires Rust (Cargo.toml). Do NOT use for: Go/Java/.NET architecture, frontend Rust, or embedded Rust.
+  Use when the user asks about Rust backend structure, Cargo workspace layout, crate boundaries, hexagonal Rust, trait-based DI or choosing axum vs actix-web. Produces a Rust service layout with error architecture. Not for tokio, serde or ownership recipes (use rust-patterns) or language basics (use lang-rust).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

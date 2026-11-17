@@ -1,10 +1,11 @@
 ---
 name: api-graphql-federation
 description: >
-  Use this skill when the user says 'graphql federation', 'apollo federation', 'supergraph', 'subgraph', 'schema composition', '@key directive', '@requires', '@shareable', 'apollo router', 'rover compose', 'federate graphql across teams'. Designs and implements Apollo Federation 2 supergraphs: subgraph boundaries, entity keys and resolution, composition and schema checks in CI, and router configuration for security, limits and telemetry. Do NOT use for: single-service GraphQL schema design (backend-graphql-patterns), resolver N+1 and query-cost tuning inside one server (backend-graphql-optimization), REST API gateways (backend api-gateway skills).
+  Use when the user asks about GraphQL federation, Apollo Federation 2, composing subgraphs into one supergraph, @key, @shareable, Apollo Router or rover compose. Produces a federated supergraph design with subgraph code. Not for single-service GraphQL schemas (use backend-graphql-patterns).
 version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 type: skill
 compatibility:
   claude-code: true

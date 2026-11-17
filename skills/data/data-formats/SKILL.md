@@ -1,10 +1,13 @@
 ---
 name: data-formats
 description: >
-  Use this skill when asked about Apache Arrow, Parquet, Avro, ORC, Arrow Flight, columnar storage, row-oriented storage, compression, schema evolution, data file format, columnar vs row-oriented, file format comparison, or data serialization. This skill enforces: columnar format selection based on access patterns, Parquet row group sizing and encoding optimization, Arrow in-memory format for analytical workloads, Arrow Flight for high-performance data transport, compression codec selection, and schema evolution compatibility. Do NOT use for: streaming data formats (Avro for Kafka), data modeling, or database storage engine design.
+  Use when the user asks about Parquet vs ORC vs Avro, Apache Arrow, Arrow Flight, row group size, encoding and
+  compression (ZSTD, Snappy) or columnar vs row-oriented formats. Produces a format choice and writer settings
+  for the access pattern. Not for table formats like Iceberg or Delta (use data-data-lake).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

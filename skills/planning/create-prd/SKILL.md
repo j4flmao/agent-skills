@@ -1,10 +1,12 @@
 ---
 name: create-prd
 description: >
-  Use this skill when the user says 'create PRD', 'product requirements', 'write requirements', 'epics and stories', 'acceptance criteria', or when docs/brief.md exists and needs expansion into a full Product Requirements Document. This skill reads the brief, generates 5-8 epics, and for each epic creates 3-5 user stories with Gherkin acceptance criteria. It also produces non-functional requirements and a Definition of Done. Do NOT use for: recording architecture decisions or writing technical specifications.
+  Use when the user asks to create a PRD, product requirements document, turn an idea or brief into epics and user stories, or add acceptance criteria and non-functional requirements. Produces a PRD
+  with epics, stories, Gherkin criteria and Definition of Done. Not for a single next story (use create-story) or technical design (use create-tech-spec).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

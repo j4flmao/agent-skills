@@ -1,10 +1,14 @@
 ---
 name: data-distributed-compute
 description: >
-  Use this skill when designing distributed compute for Hadoop MapReduce, Spark, Dask, Ray, YARN, or K8s resource management. This skill enforces: execution model selection, cluster topology, shuffle optimization, data locality, speculative execution, and resource tuning. Do NOT use for: single-node compute, GPU-only training, or SQL-only batch queries (see data-batch-processing).
+  Use when the user asks about Spark vs Dask vs Ray, Spark executor sizing, shuffle and skew, YARN or Kubernetes
+  resource management, data locality or speculative execution. Produces engine choice, cluster topology and
+  tuning settings. Not for Hive/Spark SQL query tuning (use data-batch-processing) or GPU training (use
+  distributed-training).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -109,7 +110,7 @@ What data does the app handle?
 Identify data classification levels, threat vectors (reverse engineering, network interception, device theft), and compliance requirements.
 
 ### Step 2: Secure Data at Rest
-Use platform-native secure storage: iOS Keychain, Android EncryptedSharedPreferences, flutter_secure_storage, or react-native-keychain.
+Use platform-native secure storage: iOS Keychain, Android Keystore-backed keys (Jetpack Security `EncryptedSharedPreferences` is deprecated; use Keystore directly or Tink with a Keystore-wrapped key, storing ciphertext in DataStore), flutter_secure_storage, or react-native-keychain.
 
 ### Step 3: Configure Network Security
 Implement certificate pinning with backup pins, disable cleartext traffic, and validate TLS connections.
@@ -206,20 +207,27 @@ security_decision_tree:
 let query: [String: Any] = [
     kSecClass: kSecClassGenericPassword,
     kSecAttrAccount: "auth_token",
-    kSecValueData: token.data(using: .utf8)!,
+    kSecValueData: Data(token.utf8),
+    kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,   // not synced, not in backups
 ]
 SecItemAdd(query as CFDictionary, nil)
 ```
 
 ```kotlin
-// Android: EncryptedSharedPreferences
-val prefs = EncryptedSharedPreferences.create(
-    "secure_prefs",
-    masterKey,
-    context,
-    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-)
+// Android: AES-GCM key in the Android Keystore (non-exportable); store the
+// ciphertext + IV in DataStore. EncryptedSharedPreferences is deprecated.
+val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+val key = (keyStore.getKey("token_key", null) as SecretKey?) ?: KeyGenerator
+    .getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+    .apply {
+        init(KeyGenParameterSpec.Builder("token_key",
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .build())
+    }.generateKey()
+val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
+val ciphertext = cipher.doFinal(token.toByteArray())   // persist cipher.iv alongside it
 ```
 
 ```dart
@@ -693,13 +701,13 @@ try url.setResourceValues(resourceValues)
 
 ## Performance
 
-- Platform secure storage read/write: Keychain ~5-15ms, EncryptedSharedPreferences ~10-30ms, hardware-backed keystore ~50-200ms
-- Certificate pinning validation: adds ~10-50ms per HTTPS handshake depending on cert chain length
-- Biometric authentication: Face ID ~1-2s, fingerprint ~200-500ms — do not call on app launch for non-sensitive screens
-- ProGuard/R8 obfuscation: increases build time by 30-120s for medium-size apps, adds ~5-10% to APK size from mapping files
-- Root/jailbreak detection: ~5-20ms per check — cache results for session duration, do not check on every screen
+- Secure storage, Keystore operations and biometric prompts are slower than plain preferences; read secrets once per session and cache them in memory rather than on every screen. Measure on low-end devices.
+- Certificate pinning adds a hash comparison per TLS handshake; the cost is small next to the handshake itself.
+- Biometric prompts are user-visible latency; show them only for sensitive actions.
+- R8 shrinking and obfuscation lengthen release builds but usually reduce APK/AAB size; the mapping file is uploaded to the crash reporter, not shipped in the app.
+- Root/jailbreak checks: run once per session (or on sensitive actions) and cache the result; they are signals, not guarantees.
 - SQLCipher: 5-15% performance overhead vs plain SQLite — most impact on large write queries
-- Runtime integrity checks: ~50-100ms at app startup — run in background thread, do not block TTI
+- Runtime integrity checks (Play Integrity, App Attest): network round trips — run them in the background and never block first render
 
 ## Tooling
 

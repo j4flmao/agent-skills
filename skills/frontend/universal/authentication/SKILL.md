@@ -1,10 +1,11 @@
 ---
 name: frontend-authentication
 description: >
-  Use this skill when the user says 'auth', 'authentication', 'login', 'signup', 'JWT', 'OAuth', 'OAuth2', 'OpenID Connect', 'route guard', 'protected route', 'auth middleware', 'token storage', 'refresh token', 'session management', 'access token', 'logout', 'SSO', 'magic link', 'passwordless', 'MFA', '2FA'. This skill enforces secure token storage, proper route guard patterns, OAuth flow handling (PKCE, Implicit, Auth Code), refresh token rotation, and session persistence. Works with any frontend framework (React, Vue, Angular, Svelte) and any auth provider (Auth0, Clerk, Supabase, Firebase, Cognito, custom). Do NOT use for: backend auth logic, API token validation, or database-level auth.
+  Use when the user asks to implement JWT login with refresh tokens in the browser, OAuth2/OIDC with PKCE, protected routes and route guards, token storage, sessions, logout, SSO, passkeys or MFA screens. Produces secure client-side auth flows for any framework and provider. Not for server-side token validation and auth APIs (use backend-auth-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

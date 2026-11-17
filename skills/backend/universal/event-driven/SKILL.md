@@ -1,10 +1,11 @@
 ---
 name: backend-event-driven
 description: >
-  Use this skill when the user says 'event-driven', 'message queue', 'Kafka', 'RabbitMQ', 'pub/sub', 'domain event', 'event sourcing', 'CQRS', 'async messaging', 'event bus', or when designing asynchronous communication between services. This skill enforces: domain vs integration event distinction, event naming (past tense), schema versioning, consumer idempotency, dead letter queues, saga patterns, and event sourcing basics. Applies to Kafka, RabbitMQ, NATS, Redis Pub/Sub, SQS/SNS. Do NOT use for: REST API design, database optimization, or synchronous communication patterns.
+  Use when the user asks about event-driven architecture, domain vs integration events, publishing events between services, Kafka or RabbitMQ consumers, event schema versioning, DLQs or sagas. Produces event catalog, topology and consumer code. Not for event stores (use backend-event-sourcing) or broker operations (use backend-message-queue).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -395,6 +396,9 @@ metrics.histogram('events.latency_ms', latency, { eventType });
 - Use transactional outbox for reliable event publishing.
 - Every event has a dead letter queue for failed processing.
 - Monitor event latency, lag, and failure rates.
+- Delivery is at-least-once end to end; never promise exactly-once without idempotent consumers (inbox table or natural upsert).
+- Prefer event-carried state (fat events scoped to consumer needs) for integration events; thin events force callbacks to the producer.
+- Use a CloudEvents-style envelope (`id`, `source`, `type`, `time`, `subject`) plus W3C `traceparent` in headers.
 
 ## References
   - references/dead-letter-queue.md — Dead Letter Queue

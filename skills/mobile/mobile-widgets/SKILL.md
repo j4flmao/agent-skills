@@ -8,6 +8,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -148,7 +149,7 @@ struct SmallTaskView: View {
 }
 ```
 
-3. **Widget Configuration with Intent**: User-configurable widgets via SiriKit intents.
+3. **Widget Configuration with App Intents**: User-configurable widgets via `AppIntentConfiguration` and `WidgetConfigurationIntent` (iOS 17+; the older SiriKit `.intentdefinition` path is legacy).
 
 ```swift
 import AppIntents
@@ -361,12 +362,10 @@ class TaskWidgetProvider : AppWidgetProvider() {
 6. **Widget Refresh Strategies**: Balance freshness with battery life.
 
 ```swift
-// iOS Timeline reload strategies
-enum ReloadPolicy {
-  case after(Date)           // Fixed next update time
-  case atEnd                 // Reload after last entry expires
-  case never                 // Static content, never refreshes
-}
+// iOS: TimelineReloadPolicy (WidgetKit) — returned with each Timeline
+// .after(date)  request the next timeline at or after a date (system may delay)
+// .atEnd        request a new timeline after the last entry
+// .never        reload only when the app calls WidgetCenter.reloadTimelines
 
 // iOS Background refresh via push
 func handleWidgetPush(token: String, data: [String: Any]) {
@@ -432,10 +431,10 @@ struct TaskWidget_Previews: PreviewProvider {
 
 ## Rules
 
-1. Never perform network calls inside widget view/update code — use timeline refresh.
+1. Never perform network calls in widget views — fetch in the timeline provider (iOS `getTimeline`/`timeline(for:in:)`) or a background worker (Android), then render cached data.
 2. Always provide a placeholder view for loading states.
-3. Never exceed 10MB widget binary size — keep assets minimal.
-4. Always support all widget families the platform offers for your target.
+3. Keep the widget extension small: extensions run under a tight memory limit (tens of MB), so downsample images and keep assets minimal.
+4. Support only the widget families whose layout fits your content (`supportedFamilies`), and design each one deliberately.
 5. Never use infinite timelines — always provide a finite set of entries.
 6. Always test widgets with system Dark Mode and Accent Color.
 7. Never use custom fonts not bundled in widget extension target.
@@ -446,11 +445,11 @@ struct TaskWidget_Previews: PreviewProvider {
 12. Always provide accessibility labels for VoiceOver/TalkBack.
 13. Never store large datasets in UserDefaults for widget access — use shared container.
 14. Always handle empty state gracefully (no data view, not blank).
-15. Never use animations that don't pause on Low Power Mode.
+15. Keep widget animations to the system-provided content transitions; widgets do not run custom animation loops.
 16. Always implement configurable widgets when user personalization is needed.
 17. Never use UIKit/AppKit inside iOS widgets — SwiftUI only.
 18. Always test widgets with different Dynamic Type sizes.
-19. Never reload timeline more frequently than every 5 minutes (iOS) unless critical.
+19. Respect the iOS reload budget (the system allows a limited number of reloads per day, typically every 15–60 minutes for a frequently viewed widget); use app-triggered `reloadTimelines` after real data changes instead of short timers. Android `updatePeriodMillis` is clamped to a 30-minute minimum.
 20. Always remove widget data when all widget instances are deleted.
 
 ## References
@@ -462,5 +461,5 @@ struct TaskWidget_Previews: PreviewProvider {
   - references/widget-refresh.md — Widget Refresh Strategy
 ## Handoff
 - `mobile/mobile-localization` — Widget string localization and RTL support
-- `design/ui-kit` — Widget design guidelines and brand consistency
-- `frontend/react-native-widgets` — React Native widget bridge patterns
+- `design/visual-design` — widget visual design and brand consistency
+- `mobile/react-native` — bridging app data to native widget extensions from React Native

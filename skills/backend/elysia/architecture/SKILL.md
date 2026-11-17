@@ -1,10 +1,11 @@
 ---
 name: elysia-architecture
 description: >
-  Use this skill when the user says 'elysia app structure', 'elysia project layout', 'elysia plugin', 'elysia lifecycle', 'elysia architecture', 'eden treaty', 'elysia folder structure'. Structures Elysia (Bun) applications: plugin/module layout, lifecycle hook order, TypeBox schemas, auth macros, error handling, environment validation and Eden Treaty clients. Do NOT use for: individual Elysia recipes such as rate limiting or WebSockets (elysia-patterns), plain Bun.serve apps (bun), Express/Node.js projects.
+  Use when the user asks about an Elysia API on Bun with typed routes, Elysia project structure, plugin/module layout, lifecycle hook order, TypeBox schemas or auth macros. Produces an Elysia app structure with fail-fast config. Not for Eden Treaty, WebSocket or macro recipes (use elysia-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

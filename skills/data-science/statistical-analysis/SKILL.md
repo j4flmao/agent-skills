@@ -1,10 +1,14 @@
 ---
 name: data-science-statistical-analysis
 description: >
-  Use this skill when performing statistical analysis, hypothesis testing, regression analysis, time series forecasting, Bayesian inference, descriptive statistics, data exploration, or any general statistical modeling. This skill enforces: proper data exploration before modeling, assumption checking, effect size reporting, confidence intervals alongside p-values, robust methods when assumptions violated, and reproducible analysis workflows. Do NOT use for: A/B testing (see experimentation skill), causal inference (see causal-inference skill), or ML model building.
+  Use when the user asks about hypothesis tests (t-test, chi-square, Mann-Whitney), regression diagnostics,
+  effect sizes, confidence intervals, Bayesian inference with PyMC, missing data or exploratory statistics.
+  Produces the right test or model, assumption checks and reported effect sizes. Not for experiment design (use
+  data-science-experimentation) or forecasting (use ml-time-series).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

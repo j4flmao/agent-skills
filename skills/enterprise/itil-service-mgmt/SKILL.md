@@ -1,12 +1,12 @@
 ---
 name: enterprise-itil-service-mgmt
 description: >
-  Use this skill when applying ITIL 4 framework for IT service management.
-  This skill enforces: service lifecycle governance, incident management, change and release management, service level management.
-  Do NOT use for: project management, software development methodology, infrastructure operations scheduling.
+  Use when the user asks about ITIL 4, ITSM, service desk, incident, problem and change management practices, CAB, service catalog or service level management. Produces ITIL practice design and process
+  flows. Not for on-call engineering incident response (use devops-incident-response) or SLO math (use enterprise-sla-management).
 version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

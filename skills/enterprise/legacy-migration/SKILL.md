@@ -1,12 +1,12 @@
 ---
 name: enterprise-legacy-migration
 description: >
-  Use this skill when planning or executing legacy system migrations using strangler fig, parallel run, or big bang strategies.
-  This skill enforces: anti-corruption layers, dual-write verification, rollback capability.
-  Do NOT use for: greenfield development, infrastructure-only migration, database schema changes without strategy.
+  Use when the user asks to migrate a legacy monolith, apply the strangler fig pattern, plan a parallel run or big bang cutover, replace a mainframe, or keep dual writes in sync. Produces a migration
+  strategy with anti-corruption layer, verification and rollback. Not for moving servers to the cloud (use cloud-migration) or refactoring code (use dev-loop-refactor-guide).
 version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

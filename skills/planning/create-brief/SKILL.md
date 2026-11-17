@@ -1,10 +1,12 @@
 ---
 name: create-brief
 description: >
-  Use this skill when the user says 'I want to build', 'new app idea', 'create a brief', 'product brief', 'help me define what I am building', or when no existing brief or PRD exists in the docs/ folder. This skill translates a vague idea into a structured Product Brief. It asks 5 targeted questions one at a time, then produces a brief artifact. Do NOT use for: technical specifications, architecture decisions, or user stories. Those come after the brief.
+  Use when the user says I want to build an app, has a new app idea, or asks for a one-page product brief or to define what they are building, and no brief or PRD exists yet. Asks five questions, then
+  writes a product brief. Not for full requirements (use create-prd) or technical design (use create-tech-spec).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

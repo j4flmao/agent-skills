@@ -1,10 +1,12 @@
 ---
 name: product-analytics
 description: >
-  Use this skill when the user says 'product analytics', 'tracking plan', 'event taxonomy', 'retention curve', 'cohort analysis', 'funnel', 'DAU/MAU', 'north star metric', 'activation metric', 'amplitude', 'mixpanel', 'posthog'. It defines metrics, a tracking plan and event schema, implements instrumentation, and analyzes funnels, retention and engagement. Do NOT use for: experiment design and significance (use product/ab-testing or data-science/experimentation), mobile SDK specifics (use mobile-analytics), warehouse modeling (use data-science-analytics-engineering).
+  Use when the user asks about product analytics, a tracking plan, event taxonomy, funnels, retention curves, cohort analysis, DAU/MAU, activation metrics, Amplitude, Mixpanel or PostHog. Produces
+  metrics, event schema and analyses. Not for experiment significance (use product-ab-testing) or warehouse modeling (use data-science-analytics-engineering).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [product, analytics, metrics, retention, funnel, tracking-plan]
 ---
 

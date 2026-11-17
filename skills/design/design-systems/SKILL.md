@@ -1,10 +1,11 @@
 ---
 name: design-systems
 description: >
-  Use this skill when the user says 'design system strategy', 'Figma to code', 'design tokens pipeline', 'Figma variables', 'Style Dictionary', 'Tokens Studio', 'design system governance', 'component inventory', 'design system adoption'. It sets up the design side of a design system: token taxonomy in the W3C DTCG format, the Figma-variables-to-code pipeline, component specification, contribution/governance and adoption metrics. Do NOT use for: coding the component library itself (use frontend-design-system), visual style choices like palettes and type scales (use visual-design), or accessibility audits (use design-accessibility).
+  Use when the user asks about design system strategy, Figma variables, Figma to code, a design tokens pipeline with Style Dictionary or Tokens Studio, the W3C DTCG token format, governance, component inventory or adoption metrics. Produces the design-side token taxonomy, pipeline and governance model. Not for coding the component library (use frontend-design-system).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [design, design-system, design-tokens, figma, style-dictionary, dtcg, governance]
 ---
 

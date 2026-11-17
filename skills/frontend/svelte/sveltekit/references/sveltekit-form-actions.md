@@ -38,7 +38,7 @@ export const actions: Actions = {
 <!-- src/routes/contact/+page.svelte -->
 <script lang="ts">
   import { enhance } from '$app/forms';
-  export let form;
+  let { form } = $props();
 </script>
 
 <form method="POST" use:enhance>
@@ -541,7 +541,7 @@ export const actions: Actions = {
 ```svelte
 <script lang="ts">
   import { enhance } from '$app/forms';
-  export let form;
+  let { form } = $props();
 </script>
 
 <form method="POST" enctype="multipart/form-data" use:enhance>

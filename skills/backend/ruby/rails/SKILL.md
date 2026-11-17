@@ -1,10 +1,11 @@
 ---
 name: ruby-rails
 description: >
-  Use this skill when building Ruby on Rails applications — MVC, ActiveRecord, service objects, API mode, background jobs, and testing. This skill enforces: thin controllers, service objects for business logic, ActiveRecord query best practices, Rails API mode conventions, and RSpec testing patterns. Requires Rails 7+ and Ruby 3.1+. Do NOT use for: Sinatra, Rack apps, Hanami, or non-Rails Ruby projects.
+  Use when the user asks about Ruby on Rails, ActiveRecord callbacks getting out of hand, service objects, Rails API mode, Active Job / Solid Queue, N+1 with includes or RSpec. Produces Rails 8 code with thin models and controllers. Not for Ruby outside Rails or Phoenix (use backend-elixir).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

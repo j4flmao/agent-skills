@@ -6,7 +6,7 @@ Acceptance criteria define the conditions a feature must satisfy to be accepted 
 
 ## Gherkin Acceptance Criteria
 
-Gherkin uses a structured natural language format understood by both business stakeholders and automation tools (Cucumber, SpecFlow, Behave).
+Gherkin uses a structured natural language format understood by both business stakeholders and automation tools (Cucumber, Reqnroll, Behave).
 
 ### Syntax
 

@@ -184,7 +184,7 @@ platform_mitigations:
   android:
     shared_preferences:
       threat: "SharedPreferences readable via ADB backup or file explorer on rooted device"
-      mitigation: "Always use EncryptedSharedPreferences for any non-trivial data"
+      mitigation: "Encrypt sensitive data with a Keystore-backed key (Jetpack Security crypto is deprecated)"
       
     apk_extraction:
       threat: "APK easily extracted from device or downloaded from stores"

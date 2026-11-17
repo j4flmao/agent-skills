@@ -3,36 +3,8 @@
 ## Purpose
 Design and maintain API documentation following OpenAPI 3.x specification, docs-as-code workflows, and developer portal best practices.
 
-## Agent Protocol
-
-### Trigger
-Exact user phrases: "API documentation", "OpenAPI", "Swagger", "API spec", "REST API docs", "API reference", "API design", "API contract", "API portal", "docs as code".
-
-### Input Context
-Before activating, verify:
-- API design approach: design-first (spec before code) or code-first (annotations generate spec) or hybrid.
-- Specification format: OpenAPI 3.0/3.1, AsyncAPI, GraphQL SDL.
-- Tooling: Swagger UI, Redoc, Stoplight, Postman, readme.io, GitBook.
-- CI/CD integration: spec linting, contract testing, changelog generation.
-- Authentication methods: API keys, OAuth 2.0, JWT, mTLS.
-
-### Output Artifact
-Writes to OpenAPI 3.x YAML/JSON specification files, documentation config, lint rules, and CI pipeline snippets.
-
-### Response Format
-OpenAPI YAML or JSON with no extraneous explanation.
-
-No preamble. No postamble. No explanations. No filler/hedging/transitions.
-
-### Completion Criteria
-- [ ] OpenAPI spec written with all endpoints, parameters, and responses.
-- [ ] Schemas defined for request/response bodies.
-- [ ] Authentication/authorization documented (securitySchemes).
-- [ ] Linting rules configured and passing.
-- [ ] Versioning strategy defined.
-
-### Max Response Length
-Direct file write. No response text.
+## Scope
+Reference folded into the parent `../SKILL.md` (the entry point; use its trigger and Response Format). This file keeps only material the parent does not cover: design-first vs code-first choice, spec/tool/hosting selection, Spectral rules, contract testing, CI and changelog.
 
 ## Architecture Decision Trees
 
@@ -385,55 +357,19 @@ rules:
         function: truthy
 ```
 
-### Step 4: Contract Testing with Dredd
-```yaml
-# dredd.yml
-dry-run: null
-hookfiles: ./tests/hooks/*.py
-language: python
-server: npm run start:test
-server-wait: 3
-init: false
-custom:
-  - apiUrl: "http://localhost:3000/api"
-names: false
-only: []
-reporter: [apiary, markdown]
-output: [test-results/api-tests.md]
-header: []
-sorted: false
-user: null
-inline-errors: false
-details: false
-method: []
-color: true
-loglevel: warning
-path: []
-hooks-worker-timeout: 5000
-sandbox: false
-```
-```python
-# tests/hooks/hooks.py
-import dredd_hooks as hooks
-import json
+### Step 4: Contract Testing Against the Spec
+Dredd (apiaryio/dredd) is archived and unmaintained; use a maintained spec-driven tester instead.
 
-@hooks.before("Pets > List pets > 200")
-def create_test_pet(transaction):
-    """Create a pet before listing"""
-    import requests
-    response = requests.post(
-        "http://localhost:3000/api/pets",
-        json={"name": "Test Pet", "status": "available"},
-        headers={"Authorization": "Bearer test-token"}
-    )
-    assert response.status_code == 201
+```bash
+# Schemathesis: property-based tests generated from the OpenAPI document
+uvx schemathesis run openapi.yaml --url http://localhost:3000/api \
+  --header "Authorization: Bearer ${TEST_API_TOKEN}"
 
-@hooks.before_each
-def set_auth_header(transaction):
-    """Add auth header to all requests"""
-    if "token" not in transaction.get("skip", []):
-        transaction["request"]["headers"]["Authorization"] = "Bearer test-token"
+# Prism: validation proxy that flags responses that drift from the spec
+npx @stoplight/prism-cli proxy openapi.yaml http://localhost:3000 --errors
 ```
+
+Seed test data in a fixture step, read tokens from CI secrets, and fail the build on any schema violation.
 
 ### Step 5: CI/CD Integration
 ```yaml
@@ -451,7 +387,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 24
       - run: npm install -g @stoplight/spectral-cli
       - run: spectral lint spec/openapi.yml --ruleset .spectral.yaml
 
@@ -472,8 +408,8 @@ jobs:
           - 3000:3000
     steps:
       - uses: actions/checkout@v4
-      - run: npm install -g dredd
-      - run: dredd
+      - uses: astral-sh/setup-uv@v6
+      - run: uvx schemathesis run openapi.yaml --url http://localhost:3000/api
 
   build-docs:
     needs: [lint, validate-examples]
@@ -547,7 +483,7 @@ Omitting error response schemas. Every 4xx/5xx should have a documented schema s
 Specifying schemas without examples. Consumers need to see realistic payloads to understand the API. Every schema should have at least one `example`.
 
 ### Anti-Pattern 3: Spec-Code Drift
-Letting the implementation diverge from the spec. Use contract testing (Dredd, Schemathesis, Pact) in CI to prevent drift.
+Letting the implementation diverge from the spec. Use contract testing (Schemathesis, Prism, Pact) in CI to prevent drift.
 
 ### Anti-Pattern 4: Swagger UI as Production Docs
 Swagger UI alone is insufficient for production. Use a proper developer portal with guides, SDKs, changelog, and support.

@@ -110,7 +110,7 @@ class CloudAnchorManager(private val session: Session) {
 - Use Cloud Anchors for shared AR experiences
 - Implement hit testing for object placement
 - Handle AR session lifecycle and interruptions
-- Use Sceneform for 3D rendering
+- Use SceneView (Filament-based successor to the archived Sceneform) for 3D rendering
 - Support OBJ, glTF, and GLB model formats
 - Optimize model polygon count for mobile
 - Implement ambient lighting estimation

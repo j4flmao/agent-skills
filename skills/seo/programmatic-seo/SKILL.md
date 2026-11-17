@@ -1,10 +1,11 @@
 ---
 name: programmatic-seo
 description: >
-  Use this skill when the user says 'programmatic SEO', 'generate thousands of landing pages', 'location pages at scale', '[service] in [city] pages', 'template pages from a database', 'pSEO', 'long-tail pages from data'. It designs data-driven page templates that each carry unique value, builds them with Next.js App Router static generation/ISR, ships sharded sitemaps and internal linking, and sets quality gates against thin or duplicate content. Do NOT use for: AI-written editorial articles (use seo-ai-content-optimization), schema markup details (use seo-structured-data), or general site SEO audits (use seo-fundamentals).
+  Use when the user asks about programmatic SEO (pSEO), generating thousands of landing pages, [service] in [city] location pages, template pages from a database or long-tail pages from data. Produces templates with unique value, static generation/ISR, sharded sitemaps and thin-content gates. Not for AI-written articles (use seo-ai-content-optimization).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [seo, programmatic-seo, nextjs, isr, sitemaps, landing-pages]
 ---
 

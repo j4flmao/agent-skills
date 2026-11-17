@@ -1,10 +1,11 @@
 ---
 name: react-nextjs
 description: >
-  Use this skill when the user says 'Next.js', 'App Router', 'Server Component', 'Client Component', 'Next.js structure', 'SSR Next.js', 'SSG Next.js', 'Next.js data fetching', 'use server', 'use client', or when building a Next.js application with App Router. This skill enforces: default to Server Components, add 'use client' only when necessary (event listeners, browser APIs, hooks), data fetching in Server Components with async/await, route/layout conventions (loading.tsx, error.tsx, not-found.tsx), and metadata API for SEO. Requires Next.js 14+ (next.config). Do NOT use for: CRA, Vite, Remix, or other React frameworks.
+  Use when the user asks about Next.js, App Router, Server and Client Components, 'use client', Server Actions, layouts, loading.tsx/error.tsx, caching and revalidation, proxy/middleware or Next.js data fetching. Produces Next.js 15/16 App Router code and route structure. Not for render/caching internals or why a route is dynamic (use nextjs-internals).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -505,6 +506,11 @@ export const metadata: Metadata = { title: 'Page Title' }
   - references/server-components.md
   - references/nextjs-app-router-patterns.md
   - references/nextjs-data-fetching-caching.md
+
+### Essentials from Merged Material
+- Fetch where you render and start independent requests in parallel (`Promise.all`) to avoid server waterfalls; wrap slow parts in `<Suspense>` so the shell streams first.
+- Server Actions are public POST endpoints: authenticate, authorize and validate input in every action.
+- Hydration mismatches come from `Date.now()`/`Math.random()`/locale formatting, `typeof window` branches and invalid HTML nesting; use `suppressHydrationWarning` only on the single affected element.
 
 ### Merged Material
 Content folded in from overlapping skills and notes.

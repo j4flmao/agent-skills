@@ -8,6 +8,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, godot, gdscript, performance]
 ---
 
@@ -67,7 +68,7 @@ Advanced systems bypass the Node layer by talking directly to servers — essent
 
 ### 1.2 Multi-Viewport & Rendering Priority
 
-- Multiple viewports: main `root` + sub-viewport + RemoteTexture.
+- Multiple viewports: main `root` window + `SubViewport` nodes, displayed through a `ViewportTexture`.
 - `RenderingServer` owns a broad "scene partition" (BVH) for culling; nodes register/unregister into it.
 
 ## 2. The Signal / MessageQueue System
@@ -149,7 +150,7 @@ Rules: an `await` inside `_process`/`_physics_process` turns that callback into 
 
 - `Thread` class for manual threads; must marshal back to main for `SceneTree` calls.
 - `Callable.call_deferred` to schedule on main thread.
-- Servers are thread-safe; safe particle/audio updates can go direct-to-server.
+- Server calls from worker threads are only safe when the server runs in a thread-safe mode (see Project Settings > Rendering > Driver > Threads, and each server's docs); otherwise marshal to the main thread.
 - Avoid calling `queue_free` from non-main threads.
 
 ### 5.1 WorkerThreadPool (4.x)
@@ -211,7 +212,7 @@ Use when you need many bodies with low overhead (spatial hash of collision-heavy
 
 - snake_case functions/vars; PascalCase classes; `#` comments.
 - `@export` for inspectable; group with `@export_group`.
-- 4-space indent; `func _ready():` no params.
+- Indent with tabs (the official GDScript style guide); `func _ready():` takes no parameters.
 - Avoid metaclasses; keep it readable.
 
 ## 10. Decision: GDScript vs C# vs GDExtension

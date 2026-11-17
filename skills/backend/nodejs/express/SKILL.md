@@ -1,10 +1,11 @@
 ---
 name: nodejs-express-skill
 description: >
-  Use this skill when building Express.js apps — app setup, middleware chain, routing, error handling, validation. This skill enforces: proper middleware ordering, global error handler, Zod/Joi validation, module-based routing, environment config. Do NOT use for: database schema design, frontend, DevOps, non-Express Node backends (Fastify/Hono).
+  Use when the user asks about Express.js, Express 5, Express middleware order, Express routers, Express error handler, Zod validation in Express or graceful shutdown. Produces an Express app factory with modules and tests. Not for Fastify (use nodejs-fastify) or NestJS (use nestjs-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

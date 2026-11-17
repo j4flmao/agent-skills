@@ -1,10 +1,12 @@
 ---
 name: dev-loop-debugging-strategy
 description: >
-  Use when the user asks about debugging strategies, debugging methodologies, log analysis, debugging tools, root cause analysis, or systematic debugging approaches. Do NOT use for: performance profiling (dev-loop-performance-profiler), or code review (dev-loop-code-review).
+  Use when the user reports a bug, error message, stack trace, crash, memory leak, flaky failure or asks to find the cause or do root cause analysis. Produces a hypothesis-driven debugging plan:
+  reproduce, isolate, bisect, instrument, fix and regression test. Not for speeding up slow code (use dev-loop-performance-profiler).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

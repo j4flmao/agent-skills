@@ -9,6 +9,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -379,7 +380,7 @@ const apn = require('apn');
 
 const apnProvider = new apn.Provider({
   token: {
-    key: fs.readFileSync('./AuthKey.p8'),
+    key: process.env.APNS_AUTH_KEY_PATH,   // .p8 path from the secret store; never commit the key
     keyId: 'KEY_ID',
     teamId: 'TEAM_ID',
   },
@@ -636,10 +637,10 @@ Future<void> showLocalNotification({
 - **No thread-id/grouping**: Notification tray becomes a mess. Group related notifications
 - **Critical alerts overused**: Users revoke critical alert entitlement if overused. Save for genuinely urgent
 - **No deep link in payload**: Notification tap lands on generic home screen. Always include navigation context
-- **Foreground push using remote instead of local**: iOS shows system notification by default in foreground. Use `onMessage` to show custom in-app UI instead
+- **Foreground presentation not handled**: iOS shows nothing for a foreground notification unless `userNotificationCenter(_:willPresent:)` returns presentation options; Android FCM `notification` messages are not shown in the foreground either. Decide per type: banner via `willPresent`/local notification, or custom in-app UI from `onMessage`
 - **Not handling both background and killed states**: App launched from notification tap differs from background resume. Handle both paths
 - **Logging push tokens in production**: Tokens are unique identifiers. Never log to console or crash reporting
-- **No fallback for devices without Play Services**: Firestore/FCM not available on some Chinese devices. Use alternative push SDK (Huawei Mobile Services)
+- **No fallback for devices without Play Services**: FCM is not available on devices without Google Play services (common in China). Use alternative push SDK (Huawei Mobile Services)
 
 ## Performance Considerations
 - Token registration should be fire-and-forget — don't block app launch
@@ -647,12 +648,12 @@ Future<void> showLocalNotification({
 - Use topic-based messaging for broadcasts over individual token sends
 - Silent pushes limited to ~3 per app per hour by iOS — budget accordingly
 - Notification service extension has 30s to download media (iOS)
-- Android notification rate limit: ~100/second per device
+- Android rate-limits rapid notification posts/updates from one app and silently drops the excess; coalesce progress updates
 - Monitor notification delivery rate, tap rate, and opt-out rate as KPIs
 - Compress payload data, reference images by URL rather than embedding
 
 ## Testing Push Notifications
-- iOS: use `swcutil` or Xcode > Simulate Push Notification with `.apns` file
+- iOS: `xcrun simctl push booted <bundle-id> payload.apns` or drag an `.apns` file onto the Simulator; real APNs delivery still needs a device test
 - Android: use Firebase Console > Cloud Messaging > Send Test Message
 - Test all three states: foreground, background, killed
 - Test permission flow: accept, deny, accept-then-deny-in-settings

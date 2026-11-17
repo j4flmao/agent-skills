@@ -5,6 +5,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -472,6 +473,8 @@ Reusable workflows: call another workflow file, support secrets and matrix, good
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: minimal `permissions`, concurrency groups and job timeouts; OIDC per repo/environment instead of cloud keys; actions pinned by SHA; deploy by a GitOps commit gated by environment reviewers.
 
 - `references/merged-github-actions-pipelines.md` — GitHub Actions CI/CD Pipeline Architecture (merged from `devops/ci-cd/github-actions-pipelines`)
 

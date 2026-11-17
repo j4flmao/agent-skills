@@ -81,7 +81,7 @@ Common failures in OpenAPI authoring, linting, rendering, code generation and pu
 | Contract Testing symptom | Cause | Fix |
 |--------------------------|-------|-----|
 | Schemathesis 500s on edge inputs | Server lacks validation for bounds in spec | Add server validation; good finding, not noise |
-| Dredd/Schemathesis fails on auth | No credentials for test env | Provide sandbox token via CI secret |
+| Schemathesis fails on auth | No credentials for test env | Provide sandbox token via CI secret |
 | Response validation failures for extra fields | `additionalProperties: false` on responses | Decide policy; typically keep responses open |
 
 ## Debug Commands

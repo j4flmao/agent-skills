@@ -30,7 +30,7 @@ Add when the project grows: production concerns, scaling and team workflows.
 
 | Skill | Path | What it covers |
 |-------|------|----------------|
-| [`vue-nuxt`](../../skills/frontend/vue/nuxt/SKILL.md) | `frontend/vue/nuxt` | Build Nuxt 3/4 applications with directory-based routing, server-side data fetching, and auto-imported components and composables. |
+| [`vue-nuxt`](../../skills/frontend/vue/nuxt/SKILL.md) | `frontend/vue/nuxt` | Build Nuxt 4 applications (Nuxt 3 reached end of life on 31 July 2026; upgrade with npx nuxt upgrade and the v4 migration guide) with… |
 | [`frontend-rendering-strategies`](../../skills/frontend/universal/rendering-strategies/SKILL.md) | `frontend/universal/rendering-strategies` | Select and implement the correct rendering strategy for each route: CSR for highly interactive dashboards, SSR for personalized content, SSG for… |
 | [`frontend-performance`](../../skills/frontend/universal/performance/SKILL.md) | `frontend/universal/performance` | Optimize Core Web Vitals (LCP, CLS, INP) and bundle size. |
 | [`frontend-testing`](../../skills/frontend/universal/testing/SKILL.md) | `frontend/universal/testing` | Test user behavior, not implementation. |

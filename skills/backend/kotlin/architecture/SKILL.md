@@ -1,10 +1,11 @@
 ---
 name: kotlin-architecture
 description: >
-  Use this skill when designing Kotlin backend architecture — Ktor, Spring WebFlux, http4k. Project structure, coroutine pipelines, routing, error handling, DI. This skill enforces: structured concurrency, proper coroutine scope management, layered architecture, validation. Do NOT use for: frontend architecture, database schema design, Kotlin Multiplatform Mobile.
+  Use when the user asks about Ktor, Kotlin backend architecture, Ktor plugins and routing, coroutine scopes in a server, StatusPages error handling or http4s/Spring WebFlux with Kotlin. Produces a Kotlin service layout with structured concurrency. Not for repository/DI/MockK recipes (use kotlin-backend-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -26,7 +27,7 @@ User request includes: `kotlin backend`, `ktor`, `webflux`, `http4k`, `kotlin se
 ### Input Context
 - Framework (Ktor, Spring WebFlux, http4k)
 - Runtime (JVM 17+, native via Kotlin/Native)
-- Language (Kotlin 1.9+)
+- Language (Kotlin 2.x, K2 compiler)
 - Project type (REST API, GraphQL, WebSocket server)
 
 ### Output Artifact

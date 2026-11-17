@@ -5,6 +5,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -528,6 +529,8 @@ Ansible playbook YAML, role directory structure, inventory YAML/INI, Jinja2 temp
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: FQCN module names and pinned collections (`requirements.yml`); prove idempotence with Molecule; rolling changes use `serial` plus health checks; secrets via ansible-vault or lookups with `no_log`.
 
 - `references/merged-ansible-automation.md` — Ansible Configuration Management (merged from `devops/iac/ansible-automation`)
 

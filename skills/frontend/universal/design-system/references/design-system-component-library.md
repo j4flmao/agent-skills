@@ -297,7 +297,7 @@ Every component must support:
 2. **Focus management**: Visible focus indicator, focus trap for modals, roving tabindex
 3. **ARIA attributes**: Correct roles, states, and properties
 4. **Screen reader announcements**: aria-live for dynamic content
-5. **Color contrast**: Meet WCAG 2.1 AA (4.5:1 text, 3:1 UI)
+5. **Color contrast**: Meet WCAG 2.2 AA (4.5:1 text, 3:1 UI)
 
 ### Accessibility Test Pattern
 

@@ -43,9 +43,10 @@ const kafka = new Kafka({
 ## ACL-Based Authorization
 
 ```bash
+# KRaft clusters (Kafka 4.x): ACLs go through the brokers; admin.properties holds the
+# admin client's TLS/SASL settings (keep credentials out of the file in git).
 # Define ACLs for producer role
-kafka-acls.sh --authorizer-properties \
-  zookeeper.connect=zookeeper:2181 \
+kafka-acls.sh --bootstrap-server kafka:9093 --command-config admin.properties \
   --add \
   --allow-principal User:order-service \
   --operation Write \
@@ -53,8 +54,7 @@ kafka-acls.sh --authorizer-properties \
   --topic order.created.v1
 
 # Define ACLs for consumer role
-kafka-acls.sh --authorizer-properties \
-  zookeeper.connect=zookeeper:2181 \
+kafka-acls.sh --bootstrap-server kafka:9093 --command-config admin.properties \
   --add \
   --allow-principal User:payment-service \
   --operation Read \
@@ -64,8 +64,7 @@ kafka-acls.sh --authorizer-properties \
   --topic order.created.v1
 
 # Restrict consumer group access
-kafka-acls.sh --authorizer-properties \
-  zookeeper.connect=zookeeper:2181 \
+kafka-acls.sh --bootstrap-server kafka:9093 --command-config admin.properties \
   --add \
   --allow-principal User:order-processor \
   --operation Read \

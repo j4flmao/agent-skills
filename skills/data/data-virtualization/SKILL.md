@@ -1,10 +1,13 @@
 ---
 name: data-data-virtualization
 description: >
-  Use this skill when asked about data virtualization, Trino, Presto, Starburst, Dremio, query federation, federated query, cross-source join, pushdown, connector, or data lake query engine. This skill enforces: Trino/Presto architecture (coordinator/worker), connector patterns for query federation, query pushdown optimization, cross-source join strategies, Starburst enterprise features, Dremio reflections for acceleration, and performance tuning. Do NOT use for: ETL pipeline development, data warehouse schema design, or OLTP database query optimization.
+  Use when the user asks about Trino, Presto, Starburst, Dremio, query federation, cross-source joins or
+  connector pushdown. Produces federation architecture, connector config and pushdown and join tuning. Not for
+  warehouse modeling (use data-data-warehouse) or lake table formats (use data-data-lake).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

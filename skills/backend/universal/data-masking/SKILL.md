@@ -1,10 +1,11 @@
 ---
 name: backend-data-masking
 description: >
-  Use this skill when the user says 'data masking', 'PII', 'personally identifiable information', 'encryption', 'anonymization', 'GDPR', 'CCPA', 'data privacy', 'field-level encryption', 'tokenization', 'redaction', 'data classification'. This skill masks, encrypts, and anonymizes sensitive data (PII) for GDPR/CCPA compliance. Applies to any backend stack. Do NOT use for: network-level encryption (TLS), firewall rules, or access control policies.
+  Use when the user asks about PII masking, redaction, field-level encryption, tokenization, anonymization or pseudonymization, GDPR erasure or masking production data for test environments. Produces a data protection plan with code. Not for encryption at rest and key management (use security-data-security).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

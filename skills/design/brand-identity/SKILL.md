@@ -1,10 +1,11 @@
 ---
 name: design-brand-identity
 description: >
-  Use when the user asks about brand identity, brand guidelines, visual identity, brand strategy, logo usage, brand voice, or brand consistency. Do NOT use for: visual design (design-visual-design), design systems (design-design-systems), or UX research (design-ux-research).
+  Use when the user asks about brand identity, brand guidelines, logo usage rules, brand voice and tone, brand strategy or keeping a brand consistent across channels. Produces brand guideline structure and usage rules. Not for UI color and typography choices (use design-visual-design) or design systems (use design-systems).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

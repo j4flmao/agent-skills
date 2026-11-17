@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -77,7 +78,7 @@ Deployment target?
 Team expertise?
 ├── New Swift team → SwiftUI (faster to build, less code)
 ├── Experienced UIKit team → UIKit for complex features, SwiftUI for simpler screens
-└── Enterprise app → UIKit (proven, better accessibility, broader testing tools)
+└── Enterprise app with heavy custom UI → UIKit where SwiftUI lacks control; SwiftUI elsewhere
 ```
 
 ### Architecture Pattern Selection
@@ -115,7 +116,7 @@ Sync needed?
 Task type?
 ├── One-shot network call → async/await (structured concurrency)
 ├── Stream of values → AsyncSequence (AsyncStream, AsyncAlgorithms)
-├── Reactive chain → Combine (pre iOS 13-16, being superseded by Swift concurrency)
+├── Reactive chain → Combine (iOS 13+; still supported, but new code prefers async sequences)
 └── Long-running observation → AsyncStream + @Observable (iOS 17+)
 ```
 
@@ -207,6 +208,10 @@ final class OrderViewModel {
 struct OrderListView: View {
     @State private var viewModel: OrderViewModel
 
+    init(service: OrderService) {
+        _viewModel = State(initialValue: OrderViewModel(service: service))
+    }
+
     var body: some View {
         Group {
             if viewModel.isLoading {
@@ -261,15 +266,21 @@ final class OrderListViewController: UIViewController {
         }
     }
 
+    // @Observable has no Combine publisher; re-register tracking after each change.
+    // (iOS 26 UIKit can track Observable reads in viewWillLayoutSubviews/updateProperties automatically.)
     private func bindViewModel() {
-        Task { @MainActor in
-            for await orders in viewModel.$orders.values {
-                var snapshot = NSDiffableDataSourceSnapshot<String, Order>()
-                snapshot.appendSections(["main"])
-                snapshot.appendItems(orders)
-                await dataSource.apply(snapshot)
-            }
+        withObservationTracking {
+            applySnapshot(viewModel.orders)
+        } onChange: { [weak self] in
+            Task { @MainActor in self?.bindViewModel() }
         }
+    }
+
+    private func applySnapshot(_ orders: [Order]) {
+        var snapshot = NSDiffableDataSourceSnapshot<String, Order>()
+        snapshot.appendSections(["main"])
+        snapshot.appendItems(orders)
+        dataSource.apply(snapshot, animatingDifferences: true)
     }
 }
 ```
@@ -295,19 +306,21 @@ struct PersistenceController {
 
     var context: NSManagedObjectContext { container.viewContext }
 
-    func save() {
-        if context.hasChanges {
-            try? context.save()
-        }
+    func save() throws {
+        guard context.hasChanges else { return }
+        try context.save()                       // let callers surface/log the error
     }
-}
 
-// Background context for heavy operations
-func performBackgroundTask(_ block: @escaping (NSManagedObjectContext) -> Void) {
-    let context = container.newBackgroundContext()
-    context.perform {
-        block(context)
-        try? context.save()
+    // Background context for heavy operations
+    func performBackgroundTask(_ block: @escaping (NSManagedObjectContext) throws -> Void) {
+        container.performBackgroundTask { context in
+            do {
+                try block(context)
+                if context.hasChanges { try context.save() }
+            } catch {
+                Logger.persistence.error("Background save failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 }
 ```
@@ -386,7 +399,7 @@ final class OrderViewModelTests: XCTestCase {
 - `withThrowingTaskGroup` for parallel async operations (multiple API calls)
 - `Task` lifetime tied to view lifecycle with `.task` modifier
 - Cancellation: check `Task.isCancelled` in long-running loops
-- `await Task.yield()` for cooperative cancellation points
+- `try Task.checkCancellation()` at loop boundaries; `await Task.yield()` only gives other tasks a turn and does not check cancellation
 
 ## Anti-Patterns
 

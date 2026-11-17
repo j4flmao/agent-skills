@@ -199,7 +199,7 @@ export const actions: Actions = {
   import { enhance } from '$app/forms';
   import type { ActionData } from './$types';
 
-  export let form: ActionData;
+  let { form }: { form: ActionData } = $props();
 </script>
 
 <form method="POST" action="?/login" use:enhance>

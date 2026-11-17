@@ -1,10 +1,11 @@
 ---
 name: frontend-design-system
 description: >
-  Use this skill when building or extending a frontend design system: defining design tokens (primitive/semantic/component tiers), setting up a component library, designing component APIs with CVA variants, or implementing theme/dark-mode architecture. This skill enforces: three-tier token hierarchy (primitive → semantic → component), CSS custom properties as the token layer, CVA for component variants, component API with max 10 props, and dark mode via semantic token swap. Works with React, Vue, Angular. Do NOT use for: backend API design, database schema, or one-off component implementation.
+  Use when the user asks to build a component library, define primitive, semantic and component design tokens as CSS variables, design component APIs with CVA variants, or wire dark mode through semantic tokens. Produces coded token layers and component library structure. Not for Figma variables and token pipeline governance (use design-systems).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -355,7 +356,7 @@ npx style-dictionary build --config style-dictionary.config.js
 Every component in the design system must:
 - Support keyboard navigation (Tab, Enter, Escape, Arrow keys)
 - Have visible focus states (not just outline: none)
-- Meet WCAG 2.1 AA contrast ratios (4.5:1 normal text, 3:1 large)
+- Meet WCAG 2.2 AA contrast ratios (4.5:1 normal text, 3:1 large)
 - Expose ARIA attributes for screen readers
 - Support prefers-reduced-motion
 

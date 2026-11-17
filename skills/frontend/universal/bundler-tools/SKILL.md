@@ -1,7 +1,7 @@
 ---
 name: frontend-bundler-tools
 description: >
-  Use this skill when the user says 'bundler', 'Vite', 'Webpack', 'Turbopack', 'build tool', 'bundle config', 'build optimization', 'tree shaking', 'code splitting', 'lazy loading', 'chunk splitting', 'asset bundling', 'build performance', 'bundler migration'. Configure and optimize frontend build tooling. Do NOT use for: framework-specific builds or deployment pipelines.
+  Use when the user asks about Vite, webpack, Rspack, Turbopack, Rolldown, esbuild, bundle config, tree shaking, code splitting, chunking, build speed or migrating webpack to Vite. Produces bundler configuration and build-optimization steps. Not for Core Web Vitals field work (use web-performance) or CI pipelines (use cicd-pipeline).
 compatibility:
   claude-code: true
   cursor: true
@@ -11,6 +11,7 @@ tags: [frontend, bundler, build, phase-7, universal]
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Frontend Bundler Tools

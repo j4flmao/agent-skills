@@ -1,10 +1,12 @@
 ---
 name: planning-bdd-atdd
 description: >
-  Use this skill when the user asks about BDD, ATDD, behavior-driven development, acceptance test-driven development, Gherkin, Cucumber, SpecFlow, specification by example, executable specifications, living documentation, three amigos, example mapping, or acceptance criteria refinement. Covers: Gherkin syntax and deep features (Scenario Outline, Data Tables, Doc Strings), Specification by Example methodology, BDD tools (Cucumber, Reqnroll (formerly SpecFlow), Behave, JBehave), ATDD workflow with three amigos and example mapping. Do NOT use for: unit testing (unit-testing), integration testing (integration-testing), or manual test planning.
+  Use when the user asks to write Gherkin scenarios, Given/When/Then, BDD or ATDD, Cucumber, Reqnroll (formerly SpecFlow), Behave, example mapping or three amigos sessions. Produces executable
+  specifications and step definitions. Not for UAT sign-off (use quality-acceptance-testing) or unit tests (use quality-unit-testing).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

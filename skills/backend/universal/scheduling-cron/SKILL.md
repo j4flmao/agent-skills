@@ -1,10 +1,11 @@
 ---
 name: backend-scheduling-cron
 description: >
-  Use this skill when the user says 'cron', 'schedule', 'scheduled task', 'cron job', 'job scheduling', 'distributed cron', 'cron expression', 'timezone', 'scheduler', 'background job', 'periodic task', 'interval', 'cron trigger'. This skill implements distributed cron and job scheduling with timezone-aware triggers and leader election. Applies to any backend stack. Do NOT use for: message queue consumers, event-driven processing, or workflow orchestration.
+  Use when the user asks about cron jobs, cron expressions, distributed or clustered cron, timezones and DST in schedules, missed runs or Quartz/Kubernetes CronJob. Produces schedules with single-run guarantees and monitoring. Not for queued background work (use backend-background-jobs).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

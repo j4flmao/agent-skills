@@ -42,7 +42,7 @@ SQLite-based relational DB for React Native. Lazy loading (only fetch visible re
 ## Security Fundamentals
 
 ### react-native-keychain
-Wrapper for iOS Keychain and Android EncryptedSharedPreferences. Store tokens and credentials securely. Face ID / fingerprint biometric unlock. `SECURITY_LEVEL.ANY` vs `SECURITY_LEVEL.SECURE_SOFTWARE`.
+Wrapper for iOS Keychain and Android Keystore-backed storage. Store tokens and credentials securely. Face ID / fingerprint biometric unlock. `SECURITY_LEVEL.ANY` vs `SECURITY_LEVEL.SECURE_SOFTWARE`.
 
 ### SSL Pinning
 Use `react-native-ssl-pinning` or OkHttp's CertificatePinner (Android) + URLSession delegate (iOS). Pin public key hashes. Include backup pins for key rotation. Test with mitmproxy to verify pinning works.

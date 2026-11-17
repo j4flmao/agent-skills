@@ -1,10 +1,14 @@
 ---
 name: ml-experiment-tracking
 description: >
-  Use this skill when asked about MLflow, W&B, Neptune, DVC, experiment tracking, run logging, metric logging, artifact store, model registry, hyperparameter logging, or experiment comparison. This skill enforces: experiment tracking platform setup (MLflow, W&B, Neptune), run logging conventions (params, metrics, artifacts), model registry versioning with alias-based promotion, experiment comparison using parallel coordinates, and full reproducibility through code + data + environment tracking. Do NOT use for: model training itself, feature engineering pipelines, or production deployment.
+  Use when the user asks about MLflow tracking, Weights & Biases, DVC experiments, run and metric logging,
+  artifact stores, MLflow model registry aliases or migrating off Neptune. Produces tracking setup, logging
+  conventions and registry promotion flow. Not for pipeline orchestration (use ml-ml-pipeline) or data
+  versioning (use data-data-versioning).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -29,11 +33,11 @@ Is your team size 1-3 data scientists working locally?
         |-- NO --> Do you have strict data sovereignty requirements?
               |-- YES --> MLflow (self-hosted, full control)
               |-- NO --> Do you need structured metadata with nested runs?
-                    |-- YES --> Neptune (structured logging, comparison)
+                    |-- YES --> W&B or Comet (structured logging, comparison)
                     |-- NO --> MLflow (open standard, broad ecosystem)
 
 Do you need experiment tracking for deep learning specifically?
-  |-- YES --> W&B (tight PyTorch/HuggingFace integration) or Neptune
+  |-- YES --> W&B (tight PyTorch/HuggingFace integration) or Comet
   |-- NO --> MLflow (sufficient for sklearn, XGBoost, lightGBM)
 
 Do you need model registry with CI/CD integration?
@@ -42,7 +46,7 @@ Do you need model registry with CI/CD integration?
 
 Is cost a primary constraint?
   |-- YES --> MLflow (free, open-source), DVC (free, git-based)
-  |-- NO --> W&B or Neptune (paid, more features)
+  |-- NO --> W&B or Comet (paid, more features)
 ```
 
 ### MLflow Tracking Server Deployment
@@ -112,7 +116,7 @@ No preamble. No postamble. No explanations. No filler. Compress output.
 ## Workflow
 
 ### Step 1: Platform Selection
-MLflow: open-source, self-hosted, language-agnostic, tracking + registry + projects + models. W&B: cloud-hosted, rich UI, collaboration, tight PyTorch/HuggingFace integration. Neptune: cloud-hosted, structured logging, rich comparison views. Local development: MLflow. Team collaboration: W&B or Neptune. Enterprise compliance: MLflow self-hosted on Kubernetes.
+MLflow: open-source, self-hosted, language-agnostic, tracking + registry + projects + models. W&B: cloud-hosted, rich UI, collaboration, tight PyTorch/HuggingFace integration. Neptune.ai is no longer an option: after its acquisition by OpenAI the hosted service shut down in March 2026, so migrate existing Neptune projects to MLflow or W&B. Local development: MLflow. Team collaboration: W&B (or Comet). Enterprise compliance: MLflow self-hosted on Kubernetes.
 
 ```yaml
 tracking_uri: http://mlflow-server:5000
@@ -390,7 +394,7 @@ services:
 ### Cost Optimization
 - MLflow: self-hosted → infrastructure cost only (EC2/ECS + RDS)
 - W&B: free tier for individuals, paid for teams (per seat pricing)
-- Neptune: free tier (limited), paid for teams
+- Neptune: discontinued (SaaS shut down March 2026); export and migrate
 - DVC: free (git-based, no server needed)
 - Artifact storage: S3/GS lifecycle policies to archive old artifacts after 90 days
 - Database cleanup: periodic deletion of old runs (>1 year) via MLflow API
@@ -430,12 +434,12 @@ services:
 - **Overwriting model registry versions**: Registry versions must be immutable; always create a new version.
 
 ## Compared With
-| Feature | MLflow | W&B | Neptune | DVC |
+| Feature | MLflow | W&B | Comet | DVC |
 |---------|--------|-----|---------|-----|
-| Self-hosted | Yes | Optional | No | Yes |
+| Self-hosted | Yes | Optional | Optional | Yes |
 | Model Registry | Yes | Yes | Yes | Limited |
 | Experiment Comparison | Basic | Rich | Rich | None |
-| Nested Runs | No | Yes | Yes | No |
+| Nested Runs | Yes (`nested=True`) | Grouped runs | Grouped runs | No |
 | Reports/Dashboards | Limited | Yes | Yes | No |
 | Pipeline versioning | Projects | Limited | Limited | Full |
 | Cost | Free | Freemium | Freemium | Free |
@@ -449,7 +453,7 @@ services:
 ## Tooling/Methodology
 - **MLflow**: Tracking Server, Model Registry, Projects, Models (serving).
 - **W&B**: Experiments, Artifacts, Sweeps, Reports, Tables.
-- **Neptune**: Runs, Metadata, Artifacts, Monitoring, Model Registry.
+- **Neptune**: discontinued in March 2026 (acquired by OpenAI); do not start new projects on it.
 - **DVC**: Data versioning, pipeline versioning, experiment tracking (git-based).
 - **Integration libraries**: PyTorch Lightning, HuggingFace Transformers, Keras, XGBoost.
 

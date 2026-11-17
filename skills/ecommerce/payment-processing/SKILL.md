@@ -1,10 +1,12 @@
 ---
 name: ecommerce-payment-processing
 description: >
-  Use when the user asks about payment processing, payment gateway integration, Stripe, PayPal, subscription billing, PCI DSS compliance, payment orchestration, or recurring payments. Do NOT use for: general e-commerce checkout flow (ecommerce-checkout-cart), or in-app purchases (mobile-in-app-purchase).
+  Use when the user asks about Stripe, PayPal, receiving payment webhooks and verifying signatures, payment intents, subscription billing, dunning, refunds, chargebacks, 3D Secure or PCI DSS scope.
+  Produces a payment architecture with idempotent webhook handling. Not for cart and checkout UX (use ecommerce-checkout-cart) or app store purchases (use mobile-in-app-purchase).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

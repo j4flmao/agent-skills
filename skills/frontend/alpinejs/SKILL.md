@@ -1,10 +1,11 @@
 ---
 name: alpinejs
 description: >
-  Use this skill when the user says 'Alpine.js', 'Alpine setup', 'Alpine component', 'Alpine x-data', 'Alpine x-init', 'Alpine reactive', 'Alpine project', or when building with Alpine.js. This skill enforces: HTML attribute-driven reactivity, Alpine directives (x-data, x-bind, x-on, x-show, x-for), store pattern for shared state, minimal JavaScript. Requires Alpine.js in the project (CDN or npm). Do NOT use for: Vue/React/Svelte component patterns, heavy JS frameworks, or non-Alpine projects.
+  Use when the user asks about Alpine.js, x-data, x-init, x-bind, x-on, x-show, x-for, Alpine.store or adding reactivity to server-rendered HTML. Produces attribute-driven Alpine components, stores and CSP-safe setup with minimal JavaScript. Not for hypermedia requests that swap server HTML (use htmx).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

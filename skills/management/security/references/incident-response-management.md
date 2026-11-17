@@ -1025,7 +1025,7 @@ function Stop-AzureCompromisedVM {
 - Azure Sentinel for SIEM/SOAR
 - Microsoft Defender for Cloud for CSPM
 - Azure Activity Log for control plane audit
-- Azure AD sign-in logs for identity investigation
+- Microsoft Entra ID sign-in logs for identity investigation
 - NSG Flow Logs for network analysis
 - Azure Key Vault for key rotation
 - Azure Automation for response orchestration
@@ -1573,8 +1573,9 @@ def static_pe_analysis(file_path):
     # File hashes
     with open(file_path, "rb") as f:
         data = f.read()
-    results["md5"] = hashlib.md5(data).hexdigest()
-    results["sha1"] = hashlib.sha1(data).hexdigest()
+    # MD5/SHA-1 only for IOC lookup interop with threat-intel feeds, never for integrity
+    results["md5"] = hashlib.md5(data, usedforsecurity=False).hexdigest()
+    results["sha1"] = hashlib.sha1(data, usedforsecurity=False).hexdigest()
     results["sha256"] = hashlib.sha256(data).hexdigest()
 
     # PE analysis

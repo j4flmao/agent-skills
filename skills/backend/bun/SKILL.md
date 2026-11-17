@@ -1,10 +1,11 @@
 ---
 name: bun
 description: >
-  Use this skill when the user says 'bun', 'bun runtime', 'bun install', 'bun test', 'bun build', 'Bun.serve', 'bun:sqlite', 'Bun.file', 'Bun shell', 'bun --compile'. Builds TypeScript/JavaScript backends and tools on the Bun runtime: Bun.serve HTTP/WebSocket servers, bun:sqlite, file I/O, Bun Shell scripts, the built-in test runner, bundler and single-file executables. Do NOT use for: Elysia-specific architecture (elysia-architecture), Hono apps (nodejs-hono), Deno (deno), Node.js-only deployments (nodejs-architecture), browser JavaScript.
+  Use when the user asks about Bun, Bun.serve, bun install, bun test, bun build --compile, bun:sqlite, Bun.file or Bun Shell. Produces Bun runtime servers, tooling and tests with Node compatibility notes. Not for the Elysia framework on Bun (use elysia-architecture).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

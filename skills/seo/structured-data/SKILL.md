@@ -1,10 +1,11 @@
 ---
 name: seo-structured-data
 description: >
-  Use this skill when the user says 'structured data', 'JSON-LD', 'schema.org markup', 'rich results', 'Product schema', 'Article schema', 'BreadcrumbList', 'Organization schema', 'review stars in Google', 'Rich Results Test errors'. It implements schema.org JSON-LD that is eligible for Google rich results, renders it server-side in React/Next.js safely, and validates it in CI and Search Console. Do NOT use for: knowledge-graph/RDF modelling beyond search features, general technical SEO (use seo-fundamentals), or meta tags/Open Graph (use frontend-seo).
+  Use when the user asks to add JSON-LD structured data, schema.org markup, rich results, Product, Article, BreadcrumbList or Organization schema, review stars, or Rich Results Test errors. Produces valid, XSS-safe JSON-LD rendered server-side and validated in CI. Not for meta tags and Open Graph (use frontend-seo) or crawl issues (use seo-fundamentals).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [seo, structured-data, json-ld, schema-org, rich-results]
 ---
 

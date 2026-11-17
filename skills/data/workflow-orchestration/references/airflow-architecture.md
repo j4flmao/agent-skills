@@ -76,10 +76,10 @@ kubernetes:
 ## DAG Design Patterns
 
 ```python
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-from airflow.utils.task_group import TaskGroup
+# Airflow 3 imports: authoring API in airflow.sdk, core operators in the standard provider
+from airflow.providers.standard.operators.python import PythonOperator
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.sdk import DAG, TaskGroup
 
 with DAG('complex_etl', schedule='0 6 * * *', catchup=False) as dag:
 
@@ -109,8 +109,8 @@ with DAG('complex_etl', schedule='0 6 * * *', catchup=False) as dag:
 
 ```python
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.sensors.time_delta import TimeDeltaSensor
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator  # replaces PostgresOperator
+from airflow.providers.standard.sensors.time_delta import TimeDeltaSensor
 from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
 
 # Spark job
@@ -125,9 +125,9 @@ spark_job = SparkSubmitOperator(
 )
 
 # SQL transform
-run_sql = PostgresOperator(
+run_sql = SQLExecuteQueryOperator(
     task_id='run_transform',
-    postgres_conn_id='warehouse',
+    conn_id='warehouse',
     sql='sql/transform.sql',
 )
 

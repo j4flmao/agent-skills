@@ -1,10 +1,11 @@
 ---
 name: microservices
 description: >
-  Use this skill when designing microservices architecture — decomposition, communication, data, discovery, observability, deployment. This skill enforces: bounded context decomposition, database-per-service ownership, saga patterns for distributed transactions, strangler fig migration. Do NOT use for: monolith application design, frontend architecture, single-service API design.
+  Use when the user asks about microservices, splitting a monolith, service boundaries, database per service, sagas, service discovery or strangler fig migration. Produces a decomposition and communication plan (or a monolith verdict). Not for DDD modeling (use architecture-domain-driven-design) or Kubernetes setup (use kubernetes).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -480,6 +481,7 @@ const client = new PaymentServiceClient('payment-service:443', channelCredential
 | Service mesh sidecar overhead | +1-3ms | +5-10ms | ~5% throughput reduction |
 
 ## Rules
+- Do not split before boundaries are clear: a modular monolith is the default until team or scaling needs justify services.
 - No shared databases between services — ever.
 - Each service independently deployable with its own CI/CD.
 - 3+ services in a saga? Use orchestration.
@@ -524,5 +526,5 @@ Content folded in from overlapping skills and notes.
 - `references/merged-microservice-design-patterns.md` — Microservice Data-Consistency Patterns (merged from `backend/universal/design-patterns/microservices`)
 
 ## Handoff
-Hand off to `devops/containerization/SKILL.md` for container orchestration setup. Hand off to `backend/universal/event-driven/SKILL.md` for detailed event-driven patterns. Hand off to `backend/universal/database-patterns/SKILL.md` for data consistency strategies.
+Hand off to `devops/kubernetes/SKILL.md` for container orchestration setup. Hand off to `backend/universal/event-driven/SKILL.md` for detailed event-driven patterns. Hand off to `backend/universal/database-patterns/SKILL.md` for data consistency strategies.
 - Review code for security, performance, and correctness before merging.

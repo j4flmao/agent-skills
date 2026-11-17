@@ -1,12 +1,12 @@
 ---
 name: enterprise-vendor-management
 description: >
-  Use this skill when managing third-party vendors, suppliers, and service providers.
-  This skill enforces: vendor selection, contract negotiation, risk assessment, performance management.
-  Do NOT use for: employee hiring, procurement of off-the-shelf goods, internal resource allocation.
+  Use when the user asks about selecting a vendor or SaaS supplier, an RFP, vendor risk assessment, contract and SLA negotiation, vendor scorecards or exit planning. Produces vendor evaluation, risk and
+  performance management plans. Not for build vs buy financials (use planning-cost-benefit) or hiring people (use management-hiring).
 version: "3.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -47,7 +47,7 @@ Baseline → Measure → Identify gaps → Adjust → Measure → Repeat
 ### Scoring Algorithms
 
 ```
-BM25 (default in Elasticsearch 7.x+, OpenSearch):
+BM25 (default since Elasticsearch 5.0 / Lucene 6; also OpenSearch):
 ├── Best for: general full-text search
 ├── Parameters:
 │   ├── k1: term saturation (default 1.2)
@@ -64,10 +64,10 @@ BM25 (default in Elasticsearch 7.x+, OpenSearch):
     ├── k1=2.0, b=0.9: verbose documents with repeated terms
     └── k1=0.1, b=0.3: exact match preference (long-tail queries)
 
-TF-IDF (legacy, Elasticsearch < 7.x):
+TF-IDF (legacy classic similarity, Elasticsearch < 5.0):
 ├── Best for: compatibility with existing relevance models
 ├── No saturation: repeated terms continue increasing score
-└── Replaced by BM25 in Elasticsearch 7.x
+└── Replaced by BM25 as default in Elasticsearch 5.0; classic similarity removed in 7.0
 
 Boolean model (no scoring):
 ├── Used in: filter context, term queries

@@ -3,29 +3,8 @@
 ## Purpose
 Rate limiting protects services from overload and abuse and enforces fair use between clients. The design choices are the algorithm (burst behaviour and accuracy), the key (who is limited), the enforcement point, and how a distributed limiter stays correct and fast. This skill makes those choices explicit and provides a correct Redis implementation.
 
-## Agent Protocol
-
-### Trigger
-"rate limiting algorithm", "token bucket", "leaky bucket", "sliding window", "fixed window", "GCRA", "distributed rate limiter", "Redis rate limit", "429", "Retry-After", "quota".
-
-### Input Context
-- What is protected (API, login, expensive endpoint, downstream dependency) and why (abuse, fairness, cost)
-- Identity available (API key, user, tenant, IP), traffic volume, number of gateway/service instances
-- Tolerance for over/under-limiting and behaviour when the limiter store is down
-
-### Output Artifact
-Algorithm and placement decision, limit table, implementation (Lua/Redis or gateway config), client contract. No file unless requested.
-
-### Response Format
-```
-Key: {tenant | user | API key | IP | route}
-Limit: {rate, burst, window}
-Algorithm: {token bucket | sliding window counter | GCRA | ...}
-Enforcement: {edge | gateway | service | local + global}
-Store: {in-memory | Redis | gateway-native}
-Response: 429 + Retry-After (+ RateLimit headers)
-Failure mode: {fail-open | fail-closed} because {reason}
-```
+## Scope
+Reference folded into the parent `../SKILL.md` (the entry point; use its trigger and Response Format). This file keeps only material the parent does not cover: algorithm comparison, enforcement points, a Redis token bucket and the client contract.
 
 ## 1. Algorithms
 | Algorithm | Behaviour | Memory/key | Accuracy | Use |

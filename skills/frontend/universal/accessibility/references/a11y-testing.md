@@ -65,7 +65,7 @@ test('should pass automated accessibility checks', async ({ page }) => {
 | Missing labels | Form inputs without aria-label or label | 1.3.1 |
 | Keyboard trap | Focus cannot leave an element | 2.1.2 |
 | Missing heading levels | Skipped h1-h6 hierarchy | 1.3.1 |
-| Duplicate IDs | Same id on multiple elements | 4.1.1 |
+| Duplicate IDs | Same id on multiple elements | 1.3.1 / 4.1.2 when it breaks labels or ARIA references (4.1.1 was removed in WCAG 2.2) |
 
 ## Integration Tests
 

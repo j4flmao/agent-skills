@@ -1,10 +1,11 @@
 ---
 name: backend-feature-flags
 description: >
-  Use this skill when implementing feature flags, canary releases, A/B testing, or kill switches. This skill enforces: flag ownership with removal date, cached evaluation, kill switches for critical features, safe defaults (off). Applies to LaunchDarkly, Unleash, Flagsmith, or custom flag systems. Do NOT use for: permanent configuration, environment variables, or build-time feature toggles.
+  Use when the user asks about server-side feature flags, kill switches, percentage rollouts, OpenFeature, LaunchDarkly, Unleash, Flagsmith or flag cleanup. Produces a flag design with ownership, defaults and evaluation code. Not for client UI flags (use frontend-feature-flags) or deploy strategies (use progressive-delivery).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

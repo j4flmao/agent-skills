@@ -1,10 +1,11 @@
 ---
 name: frontend-svelte-patterns
 description: >
-  Use this skill when the user says 'Svelte pattern', 'Svelte form', 'Svelte animation', 'Svelte transition', 'Svelte action', 'Svelte store pattern', 'Svelte data fetching'. This skill enforces: bind:value for form inputs, use:enhance for progressive enhancement, transition/animate directives for animations, use:action for reusable DOM behavior, and SvelteKit load functions for SSR data fetching. Requires existing Svelte 5 project (package.json with svelte ^5). Do NOT use for: React or Vue form/transition patterns.
+  Use when the user asks about Svelte forms and bind:value, transitions and animate, use: actions or attachments, shared state in .svelte.ts modules or Svelte data-fetching patterns. Produces reusable Svelte 5 UI patterns. Not for SvelteKit load functions and form actions (use sveltekit) or rune basics (use frontend-svelte-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

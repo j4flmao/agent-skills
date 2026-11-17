@@ -1,12 +1,14 @@
 # Play Billing Guide
 
-## Play Billing Library 5+
+## Play Billing Library 8+
+
+Google Play deprecates each major version about two years after release: version 7 stopped being accepted for new apps and updates on 31 August 2026 (extensions to 1 November 2026), and version 8 has a 31 August 2027 cutoff. Use the newest 8.x/9.x release and check the [deprecation FAQ](https://developer.android.com/google/play/billing/deprecation-faq).
 
 ### Gradle Setup
 
 ```groovy
 dependencies {
-    implementation "com.android.billingclient:billing:5.1.0"
+    implementation "com.android.billingclient:billing-ktx:<latest-8.x-or-newer>"  // pin via the version catalog
 }
 ```
 
@@ -15,7 +17,10 @@ dependencies {
 ```kotlin
 val billingClient = BillingClient.newBuilder(context)
     .setListener(purchaseUpdateListener)
-    .enablePendingPurchases()
+    .enablePendingPurchases(
+        PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
+    )                                   // no-arg overload was removed in PBL 8
+    .enableAutoServiceReconnection()    // PBL 8+: reconnects the service automatically
     .build()
 ```
 
@@ -111,7 +116,11 @@ val intent = Intent(Intent.ACTION_VIEW).apply {
 startActivity(intent)
 ```
 
-## Migration from PBL 4
+## Migration Notes
+
+- PBL 8 removed `queryPurchaseHistoryAsync` (use `queryPurchasesAsync` plus server records) and the no-argument `enablePendingPurchases()`.
+
+### From PBL 4
 
 - `SkuDetails` → `ProductDetails` (wrapper object changes)
 - `querySkuDetailsAsync` → `queryProductDetailsAsync`

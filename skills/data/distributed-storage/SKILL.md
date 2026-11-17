@@ -1,10 +1,14 @@
 ---
 name: data-distributed-storage
 description: >
-  Use this skill when designing distributed storage for HDFS, S3, ADLS, GCS, MinIO, NFS, or any distributed file system for data workloads. This skill enforces: storage backend selection, data durability and replication, file format selection, partitioning and compression, lifecycle policies, storage tiering, and cost optimization. Do NOT use for: database storage engines, local filesystem tuning, or content delivery networks.
+  Use when the user asks about HDFS, S3, ADLS, GCS, MinIO or Ceph for data workloads, replication and erasure
+  coding, small-file problems, storage tiering or lifecycle policies. Produces storage backend choice, layout
+  and durability and cost settings. Not for database storage engines (use database-internals-mechanics) or file
+  formats (use data-formats).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

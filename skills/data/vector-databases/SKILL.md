@@ -1,10 +1,14 @@
 ---
 name: data-vector-databases
 description: >
-  Use this skill when the user says 'vector database', 'vector db', 'pgvector', 'qdrant', 'milvus', 'pinecone', 'weaviate', 'hnsw', 'ivf', 'product quantization', 'ann search', 'similarity search', 'embeddings storage', 'hybrid search'. Chooses a vector store, designs collections/schemas and metadata filtering, tunes ANN indexes (HNSW, IVF, PQ) for recall vs latency vs memory, and sets up hybrid (dense + keyword) retrieval with evaluation. Do NOT use for: RAG prompt/answer design and chunking strategy (ai rag-architecture, prompt-engineering rag-design), full-text search engines alone (data-search-engine), recommender modeling (ml-recommendation-systems).
+  Use when the user asks to pick an index type for vector similarity search, pgvector, Qdrant, Milvus, Pinecone,
+  Weaviate, HNSW vs IVF vs PQ, metadata filtering or storing embeddings. Produces vector store choice,
+  collection schema and ANN index settings for recall, latency and memory. Not for full RAG pipeline design (use
+  llm-rag-retrieval-internals).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [data, vector-database, ann, hnsw, pgvector, embeddings, hybrid-search]
 ---
 

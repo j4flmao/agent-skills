@@ -1,10 +1,11 @@
 ---
 name: frontend-solidjs-architecture
 description: >
-  Use this skill when the user says 'SolidJS', 'SolidJS architecture', 'Solid signal', 'Solid component', 'Solid reactivity', 'SolidJS app', 'Solid router', 'SolidJS vs React', 'SolidJS fine-grained'. This skill enforces: fine-grained reactivity via Signals/Memos/Effects, compiled JSX with no virtual DOM, declarative control flow components (Show/For/Switch), createStore for deep reactivity, and @solidjs/router for routing. Requires SolidJS project (package.json with solid-js). Do NOT use for: React, Vue, or Svelte projects.
+  Use when the user asks about SolidJS, createSignal, createMemo, createEffect, createStore, Show/For control flow, @solidjs/router, SolidStart or SolidJS vs React. Produces a fine-grained reactive Solid app structure without a virtual DOM. Not for createResource, forms or animation patterns (use frontend-solidjs-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -1,10 +1,11 @@
 ---
 name: backend-audit-logging
 description: >
-  Use this skill when the user says 'audit log', 'audit trail', 'compliance logging', 'tamper-evident log', 'immutable log', 'audit table', 'change tracking', 'who changed what', 'data provenance', 'audit events', 'reporting log'. This skill implements immutable audit trails for compliance (SOC 2, SOX, HIPAA, GDPR). Applies to any backend stack. Do NOT use for: application logging (error logs, debug logs), metrics, or tracing.
+  Use when the user asks about audit logs, audit trail, who changed what, tamper-evident or append-only logs, hash chains, SOC 2 audit evidence or change tracking tables. Produces an immutable audit trail design and code. Not for application logs (use backend-structured-logging).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

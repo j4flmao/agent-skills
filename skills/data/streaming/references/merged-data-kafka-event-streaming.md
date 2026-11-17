@@ -1,34 +1,9 @@
 # Apache Kafka Event Streaming
 
+> Merged reference for the data-streaming skill (folded in from `data/data-engineering/kafka-event-streaming`). The entry point is the parent [SKILL.md](../SKILL.md); this file keeps only the material that the parent does not cover.
+
 ## Purpose
 Kafka is a distributed, partitioned, replicated append-only log. Producers append records to topic partitions; consumers read at their own pace by offset; data is retained by time/size or compacted by key. Getting partitioning, durability settings and consumer offset handling right up front prevents most ordering bugs, data loss and lag incidents.
-
-## Agent Protocol
-
-### Trigger
-"kafka", "topic design", "partitions", "partition key", "producer acks", "idempotent producer", "consumer group", "consumer lag", "rebalance", "offset commit", "kraft", "log compaction", "retention", "exactly-once".
-
-### Input Context
-- Event types, throughput (MB/s, msgs/s), message size, ordering requirements, retention needs.
-- Kafka distribution and version (Apache Kafka, Confluent Platform/Cloud, Amazon MSK, Redpanda as API-compatible alternative), client languages.
-
-### Output Artifact
-Topic spec + producer/consumer configuration + operational checks. No file unless requested.
-
-### Response Format
-```
-Topic: {name} partitions={n} RF={3} min.insync.replicas={2}
-Key: {field} (ordering scope: {per entity})
-Retention: {time/size | compact}
-Producer: acks=all, idempotence on, {batching}
-Consumer: group={id}, commit={strategy}, processing={idempotent how}
-```
-
-### Completion Criteria
-- [ ] Ordering requirement mapped to a partition key.
-- [ ] `replication.factor=3`, `min.insync.replicas=2`, `acks=all` for data that must not be lost.
-- [ ] Consumers idempotent (at-least-once delivery assumed).
-- [ ] Consumer lag monitored with alerts.
 
 ## Core Model
 | Concept | Facts |
@@ -137,5 +112,5 @@ Alert on: consumer lag (growing, not absolute), under-replicated partitions, off
 - Using Kafka as a request/response RPC transport.
 
 ## References
-- Related skills: `../../streaming/SKILL.md` (stream processing, CDC), `../../schema-registry/SKILL.md`, `../data-lake-architecture/SKILL.md`.
+- Related skills: `../SKILL.md` (parent: stream processing, CDC), `../../schema-registry/SKILL.md`, `../../data-lake/SKILL.md`.
 - Apache Kafka documentation (producer/consumer configs, KRaft, upgrade notes for 4.x); KIP-848; KIP-932.

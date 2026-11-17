@@ -1,13 +1,11 @@
 ---
 name: backend-transactional-email
 description: >
-  Enforce transactional email patterns including SMTP/SES/SendGrid/Resend setup,
-  MJML responsive template design, deliverability (SPF/DKIM/DMARC), webhook
-  handling, rate limiting, and GDPR-compliant email operations. NOT for marketing
-  campaigns, newsletters, or bulk unsolicited email.
+  Use when the user asks about transactional email, password reset emails that do not land in spam, SPF/DKIM/DMARC, Amazon SES, SendGrid, Resend, Postmark, MJML templates or bounce webhooks. Produces email sending with templates and deliverability setup. Not for marketing campaigns or SMS (use backend-sms-messaging).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

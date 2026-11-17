@@ -1,10 +1,11 @@
 ---
 name: backend-plugin-architecture
 description: >
-  Use this skill when the user says 'plugin system', 'plugin architecture', 'extension point', 'SPI', 'service provider interface', 'hot-plug', 'modular design', 'plugin loader', 'extensible', 'plugin API', 'custom extension', 'plug-in', 'dynamic loading'. This skill designs plugin/extension architecture with SPI, hot-plugging, and modular loading. Applies to any backend stack. Do NOT use for: dependency injection frameworks, micro-frontends, or NPM packages.
+  Use when the user asks about a plugin system, extension points, SPI, plugin loader, hot-plug or dynamic loading, plugin sandboxing or plugin manifests. Produces a plugin host design with lifecycle and isolation. Not for micro-frontends (use microfrontend).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

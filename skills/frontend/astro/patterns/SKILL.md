@@ -1,10 +1,11 @@
 ---
 name: frontend-astro-patterns
 description: >
-  Use this skill when the user says 'Astro pattern', 'Astro island', 'Astro component pattern', 'Astro integration', 'Astro content collection', 'Astro view transition', 'Astro hybrid SSR/SSG', 'client:load', 'client:visible'. This skill enforces: island architecture with appropriate client:* directives, type-safe content collections with Zod schemas, view transitions for page-to-page navigation, passive hydration strategy (visible > idle > load), and static/server/hybrid rendering per route. Requires Astro project (package.json with astro). Do NOT use for: general Astro project setup, deployment configuration, or non-Astro meta-framework patterns.
+  Use when the user asks about Astro island patterns, client:load / client:visible / client:idle, server islands, view transitions, Astro integrations, content collection queries or per-route prerendering. Produces hydration and rendering patterns for an existing Astro site. Not for initial Astro project setup (use frontend-astro-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

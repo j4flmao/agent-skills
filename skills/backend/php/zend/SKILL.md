@@ -1,19 +1,11 @@
 ---
 name: php-zend
 description: >
-  Use this skill when the user says 'Zend', 'Laminas', 'Zend Framework',
-  'Laminas MVC', 'laminas-servicemanager', 'laminas-db', 'laminas-form',
-  'laminas-inputfilter', 'laminas-router', 'laminas-view', 'laminas-module',
-  'Mezzio', 'laminas-stratigility', 'API Platform', 'Doctrine ORM',
-  'Zend Framework 3', 'ZF3', 'Zend Expressive'.
-  Covers: Laminas MVC project structure, Module system, ServiceManager DI,
-  routing, controllers, database (laminas-db + Doctrine), forms, validation,
-  views, Mezzio middleware, API development, security, testing.
-  Do NOT use this for: Laravel (use php-laravel), plain PHP (use php-pure),
-  or Symfony-specific questions.
+  Use when the user asks about Laminas, Zend Framework migration, Laminas MVC, Mezzio, laminas-servicemanager factories, laminas-db TableGateway or laminas-inputfilter. Produces Laminas/Mezzio modules and migration steps. Not for Symfony (use symfony-backend) or Laravel (use php-laravel).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

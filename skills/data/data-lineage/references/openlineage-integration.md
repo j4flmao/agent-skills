@@ -15,47 +15,43 @@ OpenLineage is an open standard for lineage metadata collection. Defines JSON ev
 ```
 
 ## Airflow Integration
+Airflow 2.7+ and 3.x ship lineage through the official provider; the old standalone
+`openlineage-airflow` package is deprecated. Operators that implement OpenLineage
+methods (SQL, Spark, dbt Cloud, ...) emit events automatically; no special DAG class is needed.
 ```bash
-pip install openlineage-airflow
+uv add apache-airflow-providers-openlineage
 ```
 ```ini
+# airflow.cfg (or AIRFLOW__OPENLINEAGE__TRANSPORT / AIRFLOW__OPENLINEAGE__NAMESPACE env vars)
 [openlineage]
-transport = {"type": "http", "url": "http://marquez:5000", "endpoint": "/api/v1/lineage", "timeout_in_s": 5}
+transport = {"type": "http", "url": "https://marquez.internal:5000", "endpoint": "api/v1/lineage", "timeout": 5}
 namespace = prod_warehouse
-```
-```python
-from openlineage.airflow import DAG
-dag = DAG(dag_id='orders_pipeline', description='Orders with lineage')
-with dag:
-    extract = PostgresOperator(task_id='extract_orders', sql='SELECT * FROM orders')
 ```
 
 ## dbt Integration
+Use the `openlineage-dbt` package, which provides the `dbt-ol` wrapper around the dbt CLI.
 ```bash
-pip install dbt-openlineage
-```
-```yaml
-# dbt_project.yml
-vars:
-  openlineage:
-    enabled: true
-    transport: {type: http, url: http://marquez:5000, endpoint: /api/v1/lineage}
-    namespace: prod_dbt
+uv add openlineage-dbt
+export OPENLINEAGE_URL=https://marquez.internal:5000
+export OPENLINEAGE_NAMESPACE=prod_dbt
+uv run dbt-ol run          # runs dbt, then emits lineage from manifest.json and run_results.json
 ```
 
 ## Spark Integration
-```xml
-<!-- spark-defaults.conf -->
+```properties
+# spark-defaults.conf (openlineage-spark 1.x)
+spark.jars.packages=io.openlineage:openlineage-spark_2.12:<version>
 spark.extraListeners=io.openlineage.spark.agent.OpenLineageSparkListener
-spark.openlineage.host=http://marquez:5000
+spark.openlineage.transport.type=http
+spark.openlineage.transport.url=https://marquez.internal:5000
 spark.openlineage.namespace=prod_spark
-spark.openlineage.capturedColumnLineage=true
 ```
+Column-level lineage is collected by default for supported plans.
 
 ## Custom Python Client
 ```python
 from openlineage.client import OpenLineageClient
-from openlineage.client.run import RunEvent, RunState, Run, Job
+from openlineage.client.event_v2 import Job, Run, RunEvent, RunState  # `openlineage.client.run` is deprecated
 
 client = OpenLineageClient(url="http://marquez:5000")
 run = Run(runId="run-uuid")

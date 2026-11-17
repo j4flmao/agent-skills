@@ -1,7 +1,7 @@
 # Java Records and Sealed Classes
 
 ## Overview
-Java 14+ introduced records for transparent data carriers and Java 15+ added sealed classes for restricted inheritance. Together they enable concise domain modeling with strong type safety guarantees.
+Records (preview in Java 14, final in Java 16) are transparent data carriers, and sealed classes (preview in Java 15, final in Java 17) restrict inheritance. Together they enable concise domain modeling with strong type safety guarantees.
 
 ## Records
 

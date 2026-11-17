@@ -5,6 +5,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -209,7 +210,7 @@ helm repo add cilium https://helm.cilium.io/
 helm upgrade --install cilium cilium/cilium \
   --namespace kube-system \
   --values cilium-values.yaml \
-  --version 1.15.0
+  --version <tested-version>   # pin the Cilium release you validated
 ```
 
 ### Step 3: Security Configuration
@@ -610,7 +611,7 @@ spec:
   template:
     spec:
       containers:
-        - image: myapp:<pinned-tag>
+        - image: myapp:latest
           name: app
 
 # GOOD: Resources, probes, security context

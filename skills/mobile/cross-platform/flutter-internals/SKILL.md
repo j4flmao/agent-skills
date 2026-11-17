@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [mobile, flutter, rendering, impeller, internals]
 ---
 
@@ -74,7 +75,7 @@ vsync → animate (tickers) → build (dirty elements) → layout → compositin
 ## 5. Engine and Renderer
 - The engine (C++) hosts the Dart VM, text layout, the renderer and platform embedders (Android, iOS, web, Windows, macOS, Linux).
 - **Impeller** precompiles a small fixed set of shaders at build time, removing the runtime shader-compilation jank that Skia had. It is the default on iOS and on modern Android devices (Vulkan, with an OpenGL ES backend where needed); Flutter has been removing the Skia path on Android over recent releases — check the Impeller documentation for your version's fallback rules. Web uses CanvasKit/Skwasm (WebAssembly) builds.
-- Threads: platform (main) thread, UI thread, raster thread, I/O thread (per engine instance).
+- Threads: platform (main) thread, UI thread, raster thread, I/O thread (per engine instance). Since Flutter 3.29 the Dart UI work runs on the platform main thread on iOS and Android (merged threads), which is what allows synchronous native calls through FFI; heavy Dart work therefore blocks platform events too.
 
 ## 6. Platform Integration
 - Platform channels: asynchronous binary messages between Dart and the host (`MethodChannel`, `BasicMessageChannel`, `EventChannel`), encoded by `StandardMessageCodec`; handlers run on the platform thread by default — offload slow native work to background threads/task queues.

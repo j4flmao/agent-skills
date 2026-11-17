@@ -1,10 +1,12 @@
 ---
 name: dev-loop-api-client-generator
 description: >
-  Use when the user asks about generating API clients, OpenAPI/Swagger code generation, REST API client SDKs, or automating API client creation. Do NOT use for: writing API servers, or manual HTTP request code.
+  Use when the user asks to generate an API client or SDK from OpenAPI/Swagger, run openapi-generator or orval, create typed REST clients, or turn requests into curl commands. Produces generated clients
+  with auth, retries and tests. Not for designing the API itself (use backend-api-design) or writing the OpenAPI spec (use backend-openapi-documentation).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

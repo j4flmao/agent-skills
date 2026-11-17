@@ -1,10 +1,11 @@
 ---
 name: desktop-uwp
 description: >
-  Use when the user asks about Universal Windows Platform (UWP) development, WinRT APIs, XAML UWP, Windows Store apps, or UWP lifecycle. Do NOT use for: WinUI 3, WPF (desktop-wpf), or WinForms (desktop-winforms).
+  Use when the user asks about UWP, WinRT APIs, UWP XAML, Microsoft Store packaging, the UWP app lifecycle or migrating UWP to WinUI 3 and the Windows App SDK. Produces maintenance and migration guidance for UWP apps. Not for WPF (use desktop-wpf) or WinForms (use desktop-winforms).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

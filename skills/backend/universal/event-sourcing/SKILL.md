@@ -1,10 +1,11 @@
 ---
 name: backend-event-sourcing
 description: >
-  Use this skill when the user says 'event sourcing', 'event store', 'event stream', 'event sourced', 'rehydrate from events', 'event replay', 'projection rebuild', 'event log', 'append-only log', 'event history'. This skill enforces: events as the single source of truth, current state derived from event replay, append-only event store, immutable events, event versioning, projection rebuild from scratch. Applies to any backend stack. Do NOT use for: simple audit logging, message queues, or CQRS without event sourcing.
+  Use when the user asks about event sourcing, storing every change as an append-only event log, event store, rehydrating aggregates, snapshots, upcasting or projection rebuilds. Produces an event-sourced aggregate and store design. Not for CQRS without event sourcing (use backend-cqrs-patterns).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

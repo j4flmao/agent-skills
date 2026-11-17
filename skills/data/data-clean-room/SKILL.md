@@ -1,10 +1,14 @@
 ---
 name: data-clean-room
 description: >
-  Use this skill when asked about data clean room, AWS Clean Rooms, Snowflake Clean Room, PSI, Private Set Intersection, privacy-preserving data join, data collaboration, secure multi-party computation, differential privacy, privacy-enhancing technologies, or PET. This skill enforces: clean room architecture with privacy guarantees, PSI protocol selection, column-level access policies, differential privacy budget controls, and query constraints for cross-party data collaboration. Do NOT use for: ETL pipeline design, data masking/anonymization for internal use, or standard data sharing without privacy constraints.
+  Use when the user asks about a data clean room, AWS Clean Rooms, Snowflake Data Clean Rooms, private set
+  intersection (PSI), privacy-preserving joins, differential privacy budgets or secure multi-party computation
+  for data collaboration. Produces a clean-room design with analysis rules, PET choice and privacy budget. Not
+  for in-house masking (use backend-data-masking).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

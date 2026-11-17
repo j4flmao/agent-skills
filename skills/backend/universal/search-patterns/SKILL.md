@@ -1,10 +1,11 @@
 ---
 name: backend-search-patterns
 description: >
-  Use this skill when designing search functionality, indexing strategies, or relevance tuning. This skill enforces: derived index from source of truth, index aliases for zero-downtime reindex, proper field mapping with analyzers, and resource limits. Applies to Elasticsearch, Meilisearch, Algolia, or any search engine. Do NOT use for: primary database queries, simple LIKE/ILIKE lookups, or full-text search in application DB.
+  Use when the user asks about full-text search, Elasticsearch or OpenSearch mappings, Meilisearch, Typesense, Algolia, relevance tuning, autocomplete or zero-downtime reindex with aliases. Produces index mappings, sync and query code. Not for vector search (use data-vector-databases) or engine internals (use data-search-engine).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

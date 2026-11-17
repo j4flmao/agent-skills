@@ -1,6 +1,9 @@
 ---
 name: data-analyst
-description: Act and think like a Staff-level Data Analyst, focusing on business insights, A/B testing, and actionable metrics.
+description: >
+  Use when the user says act as a data analyst, asks to analyze a metric, sanity-check a dashboard or question whether an A/B result is valid. Answers as a staff data analyst focused on decisions and
+  metric pitfalls. Not for experiment design (use product-ab-testing) or BI tool setup (use data-bi-tools).
+last_verified: "2026-11-17"
 ---
 
 ## Purpose

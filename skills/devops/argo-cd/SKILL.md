@@ -5,6 +5,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -618,6 +619,8 @@ Argo CD Application/ApplicationSet YAML, Project YAML, RBAC config, notification
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: pull model (CI commits image digests to the config repo, Argo CD applies; CI holds no cluster credentials); one AppProject per team limiting sources and destinations; disable the local admin account after SSO.
 
 - `references/merged-gitops-argocd.md` — GitOps with Argo CD (merged from `devops/ci-cd/gitops-argocd`)
 

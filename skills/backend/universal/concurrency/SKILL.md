@@ -1,10 +1,11 @@
 ---
 name: backend-concurrency-mechanics
 description: >
-  Use this skill when the user says 'race condition', 'data race', 'goroutine vs thread', 'event loop blocking', 'memory barrier', 'memory model', 'mutex vs atomic', 'deadlock', 'thread pool sizing', 'virtual threads', 'async vs threads'. Explains how OS threads, M:N schedulers (Go goroutines, Java virtual threads), and event loops (Node.js, Python asyncio) actually execute work, and gives correct synchronization patterns for backend services. Do NOT use for: cross-process locks (backend-distributed-locking), job queues (backend-background-jobs), database isolation levels (backend-database-patterns).
+  Use when the user asks about race conditions, data races, deadlocks, mutex vs atomic, memory model, thread pool sizing, virtual threads, goroutines vs threads or blocking the event loop. Produces an explanation of runtime concurrency mechanics with fixes. Not for distributed locks (use backend-distributed-locking).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [backend, concurrency, threads, goroutines, event-loop, memory-model, race-condition]
 ---
 

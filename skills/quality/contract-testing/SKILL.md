@@ -1,10 +1,12 @@
 ---
 name: quality-contract-testing
 description: >
-  Use this skill when setting up contract testing, Pact, consumer-driven contracts, provider contract verification, API compatibility, or integration testing between services. This skill enforces: consumer-driven contracts with Pact, provider-side verification, contract publishing to a broker, versioning strategy, CI pipeline integration, and breaking change detection. Do NOT use for: API end-to-end tests, schema validation only, or single-service testing.
+  Use when the user asks about consumer driven contract tests with Pact, Pact Broker or PactFlow, can-i-deploy, provider verification, message pacts or Spring Cloud Contract. Produces consumer tests,
+  provider verification and CI gating. Not for service tests with real dependencies (use quality-integration-testing) or e2e journeys (use quality-e2e-testing).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

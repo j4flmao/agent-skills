@@ -47,7 +47,7 @@ server {
   acl {
     enabled = true
     # Token replication for HA
-    replication_token = "YOUR_REPLICATION_TOKEN"
+    replication_token = "<replication-token>"   # inject from Vault or an env file, never commit
     # Policy TTL (default 30s)
     policy_ttl = "30s"
     # Token TTL (default 30s)

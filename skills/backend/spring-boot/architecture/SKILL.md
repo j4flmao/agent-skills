@@ -1,10 +1,11 @@
 ---
 name: spring-boot-architecture
 description: >
-  Use this skill when the user says 'Spring Boot structure', 'Spring architecture', 'Spring Boot clean arch', 'Spring layered', 'Spring hexagonal', 'Spring WebFlux', 'Spring Data', 'Spring Boot folder', or when building a Spring Boot application. This skill enforces: package-by-feature (not by layer), hexagonal architecture with ports and adapters, Spring stereotypes correctly applied (@Repository in infrastructure, not domain), constructor injection (no @Autowired on fields), and MVC vs WebFlux decision guide. Requires Spring Boot (pom.xml or build.gradle). Do NOT use for: Kotlin Multiplatform, non-Spring Java, or frontend Angular.
+  Use when the user asks about Spring Boot project structure, package-by-feature, hexagonal Spring, Spring WebFlux vs MVC, Spring Data repositories or Spring profiles. Produces a Spring Boot 3/4 service layout. Not for @Transactional, AOP, security or testing recipes (use spring-boot-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -363,7 +364,7 @@ Primary DB is relational (JPA/JDBC)?
 
 8. **Giant application service classes**: More than 10 methods per service suggests missing domain subdivisions.
 
-9. **@MockBean overuse in tests**: Prefer @MockitoBean (Spring Boot 3.4+) or test slices for focused tests.
+9. **@MockBean overuse in tests**: Prefer @MockitoBean (Spring Framework 6.2 / Boot 3.4+; @MockBean is removed in Boot 4) or test slices for focused tests.
 
 10. **Missing @Validated on @ConfigurationProperties classes**: Properties binding silently fails without proper validation.
 

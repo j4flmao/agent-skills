@@ -15,6 +15,7 @@ tags: [mobile, biometrics, auth, phase-7, universal]
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Mobile Biometrics
@@ -89,18 +90,18 @@ Which Android biometric class?
 
 3. **Authentication prompt flow** — Flow: user triggers protected action -> check availability -> if biometric available -> show biometric prompt with reason string -> user authenticates -> on success -> grant access -> on failure -> allow retry (up to 5 attempts) -> on 5th failure -> lockout -> force device credential. If biometric not available at start -> fall through to device credential. The reason string is mandatory on both platforms and displayed prominently. On iOS, `localizedReason` is shown in the Face ID dialog. On Android, `setTitle` and `setSubtitle` are shown in the system prompt. After successful authentication, the app receives a callback with (optionally) a `CryptoObject` for decryption.
 
-4. **Secure storage with biometric protection** — Store sensitive data (auth tokens, encryption keys, passwords) in platform secure stores with biometric access control. Android: EncryptedSharedPreferences backed by Android Keystore — set `setUserAuthenticationRequired(true)` on the master key to require biometric before reading. Or use Keystore `SecretKey` with `setUserAuthenticationRequired(true)` and encrypt/decrypt data through `CryptoObject`. `setInvalidatedByBiometricEnrollment(true)` ensures key is destroyed if new biometric is enrolled (prevents stolen biometric from accessing old data). iOS: Keychain with `SecAccessControlCreateWithFlags` using `biometryCurrentSet` — item is only accessible after biometric authentication and is invalidated on biometric enrollment change. For "cache after auth" pattern, use `setUserAuthenticationValidityDurationSeconds` (Android) or `kSecUseAuthenticationUIFallback` (iOS).
+4. **Secure storage with biometric protection** — Store sensitive data (auth tokens, encryption keys, passwords) in platform secure stores with biometric access control. Android: use a Keystore `SecretKey` (Jetpack Security `EncryptedSharedPreferences` is deprecated) with `setUserAuthenticationRequired(true)` and encrypt/decrypt data through `CryptoObject`. `setInvalidatedByBiometricEnrollment(true)` ensures key is destroyed if new biometric is enrolled (prevents stolen biometric from accessing old data). iOS: Keychain with `SecAccessControlCreateWithFlags` using `biometryCurrentSet` — item is only accessible after biometric authentication and is invalidated on biometric enrollment change. For "cache after auth" pattern, use `setUserAuthenticationValidityDurationSeconds` (Android) or `kSecUseAuthenticationUIFallback` (iOS).
 
 5. **Fallback and UX design** — Always provide device credential (PIN/password) as fallback — never block users out. Three-tier fallback chain: Biometric -> Device Credential -> App Password (optional, for users who can't use either). UX patterns: opt-in onboarding screen explaining what biometrics protect, toggle in Settings to enable/disable, clear description of protected operations, graceful degradation on devices without biometric hardware. Lockout: after 5 consecutive biometric failures, biometric is blocked (iOS indefinitely until device credential used, Android for 30 seconds escalating). After lockout, show device credential prompt automatically. Never let users get stuck — always offer the next fallback option.
 
-6. **Cross-platform implementation** — Using Capacitor Biometric plugin (`@capacitor/biometric`): single API for both platforms, handles availability check, prompt, and fallback. Using Expo LocalAuthentication: similar cross-platform API with `hasHardwareAsync()`, `isEnrolledAsync()`, `authenticateAsync()`. For React Native: `react-native-biometrics` or `react-native-keychain`. Cross-platform wrappers simplify code but may not expose all platform-specific features (CryptoObject, fine-grained error handling, key invalidation control). For sensitive apps, use platform-native implementation with cross-platform coordination.
+6. **Cross-platform implementation** — Capacitor has no official biometric plugin; community plugins (for example `@aparajita/capacitor-biometric-auth`) wrap availability check, prompt and fallback — vet maintenance before adopting. Using Expo LocalAuthentication: similar cross-platform API with `hasHardwareAsync()`, `isEnrolledAsync()`, `authenticateAsync()`. For React Native: `react-native-biometrics` or `react-native-keychain`. Cross-platform wrappers simplify code but may not expose all platform-specific features (CryptoObject, fine-grained error handling, key invalidation control). For sensitive apps, use platform-native implementation with cross-platform coordination.
 
 ## Biometric Strength Comparison
 
 | Level | Android | iOS | Security |
 |-------|---------|-----|----------|
 | Strong (Class 3) | Fingerprint, Face (Class 3) | Face ID, Touch ID | High |
-| Weak (Class 2) | Face unlock, Iris | Face ID with attention not required | Medium |
+| Weak (Class 2) | Some face unlock, iris | — (iOS has no biometric classes; Face ID and Touch ID are both strong) | Medium |
 | Convenience (Class 1) | Basic face detection | None | Low |
 | Device Credential | PIN, Pattern, Password | PIN, Password | Varies |
 
@@ -117,7 +118,7 @@ Which Android biometric class?
 
 - **Lockout without recovery**: If no device credential fallback, user is permanently locked out. Always provide it.
 - **Camera-based face unlock fails in low light**: Advise user or fallback to device credential.
-- **Biometric changed alert ignored**: Apps that don't monitor `onAuthenticationError` with `ERROR_USER_CANCELED` after biometric change leave old data accessible.
+- **Enrollment change ignored**: on Android a key created with `setInvalidatedByBiometricEnrollment(true)` throws `KeyPermanentlyInvalidatedException` after an enrollment change; on iOS compare `LAContext.domainState` (iOS 18+; `evaluatedPolicyDomainState` earlier) or use `.biometryCurrentSet` access control. Handle it by re-authenticating with the server and creating a new key.
 - **Key invalidation surprise**: Keys invalidated on enrollment change delete encrypted data. Migrate before invalidation.
 - **Missing usage description strings**: iOS rejects apps without `NSFaceIDUsageDescription` in Info.plist.
 - **Calling biometric on main thread**: Android BiometricPrompt UI must be on main thread; heavy post-auth work goes to background thread.
@@ -128,7 +129,7 @@ Which Android biometric class?
 - Server-side auth must NOT rely solely on biometric claim — use biometric for local key release, then authenticate with key
 - Anti-spoofing: Face ID with attention awareness is better than basic face unlock
 - iOS `localizedReason` displayed in dialog — make it clear to user what's being authenticated
-- Android `setConfirmationRequired(true)` adds button press to fingerprint — prevents accidental auth
+- Android `setConfirmationRequired(true)` (the default) asks for an explicit confirm after passive biometrics such as face; set it to false only for low-risk actions
 
 ## Configuration Reference
 
@@ -410,26 +411,19 @@ export async function signWithBiometric(payload: string) {
 ### Biometric Implementation Anti-Patterns
 
 - **Timeout on biometric key too long**: `setUserAuthenticationValidityDurationSeconds(86400)` = 24 hours. A compromised device exposes data for a full day. Max recommended: 300 seconds (5 min).
-- **No biometric enrollment change watcher**: Biometric enrollment changes (user adds/removes fingerprint or face) invalidate keys silently. Subscribe to `ACTION_BIOMETRIC_ENROLLMENT_CHANGED` (Android) or check `biometryCurrentSet` on each app launch.
+- **No biometric enrollment change watcher**: Biometric enrollment changes (user adds/removes fingerprint or face) invalidate keys silently. Android has no enrollment-change broadcast: catch `KeyPermanentlyInvalidatedException` when initialising the cipher; on iOS use `.biometryCurrentSet` access control or compare `LAContext.domainState`.
 - **Fallback to app password without device credential**: Users can type an app-specific password instead of device PIN. This creates a secondary auth channel that is often less secure. Always prefer device credential over app password.
 - **Biometric-only settings toggle**: "Enable Face ID" toggle without showing what features it affects. Users enable it thinking all security is handled, but payments still need device credential. Show a per-feature matrix.
 - **Not handling `ERROR_VENDOR` (Android)**: Vendor-specific errors (OEM-specific biometric implementations) can crash the app. Never assume only standard error codes. Wrap in try/catch.
-- **Face authentication without attention check**: On iOS, `LAContext.notRequireAttention` allows face unlock with closed eyes. For high-sensitivity operations, require attention by relying on the default (attention required).
+- **Assuming attention is always on**: on iOS, "Require Attention for Face ID" is a user accessibility setting the app cannot read or enforce. For high-sensitivity operations add a second factor or device-credential confirmation instead of relying on attention detection.
 - **Re-prompting after user cancel**: User cancels biometric prompt, app immediately re-shows it — frustrating. After user cancel, wait for explicit user action before re-prompting.
 - **Caching biometric success for entire app session**: Cache should expire. A user may unlock the app at 9am, hand their phone to someone at 10am — cached biometric access still grants permission. Set session timeout (5-15 min).
 
 ### Biometric Performance & Battery Considerations
 
-| Operation | Typical Duration | Battery Impact |
-|-----------|-----------------|----------------|
-| Face ID recognition | ~150ms | Minimal (Neural Engine) |
-| Touch ID recognition | ~200ms | Minimal |
-| Biometric key decryption | ~50ms | Negligible |
-| Biometric prompt UI show | ~100ms | Negligible |
-| Key generation (first time) | ~200-500ms | Small (one-time) |
-| Key invalidation on enrollment change | ~10ms | Negligible |
+Biometric matching itself is fast; the user-visible cost is the system prompt and the user's reaction time. Key generation in the Secure Enclave or StrongBox is the slowest step, so create keys once (at enrollment in your app) and reuse them. Measure on low-end Android devices, where StrongBox operations are noticeably slower.
 
-Biometric operations are hardware-accelerated on modern devices (Secure Enclave / Titan M). They do not require network access. Battery impact is minimal — comparable to pressing a button. The only power concern is the camera-based Face ID on older iPhones (iPhone X/XR) which uses the TrueDepth camera briefly per authentication.
+Biometric matching runs in secure hardware (Secure Enclave on Apple devices, TEE or StrongBox such as Titan M on Android). They do not require network access. Battery impact is minimal — comparable to pressing a button. The only power concern is the camera-based Face ID on older iPhones (iPhone X/XR) which uses the TrueDepth camera briefly per authentication.
 
 ### Biometric Regulatory & Compliance Considerations
 

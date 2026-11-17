@@ -15,6 +15,7 @@ tags: [mobile, offline, phase-7, universal]
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Mobile Offline First
@@ -106,7 +107,7 @@ Three layers:
 - **Room** (Android): compile-time SQL verification, Flow-based reactive queries, migrations
 - **SQLDelight** (KMP): cross-platform, type-safe, generates drivers for Android/iOS/JVM
 - **CoreData** (iOS native): SwiftUI @FetchRequest, iCloud sync, lightweight migration
-- **Realm**: MongoDB Atlas Device Sync, real-time sync, larger binary
+- **Realm**: local object database; MongoDB's Atlas Device Sync reached end of life in September 2025, so plan your own sync or another backend (e.g. PowerSync, Ditto) for new apps
 - **WatermelonDB**: SQLite lazy loading for React Native
 - **MMKV**: Fast key-value, no schema, ideal for settings/cache
 
@@ -124,7 +125,7 @@ Write flow: validate → write to local DB → enqueue sync op → if online, tr
 
 ### 5. Conflict Resolution Strategies
 - Last-write-wins: simplest, server timestamp authority
-- Timestamp-based: client timestamp, server keeps latest
+- Timestamp-based: client timestamp, server keeps latest (vulnerable to clock skew; prefer server-assigned versions or hybrid logical clocks)
 - CRDT: mathematically guaranteed convergence
 - Three-way merge: base + local + remote = merged
 - Manual: surface conflict to user, let them choose
@@ -141,7 +142,7 @@ Android: ConnectivityManager.NetworkCallback. iOS: NWPathMonitor. UI: persistent
 |---|---|---|---|
 | Last-write-wins | Independent entities, timestamps | Low | Medium |
 | Timestamp authority | Single-user-per-resource | Low | Low |
-| CRDT | Concurrent edits, lists, counters | High | None |
+| CRDT | Concurrent edits, lists, counters | High | No lost updates, but the merged result may not match user intent |
 | Three-way merge | Collaborative documents | Medium | Low |
 | Manual | Financial, legal, medical | High | None (user decides) |
 

@@ -1,17 +1,12 @@
 ---
 name: qc
 description: >
-  Use this skill when the user says 'code quality', 'quality gate', 'static
-  analysis', 'coding standards', 'peer review', 'code coverage', 'cyclomatic
-  complexity', 'lint rules', 'technical debt', 'quality metrics', 'quality
-  dashboard', 'SonarQube', 'ESLint', 'quality checklist', or needs quality
-  control. Covers: quality gates, static analysis enforcement, coding standards,
-  peer review process, quality metrics, and technical debt management.
-  Do NOT use for: test planning (use qa), performance optimization, or code
-  review (use code-review).
+  Use when the user asks about code quality gates, SonarQube, static analysis rules, ESLint policy, coverage thresholds, cyclomatic complexity, coding standards or quality dashboards. Produces quality
+  gate rules and enforcement in CI. Not for reviewing a specific diff (use code-review) or test planning (use qa).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

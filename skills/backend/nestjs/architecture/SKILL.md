@@ -1,10 +1,11 @@
 ---
 name: nestjs-architecture
 description: >
-  Use this skill when structuring NestJS applications — module-based architecture, dependency injection, provider scopes, dynamic modules, and monorepo structure. This skill enforces: one module per domain, provider encapsulation, module boundary enforcement, global vs scoped providers. Requires @nestjs/core. Do NOT use for: Express-only projects, React/Vue frontend, or non-NestJS Node.js frameworks.
+  Use when the user asks about NestJS modules, structuring a NestJS module with providers, dependency injection scopes, dynamic modules, module boundaries or a NestJS monorepo. Produces a NestJS module layout. Not for guards, interceptors, pipes or @nestjs/cqrs recipes (use nestjs-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -128,7 +128,7 @@ log_level = "info"
 [[runners]]
   name = "docker-runner"
   url = "https://gitlab.com"
-  token = "glrt-xxxxxxxxxxxx"
+  token = "<runner-authentication-token>"
   executor = "docker"
   tags = ["docker", "linux"]
   run_untagged = true
@@ -272,7 +272,7 @@ check_interval = 3
 [[runners]]
   name = "docker-machine-runner"
   url = "https://gitlab.com"
-  token = "glrt-xxxxxxxxxxxx"
+  token = "<runner-authentication-token>"
   executor = "docker+machine"
   limit = 20
   [runners.machine]

@@ -1,7 +1,7 @@
 ---
 name: frontend-image-optimization
 description: >
-  Use this skill when the user says 'image optimization', 'responsive images', 'image CDN', 'lazy loading images', 'next/image', 'srcset', 'picture element', 'WebP', 'AVIF', 'image compression', 'image CDN', 'blur placeholder', 'progressive image'. Optimize images for web performance including format selection, responsive images, lazy loading, and CDN integration. Do NOT use for: video optimization or server-side image processing.
+  Use when the user asks about responsive images, srcset and sizes, the picture element, AVIF/WebP, lazy loading images, next/image, image CDNs, fetchpriority for the LCP image or blur placeholders. Produces image markup and pipeline settings. Not for overall Core Web Vitals diagnosis (use web-performance).
 compatibility:
   claude-code: true
   cursor: true
@@ -11,6 +11,7 @@ tags: [frontend, images, optimization, phase-7, universal]
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Frontend Image Optimization
@@ -341,7 +342,7 @@ Serving a 4000px image for a 300px thumbnail wastes bandwidth. Use `srcset` to s
 ### Core Web Vitals Impact
 - **LCP:** Preload LCP image, serve AVIF, use responsive widths. Target: < 2.5s
 - **CLS:** Always set width/height or aspect-ratio on every image. Target: < 0.1
-- **FID/INP:** No direct impact from images, but heavy images block main thread on decode. Use `decoding="async"`.
+- **INP:** Images rarely affect INP directly; very large images still cost main-thread decode time, so size them correctly and consider `decoding="async"` for non-LCP images.
 
 ## Accessibility Considerations
 

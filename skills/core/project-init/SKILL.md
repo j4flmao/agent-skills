@@ -1,10 +1,12 @@
 ---
 name: project-init
 description: >
-  Use this skill when the user says 'create project structure', 'scaffold project', 'initialize project', 'set up folder structure', 'new project from scratch', or when a new project needs folders and config files created. This skill scaffolds the full project tree based on detected or stated stack and creates AGENTS.md with project-specific rules. Do NOT use for: adding files to an existing project, planning features, or installing dependencies.
+  Use when the user asks to scaffold a project, create the project structure, initialize a new repo from scratch, set up folders and config files or generate AGENTS.md. Scaffolds the directory tree and
+  starter config for the detected or stated stack. Not for onboarding people (use core-onboarding) or dev containers (use dev-loop-dev-container).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

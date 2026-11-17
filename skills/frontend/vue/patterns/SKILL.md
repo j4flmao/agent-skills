@@ -1,10 +1,11 @@
 ---
 name: frontend-vue-patterns
 description: >
-  Use this skill when the user says 'Vue pattern', 'Composition API pattern', 'composable', 'provide/inject', 'Vue reactivity', 'Vue directive', 'Vue composable', 'Vue Router', 'Pinia pattern', 'renderless component', 'Vue slot pattern'. This skill enforces: composables for all reusable logic (useX naming), Pinia setup stores for global state, route lazy loading with navigation guards, renderless components with scoped slots, and custom directives for reusable DOM behavior. Requires Vue 3 (package.json with vue). Do NOT use for: Vue project structure/architecture, Nuxt-specific patterns, or non-Vue frameworks.
+  Use when the user asks about Vue composables, provide/inject, Vue reactivity pitfalls, custom directives, Vue Router guards and lazy routes, Pinia setup stores, renderless components or scoped slots. Produces reusable Vue 3 patterns. Not for overall Vue project structure (use vue-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

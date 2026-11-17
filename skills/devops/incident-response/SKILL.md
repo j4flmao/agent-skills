@@ -5,6 +5,7 @@ description: >
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -510,6 +511,8 @@ def track_weekly_metrics(incidents):
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: tune Alertmanager grouping and inhibition against last month's pages; require a runbook link on every paging rule; tier first-response automation with approvals and rate limits.
 
 - `references/merged-sre-incident-response.md` — Incident Response: Triage Automation and Blameless Postmortems (merged from `site-reliability-engineering/incident-response`)
 

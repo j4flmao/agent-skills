@@ -89,7 +89,7 @@ Provider manages security OF the cloud. Customer manages security IN the cloud.
 ### Cloud Security Best Practices
 
 **Identity and access**:
-- Use cloud-native IAM (AWS IAM, Azure AD, GCP Cloud IAM)
+- Use cloud-native IAM (AWS IAM, Microsoft Entra ID, GCP Cloud IAM)
 - Principle of least privilege for all roles
 - No permanent access keys for humans (use SSO + short-term credentials)
 - Service roles for applications, not access keys

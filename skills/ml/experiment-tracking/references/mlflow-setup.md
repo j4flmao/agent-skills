@@ -90,17 +90,17 @@ client = MlflowClient()
 client.create_registered_model("recommendation-xgb")
 client.create_model_version(name="recommendation-xgb", source=f"runs:/{run_id}/models/xgboost", run_id=run_id)
 
-client.transition_model_version_stage(name="recommendation-xgb", version=5, stage="Staging")
+# Model stages are deprecated since MLflow 2.9; use aliases (and tags) instead.
+client.set_registered_model_alias("recommendation-xgb", "challenger", version=5)
 
-# Auto-promote to production if metrics pass
-latest = client.get_latest_versions("recommendation-xgb", stages=["Staging"])
-if latest[0].metrics["test.auc"] > 0.88:
-    client.transition_model_version_stage(
-        name="recommendation-xgb", version=latest[0].version, stage="Production"
-    )
+# Promote the challenger if its run metrics pass
+challenger = client.get_model_version_by_alias("recommendation-xgb", "challenger")
+auc = client.get_run(challenger.run_id).data.metrics["test.auc"]
+if auc > 0.88:
+    client.set_registered_model_alias("recommendation-xgb", "champion", version=challenger.version)
 
-# Load by stage
-model = mlflow.xgboost.load_model("models:/recommendation-xgb/Production")
+# Load by alias
+model = mlflow.xgboost.load_model("models:/recommendation-xgb@champion")
 ```
 
 ## MLflow Projects

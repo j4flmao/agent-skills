@@ -1,10 +1,14 @@
 ---
 name: data-data-warehouse
 description: >
-  Use this skill when asked about data warehouse, Snowflake, BigQuery, Redshift, star schema, snowflake schema, OLAP, dimensional modeling, fact tables, dimension tables, or data warehouse optimization. This skill enforces: dimensional modeling with star schema, platform-specific partitioning and clustering, materialized views for query performance, and cost optimization strategies. Do NOT use for: ETL pipeline design, real-time streaming, or BI dashboard configuration.
+  Use when the user asks about a data warehouse on Snowflake, BigQuery or Redshift, clustering and partitioning,
+  materialized views, OLAP performance or warehouse cost. Produces platform-specific table design and
+  optimization steps. Not for Kimball grain and SCD design (use data-dimensional-modeling) or pipeline
+  orchestration (use data-etl-pipeline).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

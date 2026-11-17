@@ -1,10 +1,12 @@
 ---
 name: quality-regression-testing
 description: >
-  Use when the user asks about regression testing, test selection, regression suite design, automation maintenance, flaky tests, or regression metrics. Do NOT use for: smoke/BVT testing (quality-smoke-testing), acceptance testing (quality-acceptance-testing), or exploratory testing (quality-exploratory-testing).
+  Use when the user asks about a regression suite, test impact analysis, selecting tests from changed files, flaky test management, test maintenance or regression metrics. Produces regression scope,
+  selection rules and suite health metrics. Not for post-deploy smoke checks (use quality-smoke-testing) or UAT (use quality-acceptance-testing).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

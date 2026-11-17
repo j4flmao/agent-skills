@@ -1,12 +1,12 @@
 ---
 name: security
 description: >
-  Use this skill when the user asks about security team operations, AppSec,
-  vulnerability management, security review, threat modeling, security incident
-  response, CVE, or compliance.
+  Use when the user asks about running a security team or AppSec program, vulnerability management SLAs, CVE triage, security review process, security champions, policies or security incident
+  management. Produces AppSec program and process design. Not for threat modeling technique (use threat-modeling) or pentest engagements (use pentesting).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

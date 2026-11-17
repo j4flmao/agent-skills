@@ -1,10 +1,11 @@
 ---
 name: golang-architecture
 description: >
-  Use this skill when the user says 'Go project structure', 'Golang architecture', 'Go package layout', 'Go clean arch', 'Go folder structure', 'Go module design', 'Go interface design', or when structuring a Go application. This skill enforces: standard Go project layout (cmd/internal/pkg), Clean Architecture with interfaces defined at the consumer side, internal package enforcement, package naming rules, and error handling architecture. Requires go.mod. Do NOT use for: Go concurrency patterns, HTTP handler implementation, or non-Go stacks.
+  Use when the user asks about Go project structure, organizing a Go service with clean package boundaries, cmd/internal/pkg layout, consumer-defined interfaces, Go module design or wiring dependencies in main. Produces a Go service layout. Not for goroutines, channels or error-handling idioms (use golang-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

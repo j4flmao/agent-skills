@@ -36,7 +36,7 @@ if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: ni
 ## Token storage
 
 ```kotlin
-// Store in EncryptedSharedPreferences
+// Legacy: EncryptedSharedPreferences is deprecated; prefer a Keystore AES-GCM key + DataStore
 val tokenPrefs = EncryptedSharedPreferences.create(...)
 tokenPrefs.edit().putString("access_token", token).apply()
 

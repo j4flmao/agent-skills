@@ -1,12 +1,14 @@
 ---
 name: ml-model-evaluation
 description: >
-  Use this skill when evaluating model performance, selecting metrics, designing cross-validation strategies, diagnosing bias-variance tradeoffs, or performing statistical significance testing.
-  This skill enforces: metric selection by task type, cross-validation strategy by data structure, bias-variance diagnosis, learning curve analysis, statistical significance protocol.
-  Do NOT use for: hyperparameter tuning (use ml-hyperparameter-tuning), experiment tracking (use ml-experiment-tracking), model explainability (use ml-model-interpretability).
+  Use when the user asks about choosing evaluation metrics, ROC-AUC vs PR-AUC, calibration, cross-validation
+  strategy (time series, grouped), bias-variance diagnosis, learning curves or comparing two models
+  statistically. Produces metric selection, CV design and significance testing. Not for explanations (use
+  ml-model-interpretability) or tuning (use ml-hyperparameter-tuning).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

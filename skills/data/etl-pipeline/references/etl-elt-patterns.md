@@ -16,12 +16,13 @@ Extract: pull data from source. Transform: process data in an external compute e
 
 ## Airflow DAG Patterns
 
-### DAG Structure Template
+### DAG Structure Template (Airflow 3)
 ```python
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.operators.dummy import DummyOperator
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.python import PythonOperator
+from airflow.sdk import DAG
 
 default_args = {
     'owner': 'data-team',
@@ -39,14 +40,12 @@ with DAG(
     schedule='0 3 * * *',  # daily at 3am
     catchup=False,
     max_active_runs=1,
-    sla_miss_callback=slack_sla_miss,
     tags=['orders', 'production'],
-) as dag:
-    start = DummyOperator(task_id='start')
+) as dag:   # Airflow 3 removed sla_miss_callback; use Deadline Alerts (3.1+) or freshness checks
+    start = EmptyOperator(task_id='start')
     extract_orders = PythonOperator(
         task_id='extract_orders',
-        python_callable=extract_from_source,
-        provide_context=True,
+        python_callable=extract_from_source,   # context is passed automatically
     )
     validate_extract = PythonOperator(
         task_id='validate_extract',
@@ -63,7 +62,7 @@ with DAG(
 - One DAG per domain (orders, inventory, customers)
 - Max 20 tasks per DAG for readability and manageability
 - Group related tasks with `TaskGroup` for visual organization in the Airflow UI
-- Use `SubDagOperator` sparingly (creates performance issues with backfills)
+- `SubDagOperator` was removed in Airflow 3; use `TaskGroup` or separate DAGs linked by Assets
 - Prefix task IDs with the stage: `extract_`, `validate_`, `load_`, `transform_`
 
 ### Airflow Pools and Concurrency

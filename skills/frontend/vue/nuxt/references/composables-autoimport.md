@@ -1,7 +1,7 @@
 # Nuxt Composables and Auto-imports
 
 ## Overview
-Nuxt 3 provides auto-imports for composables, components, and utility functions. Composables are reusable stateful functions following the Vue 3 composition API. This reference covers creating composables, auto-import configuration, built-in composables, and best practices.
+Nuxt (3 and 4) provides auto-imports for composables, components, and utility functions. Composables are reusable stateful functions following the Vue 3 composition API. This reference covers creating composables, auto-import configuration, built-in composables, and best practices.
 
 ## Built-in Composables
 

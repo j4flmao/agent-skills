@@ -1,10 +1,11 @@
 ---
 name: frontend-internationalization
 description: >
-  Use this skill when the user says 'i18n', 'internationalization', 'localization', 'locale switching', 'RTL', 'right-to-left', 'i18next', 'react-intl', 'vue-i18n', 'translation', 'language selector', 'formatjs', 'ICU message format', 'pluralization', 'LTR', 'bidirectional text'. This skill enforces proper i18n library selection, locale switching patterns, RTL/LTR layout support, ICU message syntax, and translation file management. Works with any frontend framework (React, Vue, Angular, Svelte). Do NOT use for: backend i18n, database collation, or content translation workflows.
+  Use when the user asks about frontend i18n, i18next, react-intl/FormatJS, vue-i18n, next-intl, ICU plurals, Intl formatting, locale switching, RTL layout or translation files. Produces locale routing, message catalogs and RTL-safe CSS. Not for server-side i18n (use backend-internationalization) or mobile apps (use mobile-localization).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

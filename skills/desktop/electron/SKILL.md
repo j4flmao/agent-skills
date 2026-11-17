@@ -1,10 +1,11 @@
 ---
 name: desktop-electron
 description: >
-  Use when the user asks about Electron app development, Chromium-based desktop apps, main/renderer process architecture, IPC communication, or packaging Electron apps. Do NOT use for: Tauri (desktop-tauri), or web app frontend (non-desktop skills).
+  Use when the user asks about Electron, main and renderer process IPC security, contextBridge and preload scripts, contextIsolation and sandbox, Electron Forge or electron-builder packaging, code signing or auto-update. Produces a secure Electron app structure and release setup. Not for Tauri apps (use desktop-tauri).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

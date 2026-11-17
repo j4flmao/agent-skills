@@ -33,6 +33,8 @@ export default defineConfig({
 
 ## Official Integrations
 
+> Google ignores `changefreq` and `priority` in sitemaps; an accurate `lastmod` matters more.
+
 ```js
 import { defineConfig } from 'astro/config'
 import tailwind from '@astrojs/tailwind'

@@ -1,5 +1,7 @@
 # Sitemap Reference
 
+> Note: Google ignores `<changefreq>` and `<priority>` and uses `<lastmod>` only when it is consistently accurate. They are valid in the sitemap protocol and shown below for completeness; omitting them is fine.
+
 ## XML Sitemap Format
 
 ```xml
@@ -198,4 +200,4 @@ Sitemap: https://example.com/sitemap.xml
 
 - Google Search Console: `https://search.google.com/search-console`
 - Bing Webmaster Tools: `https://www.bing.com/webmasters`
-- Ping Google: `https://www.google.com/ping?sitemap=https://example.com/sitemap.xml`
+- Google retired the sitemap ping endpoint in 2023; submit in Search Console and list the sitemap in `robots.txt` (`Sitemap: https://example.com/sitemap.xml`). Keep `<lastmod>` accurate so crawlers notice changes.

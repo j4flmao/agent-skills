@@ -42,7 +42,7 @@ Multiplatform serialization library. `@Serializable` annotation on data classes.
 ## Security Fundamentals
 
 ### Expect/Actual for Secure Storage
-Declare `expect` secure storage interface in commonMain. `actual` implementations: EncryptedSharedPreferences (Android), Keychain (iOS). Share only the interface — platform handles encryption. Store tokens, API keys, and credentials.
+Declare `expect` secure storage interface in commonMain. `actual` implementations: Keystore-backed encryption (Android; EncryptedSharedPreferences is deprecated), Keychain (iOS). Share only the interface — platform handles encryption. Store tokens, API keys, and credentials.
 
 ### Kotlin/Native Cryptography
 `kotlinx.coroutines` for secure randomness. Platform crypto via expect/actual or platform-specific SDKs. Apple's Security framework (iOS) vs AndroidKeyStore. Avoid implementing custom crypto — use platform primitives.

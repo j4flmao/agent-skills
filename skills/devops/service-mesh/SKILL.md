@@ -5,6 +5,7 @@ description: >
 version: 1.0.0
 author: j4flmao
 license: MIT
+last_verified: "2026-11-17"
 compatibility:
   cli: true
   core: true
@@ -509,6 +510,8 @@ istioctl dashboard grafana
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: prefer Istio ambient mode for L4 mTLS and add waypoints only where L7 policy is needed; use istio-cni; STRICT PeerAuthentication with default-deny AuthorizationPolicy; name ports or set `appProtocol`.
 
 - `references/merged-istio-envoy-service-mesh-mechanics.md` — Istio and Envoy: Data-Plane Mechanics (merged from `cloud-native/service-mesh`)
 - `references/envoy-xds.md` — Service Mesh: Envoy and the xDS Protocol

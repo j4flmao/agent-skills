@@ -3,35 +3,8 @@
 ## Purpose
 Microservices buy independent deployment and scaling per business capability at the cost of distributed-systems complexity: partial failure, network latency, eventual consistency, and operational overhead. This skill covers when that trade is worth it and the patterns that keep a service landscape from becoming a distributed monolith.
 
-## Agent Protocol
-
-### Trigger
-"microservices", "service decomposition", "monolith to microservices", "saga", "compensating transaction", "circuit breaker", "bulkhead", "API gateway", "database per service", "strangler fig".
-
-### Input Context
-- Team count and structure; deployment frequency pain.
-- Domain map / bounded contexts.
-- Current architecture and data model; cross-entity transactions.
-- SLOs and traffic patterns.
-
-### Output Artifact
-Decomposition proposal, per-service data ownership, interaction style per flow, resilience policy table, migration plan.
-
-### Response Format
-```
-Decision: {modular monolith|microservices} because {reason}
-Services: {name}: capability, owns {data}, team {x}
-Flow {name}: {sync|async} via {REST|gRPC|events}; consistency {saga orchestration|choreography}
-Resilience per call: timeout={ms} retries={n, backoff+jitter, idempotent?} breaker={threshold}
-Migration: strangler step {n}: route {path} -> {service}
-```
-
-### Completion Criteria
-- [ ] Services aligned to business capabilities/bounded contexts.
-- [ ] Each service owns its data; no shared tables.
-- [ ] Every remote call has timeout; retries only on idempotent operations.
-- [ ] Multi-service business transactions modeled as sagas with compensations.
-- [ ] Observability: tracing across services, per-service SLOs.
+## Scope
+Reference folded into the parent `../SKILL.md` (the entry point; use its trigger and Response Format). This file keeps only material the parent does not cover: when not to split, decomposition, saga code, resilience patterns, strangler fig.
 
 ## When (Not) to Use
 | Situation | Recommendation |

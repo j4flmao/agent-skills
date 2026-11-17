@@ -1,29 +1,9 @@
 # Micro-frontends with Import Maps & ES Modules
 
+> Reference for the `microfrontend` skill; [SKILL.md](../SKILL.md) is the entry point. Merged from the former `web/micro-frontends` skill.
+
 ## Purpose
-Browsers natively resolve bare module specifiers through import maps (`<script type="importmap">`, supported in all evergreen browsers). That allows micro-frontends built with any bundler (Vite, esbuild, Rollup) to be deployed independently and loaded by URL, without a bundler-specific runtime. This skill builds that setup with explicit mount/unmount lifecycles and a shared-dependency map.
-
-## Agent Protocol
-
-### Trigger
-"import map", "importmap", "single-spa", "native federation", "@angular-architects/native-federation", "ESM micro-frontend", "mount unmount lifecycle", "Vite micro-frontend".
-
-### Input Context
-- Frameworks per micro-frontend and bundler (Vite/esbuild/Angular CLI).
-- Routing ownership (shell routes vs. app-internal routes).
-- Hosting/CDN and how deployments are promoted per environment.
-
-### Output Artifact
-Import map, root config/shell code, per-app lifecycle entry, deployment step updating the map.
-
-### Response Format
-```
-Shell: {root-config / host}
-Apps: {name -> route -> ESM URL}
-Shared: {specifier -> URL (single copy)}
-Lifecycle: bootstrap/mount/unmount
-Deploy: {how import map is updated per env}
-```
+Browsers natively resolve bare module specifiers through import maps (`<script type="importmap">`, supported in all evergreen browsers). That allows micro-frontends built with any bundler (Vite, esbuild, Rollup) to be deployed independently and loaded by URL, without a bundler-specific runtime. This reference builds that setup with explicit mount/unmount lifecycles and a shared-dependency map.
 
 ## Import Map
 

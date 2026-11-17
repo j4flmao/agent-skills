@@ -1,10 +1,11 @@
 ---
 name: angular-patterns
 description: >
-  Use this skill when the user says 'Angular DI', 'Angular service', 'Angular interceptor', 'Angular guard', 'Angular RxJS', 'NgRx', 'Angular store', 'Angular resolver', 'Angular pipe', 'Angular directive', 'Observable vs Signal', or when implementing Angular-specific patterns. This skill enforces: HTTP interceptors for cross-cutting concerns, route guards for auth, Signals for sync state vs RxJS for async streams, Signal Store over NgRx for most apps, custom directives for reusable DOM behavior, and pure pipes for transformations. Requires Angular 17+. Do NOT use for: Angular project structure, standalone component setup, or non-Angular patterns.
+  Use when the user asks about Angular HTTP interceptors, route guards, resolvers, services and DI, RxJS vs signals, NgRx or Signal Store, custom directives or pipes. Produces Angular 17+ patterns for cross-cutting concerns and state. Not for project layout or standalone migration (use angular-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

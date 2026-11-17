@@ -1,10 +1,12 @@
 ---
 name: dev-loop-refactor-guide
 description: >
-  Use when the user asks about code refactoring, refactoring strategies, code smells, improving code structure, extracting functions/classes, or legacy code modernization. Do NOT use for: debugging (dev-loop-debugging-strategy), or performance optimization (dev-loop-performance-profiler).
+  Use when the user asks to refactor a long function or class safely, remove code smells, extract methods, untangle legacy code, or improve structure without changing behavior. Produces a step-by-step
+  refactoring plan with characterization tests. Not for tracking debt backlogs (use dev-loop-tech-debt-tracker) or system migrations (use enterprise-legacy-migration).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

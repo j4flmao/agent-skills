@@ -1,10 +1,11 @@
 ---
 name: frontend-qwik-architecture
 description: >
-  Use this skill when the user says 'Qwik', 'Qwik architecture', 'Qwik resumable', 'Qwik City', 'Qwik component', '$()', 'resumable', 'lazy loading Qwik', 'Qwik vs React'. This skill enforces: resumability (no hydration, serialized state), dollar-sign API for lazy boundaries, Qwik City file-based routing with lazy loaders/actions, and automatic bundle splitting per component and event. Requires Qwik project (package.json with @builder.io/qwik). Do NOT use for: React, SolidJS, or other eager-hydration frameworks.
+  Use when the user asks about Qwik, resumability vs hydration, Qwik City (Qwik Router in v2), the $ lazy boundary, Qwik project structure or Qwik vs React. Produces a Qwik app layout with routing, loaders/actions and bundle-splitting rules. Not for useSignal/useStore or prefetch tuning in an existing app (use frontend-qwik-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -18,6 +19,9 @@ tags: [frontend, qwik, phase-7]
 ## Purpose
 Build instantly interactive web applications with Qwik's resumability model — no hydration, lazy everything, serialized state in HTML, and automatic code splitting per component and per event.
 
+## Version Note (2026)
+Stable Qwik is still v1 (`@builder.io/qwik`, `@builder.io/qwik-city`). Qwik 2 reached release candidate in October 2026 under new package names (`@qwik.dev/core`, `@qwik.dev/router`; Qwik City becomes Qwik Router). Use v1 imports for production unless the project already runs v2, and follow the official "Migrating to Qwik v2" guide when upgrading.
+
 ## Agent Protocol
 
 ### Trigger
@@ -25,7 +29,7 @@ Exact user phrases: "Qwik", "Qwik architecture", "Qwik resumable", "Qwik City", 
 
 ### Input Context
 Before activating, verify:
-- package.json has @builder.io/qwik and @builder.io/qwik-city.
+- package.json has @builder.io/qwik + @builder.io/qwik-city (v1) or @qwik.dev/core + @qwik.dev/router (v2).
 - Vite config has the Qwik plugins.
 - Deployment target (Cloudflare, Vercel, Node).
 

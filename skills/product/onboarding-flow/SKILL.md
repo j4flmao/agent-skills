@@ -1,12 +1,12 @@
 ---
 name: product-onboarding-flow
 description: >
-  Use this skill when designing user onboarding flows: activation milestones, funnel mapping, progressive disclosure, and drop-off analysis.
-  This skill enforces: activation milestone definition, funnel mapping, progressive disclosure patterns, onboarding experimentation.
-  Do NOT use for: email drip campaigns, documentation writing, tutorial video production, customer success programs.
+  Use when the user asks to improve activation in the first-run experience, user onboarding flow, aha moment, product tours, checklists, empty states or onboarding drop-off. Produces activation
+  milestones, onboarding funnel and experiments. Not for growth loops and referrals (use product-growth-engineering) or employee onboarding (use core-onboarding).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

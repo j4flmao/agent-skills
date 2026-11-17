@@ -1,12 +1,12 @@
 ---
 name: product-user-research
 description: >
-  Use this skill when conducting user research: interviews, usability testing, persona creation, and insight synthesis.
-  This skill enforces: research question definition, participant recruitment, interview protocols, usability testing methodology.
-  Do NOT use for: quantitative surveys, A/B testing, market sizing, competitive analysis.
+  Use when the user asks about user interviews, usability testing, a discussion guide, recruiting participants, research questions or synthesizing insights with affinity mapping. Produces a research
+  plan, scripts and insight synthesis. Not for personas (use product-persona-development) or A/B tests (use product-ab-testing).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

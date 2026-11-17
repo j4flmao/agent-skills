@@ -15,6 +15,7 @@ tags: [mobile, kmp, kotlin, phase-7]
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Mobile Kotlin Multiplatform
@@ -119,7 +120,7 @@ val httpClient = HttpClient {
 
 6. **Platform-specific UI integration** — When Compose Multiplatform cannot render a native component, use `expect` composable functions. Android: wrap Android Views via `AndroidView` composable factory. iOS: wrap UIKit views via `UIKitView` composable (KMP Compose provides interop). Example: MapView, CameraPreview, WebView, NativeTextInput. Keep platform composables thin — minimal wrapper code, pass data via parameters. Platform UI code lives in `androidMain`/`iosMain` Composable files.
 
-7. **Testing strategy** — `commonTest` for shared business logic: domain models, repository logic, ViewModel state. Use kotlin.test for assertions. Mock dependencies with mock libraries that support KMP (MockK, KMM- Mock). Instrumented tests on Android and iOS use platform source sets. UI testing of Compose screens uses Compose UI Test framework in commonTest. Run iOS tests on simulator via Gradle task or Xcode Test Navigator.
+7. **Testing strategy** — `commonTest` for shared business logic: domain models, repository logic, ViewModel state. Use kotlin.test for assertions. Prefer hand-written fakes in `commonTest`; for mocks use a KMP-capable library such as Mokkery (MockK runs only on JVM/Android tests). Instrumented tests on Android and iOS use platform source sets. UI testing of Compose screens uses Compose UI Test framework in commonTest. Run iOS tests on simulator via Gradle task or Xcode Test Navigator.
 
 ## Platform Compatibility
 
@@ -147,8 +148,7 @@ val httpClient = HttpClient {
 - **No android.* imports in commonMain**: The compiler enforces this, but watch for transitive dependencies that pull Android types.
 - **iOS framework linking**: Ensure `embedAndSignAppleFrameworkForXcode` is in the build phase of your Xcode project.
 - **Serialization class clashes**: Two modules with the same `@Serializable` class cause linker errors. Use explicit `@SerialName` or module-level serializers.
-- **Generic type erasure**: `expect`/`actual` with generics requires `@Suppress("NO_ACTUAL_FOR_EXPECT")` in some cases.
-- **CocoaPods vs SPM**: CocoaPods + KMP is more mature than SPM integration. Prefer CocoaPods for iOS dependency distribution.
+- **iOS integration choice**: prefer direct integration (`embedAndSignAppleFrameworkForXcode`) or publishing an XCFramework through Swift Package Manager (e.g. with KMMBridge). The CocoaPods trunk becomes read-only in December 2026, so avoid starting new CocoaPods-based distribution.
 
 ## Anti-Patterns
 
@@ -156,7 +156,7 @@ val httpClient = HttpClient {
 - **expect/actual for everything**: Interfaces with platform implementations are more testable than expect/actual
 - **Ignoring iOS concurrency model**: Kotlin coroutines on iOS use custom dispatch — test iOS-specific threading scenarios
 - **No commonTest coverage**: If commonTest is empty, you lose the main advantage of KMP — shared test coverage
-- **Manual memory management on iOS**: Kotlin/Native uses ARC — but watch for cyclic references between Kotlin and Swift objects
+- **Memory across the Swift boundary**: Kotlin/Native uses a tracing GC while Swift uses ARC; reference cycles that cross the boundary (Swift closure ↔ Kotlin object) can outlive both, so break them explicitly and check with Instruments.
 - **Outdated libs.versions.toml**: KMP ecosystem moves fast — update Ktor, Kotlin, Compose versions together
 - **Mixing KMP modules with Android-only dependencies**: Keep KMP modules pure — put Android UI in separate :app module
 
@@ -233,6 +233,7 @@ The KMP shared module produces a Kotlin/Native framework consumed by Xcode:
 ### Version Catalog (libs.versions.toml)
 ```toml
 [versions]
+# Example versions from late 2024; update all KMP libraries together to current releases.
 kotlin = "2.0.21"
 ktor = "3.0.3"
 sqldelight = "2.0.2"
@@ -283,15 +284,15 @@ Keep `shared` module pure — no Android UI dependencies. The `composeApp` modul
 
 - **`remember` and `derivedStateOf`**: Cache expensive computations. `val total = remember(items) { items.sumOf { it.price } }` recalculates only when items change. Use `derivedStateOf` for computed state that derives from other state.
 - **`LaunchedEffect` lifecycle**: Runs in the composition's coroutine scope. Cancelled when composable leaves composition — no manual cleanup needed for coroutines. Use `DisposableEffect` for resources that need cleanup (listeners, observers).
-- **`Modifier` ordering**: Order matters — `Modifier.clip().size(100.dp).background(Color.Red)` clips before sizing, which may not work as expected. Always clip after sizing: `Modifier.size(100.dp).clip(CircleShape).background(Color.Red)`.
-- **Lambda stability**: Use `remember` for lambdas passed to composables: `val onClick = remember { { handleClick() } }`. Prevents unnecessary recomposition of child composables that receive unstable lambdas.
+- **`Modifier` ordering**: each modifier wraps the ones after it, so order changes behaviour (padding before vs after `background`, `clickable` before vs after `padding`). Decide the order for the effect you want.
+- **Lambda stability**: with strong skipping (default since Kotlin 2.0.20) lambdas are remembered automatically; manual `remember` around lambdas is rarely needed.
 - **`key` parameter in `LazyColumn`**: `LazyColumn { items(items, key = { it.id }) }` provides stable identity — enables item animation, preserves scroll position across recomposition, and minimizes recomposition scope.
 - **`contentType` in lazy lists**: When `LazyColumn` has mixed item types (headers, items, footers), set `contentType` parameter: `items(items, contentType = { "item" })`. Helps the layout engine optimize recycling.
 
 ### Memory and Allocation
 
-- **`kotlin.Result` zero-cost**: Use `Result<T>` for operation outcomes instead of sealed classes in performance-critical paths — the Kotlin compiler optimizes it as a single object.
-- **Primitive collections**: Use `IntArray`, `FloatArray`, `LongArray` over `List<Int>`, `List<Float>` for numeric-heavy operations. Reduces boxing overhead 10-20x.
+- **`kotlin.Result`**: an inline value class, so it avoids a wrapper allocation in non-generic positions but boxes when used as a generic type argument (`Flow<Result<T>>`). Do not choose it over sealed classes for performance alone.
+- **Primitive collections**: Use `IntArray`, `FloatArray`, `LongArray` over `List<Int>`, `List<Float>` for numeric-heavy operations. Avoids boxing every element.
 - **`@Immutable` / `@Stable` annotations**: Mark data classes as `@Immutable` (all properties final, never change) or `@Stable` (changes are reported to Compose). This enables Compose's compiler to skip recomposition when state hasn't changed. Without these annotations, Compose pessimistically recomposes.
 - **Avoid `var` in state holders**: Use `val` with `MutableState`/`MutableStateFlow`. `var customerName by remember { mutableStateOf("") }` — the `by` delegate enables automatic recomposition. Mutating `var` directly (without delegation) doesn't trigger recomposition.
 - **`buildList` / `buildMap` / `buildString`**: Allocation-efficient collection builders. `buildList { addAll(items); sort() }` creates a single list at the end, not intermediate copies for each operation.
@@ -313,7 +314,7 @@ AsyncImage(
 
 - **Connection pooling**: Configure `HttpClient` with custom engine options. OkHttp: `OkHttp.config { connectionPool(ConnectionPool(5, 30, TimeUnit.SECONDS)) }`. Darwin: `Darwin.config { configureRequest { setAllowsCellularAccess(true) } }`.
 - **Response caching**: Enable OkHttp cache on Android for GET requests. Configure cache directory and max size. Reduces redundant network calls.
-- **Serialization performance**: Use `kotlinx.serialization` with `Json { ignoreUnknownKeys = true; isLenient = true }` over Gson or Moshi. KMP-native serialization is 2-3x faster than reflection-based alternatives.
+- **Serialization performance**: Use `kotlinx.serialization` with `Json { ignoreUnknownKeys = true }` (Gson and Moshi are JVM-only); it generates serializers at compile time, so no reflection is needed. Avoid `isLenient = true` unless you must accept malformed JSON.
 - **WebSocket keep-alive**: For real-time connections, configure `WebSockets { pingInterval = 30_000 }` — sends ping frames every 30s to keep the connection alive and detect disconnects early.
 
 ## Architecture Patterns (Expanded)
@@ -388,19 +389,21 @@ fun <T> ContentView(
 - **Sharing platform-specific types**: `java.io.File` in commonMain breaks compilation. Use expect/actual or interfaces for platform types.
 - **One-shot expect/actual for everything**: Each `expect` declaration needs `actual` on every platform — increases maintenance. Prefer interfaces with platform DI.
 - **Blocking main thread on iOS**: Kotlin coroutines on iOS may dispatch to the main thread. Use `Dispatchers.Main.immediate` with `withContext` for UI updates. Never use `runBlocking` on main thread in iOS.
-- **No iOS memory optimization**: Kotlin/Native frameworks shipped with debug symbols by default. Strip with `isStatic = true` and set `embedAndSignAppleFrameworkForXcode` to use release builds in production.
+- **Shipping debug frameworks**: `embedAndSignAppleFrameworkForXcode` builds the configuration Xcode requests, so make sure release archives use the Release configuration; `isStatic = true` changes linking (static vs dynamic), not debug symbols.
 - **`kotlin.test` vs platform test runners**: `commonTest` uses `kotlin.test` assertions, which differ from JUnit 5 and XCTest. Teams must learn KMP test patterns.
-- **Over-reliance on Compose for everything**: Compose Multiplatform can't render native MapView, CameraPreview, or ARKit/ARCore. For 20% of features that need native components, use `expect` composable wrappers and keep them thin.
-- **Mixing CocoaPods and SPM**: Choose one dependency manager for iOS. CocoaPods has better KMP integration. SPM support is improving but still has edge cases with transitive dependencies.
-- **Missing `@ThreadLocal` on iOS objects**: iOS object initializers run on arbitrary threads. Use `@ThreadLocal` annotation or `AtomicReference` for mutable state accessed from multiple threads.
+- **Over-reliance on Compose for everything**: Compose Multiplatform can't render native MapView, CameraPreview, or ARKit/ARCore. For the features that need native components, use `expect` composable wrappers and keep them thin.
+- **Mixing CocoaPods and SPM**: choose one distribution path for iOS; new projects should use direct integration or SPM (CocoaPods trunk goes read-only in December 2026).
+- **Shared mutable state on iOS**: with the current memory manager objects are shared across threads without freezing, so `@ThreadLocal`/freezing workarounds from the legacy model are obsolete. Protect mutable state with atomics (`kotlinx.atomicfu`), a `Mutex`, or confinement to one dispatcher.
 
 ## Configuration Reference
 
 ```kotlin
 // build.gradle.kts (shared module)
+// Versions are examples; take current ones from the version catalog / release notes.
 plugins {
     id("org.jetbrains.kotlin.multiplatform") version "2.0.21"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"   // required with Kotlin 2.0+
     id("org.jetbrains.compose") version "1.7.1"
     id("app.cash.sqldelight") version "2.0.2"
 }

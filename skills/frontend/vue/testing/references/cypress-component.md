@@ -173,17 +173,17 @@ describe('Login Form', () => {
     }).as('loginRequest');
 
     cy.dataCy('email-input').type('user@example.com');
-    cy.dataCy('password-input').type('securepassword');
+    cy.dataCy('password-input').type(Cypress.env('TEST_PASSWORD'));
 
     // Verify input values
     cy.dataCy('email-input').should('have.value', 'user@example.com');
-    cy.dataCy('password-input').should('have.value', 'securepassword');
+    cy.dataCy('password-input').should('have.value', Cypress.env('TEST_PASSWORD'));
 
     cy.dataCy('submit-button').click();
 
     cy.wait('@loginRequest').its('request.body').should('deep.equal', {
       email: 'user@example.com',
-      password: 'securepassword',
+      password: Cypress.env('TEST_PASSWORD'),
     });
   });
 

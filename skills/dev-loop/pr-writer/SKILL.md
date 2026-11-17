@@ -1,10 +1,12 @@
 ---
 name: dev-loop-pr-writer
 description: >
-  Use when the user asks about writing pull requests, PR descriptions, PR templates, effective code reviews, or pull request best practices. Do NOT use for: code review content (dev-loop-code-review), or git workflow branching (dev-loop-git-workflow).
+  Use when the user asks to write a pull request description, PR title, PR template, summary of a diff for reviewers or split a large PR. Produces a reviewer-ready PR description with context, changes,
+  testing and risk. Not for reviewing someone's code (use code-review) or release notes (use dev-loop-changelog-generator).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

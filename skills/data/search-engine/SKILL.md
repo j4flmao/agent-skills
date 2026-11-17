@@ -1,10 +1,14 @@
 ---
 name: data-search-engine
 description: >
-  Use this skill when asked about Elasticsearch, OpenSearch, Solr, search engine, full-text search, inverted index, indexing, search analytics, aggregation, cluster management, or shard routing. This skill enforces: Elasticsearch architecture (node types, shards, replicas), indexing strategy (mapping, analysis, tokenization), search queries (full-text, term, bool, fuzzy), aggregations (metric, bucket, pipeline), cluster management (node roles, shard allocation, ILM), OpenSearch differences, and performance tuning. Do NOT use for: relational database queries, graph traversals, or key-value lookups.
+  Use when the user asks about Elasticsearch, OpenSearch or Solr: mappings and analyzers, BM25 relevance tuning,
+  kNN hybrid search, aggregations, shard sizing, ILM or cluster operations. Produces index mappings, queries and
+  cluster settings. Not for app-level search features (use backend-search-patterns) or vector DB choice (use
+  data-vector-databases).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -467,37 +471,38 @@ Search Engine Selection
 ### Search Query with Hybrid Scoring
 ```python
 # search_engine/hybrid_search.py
+from elasticsearch import Elasticsearch
+
+
 class HybridSearch:
-    def __init__(self, client, index: str):
+    """BM25 + approximate kNN in one request (Elasticsearch 8.4+).
+
+    A `script_score` over `match_all` scans every document; use the HNSW-backed `knn`
+    section instead. For rank fusion use the `rrf` retriever where your license allows it.
+    """
+
+    def __init__(self, client: Elasticsearch, index: str) -> None:
         self.client = client
         self.index = index
 
     def search(self, query: str, vector: list[float], alpha: float = 0.5, size: int = 20):
-        bm25_weight = alpha
-        vec_weight = 1 - alpha
-        resp = self.client.search(
+        resp = self.client.search(               # keyword args; the `body=` parameter is deprecated
             index=self.index,
-            body={
-                "query": {
-                    "bool": {
-                        "should": [
-                            {"match": {"title": {"query": query, "boost": bm25_weight}}},
-                            {"match": {"description": {"query": query, "boost": bm25_weight * 0.5}}},
-                            {
-                                "script_score": {
-                                    "query": {"match_all": {}},
-                                    "script": {
-                                        "source": f"cosineSimilarity(params.query_vector, 'embedding') + 1.0",
-                                        "params": {"query_vector": vector}
-                                    },
-                                    "boost": vec_weight
-                                }
-                            }
-                        ]
-                    }
-                },
-                "size": size
-            }
+            query={
+                "multi_match": {
+                    "query": query,
+                    "fields": ["title^2", "description"],
+                    "boost": alpha,
+                }
+            },
+            knn={
+                "field": "embedding",
+                "query_vector": vector,
+                "k": size,
+                "num_candidates": max(100, size * 5),
+                "boost": 1 - alpha,
+            },
+            size=size,
         )
         return resp["hits"]["hits"]
 ```

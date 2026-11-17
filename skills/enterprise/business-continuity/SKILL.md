@@ -1,16 +1,12 @@
 ---
 name: enterprise-business-continuity
 description: >
-  Use this skill when designing Business Continuity Plans (BCP) and Disaster Recovery (DR) at the
-  business-service level: ranking services by criticality, mapping RPO/RTO per service, planning for
-  regional outage, vendor failure, ransomware, key-person loss, supply-chain attack, and pandemic/site
-  loss. This skill enforces: BIA (Business Impact Analysis), service-tier classification, dependency
-  mapping, DR runbook structure, communication tree, executive crisis comms, vendor-lock fallback, and
-  scheduled drill cadence. Do NOT use for: technical replication topology (see enterprise-high-availability),
-  infrastructure DR setup (see devops-backup-dr), or incident-response paging (see devops-incident-response).
+  Use when the user asks about a business continuity plan (BCP), business impact analysis (BIA), RTO/RPO per service, ransomware or regional outage scenarios, crisis communication or DR drills. Produces
+  service tiers, BIA and DR runbooks. Not for replica and failover topology (use enterprise-high-availability) or backup tooling (use backup-dr).
 version: "2.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

@@ -5,6 +5,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -868,6 +869,8 @@ Additional reference material for this skill, stored outside its own `references
 
 ### Merged Material
 Content folded in from overlapping skills and notes.
+
+Rules folded in: build an operator only when Helm/Kustomize cannot encode the operational logic; reconcile level-triggered and idempotent; report status conditions with `observedGeneration`; owner references for children, finalizers only for external resources.
 
 - `references/merged-cloud-native-k8s-operators.md` — Kubernetes Operators and the Controller Pattern (merged from `cloud-native/k8s-operators`)
 - `references/kubernetes-operators.md` — Kubernetes Custom Operators

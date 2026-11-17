@@ -9,6 +9,7 @@ description: >
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 tags: [game, unreal, cpp, engine]
 ---
 
@@ -232,7 +233,7 @@ Open worlds use World Partition (grid cells streamed around streaming sources, d
 | Massive Blueprint inheritance chains | Hard to maintain, slow | Composition over deep inheritance |
 | Not setting NetUpdateFrequency | Bandwidth | Lower on background actors |
 | Full scene replication every frame | Network spike | Dormancy + conditions |
-| Nanite on skinned meshes | Error | Fallback LODs |
+| Relying on Nanite for skinned meshes | Experimental in recent 5.x only | Classic skeletal LODs unless you have validated it |
 | Lumen on low-end GPU | Frame drops | Disable or use baked GI |
 
 ## 12. When to NOT Use Unreal

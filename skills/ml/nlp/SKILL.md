@@ -1,12 +1,14 @@
 ---
 name: ml-nlp
 description: >
-  Use this skill when building NLP pipelines, applying spaCy for tokenization/NER/POS, using HuggingFace Transformers for text classification/sentiment/summarization/QA, or fine-tuning transformer models.
-  This skill enforces: NLP pipeline design (tokenization, normalization, POS, NER, parsing), framework selection (spaCy vs HuggingFace vs NLTK), model selection by task, fine-tuning strategy (full vs PEFT/LoRA), inference optimization.
-  Do NOT use for: audio/speech processing, computer vision with text (use ml-computer-vision), traditional ML on text features (use ml-classical-ml), or prompt engineering (use ai-prompt-engineering).
+  Use when the user asks about NLP pipelines with spaCy or Hugging Face Transformers: tokenization, NER, text
+  classification, sentiment, summarization, QA, or fine-tuning BERT-style models with Trainer. Produces pipeline
+  design, model choice and fine-tuning code. Not for LLM chat fine-tuning with LoRA (use llm-finetuning) or RAG
+  (use llm-rag-retrieval-internals).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -219,7 +221,7 @@ trainer = Trainer(
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=val_dataset,
-    tokenizer=tokenizer,
+    processing_class=tokenizer,   # `tokenizer=` was deprecated in transformers 4.46
     data_collator=data_collator,
     compute_metrics=compute_metrics,
 )

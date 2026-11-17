@@ -1,10 +1,11 @@
 ---
 name: backend-file-storage
 description: >
-  Use this skill when designing file upload, storage, CDN delivery, or file processing systems. This skill enforces: direct-to-storage uploads via presigned URLs, flat key design with no sensitive data, server-side validation, CDN caching with version hashes. Applies to S3, Azure Blob, GCS, or any S3-compatible storage. Do NOT use for: database blob storage, application server file handling, or ephemeral temporary files.
+  Use when the user asks about file uploads, S3 presigned URLs, direct-to-storage uploads, object keys, Azure Blob or GCS, CDN delivery of files, virus scanning or lifecycle policies. Produces an upload and storage design with validation. Not for CSV data imports (use backend-bulk-import).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

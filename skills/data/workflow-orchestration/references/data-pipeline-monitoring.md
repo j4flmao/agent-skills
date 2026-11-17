@@ -99,7 +99,7 @@ def pagerduty_alert(context):
         "source": "airflow",
         "custom_details": {
             "task": context["task"].task_id,
-            "execution_date": str(context["execution_date"]),
+            "logical_date": str(context["logical_date"]),   # execution_date was removed in Airflow 3
         }
     }
     events_client.trigger(payload)

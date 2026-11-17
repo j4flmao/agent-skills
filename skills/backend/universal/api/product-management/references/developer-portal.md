@@ -181,7 +181,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 24
 
       # Generate TypeScript SDK using OpenAPI Generator
       - name: Generate TypeScript SDK

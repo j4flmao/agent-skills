@@ -1,16 +1,12 @@
 ---
 name: code-review
 description: >
-  Use this skill when the user says 'review this code', 'code review', 'review PR',
-  'check this implementation', 'is this code good', 'LGTM?', 'feedback on code', or
-  wants a structured code review. Covers: correctness, architecture, clarity,
-  performance, security, and test quality. Produces a structured review with
-  severity levels: MUST, SHOULD, CONSIDER. Works with any language/stack.
-  Do NOT use this for: debugging (use debugging-strategy), writing code, or
-  architectural planning.
+  Use when the user asks to review this code, review a pull request for bugs, give feedback on an implementation, check a diff, or asks LGTM?. Produces a structured review with MUST/SHOULD/CONSIDER
+  findings on correctness, security, performance and tests. Not for finding a bug's root cause (use dev-loop-debugging-strategy) or writing the PR text (use dev-loop-pr-writer).
 version: "1.1.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

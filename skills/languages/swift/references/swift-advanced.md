@@ -1,7 +1,7 @@
 # Advanced Swift
 
 ## 1. Swift Concurrency (Actors and async/await)
-Swift 5.5 introduced native concurrency, completely replacing messy Grand Central Dispatch (GCD) closures.
+Swift 5.5 introduced async/await, actors and structured concurrency; they replace most callback-based GCD code, though GCD still exists underneath and in older APIs.
 
 ### Async/Await
 ```swift

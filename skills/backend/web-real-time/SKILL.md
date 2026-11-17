@@ -1,10 +1,11 @@
 ---
 name: backend-web-real-time
 description: >
-  Use when the user asks about WebRTC, real-time video/audio, media streaming, SFU/MCU, signaling server, TURN/STUN, live streaming, WebSocket for media, or real-time communication infrastructure. Do NOT use for: basic WebSocket patterns (websocket-patterns), or general real-time updates (data-streaming).
+  Use when the user asks about WebRTC, building a video call feature, SFU vs MCU, signaling servers, TURN/STUN, LiveKit or mediasoup, simulcast or live streaming latency. Produces real-time media architecture and signaling code. Not for chat-style WebSocket messaging (use backend-websocket-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

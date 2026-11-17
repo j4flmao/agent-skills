@@ -15,6 +15,7 @@ tags: [mobile, deep-linking, phase-7, universal]
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Mobile Deep Linking
@@ -113,7 +114,7 @@ Navigation framework?
 |---------|---------------------|-------------------|
 | Verification file | `apple-app-site-association` | `.well-known/assetlinks.json` |
 | File format | JSON (no extension) | JSON |
-| Verification timing | App install + periodic | Google Search Console |
+| Verification timing | AASA fetched through Apple's CDN at install/update | Digital Asset Links checked at install (re-verifiable with `pm verify-app-links`) |
 | Confirmation prompt | None | None |
 | HTTPS required | Yes | Yes |
 | Debug verification | Device console logs | `adb shell dumpsys` |
@@ -131,7 +132,7 @@ Navigation framework?
 
 ## Common Pitfalls
 
-- **AASA not served correctly**: Server must serve `apple-app-site-association` with `Content-Type: application/json` (or `application/pkix-cert` for iOS). No redirect. Must be HTTPS with valid certificate.
+- **AASA not served correctly**: Server must serve `apple-app-site-association` with `Content-Type: application/json` (unsigned JSON; the old signed `application/pkcs7-mime` format is obsolete). No redirect. Must be HTTPS with valid certificate.
 - **iOS simulator cache**: AASA changes aren't picked up quickly. Use `swcutil` to force refresh or test on device.
 - **Multiple apps claim same custom scheme**: iOS picks one arbitrarily. Use universal links to guarantee your app opens.
 - **Android auto-verify timeout**: Verification is asynchronous. May take minutes to hours after first install.
@@ -265,8 +266,8 @@ Rather than hardcoding deep link URLs, generate them dynamically from server-sid
 - Verify AASA file accessible at `https://domain/.well-known/apple-app-site-association`
 - Verify assetlinks.json at `https://domain/.well-known/assetlinks.json`
 - Test with `curl -v https://domain/.well-known/apple-app-site-association` (check Content-Type)
-- Check iOS device console for `[CoreBroker]` messages indicating AASA fetch status
-- Run `adb shell dumpsys package domain-preferred-apps` to verify Android app link status
+- Check the iOS device console for `swcd` messages about AASA fetches; during development use `applinks:example.com?mode=developer` with Associated Domains Development enabled to bypass the CDN
+- Run `adb shell pm get-app-links <package>` (Android 12+) to see verification state; `adb shell pm verify-app-links --re-verify <package>` to retry
 - Test with app in all states: not installed (fallback), terminated, background, foreground
 - Verify route params extracted correctly for edge cases (empty, special chars, unicode)
 - Confirm deferred link resolves after clean install from TestFlight/internal track

@@ -1,10 +1,11 @@
 ---
 name: rust-patterns
 description: >
-  Use this skill when implementing Rust-specific patterns — async/tokio patterns, ownership/borrowing strategies, error handling with thiserror/anyhow, serde serialization, FFI, concurrency with Arc/RwLock, and API patterns. This skill enforces: thiserror for library errors, anyhow for application errors, serde for serialization, Arc for shared state, and tokio for async. Requires Rust (Cargo.toml). Do NOT use for: Go goroutines, Java threads, or non-Rust specific concurrency patterns.
+  Use when the user asks about tokio patterns, axum extractors, thiserror vs anyhow, serde, Arc<Mutex> vs RwLock, tower-http middleware or sqlx queries. Produces idiomatic async Rust backend code. Not for workspace layout (use rust-architecture).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

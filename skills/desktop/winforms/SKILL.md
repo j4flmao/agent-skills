@@ -1,10 +1,11 @@
 ---
 name: desktop-winforms
 description: >
-  Use when the user asks about Windows Forms (WinForms) development, .NET desktop UI, WinForms controls, GDI+ drawing, or legacy Windows app maintenance. Do NOT use for: WPF (desktop-wpf), WinUI 3, or UWP (desktop-uwp).
+  Use when the user asks about Windows Forms (WinForms), WinForms controls and designer, GDI+ drawing, high-DPI in WinForms, data binding or migrating .NET Framework WinForms to modern .NET. Produces WinForms app code and migration steps. Not for XAML apps (use desktop-wpf) or UWP/WinUI (use desktop-uwp).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
@@ -426,9 +427,9 @@ For WinUI 3 migration see `../winui3/references/` (no dedicated skill yet). Hand
 |---|---|---|
 | Runtime | .NET Framework 4.8.x | Supported modern .NET (8/9/10; 6 and 7 are out of support) |
 | Platform | Windows only | Windows only (SDK) |
-| Performance | Legacy JIT | RyuJIT, better optimization |
+| Performance | Frozen runtime, security fixes only | Ongoing JIT/GC improvements each release |
 | DPI awareness | Limited (per-monitor v1) | Per-monitor v2 (included) |
-| Designer | Visual Studio full support | Visual Studio partial (Preview) |
+| Designer | Visual Studio in-process designer | Visual Studio out-of-process designer (GA; some older third-party controls lag) |
 | NuGet | Compatible | .NET Standard 2.0+ |
 | Best for | Legacy app maintenance | New WinForms on modern .NET |
 

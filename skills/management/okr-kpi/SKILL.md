@@ -1,7 +1,8 @@
 ---
 name: management-okr-kpi
 description: >
-  Use this skill when the user says 'OKR', 'KPI', 'objectives', 'key results', 'metrics', 'OKR setting', 'quarterly goals', 'team metrics', 'performance indicators', 'goal setting', 'North Star metric'. Define and track OKRs and KPIs with cascade, scoring, and review cadence. Do NOT use for: project planning or sprint ceremonies.
+  Use when the user asks to set OKRs for a team, write objectives and key results, choose KPIs, a North Star metric, OKR scoring or quarterly goal reviews. Produces OKRs and KPIs with cascade, scoring
+  and review cadence. Not for product analytics instrumentation (use product-analytics) or roadmaps (use planning-create-roadmap).
 compatibility:
   claude-code: true
   cursor: true
@@ -11,6 +12,7 @@ tags: [management, okr, kpi, phase-7]
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 ---
 
 # Management OKR & KPI

@@ -1,5 +1,7 @@
 # Storybook Setup Reference
 
+> Version note: these examples use Storybook 8 package names. Since Storybook 9, `@storybook/addon-essentials` and `@storybook/addon-interactions` are built into the `storybook` package (no separate install), and `@storybook/test` is imported as `storybook/test`. See ../SKILL.md for the current setup.
+
 ## Installation
 
 ```bash

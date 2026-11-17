@@ -3,45 +3,44 @@
 ## Overview
 Test APIs against OpenAPI specs: contract testing, spec validation, request/response validation, mock servers, and CI integration.
 
-## Contract Testing with Dredd
+## Contract Testing Against the Spec
+
+Dredd is archived and unmaintained. Use Schemathesis (generates requests from the spec and checks every response) or a Prism validation proxy.
+
+```bash
+# Run against a local test server; token comes from the CI secret store
+uvx schemathesis run ./openapi.yaml \
+  --url http://localhost:3000 \
+  --header "Authorization: Bearer ${TEST_API_TOKEN}"
+```
+
+For response-shape assertions inside Jest/Vitest, validate responses with the spec, e.g. `jest-openapi`:
 
 ```typescript
-import Dredd from 'dredd';
+import jestOpenAPI from 'jest-openapi';
+import request from 'supertest';
+import path from 'node:path';
 
-describe('API Contract Tests', () => {
-  const dredd = new Dredd({
-    server: 'http://localhost:3000',
-    options: {
-      path: './openapi.yaml',
-      dryRun: false,
-      colors: true,
-      method: ['GET', 'POST', 'PUT', 'DELETE'],
-      header: ['Authorization: Bearer test-token'],
-    },
-  });
+jestOpenAPI(path.resolve(__dirname, '../openapi.yaml'));
 
-  it('validates API against OpenAPI spec', (done) => {
-    dredd.run((error, stats) => {
-      expect(error).toBeNull();
-      expect(stats.failures).toBe(0);
-      expect(stats.passes).toBeGreaterThan(0);
-      done();
-    });
-  }, 30000);
+it('GET /v1/orders satisfies the spec', async () => {
+  const res = await request(app).get('/v1/orders').set('Authorization', `Bearer ${token}`);
+  expect(res.status).toBe(200);
+  expect(res).toSatisfyApiSpec();
 });
 ```
 
 ## Request/Response Validation
 
 ```typescript
-import { Validator } from 'express-openapi-validator';
+import * as OpenApiValidator from 'express-openapi-validator';
 
 describe('Request Validation', () => {
   let app: Express;
 
   beforeAll(() => {
     app = express();
-    app.use(Validator({
+    app.use(OpenApiValidator.middleware({
       apiSpec: './openapi.yaml',
       validateRequests: true,
       validateResponses: true,
@@ -218,7 +217,7 @@ describe('Breaking Change Detection', () => {
 ```
 
 ## Key Points
-- Use Dredd for contract testing: validates API responses match OpenAPI spec
+- Use Schemathesis or jest-openapi for contract testing: validates API responses match the OpenAPI spec
 - Validate requests at middleware level using express-openapi-validator
 - Reject invalid bodies, wrong types, and exceeded constraints (maxLength)
 - Run Spectral linting and swagger-cli validation in CI

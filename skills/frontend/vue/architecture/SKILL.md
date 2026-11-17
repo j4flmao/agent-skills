@@ -1,10 +1,11 @@
 ---
 name: vue-architecture
 description: >
-  Use this skill when the user says 'Vue structure', 'Vue architecture', 'Vue 3 folder', 'Composition API architecture', 'Vue clean arch', 'Vue feature structure', 'Pinia architecture', 'Vue project layout', or when structuring a Vue 3 application. This skill enforces: feature-based folder structure, script setup always, Composition API with composables (useX naming), Pinia for global state, one concern per composable, scoped styles by default, and component file under 200 lines. Requires Vue 3 (vue package). Do NOT use for: Nuxt-specific features, Vue 2 Options API, or React/Angular.
+  Use when the user asks about Vue 3 project structure, Vue 3 composables for shared logic, script setup, Composition API architecture, feature folders, Pinia store layout or migrating from the Options API or Vuex. Produces a Vue 3 app structure and conventions. Not for Nuxt (use vue-nuxt) or specific router/directive patterns (use frontend-vue-patterns).
 version: "1.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true

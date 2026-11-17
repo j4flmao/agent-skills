@@ -1,12 +1,11 @@
 ---
 name: frontend-patterns
 description: >
-  Use this skill when the user asks about frontend design patterns, component
-  patterns, Container/Presentational, Compound Components, HOC, Render Props,
-  Hooks patterns, Provider, or State Reducer.
+  Use when the user asks about frontend component patterns: compound components, container/presentational, custom hooks, render props, HOCs, provider pattern, state reducer or headless components. Produces pattern choices with framework examples. Not for app folder structure (use react-architecture) or picking a state library (use frontend-state-management).
 version: "2.0.0"
 author: "j4flmao"
 license: "MIT"
+last_verified: "2026-11-17"
 compatibility:
   claude-code: true
   cursor: true
